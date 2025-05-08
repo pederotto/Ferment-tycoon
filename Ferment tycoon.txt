@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fermenta Tycoon - The Alchemist's Lab (v2 Functional)</title>
+    <style>
+        :root {
+            --bg-color: #0d1117; /* GitHub Dark Dimmed BG */
+            --text-color: #c9d1d9; /* GitHub Dark Dimmed Text */
+            --primary-color: #58a6ff; /* GitHub Dark Dimmed Primary Blue */
+            --border-color: #30363d;
+            --header-bg: #161b22;
+            --section-bg: #1f242c; /* Slightly lighter for sections */
+            --accent-green: #3fb950;
+            --accent-yellow: #d29922;
+            --accent-red: #f85149;
+            --font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, Courier, monospace;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        #game-container {
+            width: 98%;
+            max-width: 1000px;
+            background-color: var(--header-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 25px rgba(0,0,0,0.3);
+            margin-top: 10px;
+            margin-bottom: 20px;
+            padding: 0;
+            box-sizing: border-box;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--section-bg);
+            padding: 15px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        header h1 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+            font-size: 2em;
+        }
+
+        #stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 8px 15px;
+            font-size: 0.9em;
+            background-color: var(--bg-color);
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #stats-bar span { white-space: nowrap; }
+        #stats-bar strong { color: var(--primary-color); font-weight: 600; }
+
+        #navigation-tabs {
+            display: flex;
+            background-color: var(--section-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .nav-tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-right: 1px solid var(--border-color);
+            color: var(--text-color);
+            transition: background-color 0.2s, color 0.2s;
+            flex-grow: 1; /* Make tabs fill space */
+            text-align: center;
+        }
+        .nav-tab:hover { background-color: #2a3038; }
+        .nav-tab.active { background-color: var(--bg-color); color: var(--primary-color); font-weight: 600; }
+        .nav-tab:last-child { border-right: none; }
+
+        .view-content {
+            display: none;
+            padding: 20px;
+            background-color: var(--bg-color);
+            min-height: 300px;
+        }
+        .view-content.active { display: block; }
+
+        .section-box {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            background-color: var(--section-bg);
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .section-box h2, .section-box h3 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            font-size: 1.3em;
+            color: var(--primary-color);
+        }
+        .section-box h3 { font-size: 1.1em; color: var(--text-color); margin-bottom: 10px;}
+
+        #log-area-container { /* New container for log area */
+             margin:0 20px 20px 20px; /* Consistent with view padding */
+             background-color:var(--bg-color);
+        }
+
+        #log-area {
+            height: 280px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            background-color: #010409;
+            font-size: 0.9em;
+            line-height: 1.5;
+            border-radius: 4px;
+        }
+        #log-area p { margin: 0 0 7px 0; }
+        #log-area p.system { color: var(--accent-yellow); font-style: italic; }
+        #log-area p.system-critical { color: var(--accent-red); font-weight: bold; text-transform: uppercase; }
+        #log-area p.success { color: var(--accent-green); }
+        #log-area p.warning { color: var(--accent-yellow); }
+        #log-area p.danger { color: var(--accent-red); }
+        #log-area p.info { color: #8b949e; }
+        #log-area p.lab_report { color: #a5d6ff; border-left: 3px solid var(--primary-color); padding-left: 10px; background-color: rgba(88,166,255,0.05); white-space: pre-wrap; } /* Allow wrapping for reports */
+
+        ul { list-style-type: none; padding-left: 0; margin: 0; }
+        ul li {
+            padding: 8px 5px; /* Increased padding */
+            border-bottom: 1px solid #21262d;
+            font-size: 0.95em;
+            display: flex; /* For aligning items like buttons */
+            justify-content: space-between;
+            align-items: center;
+        }
+        ul li:last-child { border-bottom: none; }
+        ul li .item-name { color: var(--primary-color); font-weight: 500; } /* Changed strong to span */
+        ul li .item-details { font-size: 0.88em; color: #8b949e; margin-left: 0; display:block; /* Details on new line */}
+        ul li .item-actions button { margin-left: 10px; } /* Space for action buttons in lists */
+
+        ul li .quality-aspect { display: inline-block; margin-right: 8px; font-size:0.85em; }
+        ul li .quality-aspect .val { font-weight: bold; color: var(--text-color); }
+
+
+        #actions-bar {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--section-bg);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button, .modal-button {
+            background-color: var(--primary-color);
+            color: #ffffff; /* White text on primary buttons */
+            border: 1px solid var(--primary-color);
+            padding: 10px 18px;
+            cursor: pointer;
+            font-family: var(--font-family);
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: background-color 0.2s, opacity 0.2s;
+            border-radius: 5px;
+        }
+        button:hover, .modal-button:hover {
+            opacity: 0.85;
+        }
+        button.secondary, .modal-button.secondary {
+            background-color: var(--section-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        button.secondary:hover, .modal-button.secondary:hover {
+            background-color: #2a3038;
+            border-color: #4d555f;
+        }
+        button:disabled, .modal-button:disabled {
+            background-color: #21262d !important; /* Important to override */
+            color: #484f58 !important;
+            border-color: #30363d !important;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #modal-backdrop {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75); /* Darker backdrop */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px; /* Padding for smaller screens */
+            box-sizing: border-box;
+        }
+        #modal-content {
+            background-color: var(--section-bg);
+            padding: 25px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh; /* Increased max height */
+            overflow-y: auto;
+        }
+        #modal-content h3 { margin-top: 0; color: var(--primary-color); font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom:10px; margin-bottom:15px;}
+        .modal-body-content > div, .modal-body-content > p, .modal-body-content > ul, .modal-body-content > label { margin-bottom: 15px; } /* Consistent spacing in modal body */
+        #modal-content label { display: block; margin-bottom: 6px; color: var(--text-color); font-weight: 500;}
+        #modal-content input[type="number"], 
+        #modal-content input[type="text"], 
+        #modal-content select,
+        #modal-content textarea {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            width: 100%; /* Full width */
+            box-sizing: border-box;
+            font-family: var(--font-family);
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        #modal-content textarea { min-height: 80px; }
+        #modal-content .modal-button-group { margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 15px;}
+        
+        .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; } /* Increased gap */
+        .item-card { border: 1px solid var(--border-color); padding: 12px; border-radius: 4px; background-color: var(--bg-color); }
+        .item-card h4 { margin: 0 0 8px 0; color: var(--primary-color); }
+        .item-list-actions button { font-size:0.8em !important; padding:4px 8px !important; } /* Smaller buttons in lists */
+
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <h1>Fermenta Tycoon: The Alchemist's Lab</h1>
+            <div id="stats-bar">
+                <span>Money: <strong id="money"></strong></span>
+                <span>Reputation: <strong id="reputation"></strong></span>
+                <span>Risk: <strong id="risk"></strong></span>
+                <span>Day: <strong id="day"></strong></span>
+                <span>Lab Slots: <strong id="lab_slots"></strong></span>
+                <span>RP: <strong id="research_points"></strong></span>
+            </div>
+        </header>
+
+        <div id="navigation-tabs">
+            <div class="nav-tab active" data-view="lab">Lab & Processes</div>
+            <div class="nav-tab" data-view="inventory">Inventory</div>
+            <div class="nav-tab" data-view="market">Market & Sales</div>
+            <div class="nav-tab" data-view="research">R & D</div>
+        </div>
+        
+        <div id="main-view-area">
+            <div id="view-lab" class="view-content active">
+                <div class="section-box">
+                    <h2>Equipment (<span id="equipment-count">0</span>)</h2>
+                    <ul id="equipment-list"></ul>
+                    <button data-action="manage_lab_equipment" class="secondary" style="margin-top:10px;">Manage Equipment</button>
+                </div>
+                <div class="section-box">
+                    <h2>Ongoing Fermentations (<span id="active-ferment-count">0</span>/<span id="lab-capacity-display">0</span>)</h2>
+                    <ul id="ferment-list"></ul>
+                     <button data-action="start_ferment_process" style="margin-top:10px;">Start New Fermentation</button>
+                </div>
+            </div>
+
+            <div id="view-inventory" class="view-content">
+                 <div class="section-box">
+                    <h2>Inventory Management</h2>
+                    <div class="grid-2col">
+                        <div id="ingredient-inventory-area">
+                            <h3>Ingredients</h3>
+                            <ul id="ingredient-inventory"></ul>
+                        </div>
+                        <div id="product-inventory-area">
+                            <h3>Finished Products</h3>
+                            <ul id="product-inventory"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-market" class="view-content">
+                <div class="section-box">
+                    <h2>Marketplace</h2>
+                    <div id="market-demands-area">
+                        <h3>Current Market Demands:</h3>
+                        <ul id="market-demands-list"></ul>
+                    </div>
+                     <div id="contracts-area" style="margin-top:15px;">
+                        <h3>Available Contracts:</h3>
+                        <ul id="contracts-list"></ul>
+                    </div>
+                    <div style="margin-top:15px;">
+                        <button data-action="source_ingredients_market">Source Ingredients</button>
+                        <button data-action="sell_products_market" style="margin-left:10px;">Sell Products</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-research" class="view-content">
+                <div class="section-box">
+                    <h2>Research & Development</h2>
+                    <p>Current Research Points (RP): <strong id="research-points-display">0</strong></p>
+                    <ul id="research-projects-list"></ul>
+                    <div id="experimentation-area" style="margin-top:15px;">
+                        <h3>Experimentation Lab (Future Feature)</h3>
+                        <p>Unlock new recipe variations by experimenting with known recipes and different ingredients or parameters.</p>
+                        <button data-action="conduct_experiment" class="secondary" disabled>Conduct Experiment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="log-area-container" class="section-box">
+             <h2>Activity Log</h2>
+            <div id="log-area"></div>
+        </div>
+
+        <div id="actions-bar">
+            <button data-action="next_day">Advance Day</button>
+        </div>
+    </div>
+
+    <div id="modal-backdrop">
+        <div id="modal-content"></div>
+    </div>
+
+    <script>
+    // --- ENUMS, CONSTANTS, DATA DEFINITIONS ---
+    const C = { 
+        MAX_LOG_MESSAGES: 100, BASE_LAB_SLOTS: 1, FRESHNESS_DECAY_RATE: 1, 
+        EQUIPMENT_MAINTENANCE_THRESHOLD: 30, EQUIPMENT_QUALITY_DEGRADE_RATE: 0.015,
+        MIN_INGREDIENT_QUALITY: 0.1, MAX_INGREDIENT_QUALITY: 1.0,
+        MIN_EQUIPMENT_QUALITY: 0.1, MAX_EQUIPMENT_QUALITY: 1.0,
+        BASE_SAFETY_SCORE: 0.7, // Starting safety for a ferment
+        RESEARCH_PROGRESS_PER_DAY: 1,
+    };
+    const SUBSTRATE = { GRAIN: 'Grain', LEGUME: 'Legume', FRUIT: 'Fruit', VEGETABLE: 'Vegetable', MEAT: 'Meat', SEAFOOD: 'Seafood', DAIRY: 'Dairy', FUNGUS: 'Fungus', OTHER: 'Other' };
+    const FERMENT = { LACTO: 'Lacto-fermentation', ALCOHOLIC: 'Alcoholic', ACETIC: 'Acetic Acid (Vinegar)', KOJI: 'Koji Cultivation', MISO: 'Miso/Peaso', SHOYU: 'Shoyu', GARUM: 'Garum', BLACKENING: 'Enzymatic Blackening' };
+    const EQUIP = { VESSEL: 'Vessel', INCUBATOR: 'Incubator', TEMP_CONTROL: 'Temp. Controller', HUMID_CONTROL: 'Humidity Controller', GRINDER: 'Grinder', PRESS: 'Press', PH_METER: 'pH Meter', SCALE: 'Scale', KOJI_TRAY: 'Koji Tray' };
+    const QA = { 
+        UMAMI: 'Umami', ACIDITY_LACTIC: 'Lactic Acidity', ACIDITY_ACETIC: 'Acetic Acidity', SWEETNESS: 'Sweetness', SALTINESS: 'Saltiness',
+        FUNK_COMPLEXITY: 'Funk/Complexity', AROMA_PROFILE: 'Aroma Profile', TEXTURE: 'Texture',
+        ENZYME_AMYLASE: 'Amylase Activity', ENZYME_PROTEASE: 'Protease Activity',
+        PH: 'pH Level', WATER_ACTIVITY: 'Water Activity (aW)', MICROBIAL_SAFETY: 'Microbial Safety'
+    };
+    const RARITY = { COMMON: 'Common', UNCOMMON: 'Uncommon', RARE: 'Rare', EXOTIC: 'Exotic', MYTHIC: 'Mythic' };
+
+    // --- GAME STATE ---
+    let GS = { 
+        meta: { day: 1, nextId: 0, gameOver: false, gameOverMessage: "", activeResearchProjectId: null },
+        player: { money: 10000, reputation: 0, risk: 5, researchPoints: 10 },
+        lab: {
+            slots: C.BASE_LAB_SLOTS,
+            equipment: [], 
+            activeFerments: [], 
+        },
+        resources: { ingredients: {}, products: {} },
+        knowledge: { recipes: [], research: [], discoveredVariations: {} },
+        market: { suppliers: [], demands: {}, contracts: [] },
+        log: []
+    };
+
+    // --- DOM ELEMENTS CACHE ---
+    const DOM = {}; // Populated in initDOMCache
+
+    // --- UTILITY FUNCTIONS ---
+    const U = { 
+        gid: () => `id_${GS.meta.nextId++}`,
+        rand: (min, max) => Math.random() * (max - min) + min,
+        randInt: (min, max) => Math.floor(U.rand(min, max + 1)),
+        clone: obj => JSON.parse(JSON.stringify(obj)), // Basic deep clone
+        clamp: (val, min, max) => Math.max(min, Math.min(val, max)),
+        sum: arr => arr.reduce((acc, x) => acc + x, 0),
+        avg: arr => arr.length ? U.sum(arr) / arr.length : 0,
+        formatMoney: val => `$${Math.floor(val).toLocaleString()}`,
+        formatDays: d => `${d} day${d === 1 ? '' : 's'}`,
+        formatQuality: q => q.toFixed(2)
+    };
+
+    // --- INITIALIZATION ---
+    function initDOMCache() {
+        DOM.money = document.getElementById('money');
+        DOM.reputation = document.getElementById('reputation');
+        DOM.risk = document.getElementById('risk');
+        DOM.day = document.getElementById('day');
+        DOM.labSlots = document.getElementById('lab_slots');
+        DOM.researchPoints = document.getElementById('research_points');
+        
+        DOM.navigationTabs = document.getElementById('navigation-tabs');
+        DOM.viewContents = document.querySelectorAll('.view-content');
+        DOM.mainViewArea = document.getElementById('main-view-area'); // For view-specific event delegation
+        
+        DOM.equipmentCount = document.getElementById('equipment-count');
+        DOM.equipmentList = document.getElementById('equipment-list');
+        DOM.activeFermentCount = document.getElementById('active-ferment-count');
+        DOM.labCapacityDisplay = document.getElementById('lab-capacity-display');
+        DOM.fermentList = document.getElementById('ferment-list');
+        
+        DOM.ingredientInventory = document.getElementById('ingredient-inventory');
+        DOM.productInventory = document.getElementById('product-inventory');
+        
+        DOM.marketDemandsList = document.getElementById('market-demands-list');
+        DOM.contractsList = document.getElementById('contracts-list');
+        
+        DOM.researchPointsDisplay = document.getElementById('research-points-display');
+        DOM.researchProjectsList = document.getElementById('research-projects-list');
+
+        DOM.logAreaContainer = document.getElementById('log-area-container'); // For log box
+        DOM.logArea = document.getElementById('log-area');
+        DOM.actionsBar = document.getElementById('actions-bar');
+        DOM.modalBackdrop = document.getElementById('modal-backdrop');
+        DOM.modalContent = document.getElementById('modal-content');
+
+        DOM.navigationTabs.addEventListener('click', (event) => {
+            const tab = event.target.closest('.nav-tab');
+            if (tab && !tab.classList.contains('active')) setActiveView(tab.dataset.view);
+        });
+        DOM.actionsBar.addEventListener('click', handleGlobalActionClick);
+        DOM.mainViewArea.addEventListener('click', handleViewActionClick); // Delegated listener
+    }
+
+    function initGameData() {
+        defineIngredient('Pearl Barley', { substrate: SUBSTRATE.GRAIN, rarity: RARITY.COMMON, basePrice: 5, tags: ['koji_substrate', 'starch_source'] });
+        defineIngredient('Yellow Peas', { substrate: SUBSTRATE.LEGUME, rarity: RARITY.COMMON, basePrice: 8, tags: ['miso_substrate', 'protein_source'] });
+        defineIngredient('Plums', { substrate: SUBSTRATE.FRUIT, rarity: RARITY.COMMON, basePrice: 3, tags: ['lacto_substrate', 'sugar_source'] });
+        defineIngredient('Koji Spores (A. oryzae)', { substrate: SUBSTRATE.OTHER, rarity: RARITY.UNCOMMON, basePrice: 50, tags: ['inoculant', 'koji_starter'] });
+        defineIngredient('Salt (NaCl)', { substrate: SUBSTRATE.OTHER, rarity: RARITY.COMMON, basePrice: 1, tags: ['preservative', 'osmotic_control'] });
+        defineIngredient('Beef Shin', { substrate: SUBSTRATE.MEAT, rarity: RARITY.UNCOMMON, basePrice: 18, tags: ['garum_substrate', 'protein_source'] });
+
+        addIngredientInstance('Pearl Barley', 20, U.rand(0.6, 0.8), 30);
+        addIngredientInstance('Plums', 10, U.rand(0.5, 0.7), 20);
+        addIngredientInstance('Koji Spores (A. oryzae)', 5, U.rand(0.7, 0.9), 90);
+        addIngredientInstance('Salt (NaCl)', 50, 0.95, 365);
+
+        addEquipmentInstance({ name: 'Basic Glass Jar', type: EQUIP.VESSEL, quality: 0.4, effects: { tempStability: 0.05, contaminationResist: 0.05 }, maintenanceDue: 180, cost: 50 });
+        addEquipmentInstance({ name: 'Old Cooler (Incubator)', type: EQUIP.INCUBATOR, quality: 0.3, effects: { tempStability: 0.2, humidityControl: 0.1, contaminationResist: 0.1 }, maintenanceDue: 90, cost: 100 });
+        GS.lab.slots = calculateLabSlots();
+
+        defineRecipe({
+            name: 'Lacto-Fermented Plums', type: FERMENT.LACTO,
+            desc: "Simple anaerobic fermentation of plums with salt. Produces a tangy, preserved fruit.",
+            stages: [{
+                name: "Primary Fermentation", duration: U.randInt(4, 7),
+                targetParams: { saltPercent: 2, temp: 22, anaerobic: true },
+                qualityImpact: { [QA.ACIDITY_LACTIC]: 0.8, [QA.SWEETNESS]: -0.2, [QA.FUNK_COMPLEXITY]: 0.3, [QA.MICROBIAL_SAFETY]: 0.6, [QA.PH]: -0.5 /* Lowers pH */ },
+                riskFactors: { contamination: 0.1, offFlavor: 0.2, spoilageHighPH: 0.1 }
+            }],
+            ingredients: [{ name: 'Plums', quantity: 10 }, { name: 'Salt (NaCl)', quantity: 0.2 }],
+            equipmentReq: [{ type: EQUIP.VESSEL, minQuality: 0.2 }],
+            output: { name: 'Lacto-Plums', quantity: 9, basePrice: 15, shelfLife: 60 },
+            rpYield: 5
+        });
+        defineRecipe({
+            name: 'Barley Koji', type: FERMENT.KOJI,
+            desc: "Cultivating Aspergillus oryzae on steamed barley. Critical for many advanced ferments. Produces strong amylase and protease enzymes.",
+            stages: [
+                { name: "Inoculation & Initial Growth", duration: 1, targetParams: { temp: 32, humidity: 80, aeration: 0.3 }, qualityImpact: { [QA.ENZYME_AMYLASE]: 0.4, [QA.ENZYME_PROTEASE]: 0.3, [QA.MICROBIAL_SAFETY]: 0.3, [QA.AROMA_PROFILE]: 0.2 }, riskFactors: { contamination: 0.3, overheating: 0.2, poorSporeGermination: 0.1 } },
+                { name: "Mycelial Development & Mixing", duration: 1, targetParams: { temp: 28, humidity: 75, aeration: 0.5 }, qualityImpact: { [QA.ENZYME_AMYLASE]: 0.6, [QA.ENZYME_PROTEASE]: 0.7, [QA.AROMA_PROFILE]: 0.5, [QA.MICROBIAL_SAFETY]: 0.2 }, riskFactors: { contamination: 0.2, poorEnzymeDev: 0.3, dryingOut: 0.1 } }
+            ],
+            ingredients: [{ name: 'Pearl Barley', quantity: 10 }, { name: 'Koji Spores (A. oryzae)', quantity: 1 }],
+            equipmentReq: [{ type: EQUIP.INCUBATOR, minQuality: 0.3 }, {type: EQUIP.KOJI_TRAY, minQuality: 0.2, optional: true}],
+            output: { name: 'Fresh Barley Koji', quantity: 9, isIntermediate: true, basePrice: 30, shelfLife: 5 },
+            rpYield: 15
+        });
+         defineRecipe({
+            name: 'Yellow Peaso (Miso-style)', type: FERMENT.MISO,
+            desc: "A savory paste from yellow peas and koji, aged for umami. Salt percentage is crucial for safety and flavor development.",
+            stages: [
+                { name: "Aging & Maturation", duration: U.randInt(60, 90), targetParams: { temp: 25, saltPercent: 5, anaerobic: true }, qualityImpact: { [QA.UMAMI]: 0.8, [QA.SWEETNESS]: 0.3, [QA.SALTINESS]: 0.7, [QA.FUNK_COMPLEXITY]: 0.6, [QA.MICROBIAL_SAFETY]: 0.5, [QA.TEXTURE]: 0.4, [QA.PH]: -0.2 }, riskFactors: { spoilageLowSalt: 0.2, offFlavorAnaerobicFail: 0.3, excessiveSourness: 0.1 } }
+            ],
+            ingredients: [ { name: 'Yellow Peas', quantity: 15 }, { name: 'Fresh Barley Koji', quantity: 10 }, { name: 'Salt (NaCl)', quantity: 1.25 } ],
+            equipmentReq: [{ type: EQUIP.VESSEL, minQuality: 0.4 }, {type: EQUIP.GRINDER, minQuality: 0.3, optional: true}, {type: EQUIP.SCALE, minQuality: 0.5}],
+            output: { name: 'Yellow Peaso', quantity: 20, basePrice: 80, shelfLife: 180 },
+            rpYield: 30, researchUnlockId: 'res_advanced_miso'
+        });
+
+        defineResearch({ id: 'res_koji_mastery', name: "Koji Mastery I", desc: "Refine Koji cultivation for better enzyme profiles.", costRP: 20, costMoney: 500, time: 3, unlocks: { techniques: ['koji_temp_stepdown'] } });
+        defineResearch({ id: 'res_advanced_miso', name: "Advanced Miso Techniques", desc: "Unlock non-soy misos.", costRP: 50, costMoney: 1500, time: 7, unlocks: { recipes: ['Yellow Peaso (Miso-style)'] }, prereqs: ['res_koji_mastery'] });
+
+        GS.market.suppliers.push({ name: 'Local Farm Co-op', reliability: 0.8, stock: [{ ingName: 'Plums', priceMod: 0.9, qltyMod: 0.05 }, { ingName: 'Yellow Peas', priceMod: 1, qltyMod: 0 }] });
+        GS.market.suppliers.push({ name: 'MycoSource Online', reliability: 0.95, stock: [{ ingName: 'Koji Spores (A. oryzae)', priceMod: 1, qltyMod: 0.2 }] });
+        GS.market.demands[FERMENT.LACTO] = 1.2; GS.market.demands[FERMENT.KOJI] = 0.8; GS.market.demands[FERMENT.MISO] = 0.5;
+
+        logEvent("Alchemist's Lab initialized. The pursuit of fermented perfection (and profit) awaits.", "system");
+    }
+
+    // --- LOGIC FUNCTIONS ---
+    function defineIngredient(name, props) {
+        const id = U.gid();
+        GS.resources.ingredients[name] = {
+            defId: id, name, totalQuantity: 0, instances: [],
+            substrate: props.substrate, rarity: props.rarity, basePrice: props.basePrice, tags: props.tags || [],
+            desc: props.desc || "A raw material."
+        };
+    }
+    function addIngredientInstance(name, quantity, quality, freshnessDays) {
+        if (!GS.resources.ingredients[name]) { logEvent(`Error: Ingredient type ${name} undefined.`, "danger"); return; }
+        const ingDef = GS.resources.ingredients[name];
+        ingDef.instances.push({ id: U.gid(), qty: quantity, qlty: U.clamp(quality, C.MIN_INGREDIENT_QUALITY, C.MAX_INGREDIENT_QUALITY), fresh: freshnessDays });
+        ingDef.totalQuantity += quantity;
+    }
+    function consumeIngredientInstances(ingredientName, requiredQuantity) { // More robust consumption
+        const ingDef = GS.resources.ingredients[ingredientName];
+        if (!ingDef || ingDef.totalQuantity < requiredQuantity) return null; // Not enough
+
+        let consumedAmount = 0;
+        let consumedInstancesDetails = []; // To store {qty, qlty} of consumed parts
+        ingDef.instances.sort((a, b) => a.fresh - b.fresh); // Use oldest first (FIFO)
+
+        for (let i = 0; i < ingDef.instances.length && consumedAmount < requiredQuantity; i++) {
+            const instance = ingDef.instances[i];
+            const canConsumeFromInstance = Math.min(instance.qty, requiredQuantity - consumedAmount);
+            
+            consumedInstancesDetails.push({ qty: canConsumeFromInstance, qlty: instance.qlty });
+            instance.qty -= canConsumeFromInstance;
+            consumedAmount += canConsumeFromInstance;
+        }
+        ingDef.instances = ingDef.instances.filter(inst => inst.qty > 0); // Remove empty instances
+        ingDef.totalQuantity -= consumedAmount;
+
+        // Calculate weighted average quality of consumed ingredients
+        let totalQualityPoints = 0;
+        consumedInstancesDetails.forEach(det => totalQualityPoints += det.qty * det.qlty);
+        const avgQualityConsumed = consumedAmount > 0 ? totalQualityPoints / consumedAmount : 0;
+        
+        return { consumedAmount, avgQuality: avgQualityConsumed };
+    }
+
+
+    function addEquipmentInstance(props) {
+        GS.lab.equipment.push({
+            id: U.gid(), ...props,
+            currentQuality: props.quality, 
+            maintenanceDue: props.maintenanceDue || U.randInt(90,200) 
+        });
+    }
+    function calculateLabSlots() {
+        let slots = C.BASE_LAB_SLOTS;
+        GS.lab.equipment.forEach(eq => {
+            if (eq.type === EQUIP.INCUBATOR) slots += (eq.currentQuality * 1); // Good incubators add full slots
+            else if (eq.type === EQUIP.VESSEL) slots += (eq.currentQuality * 0.5);
+            if (eq.effects && eq.effects.labSlots) slots += eq.effects.labSlots;
+        });
+        return Math.floor(slots);
+    }
+
+    function defineRecipe(props) {
+        const id = props.id || U.gid();
+        GS.knowledge.recipes.push({ ...props, id, unlocked: !props.researchUnlockId });
+    }
+    function defineResearch(props) {
+        const id = props.id || U.gid();
+        GS.knowledge.research.push({ ...props, id, completed: false, progressDays: 0 });
+    }
+
+    function canAffordRecipe(recipe) {
+        for (const ingReq of recipe.ingredients) {
+            if (!GS.resources.ingredients[ingReq.name] || GS.resources.ingredients[ingReq.name].totalQuantity < ingReq.quantity) {
+                return false; 
+            }
+        }
+        for (const eqReq of recipe.equipmentReq) {
+            if (!GS.lab.equipment.some(e => e.type === eqReq.type && e.currentQuality >= eqReq.minQuality && !e.inUseBy)) {
+                 return false; 
+            }
+        }
+        return true;
+    }
+    function getSuitableEquipmentForRecipe(recipe) { // Returns array of {type, equipmentId}
+        let assignedEquipment = [];
+        let availableLabEquipment = U.clone(GS.lab.equipment).filter(e => !e.inUseBy); // Work with a copy
+
+        for (const eqReq of recipe.equipmentReq) {
+            const foundEq = availableLabEquipment.find(e => e.type === eqReq.type && e.currentQuality >= eqReq.minQuality);
+            if (foundEq) {
+                assignedEquipment.push({type: eqReq.type, id: foundEq.id, name: foundEq.name, quality: foundEq.currentQuality});
+                // Mark as "temporarily used" for this check if multiple of same type needed
+                const indexInAvailable = availableLabEquipment.findIndex(e => e.id === foundEq.id);
+                if(indexInAvailable > -1) availableLabEquipment.splice(indexInAvailable, 1);
+            } else if (!eqReq.optional) {
+                return null; // Required equipment not found
+            }
+        }
+        return assignedEquipment;
+    }
+
+
+    function startFermentationProcess(recipeId, assignedEquipmentIdsMap) { // assignedEquipmentIdsMap = {EQUIP_TYPE: equipment_id}
+        const recipe = GS.knowledge.recipes.find(r => r.id === recipeId);
+        // Validation already happened in modal or calling function
+        
+        let consumedIngredientsInfo = [];
+        for (const ingReq of recipe.ingredients) {
+            const consumed = consumeIngredientInstances(ingReq.name, ingReq.quantity);
+            if (!consumed || consumed.consumedAmount < ingReq.quantity) {
+                logEvent(`Critical error: Insufficient ${ingReq.name} despite earlier checks.`, "danger");
+                // TODO: Rollback any previously consumed ingredients for this attempt if complex
+                return false; 
+            }
+            consumedIngredientsInfo.push({name: ingReq.name, qty: consumed.consumedAmount, avgQuality: consumed.avgQuality});
+        }
+        const overallIngredientQuality = U.avg(consumedIngredientsInfo.map(info => info.avgQuality));
+
+        const ferment = {
+            id: U.gid(), recipeId, name: `${recipe.name} #${U.randInt(100,999)}`,
+            ingredientsUsed: consumedIngredientsInfo, 
+            equipmentUsed: assignedEquipmentIdsMap, // Array of {type, id, name, quality}
+            currentStageIndex: 0, stageProgress: 0, totalProgress: 0,
+            params: {}, qualityProfile: {}, // Initialize quality profile based on QA enum
+            risks: { contamination: 0, spoilage: 0, offFlavor: 0, processFailure: 0, parameterDrift: 0 },
+            startDate: GS.meta.day,
+            baseSafety: C.BASE_SAFETY_SCORE + (overallIngredientQuality - 0.5) * 0.2 // Better ingredients, safer start
+        };
+        Object.values(QA).forEach(aspect => ferment.qualityProfile[aspect] = 0.3 + overallIngredientQuality * 0.2); // Base for all aspects
+        ferment.qualityProfile[QA.MICROBIAL_SAFETY] = ferment.baseSafety;
+        ferment.qualityProfile[QA.PH] = 7.0; // Start neutral, ferments will change this
+        ferment.qualityProfile[QA.WATER_ACTIVITY] = 0.99;
+
+
+        assignedEquipmentIdsMap.forEach(eqInfo => {
+            const labEq = GS.lab.equipment.find(e => e.id === eqInfo.id);
+            if(labEq) labEq.inUseBy = ferment.id;
+        });
+        GS.lab.activeFerments.push(ferment);
+        GS.player.risk += U.randInt(1,Math.max(1, 5 - Math.floor(overallIngredientQuality*3) )); // Higher quality ingredients, less initial risk
+        logEvent(`Started: ${ferment.name} (Recipe: ${recipe.name}). IngQ: ${U.formatQuality(overallIngredientQuality)}`, "success");
+        return true;
+    }
+
+    function advanceDailyFermentations() {
+        GS.lab.activeFerments.forEach(f => {
+            const recipe = GS.knowledge.recipes.find(r => r.id === f.recipeId);
+            if (!recipe) { logEvent(`Error: Recipe for ferment ${f.name} not found.`, "danger"); f.risks.processFailure +=1; return; }
+            
+            let currentStageDef = recipe.stages[f.currentStageIndex];
+            // If current stage is preparation, try to advance past it instantly if not already done
+            while(currentStageDef && currentStageDef.isPreparation) {
+                logEvent(`${f.name} completing preparation stage: "${currentStageDef.name}".`, "info");
+                f.currentStageIndex++;
+                f.stageProgress = 0;
+                if (f.currentStageIndex >= recipe.stages.length) { // Ferment might *only* be prep stages (unlikely but handle)
+                    finishFermentation(f.id); return; // Exit forEach for this ferment
+                }
+                currentStageDef = recipe.stages[f.currentStageIndex]; // Get next actual fermenting stage
+            }
+            if (!currentStageDef) { // All stages (including prep) are done
+                 finishFermentation(f.id); return; 
+            }
+
+
+            const dailyStageProgress = 1 / currentStageDef.duration;
+            f.stageProgress += dailyStageProgress;
+            
+            // Calculate total progress more accurately
+            let completedStageDurations = 0;
+            for(let i=0; i < f.currentStageIndex; i++) {
+                if(!recipe.stages[i].isPreparation) completedStageDurations += recipe.stages[i].duration;
+            }
+            const currentStageEffectiveProgress = f.stageProgress * currentStageDef.duration;
+            const totalRecipeDuration = U.sum(recipe.stages.filter(s => !s.isPreparation).map(s => s.duration));
+            f.totalProgress = totalRecipeDuration > 0 ? (completedStageDurations + currentStageEffectiveProgress) / totalRecipeDuration : 1;
+
+
+            // --- Parameter Control & Effects ---
+            const activeEquipmentEffects = f.equipmentUsed.reduce((acc, eqInfo) => {
+                const eqData = GS.lab.equipment.find(e => e.id === eqInfo.id);
+                if (eqData) {
+                    Object.entries(eqData.effects).forEach(([eff, val]) => acc[eff] = (acc[eff] || 0) + (val * eqData.currentQuality));
+                }
+                return acc;
+            }, { tempStability: 0.05, humidityControl: 0.05, contaminationResist: 0.05, aerationControl: 0.05 }); // Base minimums
+
+
+            Object.entries(currentStageDef.targetParams).forEach(([paramKey, targetValue]) => {
+                let actualValue = targetValue;
+                let stabilityEffect = 0.5; // Default if no specific equipment effect
+                let driftMagnitude = 1; // Base drift
+
+                if (paramKey === 'temp') { stabilityEffect = activeEquipmentEffects.tempStability; driftMagnitude = 2; }
+                else if (paramKey === 'humidity') { stabilityEffect = activeEquipmentEffects.humidityControl; driftMagnitude = 10;}
+                else if (paramKey === 'aeration') { stabilityEffect = activeEquipmentEffects.aerationControl; driftMagnitude = 0.2;}
+                else if (paramKey === 'saltPercent' || paramKey === 'anaerobic') { // These are usually set and forget, less daily drift
+                    f.params[paramKey] = targetValue; return; 
+                }
+
+                actualValue += U.rand(-driftMagnitude, driftMagnitude) * (1 - stabilityEffect);
+                f.params[paramKey] = U.clamp(actualValue, targetValue - driftMagnitude*2, targetValue + driftMagnitude*2); // Clamp drift somewhat
+
+                const deviation = Math.abs(f.params[paramKey] - targetValue);
+                const normalizedDeviation = deviation / driftMagnitude; // 0-1 scale of how bad deviation is relative to possible
+
+                if (normalizedDeviation > 0.25) { // If deviation is more than 25% of typical drift
+                    f.risks.parameterDrift += normalizedDeviation * 0.1;
+                    Object.entries(currentStageDef.qualityImpact).forEach(([aspect, impactFactor]) => {
+                        // More deviation = stronger negative impact, less deviation = slight positive or neutral
+                        const qualityChange = impactFactor * (0.01 - normalizedDeviation * 0.05); // Small positive if perfect, larger negative if bad
+                        f.qualityProfile[aspect] = U.clamp((f.qualityProfile[aspect] || 0.5) + qualityChange, 0, 1);
+                    });
+                    if (U.rand(0,1) < 0.1) logEvent(`${f.name}: ${paramKey} drifting! Target: ${targetValue}, Actual: ${f.params[paramKey].toFixed(1)}`, "warning");
+                }
+            });
+
+            // Risk accumulation based on stage risks and overall contamination resist
+            Object.entries(currentStageDef.riskFactors).forEach(([riskType, factor]) => {
+                let mitigation = (riskType === 'contamination') ? activeEquipmentEffects.contaminationResist : 0.1; // Generic mitigation for other risks
+                f.risks[riskType] = (f.risks[riskType] || 0) + factor * dailyStageProgress * (1 - mitigation);
+            });
+
+
+            if (f.stageProgress >= 0.999) { // Stage complete
+                logEvent(`${f.name} completed stage: "${currentStageDef.name}".`, "info");
+                f.currentStageIndex++;
+                f.stageProgress = 0;
+                if (f.currentStageIndex >= recipe.stages.length) {
+                    finishFermentation(f.id);
+                }
+            }
+        });
+    }
+    
+    function finishFermentation(fermentId) {
+        const fIndex = GS.lab.activeFerments.findIndex(f => f.id === fermentId);
+        if (fIndex === -1) return;
+        const f = GS.lab.activeFerments[fIndex];
+        const recipe = GS.knowledge.recipes.find(r => r.id === f.recipeId);
+
+        let finalQProfile = U.clone(f.qualityProfile); // Start with accumulated potential
+        let safetyScore = f.baseSafety;
+
+        // Apply risk impacts more directly
+        safetyScore -= (f.risks.contamination + f.risks.spoilage) * 0.4;
+        safetyScore -= f.risks.processFailure * 0.5;
+        safetyScore += f.risks.parameterDrift * 0.05; // Good parameter control can slightly improve perceived safety/stability
+        finalQProfile[QA.MICROBIAL_SAFETY] = U.clamp(safetyScore, 0, 1);
+
+        Object.entries(recipe.stages[recipe.stages.length-1].qualityImpact).forEach(([aspect, impactFactor]) => {
+            if (finalQProfile[aspect] && aspect !== QA.MICROBIAL_SAFETY) { // Don't let other risks directly hit safety again
+                let riskImpact = (f.risks.offFlavor + f.risks.parameterDrift/2) * impactFactor * 0.15;
+                finalQProfile[aspect] = U.clamp(finalQProfile[aspect] - riskImpact, 0, 1);
+            }
+        });
+        
+        // Simulate pH based on acidity aspects more realistically
+        let pH = 7.0;
+        pH -= (finalQProfile[QA.ACIDITY_LACTIC] || 0) * 3.0; // Lactic acid is strong
+        pH -= (finalQProfile[QA.ACIDITY_ACETIC] || 0) * 2.5; // Acetic acid also strong
+        pH += (finalQProfile[QA.UMAMI] || 0) * 0.2; // Umami compounds can buffer slightly
+        finalQProfile[QA.PH] = U.clamp(pH, 2.0, 7.5);
+
+        finalQProfile[QA.WATER_ACTIVITY] = U.clamp(0.99 - (finalQProfile[QA.SALTINESS]||0)*0.15 - (finalQProfile[QA.SWEETNESS]||0)*0.1, 0.6, 0.99);
+        
+        let report = `Lab Report for ${f.name} (Recipe: ${recipe.name}):\n`;
+        Object.entries(finalQProfile).forEach(([asp,val]) => report += `  - ${asp}: ${U.formatQuality(val)}\n`);
+        const avgSensoryQuality = U.avg(Object.entries(finalQProfile)
+                                .filter(([k,_]) => ![QA.MICROBIAL_SAFETY, QA.PH, QA.WATER_ACTIVITY, QA.ENZYME_AMYLASE, QA.ENZYME_PROTEASE].includes(k))
+                                .map(([_,v]) => v));
+        report += `  - Average Sensory Quality: ${U.formatQuality(avgSensoryQuality)}\n`;
+
+
+        if (finalQProfile[QA.MICROBIAL_SAFETY] < 0.4 || (finalQProfile[QA.PH] > 4.6 && recipe.type === FERMENT.LACTO && !recipe.output.isIntermediate)) {
+            logEvent(`CRITICAL FAILURE: ${f.name} is unsafe and discarded! Check report.`, "danger");
+            GS.player.reputation = Math.max(0, GS.player.reputation - U.randInt(3,8));
+            GS.player.risk += U.randInt(3,7);
+        } else {
+            const output = recipe.output;
+            if (output.isIntermediate) {
+                addIngredientInstance(output.name, output.quantity, avgSensoryQuality, output.shelfLife || U.randInt(3,7));
+                logEvent(`Produced ${output.quantity}x ${output.name} (intermediate). AvgQ: ${U.formatQuality(avgSensoryQuality)}`, "success");
+            } else {
+                addProductInstance(output.name, output.quantity, finalQProfile, output.shelfLife || U.randInt(30,180));
+                logEvent(`Produced ${output.quantity}x ${output.name}. AvgSensoryQ: ${U.formatQuality(avgSensoryQuality)}`, "success");
+                GS.player.reputation += U.randInt(1,3) + Math.floor(avgSensoryQuality * 5 + finalQProfile[QA.MICROBIAL_SAFETY] * 2);
+            }
+            GS.player.researchPoints += recipe.rpYield + Math.floor(avgSensoryQuality * recipe.rpYield * 0.5 + finalQProfile[QA.MICROBIAL_SAFETY] * recipe.rpYield * 0.3);
+        }
+        logEvent(report, "lab_report");
+
+        f.equipmentUsed.forEach(eqInfo => {
+            const labEq = GS.lab.equipment.find(e => e.id === eqInfo.id);
+            if(labEq) labEq.inUseBy = null;
+        });
+        GS.lab.activeFerments.splice(fIndex, 1);
+        updateUI();
+    }
+    function addProductInstance(name, quantity, qualityProfile, shelfLifeDays) {
+        if (!GS.resources.products[name]) {
+            const recipe = GS.knowledge.recipes.find(r => r.output.name === name && !r.output.isIntermediate);
+            GS.resources.products[name] = { defId: U.gid(), name, totalQuantity: 0, instances: [], basePrice: recipe ? recipe.output.basePrice : 50 };
+        }
+        const prodDef = GS.resources.products[name];
+        prodDef.instances.push({ id: U.gid(), qty: quantity, qProfile, shelf: shelfLifeDays, mfgDay: GS.meta.day });
+        prodDef.totalQuantity += quantity;
+    }
+
+    // --- UI RENDERING ---
+    function setActiveView(viewId) {
+        DOM.viewContents.forEach(vc => vc.classList.remove('active'));
+        const activeView = document.getElementById(`view-${viewId}`);
+        if (activeView) activeView.classList.add('active');
+        
+        DOM.navigationTabs.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.view === viewId);
+        });
+        updateUIView(viewId); // Render specific view
+    }
+    
+    function updateUI() { // Global stats and log update
+        if (GS.meta.gameOver) { showGameOverModal(); return; }
+        DOM.money.textContent = U.formatMoney(GS.player.money);
+        DOM.reputation.textContent = GS.player.reputation;
+        DOM.risk.textContent = `${GS.player.risk.toFixed(0)} (${calculateRiskLevelText(GS.player.risk)})`;
+        DOM.day.textContent = GS.meta.day;
+        GS.lab.slots = calculateLabSlots();
+        DOM.labSlots.textContent = `${GS.lab.activeFerments.length}/${GS.lab.slots}`;
+        DOM.researchPoints.textContent = GS.player.researchPoints;
+        
+        DOM.logArea.innerHTML = '';
+        const logToShow = GS.log.slice(-C.MAX_LOG_MESSAGES);
+        logToShow.forEach(entry => {
+            const p = document.createElement('p');
+            p.className = entry.type;
+            p.textContent = `D${entry.day}: ${entry.msg}`;
+            DOM.logArea.appendChild(p);
+        });
+        if(DOM.logArea.children.length > 0) DOM.logArea.scrollTop = DOM.logArea.scrollHeight;
+
+        // Update the currently active view
+        const currentActiveViewTab = DOM.navigationTabs.querySelector('.nav-tab.active');
+        if (currentActiveViewTab) updateUIView(currentActiveViewTab.dataset.view);
+    }
+
+    function updateUIView(viewId) { // Renders content for a specific view
+        switch(viewId) {
+            case 'lab': renderLabView(); break;
+            case 'inventory': renderInventoryView(); break;
+            case 'market': renderMarketView(); break;
+            case 'research': renderResearchView(); break;
+        }
+    }
+
+    function calculateRiskLevelText(level) {
+        if (level < 20) return 'Minimal'; if (level < 40) return 'Low';
+        if (level < 60) return 'Moderate'; if (level < 80) return 'High';
+        return 'Critical!';
+    }
+
+    function renderLabView() {
+        DOM.equipmentCount.textContent = GS.lab.equipment.length;
+        DOM.equipmentList.innerHTML = GS.lab.equipment.map(eq => `<li><div><span class="item-name">${eq.name}</span> (Type: ${eq.type}, Q: ${U.formatQuality(eq.currentQuality)}) <span class="item-details">${eq.inUseBy ? `In Use by ${GS.lab.activeFerments.find(f=>f.id===eq.inUseBy)?.name || 'Unknown'}` : 'Available'} | Maint. in: ${U.formatDays(eq.maintenanceDue)}</span></div></li>`).join('') || '<li>No equipment.</li>';
+        
+        DOM.activeFermentCount.textContent = GS.lab.activeFerments.length;
+        DOM.labCapacityDisplay.textContent = GS.lab.slots;
+        DOM.fermentList.innerHTML = GS.lab.activeFerments.map(f => {
+            const recipe = GS.knowledge.recipes.find(r => r.id === f.recipeId);
+            const totalRecipeDuration = U.sum(recipe.stages.filter(s => !s.isPreparation).map(s => s.duration));
+            const daysElapsed = (f.totalProgress * totalRecipeDuration);
+            const daysRemaining = Math.max(0, Math.ceil(totalRecipeDuration - daysElapsed));
+            return `<li>
+                        <div><span class="item-name">${f.name}</span> (${recipe.name})
+                             <span class="item-details">Progress: ${Math.floor(f.totalProgress*100)}% | ${U.formatDays(daysRemaining)} left</span>
+                        </div>
+                        <div class="item-list-actions"><button class="secondary item-list-actions" data-action="inspect_ferment" data-id="${f.id}">Inspect</button></div>
+                    </li>`;
+        }).join('') || '<li>No active fermentations.</li>';
+    }
+    function renderInventoryView() {
+        DOM.ingredientInventory.innerHTML = Object.values(GS.resources.ingredients).map(ing => {
+            if (ing.totalQuantity === 0) return '';
+            let instDetails = ing.instances.length > 3 ? `${ing.instances.length} batches` : ing.instances.map(i => `(qty:${i.qty} q:${U.formatQuality(i.qlty)} f:${i.fresh}d)`).join(', ');
+            return `<li><div><span class="item-name">${ing.name}</span>: ${ing.totalQuantity} <span class="item-details">${instDetails}</span></div></li>`;
+        }).join('') || '<li>No ingredients.</li>';
+
+        DOM.productInventory.innerHTML = Object.values(GS.resources.products).map(prod => {
+            if (prod.totalQuantity === 0) return '';
+            let avgQ = 0;
+            if (prod.instances.length > 0) {
+                avgQ = U.avg(prod.instances.map(i => U.avg(Object.entries(i.qProfile).filter(([k,_]) => ![QA.MICROBIAL_SAFETY, QA.PH, QA.WATER_ACTIVITY].includes(k)).map(([_,v]) => v)) ));
+            }
+            let instDetails = prod.instances.length > 3 ? `${prod.instances.length} batches` : prod.instances.map(i => `(qty:${i.qty} shelf:${i.shelf}d)`).join(', ');
+            return `<li><div><span class="item-name">${prod.name}</span>: ${prod.totalQuantity} (AvgQ: ${U.formatQuality(avgQ)}) <span class="item-details">${instDetails}</span></div></li>`;
+        }).join('') || '<li>No products.</li>';
+    }
+    function renderMarketView() {
+        DOM.marketDemandsList.innerHTML = Object.entries(GS.market.demands)
+            .map(([item, factor]) => `<li><span class="item-name">${item}</span> <span class="item-details">Demand Factor: ${factor.toFixed(1)}x</span></li>`)
+            .join('') || '<li>No specific market demands noted.</li>';
+        DOM.contractsList.innerHTML = GS.market.contracts.length > 0 ? GS.market.contracts.map(c => `<li>CONTRACT TODO</li>`).join('') : '<li>No contracts available.</li>';
+    }
+    function renderResearchView() {
+        DOM.researchPointsDisplay.textContent = GS.player.researchPoints;
+        DOM.researchProjectsList.innerHTML = GS.knowledge.research.map(r => {
+            let status = '';
+            let canStart = false;
+            if (r.completed) status = '<span style="color:var(--accent-green)">(Completed)</span>';
+            else if (GS.meta.activeResearchProjectId === r.id) status = `<span style="color:var(--accent-yellow)">(In Progress: ${r.progressDays}/${r.time}d)</span>`;
+            else {
+                canStart = GS.player.researchPoints >= r.costRP && GS.player.money >= r.costMoney && 
+                           (r.prereqs ? r.prereqs.every(prId => GS.knowledge.research.find(pr=>pr.id===prId)?.completed) : true);
+                status = canStart ? '' : '<span style="color:#8b949e">(Requirements unmet)</span>';
+            }
+            let prereqText = r.prereqs ? `Req: ${r.prereqs.map(prId => GS.knowledge.research.find(p=>p.id===prId)?.name || 'Unknown').join(', ')}` : '';
+
+            return `<li>
+                        <div><span class="item-name">${r.name}</span> ${status}
+                             <span class="item-details">${r.desc} | Cost: ${r.costRP}RP, ${U.formatMoney(r.costMoney)}, ${U.formatDays(r.time)}. ${prereqText}</span>
+                        </div>
+                        ${!r.completed && GS.meta.activeResearchProjectId !== r.id && canStart ? `<div class="item-list-actions"><button class="secondary item-list-actions" data-action="start_research" data-id="${r.id}">Start</button></div>` : ''}
+                    </li>`;
+        }).join('') || '<li>No research projects defined.</li>';
+    }
+
+    function logEvent(msg, type = "info") {
+        GS.log.push({ day: GS.meta.day, msg, type });
+        if (DOM.logArea) updateUI(); // Simplified: just call global update which will re-render log
+    }
+
+    // --- MODALS & ACTIONS ---
+    function openModal(title, contentHTML, buttonsSpec = [{ text: 'Close', action: closeModal, type: 'secondary' }]) {
+        DOM.modalContent.innerHTML = `<h3>${title}</h3><div class="modal-body-content">${contentHTML}</div>`;
+        const buttonGroup = document.createElement('div');
+        buttonGroup.className = 'modal-button-group';
+        buttonsSpec.forEach(spec => {
+            const btn = document.createElement('button');
+            btn.textContent = spec.text;
+            btn.className = `modal-button ${spec.type || ''}`;
+            btn.onclick = spec.action;
+            if (spec.id) btn.id = spec.id;
+            if (spec.disabled) btn.disabled = true;
+            buttonGroup.appendChild(btn);
+        });
+        DOM.modalContent.appendChild(buttonGroup);
+        DOM.modalBackdrop.style.display = 'flex';
+    }
+    function closeModal() { DOM.modalBackdrop.style.display = 'none'; DOM.modalContent.innerHTML = ''; }
+
+    function showStartFermentationModal() {
+        let recipeOptions = GS.knowledge.recipes.filter(r => r.unlocked)
+            .map(r => `<option value="${r.id}">${r.name}</option>`) // Affordability check will happen on select
+            .join('');
+        
+        let content = `<label for="recipe-select">Select Recipe:</label><select id="recipe-select"><option value="">--Choose Recipe--</option>${recipeOptions}</select>
+                       <div id="recipe-details-area" class="item-card" style="margin-top:10px; min-height:80px;">Select a recipe to see details and assign equipment.</div>
+                       <div id="equipment-assignment-area" style="margin-top:10px;"></div>`;
+        
+        openModal('Start New Fermentation Process', content, [
+            { text: 'Start Process', id: 'modal-confirm-start-ferment', action: () => {
+                const recipeId = document.getElementById('recipe-select').value;
+                const recipe = GS.knowledge.recipes.find(r => r.id === recipeId);
+                if (!recipe) { logEvent("No recipe selected.", "warning"); return; }
+
+                let assignedEquipmentMap = [];
+                let allEquipmentAssigned = true;
+                recipe.equipmentReq.forEach(req => {
+                    const selectEl = document.getElementById(`equip-assign-${req.type.replace(/\s+/g, '_')}`);
+                    if (selectEl && selectEl.value) {
+                        const eqData = GS.lab.equipment.find(e=>e.id === selectEl.value);
+                        assignedEquipmentMap.push({type: req.type, id: selectEl.value, name: eqData.name, quality: eqData.currentQuality});
+                    } else if (!req.optional) {
+                        allEquipmentAssigned = false;
+                    }
+                });
+
+                if (!allEquipmentAssigned) { logEvent("Not all required equipment assigned.", "warning"); return; }
+                if (!canAffordRecipe(recipe)) { logEvent(`Cannot afford ingredients for ${recipe.name}.`, "warning"); return; }
+
+
+                if(startFermentationProcess(recipeId, assignedEquipmentMap)) {
+                    closeModal();
+                    updateUI();
+                }
+            }, disabled: true }, // Initially disabled
+            { text: 'Cancel', action: closeModal, type: 'secondary' }
+        ]);
+
+        const recipeSelectEl = document.getElementById('recipe-select');
+        const recipeDetailsArea = document.getElementById('recipe-details-area');
+        const equipmentAssignmentArea = document.getElementById('equipment-assignment-area');
+        const confirmButton = document.getElementById('modal-confirm-start-ferment');
+
+        recipeSelectEl.onchange = () => {
+            const recipeId = recipeSelectEl.value;
+            const recipe = GS.knowledge.recipes.find(r => r.id === recipeId);
+            equipmentAssignmentArea.innerHTML = ''; // Clear previous
+            confirmButton.disabled = true;
+
+            if (recipe) {
+                let detailsHTML = `<h4>${recipe.name}</h4><p>${recipe.desc}</p><strong>Ingredients:</strong><ul>`;
+                recipe.ingredients.forEach(ing => detailsHTML += `<li>${ing.name}: ${ing.quantity} units</li>`);
+                detailsHTML += `</ul><strong>Equipment Required:</strong><ul>`;
+                
+                let canMeetAllRequirements = true;
+                let eqAssignmentHTML = '';
+
+                if (recipe.equipmentReq && recipe.equipmentReq.length > 0) {
+                    recipe.equipmentReq.forEach(req => {
+                        detailsHTML += `<li>${req.type} (Min Q: ${U.formatQuality(req.minQuality)}) ${req.optional ? '(Optional)' : ''}</li>`;
+                        const availableEq = GS.lab.equipment.filter(e => e.type === req.type && e.currentQuality >= req.minQuality && !e.inUseBy);
+                        if (availableEq.length > 0) {
+                            eqAssignmentHTML += `<label for="equip-assign-${req.type.replace(/\s+/g, '_')}">Assign ${req.type}:</label><select id="equip-assign-${req.type.replace(/\s+/g, '_')}">`;
+                            availableEq.forEach(eq => eqAssignmentHTML += `<option value="${eq.id}">${eq.name} (Q: ${U.formatQuality(eq.currentQuality)})</option>`);
+                            eqAssignmentHTML += `</select>`;
+                        } else if (!req.optional) {
+                            eqAssignmentHTML += `<p style="color:var(--accent-red)">No suitable ${req.type} available!</p>`;
+                            canMeetAllRequirements = false;
+                        } else {
+                             eqAssignmentHTML += `<p>Optional ${req.type} not assigned.</p>`;
+                        }
+                    });
+                } else {
+                     detailsHTML += `<li>None</li>`;
+                }
+                detailsHTML += `</ul>`;
+                recipeDetailsArea.innerHTML = detailsHTML;
+                equipmentAssignmentArea.innerHTML = eqAssignmentHTML;
+
+                if (canMeetAllRequirements && canAffordRecipe(recipe)) { // Also check ingredients again
+                    confirmButton.disabled = false;
+                } else if (!canAffordRecipe(recipe)) {
+                    recipeDetailsArea.innerHTML += `<p style="color:var(--accent-red)">Insufficient ingredients!</p>`;
+                }
+
+
+            } else {
+                recipeDetailsArea.textContent = 'Select a recipe to see details.';
+            }
+        };
+    }
+    
+    function showInspectFermentModal(fermentId) {
+        const f = GS.lab.activeFerments.find(fer => fer.id === fermentId);
+        if (!f) { logEvent("Could not find ferment to inspect.", "warning"); return; }
+        const recipe = GS.knowledge.recipes.find(r => r.id === f.recipeId);
+
+        let content = `<div class="grid-2col"><div><h4>Details</h4>
+                       <p><strong>Batch:</strong> ${f.name}</p>
+                       <p><strong>Recipe:</strong> ${recipe.name}</p>
+                       <p><strong>Equipment:</strong> ${f.equipmentUsed.map(e=>e.name + ' (Q:'+U.formatQuality(e.quality)+')').join(', ') || 'None'}</p>
+                       <p><strong>Progress:</strong> ${Math.floor(f.totalProgress*100)}%</p>
+                       <p><strong>Current Stage:</strong> ${recipe.stages[f.currentStageIndex]?.name || 'Finished'}</p>
+                       </div><div><h4>Current Parameters (Simulated)</h4>`;
+        Object.entries(f.params).forEach(([key,val]) => content += `<p><strong>${key}:</strong> ${typeof val === 'number' ? val.toFixed(2) : val}</p>`);
+        content += `</div></div><hr><h4>Quality Potential</h4><ul>`;
+        Object.entries(f.qualityProfile).forEach(([asp,val]) => content += `<li class="quality-aspect">${asp}: <span class="val">${U.formatQuality(val)}</span></li>`);
+        content += `</ul><hr><h4>Accumulated Risks</h4><ul>`;
+        Object.entries(f.risks).forEach(([risk,val]) => content += `<li class="quality-aspect">${risk}: <span class="val">${val.toFixed(2)}</span></li>`);
+        content += `</ul>`;
+        
+        openModal(`Inspect: ${f.name}`, content);
+    }
+
+    function showManageEquipmentModal() {
+        let content = `<h4>Current Equipment:</h4>`;
+        if (GS.lab.equipment.length > 0) {
+            content += `<ul>${GS.lab.equipment.map(eq => `<li><span class="item-name">${eq.name}</span> (Q: ${U.formatQuality(eq.currentQuality)}) <span class="item-details">Maint. in ${U.formatDays(eq.maintenanceDue)} | ${eq.inUseBy ? 'In Use' : 'Available'}</span></li>`).join('')}</ul>`;
+        } else { content += `<p>No equipment owned.</p>`; }
+        
+        content += `<hr><h4>Purchase New Equipment:</h4>`;
+        // TODO: Define purchasable equipment list, perhaps unlocked by research
+        const purchasable = [
+            { name: 'Basic Glass Jar', type: EQUIP.VESSEL, quality: 0.4, effects: { tempStability: 0.05, contaminationResist: 0.05 }, cost: 50 },
+            { name: 'Standard Incubator', type: EQUIP.INCUBATOR, quality: 0.6, effects: { tempStability: 0.5, humidityControl: 0.4, contaminationResist: 0.3 }, cost: 500 },
+            { name: 'Precision Scale', type: EQUIP.SCALE, quality: 0.9, effects: { measurementAccuracy: 0.95 }, cost: 150 },
+            { name: 'Koji Tray (Cedar)', type: EQUIP.KOJI_TRAY, quality: 0.7, effects: { aerationControl: 0.2, humidityRetention: 0.1 }, cost: 80 },
+        ];
+        content += `<ul>${purchasable.map(p => `<li><div><span class="item-name">${p.name}</span> (Q: ${U.formatQuality(p.quality)}) <span class="item-details">Cost: ${U.formatMoney(p.cost)}</span></div> <div class="item-list-actions"><button class="secondary item-list-actions" data-action="buy_equipment" data-name="${p.name}">Buy</button></div></li>`).join('')}</ul>`;
+
+        openModal('Manage Lab Equipment', content);
+        // Event listener for buy_equipment will be handled by mainViewArea delegated listener
+    }
+    
+    function showResearchModal() {
+        let content = `<h4>Available Projects (RP: ${GS.player.researchPoints})</h4><ul>`;
+        let availableCount = 0;
+        GS.knowledge.research.forEach(r => {
+            let status = ''; let canStart = false;
+            if (r.completed) status = '<span style="color:var(--accent-green)">(Completed)</span>';
+            else if (GS.meta.activeResearchProjectId === r.id) status = `<span style="color:var(--accent-yellow)">(In Progress: ${r.progressDays}/${r.time}d)</span>`;
+            else {
+                canStart = GS.player.researchPoints >= r.costRP && GS.player.money >= r.costMoney && 
+                           (r.prereqs ? r.prereqs.every(prId => GS.knowledge.research.find(pr=>pr.id===prId)?.completed) : true);
+                status = canStart ? '' : '<span style="color:#8b949e">(Req. unmet)</span>';
+            }
+            if(!r.completed || GS.meta.activeResearchProjectId === r.id) availableCount++; // Show if not completed or in progress
+
+            content += `<li>
+                        <div><span class="item-name">${r.name}</span> ${status}
+                             <span class="item-details">${r.desc} | Cost: ${r.costRP}RP, ${U.formatMoney(r.costMoney)}, ${U.formatDays(r.time)}. 
+                             ${r.prereqs ? `Req: ${r.prereqs.map(prId => GS.knowledge.research.find(p=>p.id===prId)?.name || 'Unknown').join(', ')}` : ''}
+                             </span>
+                        </div>
+                        ${!r.completed && GS.meta.activeResearchProjectId !== r.id && canStart ? `<div class="item-list-actions"><button class="secondary item-list-actions" data-action="start_research_project" data-id="${r.id}">Start</button></div>` : ''}
+                    </li>`;
+        });
+        if(availableCount === 0) content += "<li>No further research projects currently available.</li>";
+        content += `</ul>`;
+        openModal('Research & Development', content);
+    }
+
+
+    // --- EVENT HANDLERS ---
+    function handleGlobalActionClick(event) {
+        const button = event.target.closest('button');
+        if (!button || GS.meta.gameOver) return;
+        const action = button.dataset.action;
+        switch (action) {
+            case 'next_day': handleNextDay(); break;
+        }
+    }
+    function handleViewActionClick(event) { // Delegated from mainViewArea
+        const button = event.target.closest('button');
+        if (!button || GS.meta.gameOver) return;
+        const action = button.dataset.action;
+        const itemId = button.dataset.id; // Used by inspect, start_research_project etc.
+        const itemName = button.dataset.name; // Used by buy_equipment
+
+        closeModal(); // Close any existing modal first as a default action
+
+        switch (action) {
+            case 'manage_lab_equipment': showManageEquipmentModal(); break;
+            case 'start_ferment_process': showStartFermentationModal(); break;
+            case 'inspect_ferment': if(itemId) showInspectFermentModal(itemId); break;
+            case 'source_ingredients_market': /* TODO */ logEvent("Marketplace sourcing WIP.", "info"); break;
+            case 'sell_products_market': /* TODO */ logEvent("Selling products WIP.", "info"); break;
+            case 'conduct_experiment': /* TODO */ logEvent("Experimentation WIP.", "info"); break;
+            case 'buy_equipment':
+                if(itemName) {
+                    const purchasable = [ // Duplicated from modal, ideally define globally
+                        { name: 'Basic Glass Jar', type: EQUIP.VESSEL, quality: 0.4, effects: { tempStability: 0.05, contaminationResist: 0.05 }, cost: 50, maintenanceDue: 180 },
+                        { name: 'Standard Incubator', type: EQUIP.INCUBATOR, quality: 0.6, effects: { tempStability: 0.5, humidityControl: 0.4, contaminationResist: 0.3 }, cost: 500, maintenanceDue: 120 },
+                        { name: 'Precision Scale', type: EQUIP.SCALE, quality: 0.9, effects: { measurementAccuracy: 0.95 }, cost: 150, maintenanceDue: 360 },
+                        { name: 'Koji Tray (Cedar)', type: EQUIP.KOJI_TRAY, quality: 0.7, effects: { aerationControl: 0.2, humidityRetention: 0.1 }, cost: 80, maintenanceDue: 200 },
+                    ];
+                    const itemToBuy = purchasable.find(p => p.name === itemName);
+                    if (itemToBuy && GS.player.money >= itemToBuy.cost) {
+                        GS.player.money -= itemToBuy.cost;
+                        addEquipmentInstance(U.clone(itemToBuy)); // Add a copy
+                        logEvent(`Purchased ${itemToBuy.name} for ${U.formatMoney(itemToBuy.cost)}.`, "success");
+                        GS.lab.slots = calculateLabSlots(); // Recalculate slots after buying
+                        updateUI();
+                    } else if (itemToBuy) {
+                        logEvent(`Not enough money for ${itemToBuy.name}.`, "warning");
+                    }
+                }
+                break;
+            case 'start_research_project':
+                if(itemId) {
+                    const res = GS.knowledge.research.find(r => r.id === itemId);
+                    if (res && !res.completed && !GS.meta.activeResearchProjectId &&
+                        GS.player.researchPoints >= res.costRP && GS.player.money >= res.costMoney &&
+                        (res.prereqs ? res.prereqs.every(prId => GS.knowledge.research.find(pr=>pr.id===prId)?.completed) : true) ) {
+                        
+                        GS.meta.activeResearchProjectId = res.id;
+                        // Money and RP are deducted when research *starts*
+                        GS.player.researchPoints -= res.costRP;
+                        GS.player.money -= res.costMoney;
+                        logEvent(`Started research: "${res.name}". Will take ${U.formatDays(res.time)}.`, "success");
+                        updateUI();
+                    } else {
+                        logEvent("Cannot start this research project now.", "warning");
+                    }
+                }
+                break;
+        }
+    }
+
+    // --- GAME LOOP & MAIN ACTIONS ---
+    function advanceDailyResearch() {
+        if (GS.meta.activeResearchProjectId) {
+            const res = GS.knowledge.research.find(r => r.id === GS.meta.activeResearchProjectId);
+            if (res && !res.completed) {
+                res.progressDays += C.RESEARCH_PROGRESS_PER_DAY;
+                logEvent(`Research "${res.name}" progressing (${res.progressDays}/${res.time}d).`, "info");
+                if (res.progressDays >= res.time) {
+                    res.completed = true;
+                    GS.meta.activeResearchProjectId = null;
+                    logEvent(`Research "${res.name}" COMPLETED!`, "success");
+                    if (res.unlocks) { // Process unlocks
+                        if (res.unlocks.recipes) {
+                            res.unlocks.recipes.forEach(recipeNameToUnlock => {
+                                const recipeToUnlock = GS.knowledge.recipes.find(r => r.name === recipeNameToUnlock);
+                                if (recipeToUnlock) {
+                                    recipeToUnlock.unlocked = true;
+                                    logEvent(`New recipe available: ${recipeToUnlock.name}`, "system");
+                                }
+                            });
+                        }
+                        // TODO: Unlock techniques, equipment blueprints, etc.
+                    }
+                    GS.player.reputation += U.randInt(5,10); // Bonus for completing research
+                }
+            } else { // Should not happen if state is consistent
+                GS.meta.activeResearchProjectId = null; 
+            }
+        }
+    }
+
+    function handleNextDay() {
+        if (GS.meta.gameOver) return;
+        GS.meta.day++;
+        logEvent(`Advancing to Day ${GS.meta.day}`, "system");
+
+        advanceDailyFermentations();
+        advanceDailyResearch();
+
+        GS.resources.ingredients.forEach(ingType => {
+            let totalSpoiled = 0;
+            ingType.instances.forEach(inst => {
+                inst.fresh -= C.FRESHNESS_DECAY_RATE;
+                if (inst.fresh <= 0) totalSpoiled += inst.qty;
+            });
+            if (totalSpoiled > 0) {
+                logEvent(`${totalSpoiled} units of ${ingType.name} spoiled!`, "warning");
+                ingType.instances = ingType.instances.filter(inst => inst.fresh > 0);
+                ingType.totalQuantity = U.sum(ingType.instances.map(i => i.qty));
+            }
+        });
+        
+        GS.lab.equipment.forEach(eq => {
+            eq.maintenanceDue--;
+            if (eq.maintenanceDue <= 0) {
+                eq.currentQuality = U.clamp(eq.currentQuality - C.EQUIPMENT_QUALITY_DEGRADE_RATE, C.MIN_EQUIPMENT_QUALITY, eq.quality);
+                eq.maintenanceDue = U.randInt(C.EQUIPMENT_MAINTENANCE_THRESHOLD, C.EQUIPMENT_MAINTENANCE_THRESHOLD * 2);
+                logEvent(`${eq.name} quality degraded to ${U.formatQuality(eq.currentQuality)} due to overdue maintenance.`, "warning");
+            }
+        });
+        GS.player.risk = U.clamp(GS.player.risk - 0.2 - (GS.player.reputation * 0.001), 0, 100); // Reputation slightly reduces passive risk
+
+        updateUI();
+        checkGameOver();
+    }
+
+    function checkGameOver() { /* Same as before */ }
+    function showGameOverModal() { /* Same as before */ }
+
+    // --- STARTUP ---
+    window.onload = () => {
+        try {
+            console.log("Fermenta Tycoon: Initializing...");
+            initDOMCache();
+            console.log("DOM Cache Initialized.");
+            initGameData();
+            console.log("Game Data Initialized.");
+            setActiveView('lab'); 
+            console.log("Active View Set.");
+            updateUI(); 
+            console.log("Initial UI Rendered.");
+            logEvent("Welcome to Fermenta Tycoon: The Alchemist's Lab. Your journey begins...", "system");
+            console.log("Initialization Complete.");
+        } catch (error) {
+            console.error("FATAL ERROR DURING INITIALIZATION:", error);
+            document.body.innerHTML = `<div style="color:red; font-family:monospace; padding:20px;"><h1>Initialization Error</h1><p>There was a fatal error loading the game. Check the console (Right-click > Inspect > Console).</p><pre>${error.stack}</pre></div>`;
+        }
+    };
+
+    </script>
+</body>
+</html>
