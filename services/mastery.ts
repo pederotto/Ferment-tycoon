@@ -126,20 +126,20 @@ export const grantMastery = (
  */
 export const FAULT_LABELS: Record<string, string> = {
   'pulled-early': 'pulled before the peak',
-  'left-too-long': 'left past the window',
+  'left-too-long': 'was left past the window',
   'acid-heavy': 'came in sharp and acidic',
   'flat': 'never developed any acidity',
-  'thin': 'thin — not enough umami',
+  'thin': 'came out thin — not enough umami',
   'over-umami': 'pushed past the umami it wanted',
-  'oversweet': 'too sweet',
-  'characterless': 'clean but characterless',
-  'over-funky': 'funkier than it should be',
-  'ran-cold': 'held too cold',
-  'ran-hot': 'held too hot',
-  'under-salted': 'under-salted',
-  'over-salted': 'over-salted',
-  'dilute': 'watered down',
-  'unsafe': 'unsafe by the time it was taken',
+  'oversweet': 'came out too sweet',
+  'characterless': 'came out clean but characterless',
+  'over-funky': 'came out funkier than it should be',
+  'ran-cold': 'was held too cold',
+  'ran-hot': 'was held too hot',
+  'under-salted': 'was under-salted',
+  'over-salted': 'was over-salted',
+  'dilute': 'was watered down',
+  'unsafe': 'was unsafe by the time it was taken',
 };
 
 export const diagnoseBatch = (batch: Batch, recipe: Recipe): string[] => {

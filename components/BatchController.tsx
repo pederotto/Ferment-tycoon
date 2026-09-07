@@ -80,6 +80,10 @@ const BatchController: React.FC<BatchControllerProps> = ({
 
   // UI State
   const [hoveredItem, setHoveredItem] = useState<HoveredItem>(null);
+  // Pinning exists so two ingredients can be held side by side. The scan was
+  // hover-only and transient, which made comparing anything impossible — and
+  // comparison is exactly what the composition data invites.
+  const [pinnedItem, setPinnedItem] = useState<HoveredItem>(null);
   const [showVintageLoader, setShowVintageLoader] = useState(false);
   // Guidance lives on the recipe card, not stacked on top of the Seal button.
   const [showCard, setShowCard] = useState(false);
@@ -1005,9 +1009,26 @@ const BatchController: React.FC<BatchControllerProps> = ({
         )}
 
         {/* ---------- SPECTROMETER DOCK ---------- */}
-        <div className="scan-dock">
-          {hoveredItem ? (
-            <MolecularScan key="scan-active" target={hoveredItem} embedded={true} className="w-full h-full" />
+        <div className={`scan-dock${pinnedItem ? ' split' : ''}`}>
+          {pinnedItem && (
+            <MolecularScan
+              key="scan-pinned"
+              target={pinnedItem}
+              embedded
+              pinned
+              onTogglePin={() => setPinnedItem(null)}
+            />
+          )}
+          {(hoveredItem || pinnedItem) ? (
+            hoveredItem ? (
+              <MolecularScan
+                key="scan-active"
+                target={hoveredItem}
+                embedded
+                pinned={false}
+                onTogglePin={() => setPinnedItem(hoveredItem)}
+              />
+            ) : null
           ) : (
             <div key="scan-idle" className="scan-idle">
               <span className="puck"><Activity size={14} color="var(--text-lo)" /></span>

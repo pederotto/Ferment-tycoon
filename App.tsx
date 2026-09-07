@@ -17,6 +17,7 @@ import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persisten
 import { grantMastery } from './services/mastery';
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import DevPanel from './components/DevPanel';
+import FirstCulture from './components/FirstCulture';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon } from './components/icons';
 
@@ -63,7 +64,8 @@ export default function App() {
     insolvencyStrikes: 0,
     gameOver: false,
     recipeMastery: {},
-    undergroundBusts: 0
+    undergroundBusts: 0,
+    onboardingDone: false
   });
 
   // Any run left behind by a previous session, read once so the welcome screen
@@ -75,16 +77,27 @@ export default function App() {
   const lastActiveSpeed = useRef<number>(1);
 
   // Lab Event / Alert Notification
-  const [labNotification, setLabNotification] = useState<{ id: number; text: string; type: 'info' | 'warn' | 'alert' } | null>(null);
-
-  // Auto-dismiss lab notifications
-  useEffect(() => {
-    if (!labNotification) return;
-    const t = setTimeout(() => {
-      setLabNotification(null);
-    }, 5000);
-    return () => clearTimeout(t);
-  }, [labNotification?.id]);
+  // A queue, not a slot. There are 29 places that raise a notice — payroll,
+  // weather, raids, level-ups, mastery, purchases — and with a single slot on a
+  // 5s timer they overwrote each other, so the ones that mattered were routinely
+  // eaten by the ones that did not.
+  type Notice = { id: number; text: string; type: 'info' | 'warn' | 'alert' };
+  const [notices, setNotices] = useState<Notice[]>([]);
+  // Callers pass Date.now() as an id, which was fine for a single slot but
+  // collides in a queue when several notices fire in the same millisecond —
+  // React then sees duplicate keys. The id is assigned here instead.
+  const noticeSeq = useRef(0);
+  const setLabNotification = React.useCallback((n: Notice | null) => {
+    if (!n) { setNotices([]); return; }
+    const id = ++noticeSeq.current;
+    setNotices(prev => {
+      // Drop an identical message already on screen rather than stacking it.
+      if (prev.some(p => p.text === n.text)) return prev;
+      return [...prev, { ...n, id }].slice(-3);
+    });
+    const ttl = n.type === 'alert' ? 9000 : n.type === 'warn' ? 7000 : 5000;
+    setTimeout(() => setNotices(prev => prev.filter(p => p.id !== id)), ttl);
+  }, []);
 
   // Spacebar to pause / unpause
   useEffect(() => {
@@ -713,7 +726,7 @@ export default function App() {
         ...prev,
         batches: prev.batches.map(b => {
             if (b.id !== batch.id) return b;
-            return applyBatchIntervention(b, action, currentAmbient);
+            return applyBatchIntervention(b, action, currentAmbient, getRecipeForBatch(b));
         }),
         // Small hygiene hit for interactions
         hygiene: Math.max(0, prev.hygiene - 1) 
@@ -1193,19 +1206,23 @@ export default function App() {
       {/* HARDWARE STORE (Top Drawer) */}
 
 
-      {/* LAB NOTIFICATION TOAST */}
-      {labNotification && (
-          <div className={`toast ${labNotification.type === 'alert' ? 'alert' : labNotification.type === 'warn' ? 'warn' : ''}`}>
+      {/* LAB NOTIFICATIONS — newest at the bottom, each on its own timer */}
+      {notices.length > 0 && (
+        <div className="toast-stack">
+          {notices.map(n => (
+            <div key={n.id} className={`toast ${n.type === 'alert' ? 'alert' : n.type === 'warn' ? 'warn' : ''}`}>
               <Sparkles className="w-4 h-4 shrink-0" style={{ color: 'var(--brass)' }} />
-              <span style={{ flex: 1 }}>{labNotification.text}</span>
+              <span style={{ flex: 1 }}>{n.text}</span>
               <button
                 className="close"
-                onClick={() => setLabNotification(null)}
+                onClick={() => setNotices(prev => prev.filter(p => p.id !== n.id))}
                 aria-label="Dismiss notification"
               >
                 &times;
               </button>
-          </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* WELCOME SCREEN - Z-INDEX 100 */}
@@ -1511,6 +1528,13 @@ export default function App() {
               unlockedRecipes={gameState.unlockedRecipes}
               ownedBookIds={gameState.ownedBookIds}
           />
+      )}
+
+      {!gameState.onboardingDone && !uiState.showWelcome && !gameState.gameOver && (
+        <FirstCulture
+          gameState={gameState}
+          onDismiss={() => setGameState(prev => ({ ...prev, onboardingDone: true }))}
+        />
       )}
 
       {showDev && (

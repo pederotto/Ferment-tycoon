@@ -1,5 +1,5 @@
 
-import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge } from '../types';
+import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample } from '../types';
 import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe } from './koji';
 import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
@@ -306,63 +306,125 @@ export const getAmbientConditions = (month: number, weather: WeatherState) => {
 export const applyBatchIntervention = (
     batch: Batch, 
     action: string, 
-    ambientTemp: number
+    ambientTemp: number,
+    recipe?: Recipe
 ): Batch => {
     const newParams = { ...batch.params };
     const messages = [...batch.messages];
     const flags = { ...(batch.flags || { isLidPropped: false }) };
     let quality = { ...batch.quality };
-    
-    // ACTION COST: All actions cause a small "Growth Pause" (Disturbance)
+    let enzymes = batch.enzymes ? { ...batch.enzymes } : undefined;
+    let stress = batch.stress ?? 0;
+
+    // Interventions used to be flat, context-free bumps — Stir always gave +2
+    // umami whether or not stirring was what the batch needed, so there was
+    // never a reason to think about which one to use or when. They now depend on
+    // the state of the batch and on whether this is the handling the recipe
+    // actually asks for, and the wrong move costs you paused growth for nothing.
+    const wanted = recipe?.activeIntervention;
+    const onPoint = !!wanted && (wanted === action || (wanted === 'Ventilate' && action === 'ToggleLid'));
+    const inLogPhase = batch.progress > 18 && batch.progress < 88;
+
     let disturbance = 0;
 
     switch (action) {
         case 'Mix':
-        case 'Flip':
-            // "Turning the Trays" - Koji Logic
-            // REBALANCE: Reduced cooling impact from 0.5 to 0.15
-            const cooling = (newParams.temp - ambientTemp) * 0.15; 
+        case 'Flip': {
+            // Turning the bed releases trapped heat and redistributes the
+            // mycelium. Real koji practice, and the payoff is real too: an even
+            // bed secretes more enzyme. Done during the lag phase there is
+            // nothing to redistribute, so it is just lost time.
+            const cooling = (newParams.temp - ambientTemp) * 0.15;
             newParams.temp -= cooling;
-            disturbance = 8; // Pauses growth
-            messages.push('Trays Mixed: Heat released.');
-            quality.umami += 1;
-            break;
+            stress = Math.max(0, stress - 12);
+            disturbance = 8;
 
-        case 'Mist':
-            // "Hydrating"
-            newParams.humidity = Math.min(100, newParams.humidity + 15);
-            newParams.temp = Math.max(ambientTemp, newParams.temp - 2); // Evaporative cooling
-            disturbance = 2;
+            if (enzymes && inLogPhase) {
+                enzymes.amylase = Math.min(100, enzymes.amylase * 1.06);
+                enzymes.protease = Math.min(100, enzymes.protease * 1.06);
+                messages.push('Bed turned: heat released, growth evened out.');
+            } else if (enzymes) {
+                messages.push('Bed turned too early — nothing to redistribute yet.');
+            } else {
+                messages.push('Turned. Heat released.');
+            }
             break;
+        }
+
+        case 'Mist': {
+            // Worth doing when it is drying out, actively harmful once it is wet:
+            // a soaked bed invites bacteria rather than mould.
+            const before = newParams.humidity;
+            newParams.humidity = Math.min(100, newParams.humidity + 15);
+            newParams.temp = Math.max(ambientTemp, newParams.temp - 2);
+            disturbance = 2;
+            if (before < 55) {
+                messages.push('Misted: it was drying out.');
+            } else if (before > 88) {
+                quality.safety -= 3;
+                messages.push('Misted an already-wet bed — you are inviting bacteria.');
+            }
+            break;
+        }
 
         case 'ToggleLid':
-        case 'Ventilate': // Legacy map to ToggleLid logic if Koji
-            // "Propping the Lid"
-            flags.isLidPropped = !flags.isLidPropped; 
-            messages.push(flags.isLidPropped ? 'Lid Propped Open' : 'Lid Closed');
+        case 'Ventilate':
+            flags.isLidPropped = !flags.isLidPropped;
+            messages.push(flags.isLidPropped
+                ? 'Lid propped — it will run cooler and drier from here.'
+                : 'Lid closed — heat and moisture stay in.');
             break;
 
-        case 'Stir': // Liquid
-            quality.umami += 2; 
-            quality.safety += 1; 
+        case 'Stir': {
+            // Keeps the surface from setting and the solids from packing down.
+            // Only really matters for the ferments that ask for it.
             disturbance = 2;
+            if (onPoint) {
+                quality.umami += 2.5;
+                quality.safety = Math.min(100, quality.safety + 2);
+                messages.push('Stirred through. This one wants the movement.');
+            } else {
+                quality.umami += 0.4;
+                messages.push('Stirred. Little to gain here.');
+            }
             break;
-            
-        case 'Skim': // Garum
-            quality.safety += 5; 
-            quality.funk -= 1; 
+        }
+
+        case 'Skim': {
+            // Pulling the film off a garum. Meaningful when something has
+            // actually formed on top — i.e. when safety has started to slip.
             disturbance = 2;
+            const slipping = quality.safety < 92;
+            if (onPoint && slipping) {
+                quality.safety = Math.min(100, quality.safety + 7);
+                quality.funk = Math.max(0, quality.funk - 2);
+                messages.push('Skimmed the film. That was about to turn.');
+            } else if (slipping) {
+                quality.safety = Math.min(100, quality.safety + 3);
+                messages.push('Skimmed.');
+            } else {
+                messages.push('Nothing on the surface worth skimming.');
+            }
             break;
-            
-        case 'Clean': // Jars
-            quality.safety += 8;
+        }
+
+        case 'Clean': {
+            // Wiping the vessel down. Scales with how far safety has actually
+            // fallen, so it is a rescue rather than a free top-up.
             disturbance = 2;
+            const deficit = 100 - quality.safety;
+            const gain = Math.min(10, 2 + deficit * 0.4);
+            quality.safety = Math.min(100, quality.safety + gain);
+            messages.push(deficit > 12 ? 'Wiped down. That needed doing.' : 'Wiped down.');
             break;
+        }
     }
 
     return { 
         ...batch, 
-        params: newParams, 
+        params: newParams,
+        enzymes,
+        stress, 
         quality: quality,
         flags: flags,
         messages: messages.slice(-5),
@@ -789,8 +851,25 @@ export const processBatchTick = (
     newQuality.funk += 0.2;
   }
 
+  // --- TELEMETRY ---
+  // Sample on progress rather than on ticks, so a 400-second colatura and a
+  // 45-second koji both end up with a comparably readable trace.
+  const history = [...(batch.history ?? [])];
+  const lastP = history.length ? history[history.length - 1].p : -99;
+  if (progress - lastP >= 1.5 || history.length === 0) {
+    const sample: TelemetrySample = {
+      p: Math.round(progress * 10) / 10,
+      temp: Math.round(newParams.temp * 10) / 10,
+      hum: Math.round(newParams.humidity),
+      stress: Math.round(stress),
+    };
+    if (enzymes) { sample.amy = Math.round(enzymes.amylase); sample.pro = Math.round(enzymes.protease); }
+    history.push(sample);
+  }
+
   return {
     ...batch,
+    history,
     enzymes,
     totalMass, 
     progress: progress,

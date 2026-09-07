@@ -188,6 +188,10 @@ export interface Batch {
       isLidPropped: boolean;
   };
   
+  // A thinned record of the run so far, for the telemetry graph and the
+  // post-mortem. Capped in processBatchTick.
+  history?: TelemetrySample[];
+
   // Live enzyme development, only meaningful while this is a koji cultivation.
   // The temperature and moisture you hold decide the ratio, so the profile is
   // steered over the whole run rather than fixed at inoculation.
@@ -265,6 +269,22 @@ export interface MatrixEntry {
 // --- RECIPE MASTERY ---
 // One track per recipe. Levels are persisted rather than recomputed so a
 // level-up is detectable at the moment it happens.
+/**
+ * One sample of a running batch. The sim evolves temperature, moisture, stress
+ * and enzymes continuously but only ever showed the current instant, so cause
+ * and effect were invisible — you could not see that the spike which killed a
+ * batch happened forty seconds ago. Samples are thinned as they are taken, so a
+ * long run costs no more to keep than a short one.
+ */
+export interface TelemetrySample {
+    p: number;    // progress % at the sample
+    temp: number;
+    hum: number;
+    stress: number;
+    amy?: number; // enzymes, koji runs only
+    pro?: number;
+}
+
 /** One finished run, kept so the bench can tell you what you keep getting wrong. */
 export interface BatchOutcome {
     score: number;
@@ -384,6 +404,9 @@ export interface GameState {
 
   // Raids conceded. Escalates later fines and stops heat decaying on its own.
   undergroundBusts: number;
+
+  // The guided opening has been finished or waved away.
+  onboardingDone: boolean;
 
   // Consecutive weeks ended in the red. Three closes the lab.
   insolvencyStrikes: number;

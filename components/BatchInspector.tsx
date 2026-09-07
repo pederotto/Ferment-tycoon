@@ -3,6 +3,7 @@ import { Batch, Recipe, FermentType, Buyer, StaffRoleType } from '../types';
 import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { describeEnzymes } from '../services/koji';
+import RunTrace from './RunTrace';
 import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
 import {
@@ -221,6 +222,13 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
         </div>
 
         <div className="lbody custom-scrollbar">
+          {/* The run trace sits above both tabs: on Bioreactor it shows what is
+              happening, on Harvest it is the post-mortem — and a finished batch
+              opens straight onto Harvest, which is where it matters most. */}
+          <div style={{ padding: '0 24px' }}>
+            <RunTrace batch={batch} recipe={recipe} />
+          </div>
+
           {activeTab === 'telemetry' ? (
             <>
               <div className="lcol-left">

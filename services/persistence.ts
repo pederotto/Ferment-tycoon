@@ -13,7 +13,18 @@ import { INGREDIENTS } from '../constants';
  * the bench on load.
  */
 
-const STORAGE_KEY = 'fermenta.save.v1';
+// Three slots rather than one. "Start over" used to destroy the only save that
+// existed, irreversibly and without warning.
+const SLOT_COUNT = 3;
+const slotKey = (slot: number) => `fermenta.save.v1.slot${slot}`;
+const LEGACY_KEY = 'fermenta.save.v1';
+let activeSlot = 1;
+
+export const getActiveSlot = () => activeSlot;
+export const setActiveSlot = (slot: number) => { activeSlot = Math.min(SLOT_COUNT, Math.max(1, slot)); };
+export const listSlots = () => Array.from({ length: SLOT_COUNT }, (_, i) => i + 1);
+
+const STORAGE_KEY_LEGACY = LEGACY_KEY;
 const SAVE_VERSION = 1;
 
 interface SaveEnvelope {
@@ -42,6 +53,8 @@ function migrate(state: Partial<GameState>): GameState {
     ),
     ownedBookIds: state.ownedBookIds ?? [],
     undergroundBusts: state.undergroundBusts ?? 0,
+    // An existing save has clearly got past the opening.
+    onboardingDone: state.onboardingDone ?? true,
     // Older saves seeded unlockedRecipes with a bogus id and used it for nothing.
     // It now means "formula known", so it is rebuilt from what has been cooked.
     unlockedRecipes: Array.from(new Set([
@@ -70,7 +83,7 @@ function isPlausible(state: unknown): state is Partial<GameState> {
 export function saveGame(state: GameState): boolean {
   try {
     const envelope: SaveEnvelope = { version: SAVE_VERSION, savedAt: Date.now(), state };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope));
+    localStorage.setItem(slotKey(activeSlot), JSON.stringify(envelope));
     return true;
   } catch {
     // Private browsing, a full quota, or storage blocked outright. Losing the
@@ -81,7 +94,12 @@ export function saveGame(state: GameState): boolean {
 
 export function loadGame(): GameState | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    // A save written before slots existed is adopted into slot 1 on first read.
+    let raw = localStorage.getItem(slotKey(activeSlot));
+    if (!raw && activeSlot === 1) {
+      const legacy = localStorage.getItem(STORAGE_KEY_LEGACY);
+      if (legacy) { localStorage.setItem(slotKey(1), legacy); localStorage.removeItem(STORAGE_KEY_LEGACY); raw = legacy; }
+    }
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as Partial<SaveEnvelope>;
@@ -111,7 +129,7 @@ export function loadGame(): GameState | null {
 
 export function hasSave(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) !== null;
+    return localStorage.getItem(slotKey(activeSlot)) !== null || localStorage.getItem(STORAGE_KEY_LEGACY) !== null;
   } catch {
     return false;
   }
@@ -119,7 +137,7 @@ export function hasSave(): boolean {
 
 export function getSaveMeta(): { savedAt: number; week: number; year: number; money: number } | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(slotKey(activeSlot)) ?? localStorage.getItem(STORAGE_KEY_LEGACY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<SaveEnvelope>;
     if (!parsed?.state || parsed.version !== SAVE_VERSION) return null;
@@ -132,8 +150,40 @@ export function getSaveMeta(): { savedAt: number; week: number; year: number; mo
 
 export function clearSave(): void {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(slotKey(activeSlot));
   } catch {
     /* nothing useful to do */
   }
+}
+
+/** Metadata for every slot, for a save picker. */
+export function getAllSlotMeta(): ({ slot: number; savedAt: number; week: number; year: number; money: number } | null)[] {
+  return listSlots().map(slot => {
+    try {
+      const raw = localStorage.getItem(slotKey(slot)) ?? (slot === 1 ? localStorage.getItem(LEGACY_KEY) : null);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<SaveEnvelope>;
+      if (!parsed?.state || parsed.version !== SAVE_VERSION) return null;
+      const { week, year, money } = parsed.state;
+      return { slot, savedAt: parsed.savedAt ?? 0, week, year, money };
+    } catch { return null; }
+  });
+}
+
+/** The whole save as a portable string, so a run can outlive this browser. */
+export function exportSave(): string | null {
+  try {
+    return localStorage.getItem(slotKey(activeSlot));
+  } catch { return null; }
+}
+
+/** Adopt a pasted save into the active slot. Returns false if it is not one. */
+export function importSave(raw: string): boolean {
+  try {
+    const parsed = JSON.parse(raw) as Partial<SaveEnvelope>;
+    if (!parsed?.state || parsed.version !== SAVE_VERSION) return false;
+    if (!isPlausible(parsed.state)) return false;
+    localStorage.setItem(slotKey(activeSlot), raw);
+    return true;
+  } catch { return false; }
 }
