@@ -943,6 +943,31 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .formula-card .frow .n { font-size: 10.5px; color: var(--text-hi); text-align: right; }
 .formula-card .frow .n.brick { color: #e0a58f; }
 
+/* ---------- Koji steering (which enzymes this bed will grow) ---------- */
+.steer {
+  padding: 12px; border-radius: 10px; margin-bottom: 11px; flex-shrink: 0;
+  background: rgba(138, 154, 107, 0.08); border: 1px solid rgba(138, 154, 107, 0.3);
+}
+.steer .sh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.steer .sh .l { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
+.steer .sh .v { font-size: 11px; font-weight: 700; color: var(--moss); }
+.steer .strack {
+  height: 7px; border-radius: 999px; overflow: hidden; position: relative;
+  background: linear-gradient(90deg, rgba(138,154,107,0.35), rgba(217,164,65,0.35));
+  border: 1px solid var(--line);
+}
+.steer .sfill {
+  position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--text-hi);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5); transition: width 0.25s ease; border-radius: 0;
+}
+.steer .strack .sfill::after {
+  content: ''; position: absolute; right: -4px; top: 50%; transform: translateY(-50%);
+  width: 9px; height: 9px; border-radius: 999px; background: var(--text-hi);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.45);
+}
+.steer .sends { display: flex; justify-content: space-between; margin-top: 5px; font-size: 8px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-lo); }
+.steer .snote { margin: 8px 0 0; font-size: 10px; line-height: 1.5; color: var(--text-mid); }
+
 /* ---------- The advice ladder (recipe mastery) ---------- */
 .ladder {
   padding: 12px; border-radius: 10px; margin-bottom: 11px; flex-shrink: 0;

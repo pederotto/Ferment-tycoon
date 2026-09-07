@@ -393,7 +393,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['koji'],
         supplierId: 'nordic',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 6, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 3 },
+        hiddenStats: { starchContent: 9, sugarContent: 6, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 3 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -408,7 +408,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso', 'shoyu'],
         supplierId: 'asia_import',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 3, nativeSalinity: 0, microbialDiversity: 3, fatContent: 4, proteinContent: 9 },
+        hiddenStats: { starchContent: 2, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 3, fatContent: 4, proteinContent: 9 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -423,7 +423,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso'],
         supplierId: 'asia_import',
         tierRequired: 2,
-        hiddenStats: { sugarContent: 4, nativeSalinity: 0, microbialDiversity: 4, fatContent: 5, proteinContent: 9 },
+        hiddenStats: { starchContent: 2, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 4, fatContent: 5, proteinContent: 9 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -438,7 +438,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso', 'alcohol'],
         supplierId: 'asia_import',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 8, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 2 },
+        hiddenStats: { starchContent: 10, sugarContent: 8, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 2 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -453,7 +453,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['lacto', 'cheese'],
         supplierId: 'prime',
         tierRequired: 2,
-        hiddenStats: { sugarContent: 5, nativeSalinity: 1, microbialDiversity: 8, fatContent: 8, proteinContent: 6 },
+        hiddenStats: { starchContent: 0, sugarContent: 5, nativeSalinity: 1, microbialDiversity: 8, fatContent: 8, proteinContent: 6 },
         mass: 1000,
         unitDisplay: 'ml',
         tags: ['HIGH_RISK']
@@ -469,7 +469,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['garum'],
         supplierId: 'prime',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 2, microbialDiversity: 6, fatContent: 7, proteinContent: 8 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 2, microbialDiversity: 6, fatContent: 7, proteinContent: 8 },
         mass: 1000,
         unitDisplay: 'g',
         tags: ['SEAFOOD']
@@ -485,7 +485,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['garum'],
         supplierId: 'prime',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 1, microbialDiversity: 5, fatContent: 9, proteinContent: 8 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 1, microbialDiversity: 5, fatContent: 9, proteinContent: 8 },
         mass: 1000,
         unitDisplay: 'g',
         tags: ['SEAFOOD']
@@ -501,7 +501,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['curing'],
         supplierId: 'prime',
         tierRequired: 3,
-        hiddenStats: { sugarContent: 1, nativeSalinity: 2, microbialDiversity: 4, fatContent: 8, proteinContent: 9 },
+        hiddenStats: { starchContent: 0, sugarContent: 1, nativeSalinity: 2, microbialDiversity: 4, fatContent: 8, proteinContent: 9 },
         mass: 500,
         unitDisplay: 'g',
         tags: ['SEAFOOD', 'HIGH_RISK']
@@ -517,7 +517,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['amino_paste'],
         supplierId: 'prime',
         tierRequired: 4,
-        hiddenStats: { sugarContent: 4, nativeSalinity: 3, microbialDiversity: 2, fatContent: 2, proteinContent: 10 },
+        hiddenStats: { starchContent: 0, sugarContent: 4, nativeSalinity: 3, microbialDiversity: 2, fatContent: 2, proteinContent: 10 },
         mass: 500,
         unitDisplay: 'g',
         tags: ['SEAFOOD']
@@ -533,7 +533,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['lacto', 'shoyu'],
         supplierId: 'nordic',
         tierRequired: 3,
-        hiddenStats: { sugarContent: 3, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 5 },
+        hiddenStats: { starchContent: 1, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 5 },
         mass: 500,
         unitDisplay: 'g'
     },
@@ -548,7 +548,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['lacto', 'vinegar'],
         supplierId: 'nordic',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 6, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
+        hiddenStats: { starchContent: 1, sugarContent: 6, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -563,7 +563,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso'],
         supplierId: 'nordic',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 5, nativeSalinity: 0, microbialDiversity: 3, fatContent: 2, proteinContent: 7 },
+        hiddenStats: { starchContent: 6, sugarContent: 5, nativeSalinity: 0, microbialDiversity: 3, fatContent: 2, proteinContent: 7 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -578,7 +578,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['black'],
         supplierId: 'asia_import',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 7, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 4 },
+        hiddenStats: { starchContent: 3, sugarContent: 7, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 4 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -593,7 +593,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso'],
         supplierId: 'asia_import',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 4, nativeSalinity: 0, microbialDiversity: 3, fatContent: 2, proteinContent: 8 },
+        hiddenStats: { starchContent: 6, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 3, fatContent: 2, proteinContent: 8 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -608,7 +608,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso'],
         supplierId: 'asia_import',
         tierRequired: 2,
-        hiddenStats: { sugarContent: 1, nativeSalinity: 3, microbialDiversity: 8, fatContent: 4, proteinContent: 9 },
+        hiddenStats: { starchContent: 0, sugarContent: 1, nativeSalinity: 3, microbialDiversity: 8, fatContent: 4, proteinContent: 9 },
         mass: 1000,
         unitDisplay: 'g',
         tags: ['SEAFOOD']
@@ -624,7 +624,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['vinegar'],
         supplierId: 'asia_import',
         tierRequired: 2,
-        hiddenStats: { sugarContent: 10, nativeSalinity: 0, microbialDiversity: 6, fatContent: 2, proteinContent: 1 },
+        hiddenStats: { starchContent: 0, sugarContent: 10, nativeSalinity: 0, microbialDiversity: 6, fatContent: 2, proteinContent: 1 },
         mass: 1000,
         unitDisplay: 'ml'
     },
@@ -639,7 +639,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['syrup'],
         supplierId: 'nordic',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 2, nativeSalinity: 0, microbialDiversity: 9, fatContent: 3, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 9, fatContent: 3, proteinContent: 0 },
         mass: 500,
         unitDisplay: 'g'
     },
@@ -654,7 +654,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['garum', 'syrup'],
         supplierId: 'prime',
         tierRequired: 3,
-        hiddenStats: { sugarContent: 4, nativeSalinity: 0, microbialDiversity: 5, fatContent: 1, proteinContent: 1 },
+        hiddenStats: { starchContent: 0, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 5, fatContent: 1, proteinContent: 1 },
         mass: 250,
         unitDisplay: 'g'
     },
@@ -667,11 +667,12 @@ export const INGREDIENTS: Ingredient[] = [
         baseCost: 15,
         currency: 'money',
         quality: 80,
-        description: 'Standard Yellow Koji-kin.',
+        description: 'Standard yellow koji-kin. Even-handed: makes both amylase and protease.',
+        strainBias: 0.5,
         idealFor: ['koji'],
         supplierId: 'biolab',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
         mass: 10,
         unitDisplay: 'g',
         isLiving: true
@@ -683,11 +684,12 @@ export const INGREDIENTS: Ingredient[] = [
         baseCost: 420,
         currency: 'money',
         quality: 100,
-        description: 'Recovered from a clay pot 1000 years old. Unpredictable.',
+        description: 'Recovered from a clay pot 1000 years old. Protease-heavy and unpredictable.',
+        strainBias: 0.35,
         idealFor: ['garum'],
         supplierId: 'black_market',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 10, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 10, fatContent: 0, proteinContent: 0 },
         mass: 5,
         unitDisplay: 'g',
         isLiving: true,
@@ -707,7 +709,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['cheese'],
         supplierId: 'black_market',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 10, fatContent: 5, proteinContent: 10 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 10, fatContent: 5, proteinContent: 10 },
         mass: 50,
         unitDisplay: 'g',
         isLiving: true,
@@ -729,7 +731,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['all'],
         supplierId: 'nordic',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 10, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 10, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -744,7 +746,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['all'],
         supplierId: 'prime',
         tierRequired: 2,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 10, microbialDiversity: 1, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 10, microbialDiversity: 1, fatContent: 0, proteinContent: 0 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -759,7 +761,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['all'],
         supplierId: 'nordic',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 1000,
         unitDisplay: 'ml'
     },
@@ -774,7 +776,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['alcohol', 'syrup'],
         supplierId: 'nordic',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 10, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 10, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -789,7 +791,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso'],
         supplierId: 'asia_import',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 2, nativeSalinity: 0, microbialDiversity: 2, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 2, fatContent: 0, proteinContent: 0 },
         mass: 250,
         unitDisplay: 'g'
     },
@@ -804,7 +806,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['garum'],
         supplierId: 'black_market',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 9, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 9, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
         mass: 50,
         unitDisplay: 'ml',
         contraband: true,
@@ -822,7 +824,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['shoyu'],
         supplierId: 'asia_import',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 5, nativeSalinity: 0, microbialDiversity: 1, fatContent: 0, proteinContent: 2 },
+        hiddenStats: { starchContent: 0, sugarContent: 5, nativeSalinity: 0, microbialDiversity: 1, fatContent: 0, proteinContent: 2 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -835,11 +837,12 @@ export const INGREDIENTS: Ingredient[] = [
         baseCost: 25,
         currency: 'money',
         quality: 80,
-        description: 'Ready-to-use inoculated barley.',
+        description: 'Ready-to-use inoculated barley. Grown balanced, leaning savoury.',
+        enzymes: { amylase: 44, protease: 52 },
         idealFor: ['miso'],
         supplierId: 'in_house', // Or buy from Biolab
         tierRequired: 0,
-        hiddenStats: { sugarContent: 6, nativeSalinity: 0, microbialDiversity: 8, fatContent: 1, proteinContent: 4 },
+        hiddenStats: { starchContent: 8, sugarContent: 6, nativeSalinity: 0, microbialDiversity: 8, fatContent: 1, proteinContent: 4 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -850,11 +853,12 @@ export const INGREDIENTS: Ingredient[] = [
         baseCost: 30,
         currency: 'money',
         quality: 80,
-        description: 'Inoculated rice grains.',
+        description: 'Inoculated rice grains. Grown on starch, so it is amylase-heavy — the sweet one.',
+        enzymes: { amylase: 66, protease: 30 },
         idealFor: ['miso', 'amazake'],
         supplierId: 'biolab',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 8, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 2 },
+        hiddenStats: { starchContent: 9, sugarContent: 8, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 2 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -869,7 +873,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['flavor'],
         supplierId: 'in_house',
         tierRequired: 0,
-        hiddenStats: { sugarContent: 2, nativeSalinity: 10, microbialDiversity: 5, fatContent: 0, proteinContent: 8 },
+        hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 10, microbialDiversity: 5, fatContent: 0, proteinContent: 8 },
         mass: 1000,
         unitDisplay: 'ml'
     },
@@ -886,7 +890,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['koji'],
         supplierId: 'tech',
         tierRequired: 1,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 500,
         unitDisplay: 'g'
     },
@@ -901,7 +905,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['koji', 'curing'],
         supplierId: 'tech',
         tierRequired: 2,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 800,
         unitDisplay: 'g'
     },
@@ -916,7 +920,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['shoyu'],
         supplierId: 'tech',
         tierRequired: 3,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 5000,
         unitDisplay: 'g'
     },
@@ -931,7 +935,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['garum', 'vinegar'],
         supplierId: 'tech',
         tierRequired: 5,
-        hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 10000,
         unitDisplay: 'g'
     }
@@ -978,6 +982,44 @@ export const GREY_MARKET_SOURCES: { id: string; tier: number; heat: number }[] =
   { id: 'scallops', tier: 2, heat: 4 },
 ];
 
+// --- SPORE STRAINS ---
+// The same species bred in two directions. This is real: sake breweries and soy
+// sauce brewers have selected A. oryzae for opposite ends of the enzyme ratio
+// for centuries.
+const STRAINS: Ingredient[] = [
+  {
+    id: 'sake_spores',
+    name: 'Sake Koji-kin (Amylase strain)',
+    type: IngredientType.STARTER,
+    baseCost: 40,
+    currency: 'money',
+    quality: 88,
+    description: 'Bred for saccharification. Run it warm and it will turn starch to sugar and little else.',
+    idealFor: ['koji', 'amazake', 'alcohol'],
+    supplierId: 'biolab',
+    tierRequired: 1,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
+    mass: 10, unitDisplay: 'g', isLiving: true,
+    strainBias: 0.85,
+  },
+  {
+    id: 'shoyu_spores',
+    name: 'Shoyu Koji-kin (Protease strain)',
+    type: IngredientType.STARTER,
+    baseCost: 45,
+    currency: 'money',
+    quality: 90,
+    description: 'Bred for proteolysis. Run it cool and it will free more glutamate than anything else on the shelf.',
+    idealFor: ['koji', 'shoyu', 'miso', 'garum'],
+    supplierId: 'biolab',
+    tierRequired: 2,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 0 },
+    mass: 10, unitDisplay: 'g', isLiving: true,
+    strainBias: 0.15,
+  },
+];
+INGREDIENTS.push(...STRAINS);
+
 // --- HIGHER-TIER STOCK ---
 // Supplier loyalty levels up from spending, and the shelf gates on
 // tierRequired — but several suppliers had nothing above tier 1 or 2, so
@@ -992,11 +1034,13 @@ const HIGH_TIER: Ingredient[] = [
     baseCost: 90,
     currency: 'money',
     quality: 92,
-    description: 'Citric-acid producing black koji. Protects a warm ferment from itself.',
+    description: 'Citric-acid producing black koji. Protease-leaning, and the acid protects a warm ferment from itself.',
+    strainBias: 0.35,
+    acidProtection: 18,
     idealFor: ['garum', 'shoyu'],
     supplierId: 'biolab',
     tierRequired: 2,
-    hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 2 },
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 2 },
     mass: 20, unitDisplay: 'g', isLiving: true,
   },
   {
@@ -1010,7 +1054,7 @@ const HIGH_TIER: Ingredient[] = [
     idealFor: ['lacto'],
     supplierId: 'biolab',
     tierRequired: 3,
-    hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 9, fatContent: 0, proteinContent: 1 },
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 9, fatContent: 0, proteinContent: 1 },
     mass: 25, unitDisplay: 'g', isLiving: true,
   },
   {
@@ -1024,7 +1068,7 @@ const HIGH_TIER: Ingredient[] = [
     idealFor: ['miso', 'shoyu'],
     supplierId: 'asia_import',
     tierRequired: 3,
-    hiddenStats: { sugarContent: 1, nativeSalinity: 0, microbialDiversity: 3, fatContent: 6, proteinContent: 11 },
+    hiddenStats: { starchContent: 1, sugarContent: 1, nativeSalinity: 0, microbialDiversity: 3, fatContent: 6, proteinContent: 11 },
     mass: 1000, unitDisplay: 'kg',
   },
   {
@@ -1038,7 +1082,7 @@ const HIGH_TIER: Ingredient[] = [
     idealFor: ['garum'],
     supplierId: 'prime',
     tierRequired: 4,
-    hiddenStats: { sugarContent: 0, nativeSalinity: 1, microbialDiversity: 4, fatContent: 9, proteinContent: 13 },
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 1, microbialDiversity: 4, fatContent: 9, proteinContent: 13 },
     mass: 1000, unitDisplay: 'kg', tags: ['SEAFOOD'],
   },
   {
@@ -1052,7 +1096,7 @@ const HIGH_TIER: Ingredient[] = [
     idealFor: ['all'],
     supplierId: 'prime',
     tierRequired: 5,
-    hiddenStats: { sugarContent: 0, nativeSalinity: 100, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 100, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
     mass: 1000, unitDisplay: 'kg',
   },
   {
@@ -1066,7 +1110,7 @@ const HIGH_TIER: Ingredient[] = [
     idealFor: ['lacto', 'miso'],
     supplierId: 'nordic',
     tierRequired: 4,
-    hiddenStats: { sugarContent: 2, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 8 },
+    hiddenStats: { starchContent: 1, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 8 },
     mass: 1000, unitDisplay: 'kg',
   },
 ];

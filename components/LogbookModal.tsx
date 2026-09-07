@@ -11,11 +11,11 @@ interface LogbookModalProps {
   logbook: LogEntry[];
   analyzedRecipeIds: string[];
   recipeMastery: Record<string, RecipeMastery>;
-  unlockedRecipes: string[];
-  ownedBookIds: string[];
+  unlockedRecipes?: string[];
+  ownedBookIds?: string[];
 }
 
-const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes, ownedBookIds }) => {
+const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes = [], ownedBookIds = [] }) => {
   const [activeTab, setActiveTab] = useState<'codex' | 'archives'>('codex');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');

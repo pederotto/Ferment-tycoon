@@ -159,7 +159,21 @@ const rungTwo = (recipe: Recipe): string => {
     lever = 'Heat is the lever here. Everything else follows it.';
   }
 
-  return `${heat} ${lever}`;
+  // For the enzyme-driven ferments, name the actual mechanism. This is the part
+  // that teaches: a player who learns WHY koji matters can reason about recipes
+  // they have never seen, instead of memorising dial positions.
+  const mechanism =
+    recipe.type === FermentType.KOJI
+      ? ' You are not cooking here, you are farming enzymes. Warm and wet grows amylase for sweetness; cool and dry grows protease for savour.'
+      : recipe.type === FermentType.GARUM || recipe.type === FermentType.SHOYU
+        ? ' This lives or dies on protease. Bring a savoury koji and a protein-rich substrate, or it will taste of nothing.'
+        : recipe.type === FermentType.MISO
+          ? ' The koji you bring decides this more than the beans do. Protease for a dark, savoury paste; amylase for a sweet pale one.'
+          : recipe.type === FermentType.ALCOHOL
+            ? ' Yeast cannot eat starch. An amylase koji has to cut it into sugar first.'
+            : '';
+
+  return `${heat} ${lever}${mechanism}`;
 };
 
 /** Rung 3 — coarse bands. The first time salinity is surfaced anywhere. */

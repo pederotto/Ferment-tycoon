@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Batch, Recipe, FermentType, Buyer, StaffRoleType } from '../types';
 import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import { describeEnzymes } from '../services/koji';
 import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
 import {
@@ -235,6 +236,29 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
 
               <div className="lcol-right">
                 <div>
+                  {batch.enzymes && (batch.enzymes.amylase > 0.5 || batch.enzymes.protease > 0.5) && (
+                    <div className="steer" style={{ marginBottom: 14 }}>
+                      <div className="sh">
+                        <span className="l">Enzymes developing</span>
+                        <span className="v">{describeEnzymes(batch.enzymes).label}</span>
+                      </div>
+                      <div className="strack">
+                        <div
+                          className="sfill"
+                          style={{ width: `${(batch.enzymes.amylase / Math.max(1, batch.enzymes.amylase + batch.enzymes.protease)) * 100}%` }}
+                        />
+                      </div>
+                      <div className="sends">
+                        <span>protease {batch.enzymes.protease.toFixed(0)}</span>
+                        <span>amylase {batch.enzymes.amylase.toFixed(0)}</span>
+                      </div>
+                      <p className="snote">
+                        {describeEnzymes(batch.enzymes).detail} Nudge the heat and moisture now —
+                        the bed is still deciding what it will be.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="section-lbl">Environmental Telemetry</div>
                   <div className="dial-row">
                     <TelemetryDial

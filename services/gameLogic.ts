@@ -1,5 +1,6 @@
 
 import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge } from '../types';
+import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe } from './koji';
 import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
   getUndergroundTierFromXp,
@@ -392,6 +393,7 @@ export const processBatchTick = (
   let status = batch.status;
   let stress = batch.stress || 0;
   let disturbanceTimer = batch.disturbanceTimer || 0;
+  let enzymes = batch.enzymes;
   const flags = batch.flags || { isLidPropped: false };
   let lineageDamaged = batch.lineageDamaged;
 
@@ -443,7 +445,13 @@ export const processBatchTick = (
       }
 
       // 2. THERMAL PHYSICS (Inertia System)
-      const selfGeneratedHeat = (metabolicActivity * 4.0) * concentration * speedModifier; 
+      // Biogenic heat used to overwhelm the cooling term by two orders of
+      // magnitude: every bed, at any setpoint, ran away roughly 16 C and had to
+      // be rescued by propping the lid. That made the one interesting decision
+      // mandatory, which is what made koji feel like a chore. A bed now drifts a
+      // few degrees above where you set it, and only a genuinely hot setpoint
+      // needs managing.
+      const selfGeneratedHeat = (metabolicActivity * 1.05) * concentration * speedModifier; 
       
       // Cooling Logic
       let coolingFactor = 0.02 * (1 - vessel.insulationFactor); 
@@ -451,7 +459,7 @@ export const processBatchTick = (
       if (flags.isLidPropped) {
           coolingFactor = 0.3; // Lid Open = Very High Cooling (Decisive)
       } else {
-          coolingFactor *= 0.2; // Lid Closed = Traps heat very effectively
+          coolingFactor *= 0.55; // Lid closed still traps, but not hermetically
       }
       
       // Convection Fan
@@ -506,14 +514,23 @@ export const processBatchTick = (
           stress -= 0.2;
       }
 
-      // 5. PROGRESSION
+      // 5. ENZYME DEVELOPMENT
+      // What the bed is actually producing, steered by the heat and moisture the
+      // player is holding right now. This is the whole point of a koji run: you
+      // are not waiting out a timer, you are deciding what the koji will be FOR.
+      const starterIng = ingredients.find(i => i.type === IngredientType.STARTER);
+      enzymes = advanceEnzymes(
+        enzymes, substrate, starterIng, newParams.temp, newParams.humidity, stress, progress / 100
+      );
+
+      // 6. PROGRESSION
       if (stress < 90 && newParams.humidity > 30) {
           const speedMult = 1 + ((newParams.temp - 30) / 20);
           const baseGrowth = (100 / recipe.baseDurationSeconds);
           progress += (baseGrowth * speedMult * speedModifier * genSpeedBuff);
       }
 
-      // 6. SPOILAGE
+      // 7. SPOILAGE
       if (stress >= 100) {
           status = 'spoiled';
           if (!messages.includes('CRITICAL: Burnout')) messages.push('CRITICAL: Burnout');
@@ -616,6 +633,11 @@ export const processBatchTick = (
   if (newQuality.acidity >= 45) {
       riskFactor *= 0.2; // Acidified environment suppresses pathogens
   }
+
+  // Black koji throws citric acid, which drops the pH and keeps a warm ferment
+  // from turning on itself — the reason it exists in hot climates.
+  const acidShield = getAcidProtection(ingredients);
+  if (acidShield > 0) riskFactor *= Math.max(0.3, 1 - acidShield / 40);
 
   // Hygiene Check & Cleaner Staff
   if (activeStaff['cleaner']) riskFactor *= 0.5;
@@ -737,7 +759,7 @@ export const processBatchTick = (
   // trickle (+0.05/tick) that moved the needle about 6 points over a whole batch
   // and left the outcome essentially equal to its starting value.
   const rdUmamiMult = activeStaff['rd'] ? 1.35 : 1.0;
-  const potential = getFlavorPotential(ingredients, concentration);
+  const potential = getFlavorPotential(ingredients, concentration, batch.ingredientQuantities);
 
   // How well the batch is being run, 0..1. Enzymes stall when it is too cold and
   // denature when it is too hot, so this is a band around the recipe's ideal.
@@ -769,6 +791,7 @@ export const processBatchTick = (
 
   return {
     ...batch,
+    enzymes,
     totalMass, 
     progress: progress,
     params: newParams,
@@ -841,15 +864,31 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
  */
 export const getFlavorPotential = (
   ingredients: Ingredient[],
-  concentration: number
+  concentration: number,
+  quantities?: Record<string, number>
 ): { umami: number; funk: number; sweetness: number } => {
   const sub = ingredients.find(i => i.type === IngredientType.SUBSTRATE) || ingredients[0];
   if (!sub) return { umami: 0, funk: 0, sweetness: 0 };
   const c = Math.max(0.15, concentration);
+  const h = sub.hiddenStats;
+
+  // The enzymes present decide how much of the substrate is actually reachable.
+  // Protein sitting in a bean is not umami until a protease cuts it up, and
+  // starch is not sweet until an amylase does. A rich substrate with no koji is
+  // a missed opportunity; a strong koji on a poor substrate has nothing to work
+  // on. Both halves have to be right.
+  const enz = getBatchEnzymes(ingredients, quantities);
+
+  // A floor of background activity: wild organisms and native enzymes do a
+  // little of this on their own, which is how a plain lacto pickle works.
+  const proteolysis = 0.18 + (enz.protease / 100) * 0.95;
+  const saccharification = 0.15 + (enz.amylase / 100) * 1.0;
+
   return {
-    umami: sub.hiddenStats.proteinContent * 11 * c,
-    funk: sub.hiddenStats.microbialDiversity * 9 * c,
-    sweetness: sub.hiddenStats.sugarContent * 9 * c,
+    umami: h.proteinContent * 11 * c * proteolysis,
+    funk: h.microbialDiversity * 9 * c,
+    // Free sugar is already there; starch only counts once amylase reaches it.
+    sweetness: (h.sugarContent * 5 + h.starchContent * 7 * saccharification) * c,
   };
 };
 
@@ -863,6 +902,8 @@ export const generateInitialQuality = (ingredients: Ingredient[]): FlavorProfile
         umami: sub.hiddenStats.proteinContent * concentration * 1.2,
         acidity: 4 * concentration,
         funk: sub.hiddenStats.microbialDiversity * concentration * 0.8,
+        // Only the free sugar tastes sweet at the start — the starch has not
+        // been converted yet, which is what the ferment is for.
         sweetness: sub.hiddenStats.sugarContent * concentration * 1.5,
         safety: 100
     };

@@ -3,7 +3,8 @@ import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentTyp
 import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION } from '../constants';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
-import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
+import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../services/gameLogic';
+import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias } from '../services/koji';
 import MolecularScan, { ScanTarget } from './MolecularScan';
 import {
   Play,
@@ -46,8 +47,8 @@ interface BatchControllerProps {
   ownedVesselIds: string[];
   analyzedRecipeIds: string[];
   recipeMastery: Record<string, RecipeMastery>;
-  unlockedRecipes: string[];
-  ownedBookIds: string[];
+  unlockedRecipes?: string[];
+  ownedBookIds?: string[];
 }
 
 type HoveredItem = ScanTarget | null;
@@ -65,8 +66,8 @@ const BatchController: React.FC<BatchControllerProps> = ({
   ownedVesselIds, 
   analyzedRecipeIds,
   recipeMastery,
-  unlockedRecipes,
-  ownedBookIds
+  unlockedRecipes = [],
+  ownedBookIds = []
 }) => {
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
   const [vesselId, setVesselId] = useState<string>('');
@@ -437,6 +438,25 @@ const BatchController: React.FC<BatchControllerProps> = ({
   // next rung claim it needed a score of 80 rather than the xp it actually wants.
   const toNext = mastery ? xpToNextLevel({ ...mastery, level: handLevel }) : null;
   // Only worth printing before you have run it; after that the ladder says more.
+  // What the chamber is actually bringing: the enzymes on any koji you added,
+  // and — if this IS a koji run — which way the current dials will steer it.
+  const broughtEnzymes = useMemo(
+    () => getBatchEnzymes(selectedIngredients, customQuantities),
+    [selectedIngredients, customQuantities]
+  );
+  const isKojiRun = resolvedRecipe?.type === FermentType.KOJI;
+  const kojiSteer = useMemo(() => {
+    if (!isKojiRun) return null;
+    const sub = selectedIngredients.find(i => i.type === IngredientType.SUBSTRATE);
+    const starter = selectedIngredients.find(i => i.type === IngredientType.STARTER);
+    return kojiDevelopment(sub, starter, temp, humidity, 0);
+  }, [isKojiRun, selectedIngredients, temp, humidity]);
+
+  const ceilings = useMemo(
+    () => getFlavorPotential(selectedIngredients, dynamics.concentration || 1, customQuantities),
+    [selectedIngredients, dynamics.concentration, customQuantities]
+  );
+
   const benchFormula = resolvedRecipe && !isUndiscovered && !analyzedRecipeIds.includes(resolvedRecipe.id)
     ? describeFormula(resolvedRecipe.id) : null;
 
@@ -842,6 +862,27 @@ const BatchController: React.FC<BatchControllerProps> = ({
                   <span className="k">Kinetics</span>
                   <span className="n plum">{dynamics.speedModifier.toFixed(2)}×</span>
                 </div>
+
+                {(broughtEnzymes.amylase > 1 || broughtEnzymes.protease > 1) && (
+                  <>
+                    <div className="kv" style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid var(--line)' }}>
+                      <span className="k" title="Protease frees amino acids from protein. That is umami.">Protease</span>
+                      <span className="n moss">{broughtEnzymes.protease.toFixed(0)}</span>
+                    </div>
+                    <div className="kv">
+                      <span className="k" title="Amylase converts starch into sugar.">Amylase</span>
+                      <span className="n">{broughtEnzymes.amylase.toFixed(0)}</span>
+                    </div>
+                    <div className="kv">
+                      <span className="k">Reachable umami</span>
+                      <span className="n moss">{ceilings.umami.toFixed(0)}</span>
+                    </div>
+                    <div className="kv">
+                      <span className="k">Reachable sweetness</span>
+                      <span className="n">{ceilings.sweetness.toFixed(0)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -938,6 +979,26 @@ const BatchController: React.FC<BatchControllerProps> = ({
                     Set to the book
                   </button>
                 )}
+              </div>
+            )}
+
+            {kojiSteer && (
+              <div className="steer">
+                <div className="sh">
+                  <span className="l">This bed will grow</span>
+                  <span className="v">{describeEnzymes({ amylase: kojiSteer.amylaseShare * 100, protease: (1 - kojiSteer.amylaseShare) * 100 }).label}</span>
+                </div>
+                <div className="strack">
+                  <div className="sfill" style={{ width: `${kojiSteer.amylaseShare * 100}%` }} />
+                </div>
+                <div className="sends">
+                  <span>savoury · protease</span>
+                  <span>sweet · amylase</span>
+                </div>
+                <p className="snote">
+                  Warmer and wetter pushes it sweet; cooler and drier pushes it savoury.
+                  The strain you inoculated with decides where the middle sits.
+                </p>
               </div>
             )}
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book } from './types';
-import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS,
+import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS,
   RAID_HEAT_THRESHOLD, RAID_BASE_CHANCE, HEAT_DECAY_PER_TICK, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads } from './services/gameLogic';
@@ -16,6 +16,7 @@ import LogbookModal from './components/LogbookModal';
 import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
 import { grantMastery } from './services/mastery';
+import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import DevPanel from './components/DevPanel';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon } from './components/icons';
@@ -627,6 +628,23 @@ export default function App() {
               inventory: { ...prev.inventory, [ingredient.id]: (prev.inventory[ingredient.id] || 0) + quantity },
               supplierRelationships: { ...prev.supplierRelationships, [supplierId]: { level: newLevel, xp: newXp } }
             }));
+
+            // Levelling a supplier used to happen in total silence, so the stock
+            // it opened was easy to miss entirely — the system worked and looked
+            // like it did not. Say what it opened.
+            if (newLevel > rel.level) {
+              const supplierName = SUPPLIERS.find(x => x.id === supplierId)?.name ?? 'Supplier';
+              const opened = INGREDIENTS
+                .filter(i => i.supplierId === supplierId && i.tierRequired > rel.level && i.tierRequired <= newLevel)
+                .map(i => i.name);
+              setLabNotification({
+                id: Date.now(),
+                text: opened.length
+                  ? `${supplierName} now deals with you at level ${newLevel} — ${opened.join(', ')} on the shelf.`
+                  : `${supplierName} now deals with you at level ${newLevel}.`,
+                type: 'info'
+              });
+            }
         }
     }
   };
@@ -946,7 +964,7 @@ export default function App() {
                 idealFor: ['koji'],
                 supplierId: 'in_house',
                 tierRequired: 0,
-                hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
+                hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
                 mass: 10,
                 unitDisplay: 'g',
                 isLiving: true,
@@ -1031,6 +1049,7 @@ export default function App() {
         supplierId: 'in_house',
         tierRequired: 0,
         hiddenStats: {
+          starchContent: 0,   // already converted by the ferment that made it
           sugarContent: batch.quality.sweetness / 10,
           nativeSalinity: batch.params.salinity,
           microbialDiversity: 5,
@@ -1062,6 +1081,39 @@ export default function App() {
       value: 0,
       notes: `Cellared in Laboratory Storage (${amount} units)`
     };
+
+    // A finished koji is not a jar of sauce — it is a tool, and which tool it is
+    // depends on how you grew it. Mint it carrying the enzyme profile the bed
+    // actually developed, so it can be spent on the next batch.
+    if (isKojiRecipe(recipe) && batch.enzymes) {
+      const substrate = [...INGREDIENTS, ...newCustomIngredients].find(i => i.id === batch.substrateId);
+      const product = mintKojiProduct(batch, recipe, substrate);
+      const already = [...INGREDIENTS, ...newCustomIngredients].find(i => i.id === product.id);
+      if (!already) newCustomIngredients.push(product);
+
+      const read = describeEnzymes(batch.enzymes);
+      setGameState(prev => ({
+        ...prev,
+        batches: prev.batches.filter(b => b.id !== batch.id),
+        customIngredients: newCustomIngredients,
+        inventory: { ...prev.inventory, [product.id]: (prev.inventory[product.id] || 0) + amount },
+        recipeMastery: storeMastery.next,
+        xp: prev.xp + storeMastery.gained,
+        hygiene: Math.max(0, prev.hygiene - 3),
+        logbook: [logEntry, ...prev.logbook],
+        analyzedRecipeIds: prev.analyzedRecipeIds.includes(batch.recipeId)
+          ? prev.analyzedRecipeIds : [...prev.analyzedRecipeIds, batch.recipeId],
+        unlockedRecipes: prev.unlockedRecipes.includes(batch.recipeId)
+          ? prev.unlockedRecipes : [...prev.unlockedRecipes, batch.recipeId],
+      }));
+      setUiState(prev => ({ ...prev, activeBatchId: null }));
+      setLabNotification({
+        id: Date.now(),
+        text: `${amount}x ${product.name} — ${Math.round(batch.enzymes.amylase)} amylase / ${Math.round(batch.enzymes.protease)} protease.`,
+        type: 'info'
+      });
+      return;
+    }
 
     setGameState(prev => ({
       ...prev,

@@ -13,12 +13,37 @@ export interface Supplier {
   color: string; 
 }
 
+/**
+ * Substrate composition, on a 0-10 scale that tracks real proportions of dry
+ * matter. Rough anchors: polished rice is ~7% protein / ~78% starch, pearl
+ * barley ~10/73, soybeans ~36% protein with almost no starch, oily fish ~19%
+ * protein / 0 starch / ~14% fat.
+ *
+ * The split between `starchContent` and `sugarContent` is what makes koji
+ * enzymes mean anything: amylase converts STARCH into sugar, it does not
+ * conjure sugar out of a fish.
+ */
 export interface HiddenStats {
-  sugarContent: number; 
+  sugarContent: number;        // free/simple sugars already present
+  starchContent: number;       // polysaccharide that amylase can convert
   nativeSalinity: number; 
   microbialDiversity: number; 
   fatContent: number; 
-  proteinContent: number; 
+  proteinContent: number;      // what protease converts into glutamate/umami
+}
+
+/**
+ * What a koji is actually FOR.
+ *
+ * Aspergillus secretes two families that matter here: amylases, which cut
+ * starch into fermentable sugar, and proteases, which cut protein into free
+ * amino acids — glutamate above all, which is umami. A sake koji is bred for
+ * amylase; a shoyu or miso koji is bred for protease. The same spore grown
+ * differently lands somewhere else again, which is the decision this models.
+ */
+export interface EnzymeProfile {
+  amylase: number;   // 0-100 activity units
+  protease: number;  // 0-100 activity units
 }
 
 export interface Ingredient {
@@ -48,6 +73,14 @@ export interface Ingredient {
   
   isLiving?: boolean;
   generation?: number; 
+
+  // --- KOJI ---
+  // On a spore: which way the strain is bred, 0 = pure protease, 1 = pure amylase.
+  strainBias?: number;
+  // On a finished koji: the enzyme activity it actually carries into the next batch.
+  enzymes?: EnzymeProfile;
+  // Black koji (A. luchuensis) throws citric acid, which protects a warm ferment.
+  acidProtection?: number;
   lineageBuffs?: {
     speedMultiplier: number; 
     resilience: number; 
@@ -155,6 +188,11 @@ export interface Batch {
       isLidPropped: boolean;
   };
   
+  // Live enzyme development, only meaningful while this is a koji cultivation.
+  // The temperature and moisture you hold decide the ratio, so the profile is
+  // steered over the whole run rather than fixed at inoculation.
+  enzymes?: EnzymeProfile;
+
   // Built with at least one contraband reagent. Stored on the batch so the
   // fences and the heat tick never have to re-derive it from the ingredient list.
   contraband?: boolean;
