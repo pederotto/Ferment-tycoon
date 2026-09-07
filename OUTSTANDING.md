@@ -2,14 +2,43 @@
 
 Where the work stopped, so it can be picked up without this conversation.
 
-## Needs doing before anything else
+## Measured — the economy after gram dialling
 
-**A balance sweep after per-reagent gram dialling.** Batch value derives from
-mass (`yieldVolume`), and reagents can now be dialled down, so smaller batches
-mean smaller sales. That is correct behaviour but the economy was last measured
-against fixed 1 kg units. If early-game income feels wrong, this is the cause.
-Method: harness under `sim/`, compare profit-per-week across the opening vessels
-against the weekly bill floor of $120.
+The balance sweep this file used to ask for has been run. The economy still
+clears its floor, but the dial has a one-way bias worth knowing about.
+
+Method: `esbuild --bundle` on `constants.ts` and `services/gameLogic.ts` into
+plain ESM, then arithmetic on the real numbers. No new harness — it takes about
+a minute to redo.
+
+The floor is $120 rent a week, plus $18 upkeep per vessel past the first two.
+A week is 7 days x `DAY_DURATION_MS` (8 s) = 56 s of wall clock, and recipes run
+60-400 s, so most ferments take *more than one week* to finish. That, not the
+batch price, is what sets income.
+
+Revenue is `50 x difficulty x (score/50) x mass_kg^0.62 x buyerMult x demand`.
+At score 70 against a plain 1.0 buyer, one difficulty-2 recipe on a 150 s clock
+(2.7 weeks) pays:
+
+| fill | per batch | per vessel-week | two vessels |
+|------|-----------|-----------------|-------------|
+| 0.5 kg | $91 | $34 | $68 — underwater |
+| 1.0 kg | $140 | $52 | $104 — underwater |
+| 2.0 kg (full mason jar) | $215 | $80 | $160 — clears |
+
+With a x1.5 buyer a single filled jar clears the floor on its own. So: the
+opening is solvent if the player fills the vessel, and insolvent if they do not.
+
+**The bias worth knowing about.** Because yield pays `mass^0.62` while
+ingredients cost linearly, a *smaller* batch is more efficient per gram spent —
+but vessel-weeks are the real bottleneck, so a smaller batch is always worse per
+week. Filling the vessel is therefore never wrong, and the mass half of the
+reagent dial has no upside; only the *ratios* between reagents are a real
+decision. If that ever wants fixing, the lever is a per-batch cost that scales
+with time rather than mass (the upkeep already does this per vessel), or an
+ingredient market that makes bulk genuinely dearer.
+
+## Needs doing before anything else
 
 **A visual review.** Almost everything built in the last stretch was verified by
 DOM measurement rather than by eye, because the browser pane could not render
