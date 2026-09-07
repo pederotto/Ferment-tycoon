@@ -107,11 +107,14 @@ export const resolveRecipeFromMatrix = (
               peakWindowEnd: 100,
               activeIntervention: 'Clean',
               idealParams: { temp: 20, humidity: 60, salinity: 3 }, 
+              // Fixed target. What a lacto SHOULD taste like is a property of the
+              // process, not of whatever you put in it — deriving the target from
+              // the substrate made every substrate score the same.
               idealFlavorProfile: { 
                   umami: 20, 
                   acidity: isBrine ? 60 : 80, // Brine dilutes acid
                   funk: 30, 
-                  sweetness: Math.max(0, sub.hiddenStats.sugarContent * 5), 
+                  sweetness: 30, 
                   safety: isBrine ? 100 : 90 // Brine is safer
               },
               difficulty: 1
@@ -137,10 +140,10 @@ export const resolveRecipeFromMatrix = (
               activeIntervention: isWet ? 'Stir' : 'Clean',
               idealParams: { temp: 25, humidity: 60, salinity: 8 },
               idealFlavorProfile: { 
-                  umami: sub.hiddenStats.proteinContent * 10, 
+                  umami: 75,      // fixed: a good miso is a good miso
                   acidity: 20, 
                   funk: 50, 
-                  sweetness: sub.hiddenStats.sugarContent * 5, 
+                  sweetness: 25, 
                   safety: 100 
               },
               difficulty: 2
@@ -164,8 +167,8 @@ export const resolveRecipeFromMatrix = (
               activeIntervention: 'Skim',
               idealParams: { temp: 60, humidity: 50, salinity: 15 }, // Needs high heat
               idealFlavorProfile: { 
-                  umami: sub.hiddenStats.proteinContent * 15, // Extreme Umami
-                  acidity: 30, 
+                  umami: 95,      // fixed, and deliberately high: only a
+                  acidity: 30,    // protein-rich substrate can ever reach it
                   funk: 60, 
                   sweetness: 10, 
                   safety: 90 
@@ -555,6 +558,17 @@ export const processBatchTick = (
          newParams.humidity -= drift;
       }
 
+      // Airflow and misting only worked inside the koji branch, so a cure like
+      // bottarga — which rots above 40% RH — had no counterplay at all in a humid
+      // month. The tools now work in the standard model too, which is the whole
+      // reason to own them.
+      if ((inventory['portable_fan'] || 0) > 0) {
+          newParams.humidity = Math.max(0, newParams.humidity - 0.35);
+      }
+      if ((inventory['humidifier'] || 0) > 0 && newParams.humidity < recipe.idealParams.humidity) {
+          newParams.humidity = Math.min(100, newParams.humidity + 0.3);
+      }
+
       // 3. Temperature-Dependent Progress
       if (newParams.temp > 10 && newParams.temp < 65) {
            const tempOptimality = 1 - (Math.abs(newParams.temp - recipe.idealParams.temp) / 50);
@@ -717,17 +731,40 @@ export const processBatchTick = (
       }
   }
 
-  // Flavor Evolution (R&D boosts Umami scaling)
+  // --- FLAVOUR DEVELOPMENT ---
+  // Quality converges toward what the substrate can actually support, at a rate
+  // set by how close to ideal you are holding the vessel. This replaces a flat
+  // trickle (+0.05/tick) that moved the needle about 6 points over a whole batch
+  // and left the outcome essentially equal to its starting value.
   const rdUmamiMult = activeStaff['rd'] ? 1.35 : 1.0;
-  if (progress < peakStart) {
-    newQuality.umami += 0.05 * concentration * rdUmamiMult;
-  } else if (progress >= peakStart && progress <= effectivePeakEnd) {
-    newQuality.umami += 0.2 * concentration * rdUmamiMult; 
-    newQuality.funk += 0.1 * concentration; 
-    newQuality.acidity += 0.05;
-  } else if (progress > effectivePeakEnd) {
-    newQuality.umami -= 0.1;
-    newQuality.funk += 0.2; 
+  const potential = getFlavorPotential(ingredients, concentration);
+
+  // How well the batch is being run, 0..1. Enzymes stall when it is too cold and
+  // denature when it is too hot, so this is a band around the recipe's ideal.
+  const tempMiss = Math.abs(newParams.temp - recipe.idealParams.temp);
+  const processQuality = Math.max(0.05, 1 - tempMiss / 28) * (1 - Math.min(0.6, stress / 100));
+
+  // Salt is the other half: an under-salted ferment goes sour and thin instead
+  // of deep, an over-salted one simply stops working.
+  const idealSal = recipe.idealParams.salinity;
+  const salFactor = idealSal <= 0
+    ? 1
+    : Math.max(0.25, 1 - Math.abs(newParams.salinity - idealSal) / (idealSal * 1.6));
+
+  const convert = 0.035 * processQuality * salFactor;
+
+  if (progress <= effectivePeakEnd) {
+    newQuality.umami += (potential.umami * rdUmamiMult - newQuality.umami) * convert;
+    newQuality.funk += (potential.funk - newQuality.funk) * convert * 0.8;
+    if (potential.sweetness > newQuality.sweetness) {
+      // Starch converts to sugar early, then the sugar gets eaten.
+      newQuality.sweetness += (potential.sweetness - newQuality.sweetness) * convert * 0.6;
+    }
+    if (progress >= peakStart) newQuality.acidity += 0.05;
+  } else {
+    // Past the window it keeps going: umami breaks back down and it turns funky.
+    newQuality.umami -= 0.12;
+    newQuality.funk += 0.2;
   }
 
   return {
@@ -793,15 +830,40 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
   return Math.floor(Math.min(qualityCap, score));
 };
 
+/**
+ * What this batch could become if you run it well.
+ *
+ * This is the load-bearing idea: the substrate sets your CEILING, not your
+ * target. A protein-rich fish can reach a garum's umami; pearl barley cannot,
+ * no matter how perfectly you run it. Previously the procedural recipes derived
+ * their own idealFlavorProfile from these same stats, so the goalposts moved
+ * with the ball and every substrate scored roughly the same.
+ */
+export const getFlavorPotential = (
+  ingredients: Ingredient[],
+  concentration: number
+): { umami: number; funk: number; sweetness: number } => {
+  const sub = ingredients.find(i => i.type === IngredientType.SUBSTRATE) || ingredients[0];
+  if (!sub) return { umami: 0, funk: 0, sweetness: 0 };
+  const c = Math.max(0.15, concentration);
+  return {
+    umami: sub.hiddenStats.proteinContent * 11 * c,
+    funk: sub.hiddenStats.microbialDiversity * 9 * c,
+    sweetness: sub.hiddenStats.sugarContent * 9 * c,
+  };
+};
+
 export const generateInitialQuality = (ingredients: Ingredient[]): FlavorProfile => {
     const sub = ingredients.find(i => i.type === IngredientType.SUBSTRATE) || ingredients[0];
     const { concentration } = calculateBatchDynamics(ingredients);
 
+    // Raw inputs start near zero. Everything the batch becomes is developed by
+    // the ferment itself, which is what makes the process worth simulating.
     return {
-        umami: sub.hiddenStats.proteinContent * concentration * 5,
-        acidity: 5 * concentration,
-        funk: sub.hiddenStats.microbialDiversity * 2 * concentration,
-        sweetness: sub.hiddenStats.sugarContent * 2 * concentration,
+        umami: sub.hiddenStats.proteinContent * concentration * 1.2,
+        acidity: 4 * concentration,
+        funk: sub.hiddenStats.microbialDiversity * concentration * 0.8,
+        sweetness: sub.hiddenStats.sugarContent * concentration * 1.5,
         safety: 100
     };
 };
