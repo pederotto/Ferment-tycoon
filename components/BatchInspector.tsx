@@ -1,15 +1,166 @@
 import React, { useState } from 'react';
-import { Batch, Recipe, FermentType, Buyer, StaffRoleType } from '../types';
+import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls } from '../types';
 import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
-import { describeEnzymes } from '../services/koji';
+import { describeEnzymes, describeLineage } from '../services/koji';
 import RunTrace from './RunTrace';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch } from '../services/gameLogic';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
 import {
   CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
   LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon
 } from './icons';
+
+/**
+ * THE CHAMBER PANEL
+ *
+ * Held settings, not pokes. Three rows because there are exactly three things
+ * you can hold: how much air moves, how much water goes in, and how hard the
+ * box is heating.
+ *
+ * The readout underneath is the point of the whole component. Vent and mist are
+ * individually easy to understand and jointly counter-intuitive — misting into
+ * a sealed chamber does almost nothing to the temperature, and misting into a
+ * draught is the strongest cooling in the game while barely moving humidity.
+ * Rather than making the player derive that, the panel states what the current
+ * combination is doing right now, and it updates as they change it.
+ */
+const VENT_LABELS = ['Sealed', 'Cracked', 'Open', 'Forced'];
+const MIST_LABELS = ['Off', 'Periodic', 'Continuous'];
+
+const ChamberPanel: React.FC<{
+  batch: Batch;
+  recipe: Recipe;
+  inventory: Record<string, number>;
+  onSetControl?: (patch: Partial<ChamberControls>) => void;
+}> = ({ batch, recipe, inventory, onSetControl }) => {
+  const c = getControls(batch);
+  const hasFan = (inventory['portable_fan'] || 0) > 0;
+  const hasHumidifier = (inventory['humidifier'] || 0) > 0;
+  const isIncubator = batch.vesselId === 'incubator';
+  const ex = chamberExchange(c, hasFan);
+  const live = batch.status === 'active';
+
+  const netHumidity = ex.moistureGain - ex.moistureLoss;
+  const surface = batch.surfaceWater ?? 0;
+
+  // What the current combination actually does, in one sentence.
+  const reading = (() => {
+    if (c.mist > 0 && ex.vent >= 2)
+      return 'Evaporative cooling: the airflow is carrying the mist off and taking heat with it. Humidity roughly holds while the temperature falls — the only way to run cool and damp at once.';
+    if (c.mist > 0 && ex.vent === 0)
+      return 'Misting into a sealed chamber. The air saturates, so it cools very little — the water is going onto the bed instead of into the air.';
+    if (ex.vent >= 2 && c.mist === 0)
+      return 'Open and dry. Sheds heat fast, and moisture with it — watch the humidity, not just the temperature.';
+    if (ex.vent === 0 && c.mist === 0)
+      return 'Sealed. Whatever the culture generates, it keeps. Fine until it starts generating a lot.';
+    return 'Cracked open. Gentle exchange with the room.';
+  })();
+
+  const Row: React.FC<{
+    label: string; hint: string; value: number; max: number;
+    names: string[]; locked?: (n: number) => string | null;
+    onPick: (n: number) => void;
+  }> = ({ label, hint, value, max, names, locked, onPick }) => (
+    <div className="cp-row">
+      <span className="cp-lab" title={hint}>{label}</span>
+      <div className="cp-steps">
+        {Array.from({ length: max + 1 }, (_, n) => {
+          const lock = locked?.(n) ?? null;
+          return (
+            <button
+              key={n}
+              className={`cp-step${value === n ? ' on' : ''}${lock ? ' locked' : ''}`}
+              disabled={!live || !!lock || !onSetControl}
+              title={lock ?? names[n]}
+              onClick={() => onPick(n)}
+            >
+              {names[n]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="chamber">
+      <div className="cp-head">
+        <span className="l">Chamber</span>
+        <span className="k mono">
+          {batch.params.temp.toFixed(1)}° · {batch.params.humidity.toFixed(0)}% RH
+        </span>
+      </div>
+
+      <Row
+        label="Vent" hint="Airflow. Sheds heat and moisture together."
+        value={c.vent} max={3} names={VENT_LABELS}
+        locked={n => (n === 3 && !hasFan ? 'Forced air needs a portable fan' : null)}
+        onPick={n => onSetControl?.({ vent: n as 0 | 1 | 2 | 3 })}
+      />
+
+      <Row
+        label="Mist" hint="Added water. Cools by evaporating — but only as fast as the vent carries it away."
+        value={c.mist} max={2} names={MIST_LABELS}
+        locked={n => (n === 2 && !hasHumidifier ? 'Continuous misting needs a humidifier' : null)}
+        onPick={n => onSetControl?.({ mist: n as 0 | 1 | 2 })}
+      />
+
+      {isIncubator && (
+        <div className="cp-row">
+          <span className="cp-lab" title="The chamber setpoint. Heat is a preservative in its own right — more of it means you need less salt.">
+            Heat
+          </span>
+          <div className="cp-heat">
+            <button className="cp-step" disabled={!live || !onSetControl}
+                    onClick={() => onSetControl?.({ heat: c.heat === null ? recipe.idealParams.temp : null })}>
+              {c.heat === null ? 'Off' : 'On'}
+            </button>
+            <input
+              type="range" min={20} max={70} step={1}
+              value={c.heat ?? recipe.idealParams.temp}
+              disabled={!live || c.heat === null || !onSetControl}
+              onChange={e => onSetControl?.({ heat: Number(e.target.value) })}
+            />
+            <span className="cp-set mono">{c.heat === null ? '—' : `${c.heat}°`}</span>
+          </div>
+        </div>
+      )}
+
+      <p className="cp-read">{reading}</p>
+
+      <div className="cp-facts">
+        <span className={`f${Math.abs(netHumidity) < 0.07 ? ' hi' : ''}`}>
+          {/* Three bands rather than two. The signature vent+mist combination
+              nets about +0.05 an hour — genuinely near-steady next to the -0.13
+              of an open chamber, but it is not flat, and calling it "holding"
+              would be the kind of small lie the player eventually catches. */}
+          humidity {Math.abs(netHumidity) < 0.02
+            ? 'holding'
+            : Math.abs(netHumidity) < 0.07
+              ? `near-steady, ${netHumidity > 0 ? 'up' : 'down'}`
+              : netHumidity > 0 ? 'rising' : 'falling'}
+        </span>
+        <span className={`f${ex.evapCooling > 0.6 ? ' hi' : ''}`}>
+          evaporative cooling {ex.evapCooling < 0.05 ? 'none' : ex.evapCooling < 0.6 ? 'slight' : 'strong'}
+        </span>
+        <span className={`f${surface > 55 ? ' bad' : ''}`} title="Free water on the substrate itself, which is not the same as humidity in the air. Airflow dries it off; a sealed chamber lets it pool, and a soaked bed grows bacteria rather than mould.">
+          bed {surface < 20 ? 'dry' : surface < 55 ? 'damp' : surface < 80 ? 'wet' : 'waterlogged'}
+        </span>
+        {isIncubator && c.heat !== null && c.heat >= 55 && c.heat < 65 && (
+          <span className="f hi" title="Above about 55 C nothing pathogenic establishes, whatever the salinity. This is the modern route: heat instead of salt.">
+            heat-preserved
+          </span>
+        )}
+        {isIncubator && c.heat !== null && c.heat >= 65 && (
+          <span className="f bad" title="Enzymes are proteins and they denature. Past 65 C the batch stops developing permanently — cooling it back down does not bring them back.">
+            above denaturing point
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface BatchInspectorProps {
   batch: Batch;
@@ -22,6 +173,7 @@ interface BatchInspectorProps {
   marketDemand?: Record<string, number>;
   onClose: () => void;
   onIntervention: (action: string) => void;
+  onSetControl?: (patch: Partial<ChamberControls>) => void;
   onQuickHarvest: () => void;
   onSell?: (buyer: Buyer, price: number, renownGain: number) => void;
   onStore?: () => void;
@@ -84,6 +236,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   marketDemand,
   onClose,
   onIntervention,
+  onSetControl,
   onQuickHarvest,
   onSell,
   onStore,
@@ -169,22 +322,20 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   // per-family branching, restyled onto the mockup's .tool-btn chrome).
   type Tool = { key: string; label: string; icon: React.FC<any>; onClick: () => void; disabled?: boolean; active?: boolean };
   const tools: Tool[] = [];
+  // The lid and the mister are held settings now, not pokes — they live in the
+  // chamber panel below. What is left here is genuinely momentary: turning the
+  // bed by hand is an action, not a state.
   if (isKoji) {
-    tools.push({ key: 'lid', label: lidOpen ? 'Lid: Open' : 'Lid: Closed', icon: LidToolIcon, onClick: () => onIntervention('ToggleLid'), active: lidOpen });
     tools.push({ key: 'mix', label: 'Mix', icon: MixToolIcon, onClick: () => onIntervention('Mix'), disabled: isPaused });
-    tools.push({ key: 'mist', label: 'Mist', icon: MistToolIcon, onClick: () => onIntervention('Mist'), disabled: isPaused });
   }
   if (isLiquid) {
     tools.push({ key: 'stir', label: 'Stir', icon: MixToolIcon, onClick: () => onIntervention('Stir') });
     if (isGarum) tools.push({ key: 'skim', label: 'Skim', icon: CleanToolIcon, onClick: () => onIntervention('Skim') });
-    tools.push({ key: 'lid', label: lidOpen ? 'Lid: Open' : 'Lid: Closed', icon: LidToolIcon, onClick: () => onIntervention('ToggleLid'), active: lidOpen });
   }
   if (isSolid) {
     tools.push({ key: 'clean', label: 'Clean', icon: CleanToolIcon, onClick: () => onIntervention('Clean') });
   }
-  if (recipe.type === FermentType.ALCOHOL) {
-    tools.push({ key: 'vent', label: 'Burp', icon: MistToolIcon, onClick: () => onIntervention('Ventilate') });
-  }
+
 
   const alertText = isSpoiled
     ? 'Culture has spoiled — salvage via Bio-Reclamation or discard.'
@@ -212,7 +363,11 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
             <span className="type-tag">{recipe.type} &middot; {batch.vesselId} #{batch.id.slice(-4)}</span>
             <h1 className="slab">{recipe.name}</h1>
             <div className="gen mono">
-              {batch.generation > 1 ? `Lineage: Gen ${batch.generation} Culture` : 'Lineage: Founder Culture'}
+              {batch.lineage && batch.lineage.generation > 1
+                ? describeLineage(batch.lineage)
+                : batch.generation > 1
+                  ? `Lineage: Gen ${batch.generation} Culture`
+                  : 'Lineage: Founder Culture'}
               {isSpoiled ? ' · Bio-Hazard' : isInPeakWindow ? ' · Peak Harvest Window' : batch.progress >= 100 ? ' · Mature / Ready' : ''}
             </div>
           </div>
@@ -318,6 +473,8 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                     </div>
                   )}
                 </div>
+
+                <ChamberPanel batch={batch} recipe={recipe} inventory={inventory} onSetControl={onSetControl} />
 
                 {tools.length > 0 && (
                   <div>

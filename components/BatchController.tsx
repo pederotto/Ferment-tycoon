@@ -391,10 +391,22 @@ const BatchController: React.FC<BatchControllerProps> = ({
       status: 'active',
       messages: ['Matrix Inoculated.', `Vessel: ${vessel.name}`, `Net Mass: ${(totalMass / 1000).toFixed(2)}kg`],
       generation: generation,
+      // The strain comes with the spore. Founder stock gets the neutral profile.
+      lineage: starter?.lineage ?? {
+        generation,
+        vigor: 1,
+        resilience: 0,
+        bias: starter?.strainBias ?? 0.5,
+      },
       lineageDamaged: false,
       stress: 0,
       disturbanceTimer: 0,
-      flags: { isLidPropped: false }
+      flags: { isLidPropped: false },
+      // Everything starts sealed, unmisted and unheated. Deciding otherwise is
+      // the player's job now, and the incubator defaults to the recipe's target
+      // until they touch it.
+      controls: { vent: 0, mist: 0, heat: vesselId === 'incubator' ? recipe.idealParams.temp : null },
+      surfaceWater: 0,
     };
 
     const deductions: Record<string, number> = {};

@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book } from './types';
+import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book, Lineage, ChamberControls } from './types';
 import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
   RAID_HEAT_THRESHOLD, RAID_BASE_CHANCE, HEAT_DECAY_PER_TICK, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
-import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads } from './services/gameLogic';
+import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls } from './services/gameLogic';
+import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage } from './services/koji';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
 import BatchController from './components/BatchController';
@@ -745,12 +746,14 @@ export default function App() {
     const starter = usedIngredients.find(i => i.type === IngredientType.STARTER);
     if (starter) {
         newBatch.generation = starter.generation || 1;
+        if (starter.lineage) newBatch.lineage = starter.lineage;
     }
 
     // Initialize New Physics State
     newBatch.stress = 0;
     newBatch.disturbanceTimer = 0;
     newBatch.flags = { isLidPropped: false };
+    newBatch.surfaceWater = newBatch.surfaceWater ?? 0;
 
     setGameState(prev => {
         const newInventory = { ...prev.inventory };
@@ -785,6 +788,23 @@ export default function App() {
         }),
         // Small hygiene hit for interactions
         hygiene: Math.max(0, prev.hygiene - 1) 
+    }));
+  };
+
+  /**
+   * Hold an appliance at a new setting. Unlike an intervention this is not a
+   * one-off poke — it changes what the tick does from here to the end of the
+   * run, so there is no disturbance penalty and no hygiene cost. The cost is
+   * that it keeps applying whether or not you were still paying attention.
+   */
+  const handleSetControl = (batch: Batch, patch: Partial<ChamberControls>) => {
+    setGameState(prev => ({
+      ...prev,
+      batches: prev.batches.map(b =>
+        b.id === batch.id
+          ? { ...b, controls: { ...getControls(b), ...patch } }
+          : b
+      ),
     }));
   };
 
@@ -1014,39 +1034,57 @@ export default function App() {
     let newCustomIngredients = [...gameState.customIngredients];
 
     // HANDLE SPORES (Lineage Logic)
+    //
+    // The spores you take off a bed inherit what that bed selected for, so the
+    // conditions held during the run — not the generation counter — decide what
+    // comes out. Three strains are kept per generation (proteolytic, balanced,
+    // amylolytic) so the drift is a thing you can pick up and use rather than a
+    // hidden number.
     if (sporeAmount > 0) {
-        let nextGen = batch.generation + 1;
-        if (batch.lineageDamaged) {
-            nextGen = Math.max(1, batch.generation - 1);
-        }
+        const parent = getLineage(batch);
+        const child = propagateLineage(parent, batch.history, batch.lineageDamaged);
+        const strain = lineageStrainKey(child.bias);
+        const nextGen = child.generation;
 
-        const sporeId = `koji_spores_gen${nextGen}`;
-        const existingSpore = newCustomIngredients.find(i => i.id === sporeId);
-        
-        if (!existingSpore) {
-            const newSpore: Ingredient = {
-                id: sporeId,
-                name: `Master Spores (Gen ${nextGen})`,
-                type: IngredientType.STARTER,
-                baseCost: 150 + (nextGen * 50), 
-                currency: 'money', 
-                quality: 100,
-                description: `Cultivated lineage. Generation ${nextGen}. Enhanced Vigor & Resilience.`,
-                idealFor: ['koji'],
-                supplierId: 'in_house',
-                tierRequired: 0,
-                hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
-                mass: 10,
-                unitDisplay: 'g',
-                isLiving: true,
+        const sporeId = `koji_spores_gen${nextGen}_${strain}`;
+        const existingIdx = newCustomIngredients.findIndex(i => i.id === sporeId);
+
+        // Re-propagating into a strain you already hold blends the two rather
+        // than overwriting: your house culture is the average of what you have
+        // been doing to it, which is how selection actually works.
+        const merged: Lineage = existingIdx >= 0 && newCustomIngredients[existingIdx].lineage
+            ? {
                 generation: nextGen,
-                lineageBuffs: {
-                    speedMultiplier: 1 + (nextGen * 0.05),
-                    resilience: nextGen * 5
-                }
-            };
-            newCustomIngredients.push(newSpore);
-        }
+                vigor: Math.max(newCustomIngredients[existingIdx].lineage!.vigor, child.vigor),
+                resilience: Math.max(newCustomIngredients[existingIdx].lineage!.resilience, child.resilience),
+                bias: (newCustomIngredients[existingIdx].lineage!.bias + child.bias) / 2,
+              }
+            : child;
+
+        const spore: Ingredient = {
+            id: sporeId,
+            name: `Master Spores (Gen ${nextGen} · ${lineageStrainLabel(merged.bias)})`,
+            type: IngredientType.STARTER,
+            baseCost: 150 + (nextGen * 50),
+            currency: 'money',
+            quality: 100,
+            description: describeLineage(merged),
+            idealFor: ['koji'],
+            supplierId: 'in_house',
+            tierRequired: 0,
+            hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
+            mass: 10,
+            unitDisplay: 'g',
+            isLiving: true,
+            generation: nextGen,
+            // strainBias is what advanceEnzymes actually reads, so the drift
+            // reaches the simulation through the same door a bought spore does.
+            strainBias: merged.bias,
+            lineage: merged,
+        };
+
+        if (existingIdx >= 0) newCustomIngredients[existingIdx] = spore;
+        else newCustomIngredients.push(spore);
 
         newInventory[sporeId] = (newInventory[sporeId] || 0) + sporeAmount;
     }
@@ -1570,6 +1608,7 @@ export default function App() {
              playerXp={gameState.xp}
              onClose={() => setUiState(prev => ({ ...prev, activeBatchId: null }))}
              onIntervention={(action) => handleIntervention(activeBatchForTest, action)}
+             onSetControl={(patch) => handleSetControl(activeBatchForTest, patch)}
              onQuickHarvest={() => handleQuickHarvest(activeBatchForTest)}
              onSell={handleSell}
              onStore={() => handleStore(activeBatchForTest)}

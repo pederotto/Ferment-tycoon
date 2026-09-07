@@ -82,10 +82,44 @@ export interface Ingredient {
   enzymes?: EnzymeProfile;
   // Black koji (A. luchuensis) throws citric acid, which protects a warm ferment.
   acidProtection?: number;
-  lineageBuffs?: {
-    speedMultiplier: number; 
-    resilience: number; 
-  };
+  // The heritable profile of a propagated culture. Read by the simulation, and
+  // by advanceEnzymes via strainBias — this is what makes generation N of your
+  // own strain behave differently from generation N of anyone else's.
+  lineage?: Lineage;
+}
+
+/**
+ * CHAMBER CONTROLS
+ *
+ * Every appliance the player can hold at a setting while a batch runs. These are
+ * levels, not toggles, and the physics reads them each tick:
+ *
+ *   vent   airflow. Sheds heat AND moisture — one lever, two consequences.
+ *   mist   added water. Cools by evaporation, but only as fast as the vent can
+ *          carry the vapour away, and wets the substrate itself as it goes.
+ *   heat   an incubator setpoint in degrees C, rather than the machine silently
+ *          holding whatever the recipe wanted.
+ */
+export interface ChamberControls {
+  vent: 0 | 1 | 2 | 3;   // sealed · cracked · open · forced (needs a fan)
+  mist: 0 | 1 | 2;       // off · periodic · continuous (needs a humidifier)
+  heat: number | null;   // setpoint in C, null = heating off
+}
+
+/**
+ * A CULTURE'S LINEAGE
+ *
+ * Carried on the spore, not recomputed from a generation counter. Vigour and
+ * resilience accumulate as you propagate; `bias` is the interesting one — it
+ * drifts toward whatever conditions you actually cultivated the parent bed in,
+ * so a house strain becomes yours over generations rather than just becoming a
+ * bigger number.
+ */
+export interface Lineage {
+  generation: number;
+  vigor: number;       // growth speed multiplier, 1.0 = founder stock
+  resilience: number;  // stress tolerance and effective hygiene buffer
+  bias: number;        // 0 = pure protease, 1 = pure amylase
 }
 
 export enum FermentType {
@@ -180,6 +214,10 @@ export interface Batch {
   messages: string[];
 
   generation: number;
+  // The strain profile this batch is running on, copied off the starter at
+  // inoculation. Absent on saves made before lineage was heritable — the sim
+  // falls back to deriving it from `generation`.
+  lineage?: Lineage;
   lineageDamaged: boolean;
   evaluationScore?: number;
   
@@ -187,8 +225,22 @@ export interface Batch {
   stress: number; // 0-100 Health Bar
   disturbanceTimer: number; // Ticks where growth is paused due to intervention
   flags: {
+      // Derived from controls.vent every tick, kept because several older call
+      // sites still ask the simple question "is it open".
       isLidPropped: boolean;
   };
+
+  // --- LIVE CHAMBER CONTROLS ---
+  // Appliances are held at a setting for the whole run rather than poked once.
+  // The tick reads these every step, so changing one mid-ferment changes the
+  // curve from that moment on.
+  controls?: ChamberControls;
+
+  // Free water sitting ON the substrate, as opposed to vapour in the air around
+  // it. Misting raises it, airflow drives it off. Chamber humidity and substrate
+  // wetness are not the same quantity and conflating them is the classic error:
+  // a wet bed grows bacteria while the air above it reads perfectly.
+  surfaceWater?: number; // 0-100
   
   // A thinned record of the run so far, for the telemetry graph and the
   // post-mortem. Capped in processBatchTick.

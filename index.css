@@ -1597,3 +1597,74 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .sc-pair .pr .w { font-size: 10px; color: var(--text-hi); }
 .sc-pair .pr .r { font-size: 9.5px; font-family: 'IBM Plex Mono', monospace; color: var(--brass); text-align: right; }
 .sc-pair .pr .y { grid-column: 1 / -1; font-size: 9px; color: var(--text-lo); font-style: italic; }
+
+/* =============================================================================
+   CHAMBER PANEL — held appliance settings inside the batch inspector.
+   Stepped buttons rather than sliders for vent and mist: there are three or
+   four meaningful positions, not a continuum, and a stepped control says so.
+   ============================================================================= */
+.chamber {
+  margin: 14px 0 4px;
+  padding: 12px 13px 11px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.16);
+}
+.chamber .cp-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.chamber .cp-head .l {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--brass);
+}
+.chamber .cp-head .k { font-size: 11px; color: var(--text-lo); }
+
+.cp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cp-lab {
+  flex: 0 0 42px;
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-lo); cursor: help;
+}
+.cp-steps { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+.cp-step {
+  flex: 1 1 auto; min-width: 62px;
+  padding: 5px 6px;
+  font-size: 10.5px; letter-spacing: 0.04em;
+  color: var(--text-mid);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.cp-step:hover:not(:disabled):not(.locked) { border-color: var(--brass); color: var(--text-hi); }
+.cp-step.on {
+  color: var(--bg-void);
+  background: var(--brass);
+  border-color: var(--brass);
+}
+.cp-step:disabled { opacity: 0.42; cursor: not-allowed; }
+.cp-step.locked { opacity: 0.3; font-style: italic; }
+
+.cp-heat { display: flex; align-items: center; gap: 8px; flex: 1; }
+.cp-heat input[type='range'] { flex: 1; accent-color: var(--amber); min-width: 80px; }
+.cp-heat .cp-step { flex: 0 0 46px; min-width: 46px; }
+.cp-set { font-size: 11px; color: var(--amber); flex: 0 0 34px; text-align: right; }
+
+.cp-read {
+  margin: 10px 0 8px;
+  font-size: 11.5px; line-height: 1.5;
+  color: var(--text-mid);
+  border-left: 2px solid var(--teal);
+  padding-left: 9px;
+}
+.cp-facts { display: flex; flex-wrap: wrap; gap: 5px; }
+.cp-facts .f {
+  font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 6px;
+  border: 1px solid var(--line); border-radius: 2px;
+  color: var(--text-lo);
+}
+.cp-facts .f.hi { color: var(--brass); border-color: rgba(193, 154, 88, 0.5); }
+.cp-facts .f.bad { color: var(--brick); border-color: rgba(166, 86, 65, 0.55); }

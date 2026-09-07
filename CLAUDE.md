@@ -69,6 +69,35 @@ feedback loop.
 for target temperature and humidity until the mastery track is high enough. That
 is the thing mastery sells. Do not "fix" it.
 
+**Chamber controls are held settings; interventions are pokes.** `controls`
+(vent / mist / heat) is read every tick and persists; `applyBatchIntervention`
+is a one-off with a disturbance cost. Do not move one into the other — the vent
+was a one-shot lid toggle originally and that is why it never interacted with
+anything.
+
+**Vent and mist are one system, not two knobs.** Airflow sheds heat *and*
+moisture; misting cools only as fast as the vent carries the vapour off. So
+mist+vent holds humidity while dropping temperature (a swamp cooler) and is the
+only route to a cool, damp bed. Measured: open+mist yields protease 67 / amylase
+50, sealed yields protease 33 / amylase 52. Changing either coefficient without
+re-measuring that spread will quietly collapse the interaction.
+
+**Chamber humidity and substrate wetness are different quantities.**
+`surfaceWater` is free water on the bed; `params.humidity` is vapour in the air.
+Misting into a sealed chamber raises the second barely and the first a lot, and
+a waterlogged bed grows bacteria while the hygrometer reads fine.
+
+**Lineage lives on the culture, not on a counter.** `getLineage()` reads
+`batch.lineage` and only falls back to deriving from `generation` for founder
+stock and old saves. `bias` drifts toward the conditions the parent bed was held
+at, in the same direction as `kojiDevelopment` — warm and wet selects amylase.
+If you change one, change both, or the game teaches two contradictory rules.
+
+**A heated chamber must be able to reach its setpoint before the batch spoils.**
+The incubator's heating is proportional to the gap for this reason; a flat rate
+meant a low-salt batch died in the twenties on its way to 60 °C, which made the
+heat-instead-of-salt route unreachable even though the safety model supports it.
+
 **Two advice sources, kept separate.** `BOOK_ADVICE` is authored, bought, and
 identical for everyone — it is about the craft. `benchAdvice()` is generated from
 the player's own run history — it is about them. Do not merge them.

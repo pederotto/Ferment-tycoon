@@ -1,4 +1,4 @@
-import { Batch, Ingredient, Recipe, EnzymeProfile, IngredientType, FermentType } from '../types';
+import { Batch, Ingredient, Recipe, EnzymeProfile, IngredientType, FermentType, TelemetrySample, Lineage } from '../types';
 
 /**
  * KOJI ENZYMOLOGY
@@ -363,4 +363,92 @@ export const suggestPairing = (i: Ingredient): Pairing | null => {
     };
   }
   return null;
+};
+
+/* =============================================================================
+   LINEAGE
+   Propagating your own spores is not just a cheaper starter. The bed you take
+   them from has been living under conditions you chose, and the spores that
+   survive to sporulate are the ones those conditions suited. Run beds warm and
+   damp for a few generations and you end up holding an amylolytic house strain;
+   run them cool and dry and you end up with a protease strain. That drift is the
+   whole point of the system — the numbers going up is the boring half.
+
+   Direction matches kojiDevelopment() deliberately: warm and wet favours
+   amylase there, so warm and wet must select for amylase here, or the player
+   would be taught two contradictory rules.
+   ============================================================================= */
+
+/** Mean temperature and humidity across the log phase, where selection happens. */
+const logPhaseConditions = (history: TelemetrySample[] | undefined) => {
+  const log = (history ?? []).filter(s => s.p >= 20 && s.p <= 80);
+  if (log.length === 0) return null;
+  const mean = (pick: (s: TelemetrySample) => number) =>
+    log.reduce((a, s) => a + pick(s), 0) / log.length;
+  return { temp: mean(s => s.temp), humidity: mean(s => s.hum) };
+};
+
+/**
+ * The strain profile the next generation inherits.
+ *
+ * `damaged` is a real setback rather than cosmetic: a bed you cooked loses
+ * vigour and resilience outright, and its bias slides back toward the middle
+ * because you have killed off whatever you had been selecting for.
+ */
+export const propagateLineage = (
+  parent: Lineage,
+  history: TelemetrySample[] | undefined,
+  damaged: boolean
+): Lineage => {
+  const cond = logPhaseConditions(history);
+
+  if (damaged) {
+    return {
+      generation: Math.max(1, parent.generation - 1),
+      vigor: Math.max(1, parent.vigor - 0.05),
+      resilience: Math.max(0, parent.resilience - 5),
+      bias: parent.bias + (0.5 - parent.bias) * 0.5,
+    };
+  }
+
+  // How far the conditions pulled, and which way. Selection is slow on purpose:
+  // a house strain should take several generations to become properly yours.
+  let bias = parent.bias;
+  if (cond) {
+    const pull = clamp01(
+      tempAmylaseBias(cond.temp) * 0.65 + moistureAmylaseBias(cond.humidity) * 0.35
+    );
+    bias = clamp01(parent.bias + (pull - parent.bias) * 0.28);
+  }
+
+  const generation = parent.generation + 1;
+  return {
+    generation,
+    // Vigour and resilience still climb, but they saturate — the interesting
+    // axis is bias, and an endlessly compounding speed buff would drown it.
+    vigor: Math.min(1.55, parent.vigor + 0.05),
+    resilience: Math.min(50, parent.resilience + 5),
+    bias,
+  };
+};
+
+/** Three readable strains per generation, so drift is visible as a real object. */
+export const lineageStrainKey = (bias: number): 'protease' | 'balanced' | 'amylase' =>
+  bias >= 0.62 ? 'amylase' : bias <= 0.38 ? 'protease' : 'balanced';
+
+export const lineageStrainLabel = (bias: number): string => {
+  const k = lineageStrainKey(bias);
+  return k === 'amylase' ? 'Amylolytic' : k === 'protease' ? 'Proteolytic' : 'Balanced';
+};
+
+/** What the player is told the strain has become, and why. */
+export const describeLineage = (l: Lineage): string => {
+  const k = lineageStrainKey(l.bias);
+  const lean =
+    k === 'amylase'
+      ? 'Selected toward amylase — your warm, damp beds have bred a strain that makes sugar.'
+      : k === 'protease'
+        ? 'Selected toward protease — your cool, dry beds have bred a strain that makes umami.'
+        : 'Still even-handed. Hold your beds consistently warm and damp, or cool and dry, to push it.';
+  return `Generation ${l.generation}. ${lean}`;
 };

@@ -122,6 +122,21 @@ export function loadGame(): GameState | null {
       contraband: b.contraband ?? (b.inputIngredientIds ?? []).some(
         id => INGREDIENTS.find(i => i.id === id)?.contraband === true
       ),
+      // Chamber controls and heritable lineage both postdate a lot of saves.
+      // getControls()/getLineage() cope with their absence, but seeding them
+      // here means the inspector opens on a real setting rather than a fallback.
+      controls: b.controls ?? {
+        vent: b.flags?.isLidPropped ? 2 : 0,
+        mist: 0,
+        heat: b.vesselId === 'incubator' ? null : null,
+      },
+      surfaceWater: b.surfaceWater ?? 0,
+      lineage: b.lineage ?? {
+        generation: b.generation ?? 1,
+        vigor: 1 + Math.min(10, (b.generation ?? 1) - 1) * 0.05,
+        resilience: Math.min(10, (b.generation ?? 1) - 1) * 5,
+        bias: 0.5,
+      },
     }));
 
     return migrated;

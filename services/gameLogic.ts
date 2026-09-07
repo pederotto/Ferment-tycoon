@@ -1,5 +1,5 @@
 
-import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample } from '../types';
+import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage } from '../types';
 import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe } from './koji';
 import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
@@ -445,6 +445,67 @@ export const applyBatchIntervention = (
 };
 
 /**
+ * The chamber settings a batch is running at. Older saves have no `controls`
+ * block, so they fall back to the binary lid flag they were built around.
+ */
+export const getControls = (batch: Batch): ChamberControls => {
+  if (batch.controls) return batch.controls;
+  return { vent: batch.flags?.isLidPropped ? 2 : 0, mist: 0, heat: null };
+};
+
+/**
+ * A culture's heritable profile. Stored on the spore once it has been
+ * propagated; derived from the generation counter for founder stock and for
+ * saves that predate heritable lineage.
+ */
+export const getLineage = (batch: Batch): Lineage => {
+  if (batch.lineage) return batch.lineage;
+  const generation = batch.generation || 1;
+  const genBonus = Math.min(10, generation - 1);
+  return {
+    generation,
+    vigor: 1 + genBonus * 0.05,
+    resilience: genBonus * 5,
+    bias: 0.5,
+  };
+};
+
+/**
+ * THE VENT / MIST INTERACTION
+ *
+ * Airflow does two things at once — it carries heat away and it carries water
+ * away — which is why it cannot be treated as a temperature knob. Misting adds
+ * water, and cools, but only by evaporating: a sealed chamber saturates and the
+ * mist just sits there, while an open one carries the vapour off and takes the
+ * latent heat with it.
+ *
+ * So the combination the player will find is mist + vent: humidity roughly
+ * holds while the temperature falls hard. That is a swamp cooler, and it is the
+ * only way to run a bed cool and damp at the same time.
+ *
+ * The cost is that the water has to land somewhere. `surfaceWater` is free water
+ * on the substrate itself, which is not the same as vapour in the air — a wet
+ * bed grows bacteria while the hygrometer above it reads fine.
+ */
+export const chamberExchange = (c: ChamberControls, hasFan: boolean) => {
+  const vent = hasFan ? c.vent : Math.min(2, c.vent) as 0 | 1 | 2;
+  return {
+    vent,
+    // Heat shed to the room, as a fraction of the gap.
+    coolingFactor: 0.011 + vent * 0.098,
+    // Vapour lost to the room per tick.
+    moistureLoss: 0.001 + vent * 0.066,
+    // Water added per tick.
+    moistureGain: c.mist * 0.09,
+    // Evaporative cooling: proportional to what is being evaporated AND to how
+    // fast the vent removes it. Sealed, misting barely cools at all.
+    evapCooling: c.mist * (0.15 + vent * 0.55),
+    // Free water arriving on the substrate, less what the airflow dries off.
+    surfaceDelta: c.mist * 0.4 - vent * 0.25,
+  };
+};
+
+/**
  * CORE SIMULATION LOOP
  * Updated with Conditional Logic Hooks for Recipe Matrix
  */
@@ -468,17 +529,30 @@ export const processBatchTick = (
   let stress = batch.stress || 0;
   let disturbanceTimer = batch.disturbanceTimer || 0;
   let enzymes = batch.enzymes;
-  const flags = batch.flags || { isLidPropped: false };
+  const flags = { ...(batch.flags || { isLidPropped: false }) };
   let lineageDamaged = batch.lineageDamaged;
 
   // Pass custom quantities if they exist on the batch
   const { speedModifier, concentration, totalMass } = calculateBatchDynamics(ingredients, batch.ingredientQuantities);
   const vessel = VESSELS.find(v => v.id === batch.vesselId) || VESSELS[0];
   
-  const generation = batch.generation || 1;
-  const genBonus = Math.min(10, generation - 1);
-  const genSpeedBuff = 1 + (genBonus * 0.05); 
-  const resilienceBuffer = genBonus * 5; 
+  // Lineage is carried on the culture now rather than recomputed from a counter,
+  // so a strain you damaged stays damaged and a strain you selected stays
+  // selected. getLineage() falls back to the old derivation for founder stock.
+  const lineage = getLineage(batch);
+  const genSpeedBuff = lineage.vigor;
+  const resilienceBuffer = lineage.resilience;
+
+  // Live appliance settings, read fresh every tick so a mid-run change bites
+  // immediately.
+  const controls = getControls(batch);
+  const hasFan = (inventory['portable_fan'] || 0) > 0;
+  const hasHumidifier = (inventory['humidifier'] || 0) > 0;
+  const ex = chamberExchange(
+    { ...controls, mist: (hasHumidifier ? controls.mist : Math.min(1, controls.mist)) as 0 | 1 | 2 },
+    hasFan
+  );
+  let surfaceWater = batch.surfaceWater ?? 0;
 
   const isKoji = recipe.type === FermentType.KOJI;
   const isIncubated = batch.vesselId === 'incubator';
@@ -525,43 +599,48 @@ export const processBatchTick = (
       // mandatory, which is what made koji feel like a chore. A bed now drifts a
       // few degrees above where you set it, and only a genuinely hot setpoint
       // needs managing.
-      const selfGeneratedHeat = (metabolicActivity * 1.05) * concentration * speedModifier; 
-      
-      // Cooling Logic
-      let coolingFactor = 0.02 * (1 - vessel.insulationFactor); 
-      
-      if (flags.isLidPropped) {
-          coolingFactor = 0.3; // Lid Open = Very High Cooling (Decisive)
-      } else {
-          coolingFactor *= 0.55; // Lid closed still traps, but not hermetically
-      }
-      
-      // Convection Fan
-      if ((inventory['portable_fan'] || 0) > 0) coolingFactor += 0.05;
-      
+      const selfGeneratedHeat = (metabolicActivity * 1.05) * concentration * speedModifier;
+
+      // Cooling is the vent setting, damped by how well the vessel holds heat.
+      // A sealed insulated crock barely sheds anything; a forced-air tray sheds
+      // a lot. The player sets this and lives with both of its consequences.
+      const coolingFactor = ex.coolingFactor * (1 - vessel.insulationFactor * 0.5);
+
       const ambientDelta = newParams.temp - ambientTemp;
       const coolingLoss = ambientDelta * coolingFactor;
 
-      // Net change is divided by the large THERMAL_MASS_FACTOR
-      const netTempChange = (selfGeneratedHeat - coolingLoss) / (THERMAL_MASS_FACTOR / 10);
+      // Evaporative cooling is not proportional to the gap — it works even when
+      // the bed is already at room temperature, which is exactly why misting
+      // into a draught is the tool for a bed running hot in a warm room.
+      const netTempChange =
+        (selfGeneratedHeat - coolingLoss - ex.evapCooling) / (THERMAL_MASS_FACTOR / 10);
       newParams.temp += netTempChange;
 
       // 3. HUMIDITY PHYSICS
-      let moistureLoss = 0.005; 
-      if (flags.isLidPropped) {
-          moistureLoss = 0.2; // Open lid dries very fast
-      } else {
-          moistureLoss = 0.001; // Closed lid retains almost everything
-      }
+      // Loss and gain are separate terms rather than one signed number, because
+      // they have different causes and the player needs to be able to run both
+      // at once. mist 2 + vent 2 comes out near neutral on humidity while the
+      // evaporation above drags the temperature down: the swamp-cooler trick.
+      let moistureLoss = ex.moistureLoss;
+      if (newParams.temp > 35) moistureLoss += 0.02; // sweating
 
-      if (newParams.temp > 35) moistureLoss += 0.02; // Sweating
-      
-      // Humidifier mitigation
-      if ((inventory['humidifier'] || 0) > 0 && newParams.humidity < recipe.idealParams.humidity) {
-          moistureLoss -= 0.05; 
+      newParams.humidity = Math.max(0, Math.min(100,
+        newParams.humidity - moistureLoss + ex.moistureGain
+      ));
+
+      // Water that did not evaporate has landed on the bed. Airflow takes it
+      // back off again; a sealed chamber lets it pool.
+      surfaceWater = Math.max(0, Math.min(100, surfaceWater + ex.surfaceDelta));
+
+      // A soaked bed is a bacterial substrate, not a fungal one. This is the
+      // cost of holding the mist on: the air reads perfect and the bed rots.
+      if (surfaceWater > 55) {
+          const sodden = (surfaceWater - 55) / 45;
+          newQuality.safety = Math.max(0, newQuality.safety - sodden * 0.35);
+          if (surfaceWater > 80 && !messages.includes('Bed waterlogged — bacteria, not mould')) {
+              messages.push('Bed waterlogged — bacteria, not mould');
+          }
       }
-      
-      newParams.humidity = Math.max(0, newParams.humidity - moistureLoss);
 
       // 4. STRESS SYSTEM
       // 4. STRESS SYSTEM & R&D PROTECTION
@@ -621,8 +700,20 @@ export const processBatchTick = (
       
       if (isIncubated) {
           if (isPowerAvailable) {
-              targetTemp = recipe.idealParams.temp;
-              heatingPower = 2.0; // Incubator active heating
+              // The chamber used to silently hold whatever the recipe wanted,
+              // which meant the one decision that separates Roman garum from the
+              // modern method — how much heat you substitute for salt — was made
+              // for you. The setpoint is the player's now; null means heating
+              // off, and the batch simply sits at room temperature.
+              targetTemp = controls.heat ?? recipe.idealParams.temp;
+              // A thermostat drives hardest when it is furthest from setpoint,
+              // rather than trickling at a fixed rate. The flat 2.0 took so long
+              // to climb that a low-salt batch spoiled somewhere in the twenties
+              // on its way to 60 C — which made the heat-instead-of-salt route
+              // unreachable in practice even though the safety model supports it.
+              heatingPower = controls.heat === null
+                ? 0
+                : Math.min(9, Math.max(0, (targetTemp - newParams.temp) * 0.85));
           } else {
               targetTemp = ambientTemp;
               heatingPower = 0;
@@ -649,21 +740,33 @@ export const processBatchTick = (
          newParams.humidity -= drift;
       }
 
-      // Airflow and misting only worked inside the koji branch, so a cure like
-      // bottarga — which rots above 40% RH — had no counterplay at all in a humid
-      // month. The tools now work in the standard model too, which is the whole
-      // reason to own them.
-      if ((inventory['portable_fan'] || 0) > 0) {
-          newParams.humidity = Math.max(0, newParams.humidity - 0.35);
-      }
-      if ((inventory['humidifier'] || 0) > 0 && newParams.humidity < recipe.idealParams.humidity) {
-          newParams.humidity = Math.min(100, newParams.humidity + 0.3);
-      }
+      // The vent and the mister are not koji-only tools. A cure like bottarga
+      // rots above 40% RH and had no counterplay at all in a humid month; a
+      // garum held open runs cooler than its setpoint. Same levers, same
+      // consequences, in both physics branches.
+      newParams.humidity = Math.max(0, Math.min(100,
+        newParams.humidity - ex.moistureLoss * 4 + ex.moistureGain * 4
+      ));
+      // Airflow over a liquid or a paste pulls its temperature down too, and
+      // misting into that airflow pulls it down further.
+      newParams.temp -= (ex.evapCooling * 0.5 + (newParams.temp - ambientTemp) * ex.coolingFactor * 0.35) / thermalInertia;
+
+      surfaceWater = Math.max(0, Math.min(100, surfaceWater + ex.surfaceDelta));
 
       // 3. Temperature-Dependent Progress
       if (newParams.temp > 10 && newParams.temp < 65) {
            const tempOptimality = 1 - (Math.abs(newParams.temp - recipe.idealParams.temp) / 50);
            progress += (100 / recipe.baseDurationSeconds) * speedModifier * genSpeedBuff * Math.max(0.1, tempOptimality);
+      } else if (newParams.temp >= 65) {
+           // Enzymes are proteins and they denature. Past 65 C nothing further
+           // happens, ever — which is a legitimate outcome but a baffling one to
+           // watch, because the batch simply stops with no explanation. Now it
+           // says so. Cooling back down does not undo it; the enzymes are gone.
+           if (!messages.includes('Enzymes denatured — too hot to develop further')) {
+               messages.push('Enzymes denatured — too hot to develop further');
+           }
+      } else if (newParams.temp <= 10 && !messages.includes('Too cold to develop')) {
+           messages.push('Too cold to develop');
       }
   }
 
@@ -711,8 +814,16 @@ export const processBatchTick = (
       if (newParams.salinity < recipe.idealParams.salinity * 0.4) {
           // Severely under-salted — unless the heat is carrying it instead, which
           // is a legitimate method rather than a mistake.
+          //
+          // A chamber climbing toward a heat-preserving setpoint is a third case:
+          // the batch is passing through the danger zone rather than sitting in
+          // it. That is a real risk and a bounded one, so it decays slowly
+          // instead of not at all. Without this the modern low-salt route could
+          // never be reached, because the batch died during the warm-up.
           const heatIsCarryingIt = newParams.temp >= 55;
-          if (!heatIsCarryingIt) safetyDecay += 2;
+          const climbingToHeat = !heatIsCarryingIt && isIncubated && isPowerAvailable
+            && (controls.heat ?? recipe.idealParams.temp) >= 55;
+          if (!heatIsCarryingIt) safetyDecay += climbingToHeat ? 0.5 : 2;
           if (Math.random() < 0.05 && !messages.includes('Under-salted: Pathogen Risk')) {
               messages.push('Under-salted: Pathogen Risk');
           }
@@ -926,9 +1037,13 @@ export const processBatchTick = (
     messages: messages.slice(-5),
     lastTick: Date.now(),
     lineageDamaged: lineageDamaged,
+    controls,
+    surfaceWater,
+    // Kept in step with the vent so the older call sites that ask the simple
+    // open/closed question still get a true answer.
+    flags: { ...flags, isLidPropped: ex.vent >= 2 },
     stress: Math.max(0, stress),
     disturbanceTimer: disturbanceTimer,
-    flags: flags
   };
 };
 
