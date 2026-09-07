@@ -1,7 +1,7 @@
 import React from 'react';
 import { Ingredient, Vessel, Recipe, IngredientType } from '../types';
 import { masteryReveal } from '../services/mastery';
-import { describeEnzymes } from '../services/koji';
+import { describeEnzymes, suggestPairing } from '../services/koji';
 import { Pin, PinOff } from 'lucide-react';
 import { SearchIcon, getIngredientIcon, VesselLineIcon } from './icons';
 
@@ -123,6 +123,23 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
               <Bar label="Salt" value={h.nativeSalinity} max={100} tone="var(--teal)" hint="Salinity the ingredient brings by itself." />
               <Bar label="Wild" value={h.microbialDiversity} tone="var(--plum)" hint="Native microbial life. Funk, and unpredictability." />
             </div>
+            {(() => {
+              const pair = suggestPairing(i);
+              if (!pair) return null;
+              return (
+                <div className="sc-pair">
+                  <span className="ph">{pair.headline}</span>
+                  {pair.partners.map((p, n) => (
+                    <span key={n} className="pr">
+                      <span className="w">{p.what}</span>
+                      <span className="r">{p.ratio}</span>
+                      <span className="y">{p.why}</span>
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
+
             <div className="sc-facts">
               {i.enzymes && (
                 <span className="f hi">amylase {i.enzymes.amylase} · protease {i.enzymes.protease}</span>

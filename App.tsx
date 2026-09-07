@@ -43,7 +43,7 @@ export default function App() {
     discoveredRecipeIds: [],
     analyzedRecipeIds: [], // Start with empty discovery
     equipmentSlots: 8,
-    ownedVesselIds: ['mason_jar', 'koji_tray'], // Initial unlocked vessels
+    ownedVessels: { mason_jar: 2, koji_tray: 1 },   // you start with a couple of jars and a tray
     supplierRelationships: {
       'nordic': { level: 1, xp: 0 },
       'biolab': { level: 1, xp: 0 },
@@ -401,7 +401,7 @@ export default function App() {
                 // upkeep and metered power give every week a number to clear.
                 const totalWages = STAFF_ROLES.reduce((acc, role) => prev.staff[role.id] ? acc + role.weeklyWage : acc, 0);
                 const drawnWatts = prev.batches.reduce((acc, b) => acc + (VESSELS.find(v => v.id === b.vesselId)?.powerDraw || 0), 0);
-                const bills = calculateOverheads(prev.ownedVesselIds, drawnWatts, totalWages);
+                const bills = calculateOverheads(prev.ownedVessels, drawnWatts, totalWages);
 
                 newMoney -= bills.total;
 
@@ -710,12 +710,19 @@ export default function App() {
   };
 
   const handleBuyVessel = (vessel: Vessel) => {
-      if (gameState.money >= vessel.cost && !gameState.ownedVesselIds.includes(vessel.id)) {
+      // Buy as many as you like — the limit is bench slots and money, which is
+      // how a real bench is limited.
+      if (gameState.money >= vessel.cost) {
           setGameState(prev => ({
               ...prev,
               money: prev.money - vessel.cost,
-              ownedVesselIds: [...prev.ownedVesselIds, vessel.id]
+              ownedVessels: { ...prev.ownedVessels, [vessel.id]: (prev.ownedVessels[vessel.id] ?? 0) + 1 }
           }));
+          setLabNotification({
+            id: Date.now(),
+            text: `${vessel.name} acquired — you now have ${(gameState.ownedVessels[vessel.id] ?? 0) + 1}.`,
+            type: 'info'
+          });
       }
   };
 
@@ -1491,7 +1498,7 @@ export default function App() {
               style={{ cursor: 'pointer' }}
               title="Click to view & purchase hardware vessels"
             >
-              <VesselLineIcon vesselId={gameState.ownedVesselIds[gameState.ownedVesselIds.length - 1] || 'mason_jar'} size={12} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{gameState.ownedVesselIds.length} types</span>
+              <VesselLineIcon vesselId={'mason_jar'} size={12} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
             </div>
           </div>
 
@@ -1518,7 +1525,7 @@ export default function App() {
                   playerXp={gameState.xp}
                   undergroundTier={getUndergroundTierFromXp(gameState.xp)}
                   relationships={gameState.supplierRelationships}
-                  ownedVesselIds={gameState.ownedVesselIds}
+                  ownedVessels={gameState.ownedVessels}
                   ownedBookIds={gameState.ownedBookIds}
                   currentPower={currentPower}
                   maxPower={gameState.maxPower}
@@ -1543,7 +1550,7 @@ export default function App() {
            maxPower={gameState.maxPower}
            availableSlots={gameState.equipmentSlots - usedSlots}
            logbook={gameState.logbook}
-           ownedVesselIds={gameState.ownedVesselIds}
+           ownedVessels={gameState.ownedVessels}
            analyzedRecipeIds={gameState.analyzedRecipeIds} // Pass discovery state
            recipeMastery={gameState.recipeMastery}
            unlockedRecipes={gameState.unlockedRecipes}

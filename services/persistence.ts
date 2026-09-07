@@ -64,7 +64,9 @@ function migrate(state: Partial<GameState>): GameState {
     ])),
     customIngredients: state.customIngredients ?? [],
     analyzedRecipeIds: state.analyzedRecipeIds ?? [],
-    ownedVesselIds: state.ownedVesselIds ?? ['mason_jar', 'koji_tray'],
+    // Older saves stored a list of ids; each becomes a count of one.
+    ownedVessels: state.ownedVessels
+      ?? Object.fromEntries((((state as any).ownedVesselIds as string[]) ?? ['mason_jar', 'koji_tray']).map(id => [id, 1])),
     logbook: state.logbook ?? [],
     batches: state.batches ?? [],
   };

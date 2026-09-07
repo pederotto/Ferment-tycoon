@@ -45,7 +45,7 @@ interface BatchControllerProps {
   maxPower: number;
   availableSlots: number;
   logbook: LogEntry[];
-  ownedVesselIds: string[];
+  ownedVessels: Record<string, number>;
   analyzedRecipeIds: string[];
   recipeMastery: Record<string, RecipeMastery>;
   unlockedRecipes?: string[];
@@ -64,7 +64,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
   maxPower, 
   availableSlots, 
   logbook, 
-  ownedVesselIds, 
+  ownedVessels, 
   analyzedRecipeIds,
   recipeMastery,
   unlockedRecipes = [],
@@ -107,6 +107,11 @@ const BatchController: React.FC<BatchControllerProps> = ({
   // Cleared once the player moves the dial, so the recipe's suggested mash never
   // overwrites a deliberate choice.
   const [hydrationTouched, setHydrationTouched] = useState(false);
+  // Grams per reagent, keyed by id. Salt and water were already titrated
+  // continuously while every other reagent came in fixed 1kg blocks — which made
+  // the 2L Glass Jar hold exactly two of anything, and unusable once salt was
+  // added on top. Everything is dialable now.
+  const [reagentGrams, setReagentGrams] = useState<Record<string, number>>({});
 
   // Inline Notification
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
@@ -129,8 +134,8 @@ const BatchController: React.FC<BatchControllerProps> = ({
   const solidsMass = useMemo(() => {
     return selectedIngredients
       .filter(i => i.type !== IngredientType.ADDITIVE)
-      .reduce((acc, i) => acc + (i.mass || 0), 0);
-  }, [selectedIngredients]);
+      .reduce((acc, i) => acc + (reagentGrams[i.id] ?? i.mass ?? 0), 0);
+  }, [selectedIngredients, reagentGrams]);
 
   const hasWater = useMemo(() =>
     selectedIngredients.some(i => i.id === 'water'),
@@ -159,11 +164,13 @@ const BatchController: React.FC<BatchControllerProps> = ({
       } else if (i.id === 'water') {
         quantities[i.id] = requiredWaterMass;
       } else {
-        quantities[i.id] = i.mass;
+        // An explicit gram setting wins; otherwise a reagent contributes its own
+        // unit mass, as before.
+        quantities[i.id] = reagentGrams[i.id] ?? i.mass;
       }
     });
     return quantities;
-  }, [selectedIngredients, requiredSaltMass, requiredWaterMass]);
+  }, [selectedIngredients, requiredSaltMass, requiredWaterMass, reagentGrams]);
 
   // Aggregated display
   const aggregatedIngredients = useMemo(() => {
@@ -184,9 +191,9 @@ const BatchController: React.FC<BatchControllerProps> = ({
   // chosen we allow up to the biggest vessel owned, then validate again on start.
   const capacityLimitL = useMemo(() => {
     if (vesselId) return VESSELS.find(v => v.id === vesselId)?.capacityL ?? 2;
-    const owned = VESSELS.filter(v => ownedVesselIds.includes(v.id));
+    const owned = VESSELS.filter(v => (ownedVessels[v.id] ?? 0) > 0);
     return owned.length ? Math.max(...owned.map(v => v.capacityL)) : 2;
-  }, [vesselId, ownedVesselIds]);
+  }, [vesselId, ownedVessels]);
 
   // What the resolved ferment family normally wants, for the nudge line.
   const suggestedHydration = resolvedRecipe ? (HYDRATION_TARGETS[resolvedRecipe.type] ?? null) : null;
@@ -300,7 +307,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
       if (entry.config.starterId) ids.push(entry.config.starterId);
     }
     
-    if (!ownedVesselIds.includes(entry.config.vesselId)) {
+    if ((ownedVessels[entry.config.vesselId] ?? 0) === 0) {
       setErrorNotice("You do not own the required vessel for this vintage recipe!");
       return;
     }
@@ -396,6 +403,9 @@ const BatchController: React.FC<BatchControllerProps> = ({
         deductions[ing.id] = requiredSaltMass / (ing.mass || 1);
       } else if (ing.id === 'water') {
         deductions[ing.id] = requiredWaterMass / (ing.mass || 1);
+      } else if (reagentGrams[ing.id] !== undefined) {
+        // Charged by the gram actually used, not by whole units.
+        deductions[ing.id] = reagentGrams[ing.id] / (ing.mass || 1);
       } else if (deductions[ing.id]) {
         deductions[ing.id] += 1;
       } else {
@@ -681,7 +691,8 @@ const BatchController: React.FC<BatchControllerProps> = ({
                   }
 
                   return (
-                    <div key={ing.id} className="charge">
+                    <div key={ing.id} className="charge stacked">
+                      <span className="crow">
                       <span className="left">
                         <span className="glyph"><ChargeGlyph size={13} color="currentColor" /></span>
                         <span style={{ minWidth: 0 }}>
@@ -700,6 +711,31 @@ const BatchController: React.FC<BatchControllerProps> = ({
                       >
                         <Minus size={13} />
                       </button>
+                      </span>
+
+                      {/* Everything is dialable by the gram now. A 2L jar could
+                          only ever hold two 1kg blocks before, and none at all
+                          once salt was titrated in on top. */}
+                      {ing.id !== 'salt' && ing.id !== 'trapani_salt' && ing.id !== 'water' && (
+                        <div className="charge-amt">
+                          <input
+                            type="range"
+                            className="dial-slider"
+                            min={Math.round((ing.mass || 100) * 0.1)}
+                            max={(ing.mass || 1000) * count}
+                            step={Math.max(10, Math.round((ing.mass || 1000) / 20))}
+                            value={reagentGrams[ing.id] ?? (ing.mass || 0) * count}
+                            onChange={(e) => setReagentGrams(prev => ({ ...prev, [ing.id]: Number(e.target.value) }))}
+                            aria-label={`Amount of ${ing.name} in grams`}
+                          />
+                          <span className="amt">
+                            {(() => {
+                              const g = reagentGrams[ing.id] ?? (ing.mass || 0) * count;
+                              return g >= 1000 ? `${(g / 1000).toFixed(2)}kg` : `${Math.round(g)}g`;
+                            })()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -809,7 +845,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
 
             <div className="station-scroll custom-scrollbar">
               {VESSELS.map(v => {
-                const notOwned = !ownedVesselIds.includes(v.id);
+                const notOwned = (ownedVessels[v.id] ?? 0) === 0;
                 const notEnoughSpace = v.slotsRequired > availableSlots;
                 const notEnoughPower = (currentPower + v.powerDraw) > maxPower;
                 const notEnoughCapacity = (dynamics.totalMass / 1000) > v.capacityL;

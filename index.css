@@ -1568,3 +1568,32 @@ input[type="range"].dial-slider::-moz-range-thumb {
   padding: 2px 6px; border-radius: 4px; white-space: nowrap;
   background: rgba(157, 139, 176, 0.14); color: var(--plum); border: 1px solid rgba(157, 139, 176, 0.3);
 }
+
+/* How many of a vessel you own — it used to be a yes/no */
+.own-count {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700;
+  background: rgba(138, 154, 107, 0.18); color: var(--moss);
+}
+
+/* Per-reagent amount. Salt and water were always titrated; everything else came
+   in fixed 1kg blocks, which is what made the 2L jar unusable. */
+.charge.stacked { flex-direction: column; align-items: stretch; gap: 7px; }
+.charge .crow { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+.charge-amt { display: flex; align-items: center; gap: 9px; }
+.charge-amt input[type="range"] { flex: 1; }
+.charge-amt .amt {
+  min-width: 52px; text-align: right; font-size: 10px; font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace; color: var(--text-hi);
+}
+
+/* Pairing suggestions — the scan said what a thing IS but never what to do with it */
+.sc-pair {
+  display: flex; flex-direction: column; gap: 5px; padding: 9px 11px; border-radius: 9px;
+  background: rgba(138, 154, 107, 0.07); border: 1px solid rgba(138, 154, 107, 0.25);
+}
+.sc-pair .ph { font-size: 10.5px; font-weight: 600; color: var(--moss); margin-bottom: 2px; }
+.sc-pair .pr { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2px 10px; align-items: baseline; }
+.sc-pair .pr .w { font-size: 10px; color: var(--text-hi); }
+.sc-pair .pr .r { font-size: 9.5px; font-family: 'IBM Plex Mono', monospace; color: var(--brass); text-align: right; }
+.sc-pair .pr .y { grid-column: 1 / -1; font-size: 9px; color: var(--text-lo); font-style: italic; }

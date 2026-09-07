@@ -230,3 +230,137 @@ export const mintKojiProduct = (
 };
 
 export const isKojiRecipe = (recipe: Recipe): boolean => recipe.type === FermentType.KOJI;
+
+
+/* =========================================================================
+   PAIRING — what to put this with, and in what proportion
+   ========================================================================= */
+
+/**
+ * The scan could say what an ingredient IS but never what to do with it. These
+ * are the classic working ratios, which are remarkably consistent across the
+ * traditions: koji sits around a fifth of the mass of a paste, salt is a few
+ * percent for a lacto and a fifth for a Roman cure, and a starch base wants an
+ * amylase koji while a protein base wants a protease one.
+ */
+export interface Pairing {
+  headline: string;
+  partners: { what: string; ratio: string; why: string }[];
+}
+
+export const suggestPairing = (i: Ingredient): Pairing | null => {
+  const h = i.hiddenStats;
+
+  // A koji: say what it is FOR and at what proportion.
+  if (i.enzymes) {
+    const total = i.enzymes.amylase + i.enzymes.protease;
+    const share = total > 0 ? i.enzymes.amylase / total : 0.5;
+    if (share > 0.6) {
+      return {
+        headline: 'An amylase koji. Pair it with starch.',
+        partners: [
+          { what: 'Rice or barley', ratio: '1 part koji : 1 part grain', why: 'amazake and sweet pale misos' },
+          { what: 'Water, held at 55-60 °C', ratio: '1 : 1 by weight', why: 'amylase works fastest just below where it dies' },
+          { what: 'Salt', ratio: '4–6% of the total', why: 'a short, sweet miso — more salt and it turns savoury' },
+        ],
+      };
+    }
+    if (share < 0.4) {
+      return {
+        headline: 'A protease koji. Pair it with protein.',
+        partners: [
+          { what: 'Soybeans, fish or lean meat', ratio: '1 part koji : 4 parts substrate', why: 'the classic paste ratio' },
+          { what: 'Salt', ratio: '10–13% for a dark miso, 20% for a cure', why: 'the more salt, the slower and the longer it keeps' },
+          { what: 'Water, held at 60 °C', ratio: '1 : 1 with the substrate', why: 'the modern garum route — heat replaces most of the salt' },
+        ],
+      };
+    }
+    return {
+      headline: 'A balanced koji. It will work on either.',
+      partners: [
+        { what: 'Soy plus a grain', ratio: '1 koji : 2 soy : 1 grain', why: 'a red miso — savour with some sweetness under it' },
+        { what: 'Salt', ratio: '8–10% of the total', why: 'a year-scale paste' },
+      ],
+    };
+  }
+
+  // A spore: what to grow it on. Three cases, not two — a balanced strain should
+  // not be handed the protease advice by default.
+  if (i.strainBias !== undefined) {
+    if (i.strainBias > 0.4 && i.strainBias < 0.6) {
+      return {
+        headline: 'An even-handed strain. What you grow it on decides what it becomes.',
+        partners: [
+          { what: 'Rice or barley, held 34–38 °C', ratio: 'a pinch per kilo', why: 'starch and warmth bias it toward amylase — the sweet koji' },
+          { what: 'Soybeans, held 28–30 °C', ratio: 'a pinch per kilo', why: 'protein and cool bias it toward protease — the savoury koji' },
+          { what: 'Either, at 32 °C', ratio: '—', why: 'a general-purpose bed if you have not decided yet' },
+        ],
+      };
+    }
+    const amyl = i.strainBias >= 0.6;
+    return {
+      headline: amyl ? 'Grow this on starch, warm.' : 'Grow this on protein, cool.',
+      partners: amyl
+        ? [
+            { what: 'Polished rice or pearl barley', ratio: 'a pinch per kilo of grain', why: 'starch induces the amylase you bought it for' },
+            { what: 'Hold 34–38 °C, 85% RH', ratio: '—', why: 'warm and wet pushes the ratio toward amylase' },
+          ]
+        : [
+            { what: 'Soybeans or a protein-rich grain', ratio: 'a pinch per kilo', why: 'protein induces protease' },
+            { what: 'Hold 28–30 °C, 60% RH', ratio: '—', why: 'cool and dry pushes the ratio toward protease' },
+          ],
+    };
+  }
+
+  const protein = h.proteinContent, starch = h.starchContent, fat = h.fatContent;
+
+  if (protein >= 7 && starch <= 2) {
+    return {
+      headline: 'Protein with no starch. This wants a protease koji.',
+      partners: [
+        { what: 'A savoury koji', ratio: '1 part koji : 4 parts this', why: 'protease is what turns protein into umami' },
+        { what: 'Salt', ratio: '20% for the Roman route, 12% if held at 60 °C', why: 'salt and heat are alternatives, not both required' },
+        { what: 'An amylase koji', ratio: 'avoid', why: 'there is no starch here for it to work on' },
+      ],
+    };
+  }
+  if (starch >= 7 && protein <= 4) {
+    return {
+      headline: 'Starch with little protein. This wants an amylase koji.',
+      partners: [
+        { what: 'A sweet koji', ratio: '1 : 1 by weight', why: 'amylase converts the starch to sugar' },
+        { what: 'Water at 55–60 °C', ratio: '1 : 1', why: 'amazake — thermal saccharification, no salt at all' },
+        { what: 'Salt', ratio: 'keep under 6%', why: 'salt slows amylase and buries the sweetness' },
+      ],
+    };
+  }
+  if (fat >= 7) {
+    return {
+      headline: 'Mostly fat. This is lipase territory.',
+      partners: [
+        { what: 'A koji with lipase activity', ratio: '1 part koji : 5 parts this', why: 'free fatty acids are where aged pungency comes from' },
+        { what: 'Salt', ratio: '8% or more', why: 'fat above 4 turns rancid with heat and no salt' },
+        { what: 'Cool and slow', ratio: '12–20 °C', why: 'heat on fat gives rancidity rather than character' },
+      ],
+    };
+  }
+  if (h.microbialDiversity >= 7) {
+    return {
+      headline: 'Carries plenty of its own wild life.',
+      partners: [
+        { what: 'Salt only', ratio: '2–3% of the weight', why: 'a lacto ferment — the organisms are already on it' },
+        { what: 'Anaerobic vessel', ratio: '—', why: 'keep it under its own liquid or the surface spoils' },
+      ],
+    };
+  }
+  if (protein >= 5 && starch >= 5) {
+    return {
+      headline: 'Protein and starch together. Either koji suits it.',
+      partners: [
+        { what: 'A balanced koji', ratio: '1 part koji : 3 parts this', why: 'savour and sweetness in the same paste' },
+        { what: 'Salt', ratio: '8–10%', why: 'a paste meant to age for a year' },
+      ],
+    };
+  }
+  return null;
+};

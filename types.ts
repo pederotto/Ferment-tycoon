@@ -397,7 +397,10 @@ export interface GameState {
   discoveredRecipeIds: string[];
 
   equipmentSlots: number;
-  ownedVesselIds: string[]; // NEW: Track owned vessels
+  // How many of each vessel you own. This was a string[] with an includes()
+  // guard, so a second Glass Jar was impossible — eight bench slots but only six
+  // vessels, one apiece. A working bench has a shelf of jars.
+  ownedVessels: Record<string, number>;
   
   supplierRelationships: Record<string, { level: number, xp: number }>;
   customIngredients: Ingredient[];

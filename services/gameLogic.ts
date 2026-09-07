@@ -1385,12 +1385,13 @@ export interface Overheads {
 
 /** Everything the lab owes at the end of a week. */
 export const calculateOverheads = (
-  ownedVesselIds: string[],
+  ownedVessels: Record<string, number>,
   currentPower: number,
   wages: number
 ): Overheads => {
   const rent = WEEKLY_BENCH_RENT;
-  const billableVessels = Math.max(0, ownedVesselIds.length - FREE_UPKEEP_VESSELS);
+  const totalVessels = Object.values(ownedVessels).reduce((a, b) => a + b, 0);
+  const billableVessels = Math.max(0, totalVessels - FREE_UPKEEP_VESSELS);
   const upkeep = billableVessels * WEEKLY_VESSEL_UPKEEP;
   const utilities = Math.round(currentPower * UTILITY_COST_PER_WATT);
   return { rent, upkeep, utilities, wages, total: rent + upkeep + utilities + wages };

@@ -34,7 +34,7 @@ interface SupplyPanelProps {
   playerXp: number;
   undergroundTier: number;
   relationships: Record<string, { level: number; xp: number }>;
-  ownedVesselIds: string[];
+  ownedVessels: Record<string, number>;
   ownedBookIds: string[];
   currentPower: number;
   maxPower: number;
@@ -63,7 +63,7 @@ const Bar: React.FC<{ v: number; tone: string; title: string }> = ({ v, tone, ti
 
 const SupplyPanel: React.FC<SupplyPanelProps> = ({
   isOpen, onToggle, ingredients, inventory, money, playerXp, undergroundTier,
-  relationships, ownedVesselIds, ownedBookIds, currentPower, maxPower, usedSlots,
+  relationships, ownedVessels, ownedBookIds, currentPower, maxPower, usedSlots,
   onBuy, onBuyVessel, onBuyTool, onBuyBook, onUpgradePower,
 }) => {
   const [tab, setTab] = useState<Tab>('ingredients');
@@ -306,29 +306,34 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               <div className="sup-meta">
                 <span><BoltIcon size={12} /> Grid {currentPower}W / {maxPower}W</span>
                 <span>Bench {usedSlots} / {MAX_EQUIPMENT_SLOTS} slots</span>
-                <span>Vessels {ownedVesselIds.length} / {VESSELS.length}</span>
+                <span>Vessels {Object.values(ownedVessels).reduce((a: number, b) => a + (b as number), 0)} owned</span>
               </div>
 
               <span className="sup-lbl">Fermentation vessels</span>
               <div className="eq-grid">
                 {VESSELS.map(v => {
-                  const isOwned = ownedVesselIds.includes(v.id);
+                  const ownedCount = ownedVessels[v.id] ?? 0;
                   const canAfford = money >= v.cost;
                   return (
-                    <div key={v.id} className={`eq-card${isOwned ? ' owned' : ''}`}>
+                    <div key={v.id} className={`eq-card${ownedCount > 0 ? ' owned' : ''}`}>
                       <div className="eq-top">
                         <span className="eq-ic"><VesselLineIcon vesselId={v.id} size={15} color="currentColor" /></span>
                         <span>
-                          <b>{v.name}</b>
+                          <b>{v.name}{ownedCount > 0 && <span className="own-count">×{ownedCount}</span>}</b>
                           <em>Cap {v.capacityL}L · {v.slotsRequired} slot{v.slotsRequired > 1 ? 's' : ''}{v.powerDraw ? ` · ${v.powerDraw}W` : ''}</em>
                         </span>
                       </div>
                       <p>{v.description}</p>
-                      {isOwned
-                        ? <span className="eq-btn owned-tag"><CheckIcon size={11} /> Acquired</span>
-                        : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyVessel(v)} aria-label={`Buy ${v.name} for $${v.cost}`}>
-                            {canAfford ? `Purchase $${v.cost}` : `Need $${v.cost}`}
-                          </button>}
+                      <button
+                        className={`eq-btn${!canAfford ? ' disabled' : ''}`}
+                        disabled={!canAfford}
+                        onClick={() => onBuyVessel(v)}
+                        aria-label={`Buy another ${v.name} for $${v.cost}`}
+                      >
+                        {canAfford
+                          ? (ownedCount > 0 ? `Buy another · $${v.cost}` : `Purchase $${v.cost}`)
+                          : `Need $${v.cost}`}
+                      </button>
                     </div>
                   );
                 })}

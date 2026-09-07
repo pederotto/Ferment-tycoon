@@ -32,7 +32,7 @@ const DevPanel: React.FC<DevPanelProps> = ({ gameState, setGameState, onClose, g
       unlockedRecipes: RECIPES.map(r => r.id),
       analyzedRecipeIds: RECIPES.map(r => r.id),
       ownedBookIds: BOOKS.map(b => b.id),
-      ownedVesselIds: VESSELS.map(v => v.id),
+      ownedVessels: Object.fromEntries(VESSELS.map(v => [v.id, 4])),
     });
     say('Every recipe, book and vessel unlocked.');
   };
