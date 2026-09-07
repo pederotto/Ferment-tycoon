@@ -839,6 +839,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .bench-block .kv .n.plum { color: var(--plum); }
 
 .station-head .tally.mass.full { color: var(--brass); background: rgba(217, 164, 65, 0.14); border-color: rgba(217, 164, 65, 0.4); }
+.station-head .tally.mass.over { color: #e9baa8; background: rgba(179, 69, 47, 0.18); border-color: rgba(179, 69, 47, 0.5); }
 
 .demand-chip {
   font-size: 8.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
@@ -852,9 +853,11 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .fill-gauge { margin-top: 11px; flex-shrink: 0; }
 .fill-gauge .fh { display: flex; align-items: center; justify-content: space-between; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; margin-bottom: 5px; }
 .fill-gauge .fh .full { color: var(--brass); }
+.fill-gauge .fh .over { color: var(--brick); font-weight: 700; }
 .fill-gauge .ftrack { height: 6px; border-radius: 999px; background: #0a0705; border: 1px solid var(--line); overflow: hidden; }
 .fill-gauge .ffill { height: 100%; background: var(--moss); border-radius: 999px; transition: width 0.25s ease; }
 .fill-gauge .ffill.full { background: var(--amber); }
+.fill-gauge .ffill.over { background: var(--brick); }
 
 /* ---------- Vessel picker (station 3) ---------- */
 .vessel-pick {

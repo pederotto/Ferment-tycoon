@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentType } from '../types';
-import { VESSELS, MAX_REAGENT_UNITS } from '../constants';
+import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION } from '../constants';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
 import MolecularScan, { ScanTarget } from './MolecularScan';
 import {
@@ -27,6 +27,7 @@ import {
   BoltIcon,
   CheckCircleIcon,
   WaterDropIcon,
+  SaltCrystalIcon,
   VesselLineIcon,
   getIngredientIcon
 } from './icons';
@@ -84,6 +85,12 @@ const BatchController: React.FC<BatchControllerProps> = ({
   const [temp, setTemp] = useState(20);
   const [humidity, setHumidity] = useState(50);
   const [salinity, setSalinity] = useState(0);
+  // Water is titrated as a % of solids mass, exactly as salt is, instead of being
+  // dropped in as fixed 1L blocks that silently ate vessel capacity.
+  const [hydration, setHydration] = useState(DEFAULT_HYDRATION);
+  // Cleared once the player moves the dial, so the recipe's suggested mash never
+  // overwrites a deliberate choice.
+  const [hydrationTouched, setHydrationTouched] = useState(false);
 
   // Inline Notification
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
@@ -109,11 +116,23 @@ const BatchController: React.FC<BatchControllerProps> = ({
       .reduce((acc, i) => acc + (i.mass || 0), 0);
   }, [selectedIngredients]);
 
+  const hasWater = useMemo(() =>
+    selectedIngredients.some(i => i.id === 'water'),
+  [selectedIngredients]);
+
   // Salt mass required based on salinity slider
   const requiredSaltMass = useMemo(() => {
     if (!hasSalt || solidsMass === 0) return 0;
     return solidsMass * (salinity / 100);
   }, [hasSalt, solidsMass, salinity]);
+
+  // Water mass required based on the hydration slider. solidsMass deliberately
+  // excludes every ADDITIVE, so neither the salt nor the water we are about to
+  // add feeds back into its own basis.
+  const requiredWaterMass = useMemo(() => {
+    if (!hasWater || solidsMass === 0) return 0;
+    return solidsMass * (hydration / 100);
+  }, [hasWater, solidsMass, hydration]);
 
   // Quantities map
   const customQuantities = useMemo(() => {
@@ -121,12 +140,14 @@ const BatchController: React.FC<BatchControllerProps> = ({
     selectedIngredients.forEach(i => {
       if (i.id === 'salt' || i.id === 'trapani_salt') {
         quantities[i.id] = requiredSaltMass;
+      } else if (i.id === 'water') {
+        quantities[i.id] = requiredWaterMass;
       } else {
         quantities[i.id] = i.mass;
       }
     });
     return quantities;
-  }, [selectedIngredients, requiredSaltMass]);
+  }, [selectedIngredients, requiredSaltMass, requiredWaterMass]);
 
   // Aggregated display
   const aggregatedIngredients = useMemo(() => {
@@ -151,9 +172,15 @@ const BatchController: React.FC<BatchControllerProps> = ({
     return owned.length ? Math.max(...owned.map(v => v.capacityL)) : 2;
   }, [vesselId, ownedVesselIds]);
 
+  // What the resolved ferment family normally wants, for the nudge line.
+  const suggestedHydration = resolvedRecipe ? (HYDRATION_TARGETS[resolvedRecipe.type] ?? null) : null;
+
   const fillL = dynamics.totalMass / 1000;
   const fillPct = capacityLimitL > 0 ? Math.min(100, (fillL / capacityLimitL) * 100) : 0;
   const isFull = fillL >= capacityLimitL;
+  // Reagents are capped on the way in, but the hydration dial can push a batch
+  // past the vessel afterwards, so overflow needs its own visible state.
+  const isOverflowing = fillL > capacityLimitL + 0.0001;
 
   // Resolve recipe & dynamics effect
   useEffect(() => {
@@ -163,6 +190,12 @@ const BatchController: React.FC<BatchControllerProps> = ({
       
       const isKnown = analyzedRecipeIds.includes(recipe.id) || recipe.type === FermentType.FAIL;
       setIsUndiscovered(!isKnown);
+
+      // Suggest the mash this ferment family wants, until the player overrides it.
+      if (!hydrationTouched) {
+        const target = HYDRATION_TARGETS[recipe.type];
+        if (target !== undefined) setHydration(target);
+      }
 
       if (recipe.type === FermentType.FAIL) {
         setProjectedRecipeName('Unstable Bio-Sludge');
@@ -179,7 +212,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
       setIsUndiscovered(false);
       setDynamics({ yieldVolume: 0, concentration: 0, speedModifier: 1, totalMass: 0 });
     }
-  }, [selectedIngredientIds, vesselId, selectedIngredients, customQuantities, analyzedRecipeIds]);
+  }, [selectedIngredientIds, vesselId, selectedIngredients, customQuantities, analyzedRecipeIds, hydrationTouched]);
 
   /**
    * Add up to `count` units, stopping at whatever the vessel and the pantry
@@ -301,6 +334,21 @@ const BatchController: React.FC<BatchControllerProps> = ({
       }
     }
 
+    // Inventory check for water (titrated, so the unit count depends on the dial)
+    if (hasWater) {
+      const waterIng = selectedIngredients.find(i => i.id === 'water');
+      if (waterIng) {
+        const unitsNeeded = requiredWaterMass / (waterIng.mass || 1);
+        if ((inventory['water'] || 0) < unitsNeeded) {
+          setErrorNotice(
+            `Not enough water. ${(requiredWaterMass / 1000).toFixed(2)}L needs ` +
+            `${Math.ceil(unitsNeeded)} units; you have ${inventory['water'] || 0}.`
+          );
+          return;
+        }
+      }
+    }
+
     // Capacity check
     const vessel = VESSELS.find(v => v.id === vesselId)!;
     const { totalMass } = calculateBatchDynamics(selectedIngredients, customQuantities);
@@ -349,6 +397,8 @@ const BatchController: React.FC<BatchControllerProps> = ({
     selectedIngredients.forEach(ing => {
       if (ing.id === 'salt' || ing.id === 'trapani_salt') {
         deductions[ing.id] = requiredSaltMass / (ing.mass || 1);
+      } else if (ing.id === 'water') {
+        deductions[ing.id] = requiredWaterMass / (ing.mass || 1);
       } else if (deductions[ing.id]) {
         deductions[ing.id] += 1;
       } else {
@@ -381,7 +431,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
       });
   }, [ingredients, inventory, pantryCategory, pantrySearch]);
 
-  const canStart = selectedIngredientIds.length > 0 && !!vesselId;
+  const canStart = selectedIngredientIds.length > 0 && !!vesselId && !isOverflowing;
   const hintText = resolvedRecipe ? getRecipeHint(resolvedRecipe.id, resolvedRecipe.type) : null;
 
   return (
@@ -568,7 +618,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
           <section className={`station alt ${activeTab === 'bowl' ? '' : 'is-hidden'}`}>
             <div className="station-head">
               <span className="lbl"><span className="num">02</span> Chamber</span>
-              <span className={`tally mass ${isFull ? 'full' : ''}`}>
+              <span className={`tally mass ${isOverflowing ? 'over' : isFull ? 'full' : ''}`}>
                 {fillL.toFixed(2)} / {capacityLimitL} L
               </span>
             </div>
@@ -586,6 +636,10 @@ const BatchController: React.FC<BatchControllerProps> = ({
                   let weightDisplay: string;
                   if (ing.id === 'salt' || ing.id === 'trapani_salt') {
                     weightDisplay = `${requiredSaltMass.toFixed(1)}g · titrated`;
+                  } else if (ing.id === 'water') {
+                    weightDisplay = requiredWaterMass >= 1000
+                      ? `${(requiredWaterMass / 1000).toFixed(2)}L · titrated`
+                      : `${requiredWaterMass.toFixed(0)}ml · titrated`;
                   } else {
                     const totalItemMass = (ing.mass || 0) * count;
                     weightDisplay = totalItemMass > 0
@@ -623,10 +677,12 @@ const BatchController: React.FC<BatchControllerProps> = ({
               <div className="fill-gauge">
                 <div className="fh">
                   <span>Vessel fill</span>
-                  <span className={isFull ? 'full' : ''}>{fillPct.toFixed(0)}%</span>
+                  <span className={isOverflowing ? 'over' : isFull ? 'full' : ''}>
+                    {isOverflowing ? `overflowing by ${(fillL - capacityLimitL).toFixed(2)}L` : `${fillPct.toFixed(0)}%`}
+                  </span>
                 </div>
                 <div className="ftrack">
-                  <div className={`ffill ${isFull ? 'full' : ''}`} style={{ width: `${fillPct}%` }} />
+                  <div className={`ffill ${isOverflowing ? 'over' : isFull ? 'full' : ''}`} style={{ width: `${fillPct}%` }} />
                 </div>
               </div>
             )}
@@ -634,7 +690,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             {selectedIngredientIds.length > 0 && (
               <div className="bench-block">
                 <div className="bh">
-                  <span className="l"><WaterDropIcon size={12} color="var(--teal)" /> Salinity</span>
+                  <span className="l"><SaltCrystalIcon size={12} color="var(--teal)" /> Salinity</span>
                   <span className={`v ${hasSalt ? '' : 'off'}`}>{salinity.toFixed(1)}%</span>
                 </div>
                 {hasSalt ? (
@@ -647,7 +703,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                       step="0.5"
                       value={salinity}
                       onChange={(e) => setSalinity(Number(e.target.value))}
-                      aria-label="Salinity percentage"
+                      aria-label="Salinity as a percentage of solids"
                     />
                     <div className="kv">
                       <span className="k">Salt to weigh out</span>
@@ -656,6 +712,52 @@ const BatchController: React.FC<BatchControllerProps> = ({
                   </>
                 ) : (
                   <div className="note">Add salt to the chamber to titrate.</div>
+                )}
+              </div>
+            )}
+
+            {selectedIngredientIds.length > 0 && (
+              <div className="bench-block">
+                <div className="bh">
+                  <span className="l"><WaterDropIcon size={12} color="var(--teal)" /> Hydration</span>
+                  <span className={`v ${hasWater ? '' : 'off'}`}>{hydration.toFixed(0)}%</span>
+                </div>
+                {hasWater ? (
+                  <>
+                    <input
+                      type="range"
+                      className="dial-slider"
+                      min="0"
+                      max={MAX_HYDRATION}
+                      step="5"
+                      value={hydration}
+                      onChange={(e) => { setHydration(Number(e.target.value)); setHydrationTouched(true); }}
+                      aria-label="Hydration as a percentage of solids"
+                    />
+                    <div className="kv">
+                      <span className="k">Water to measure</span>
+                      <span className="n">
+                        {requiredWaterMass >= 1000
+                          ? `${(requiredWaterMass / 1000).toFixed(2)}L`
+                          : `${requiredWaterMass.toFixed(0)}ml`}
+                      </span>
+                    </div>
+                    <div className="kv">
+                      <span className="k" title="Water dilutes the mash. Thinner batches fill the vessel but taste of less.">
+                        Mash strength
+                      </span>
+                      <span className={`n ${dynamics.concentration < 0.45 ? '' : 'moss'}`}>
+                        {(dynamics.concentration * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {suggestedHydration !== null && Math.abs(hydration - suggestedHydration) > 15 && (
+                      <div className="note" style={{ marginTop: 7 }}>
+                        This ferment usually sits nearer {suggestedHydration}%.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="note">Add water to the chamber to set the mash.</div>
                 )}
               </div>
             )}
@@ -815,7 +917,9 @@ const BatchController: React.FC<BatchControllerProps> = ({
                 ? 'Draw your reagents'
                 : !vesselId
                   ? 'Choose a vessel'
-                  : <><Play size={14} style={{ fill: 'currentColor' }} /> Seal &amp; Inoculate</>}
+                  : isOverflowing
+                    ? 'Too much for this vessel'
+                    : <><Play size={14} style={{ fill: 'currentColor' }} /> Seal &amp; Inoculate</>}
             </button>
           </section>
         </div>

@@ -240,7 +240,12 @@ export const calculateBatchDynamics = (ingredients: Ingredient[], customQuantiti
     // New Logic: Mass-based physics with Custom Quantities support
     
     // Helper to get mass of an ingredient (either custom amount or static definition)
-    const getMass = (i: Ingredient) => customQuantities && customQuantities[i.id] ? customQuantities[i.id] : i.mass;
+    // A titrated quantity of exactly 0 is a legitimate answer — salt at 0% or a
+    // bone-dry mash — so this has to test for presence, not truthiness. The old
+    // truthy check fell back to the full 1kg unit mass whenever the dial hit
+    // zero, silently dumping a kilo of salt or water into the batch.
+    const getMass = (i: Ingredient) =>
+      customQuantities && customQuantities[i.id] !== undefined ? customQuantities[i.id] : i.mass;
 
     const totalMass = ingredients.reduce((acc, i) => acc + getMass(i), 0);
     

@@ -12,6 +12,26 @@ export const INITIAL_MAX_POWER = 100;
 // If performance lags, increase this to 10000 or 12000 to lower tick rate requirements.
 export const DAY_DURATION_MS = 8000; 
 
+// --- HYDRATION ---
+// Water is titrated as a percentage of solids mass, exactly as salt is. Every
+// ferment family wants a different mash: koji is cultivated dry on a tray and
+// free water invites bacteria, a miso is a stiff paste, a moromi or a vinegar
+// is essentially a liquid. These are the targets the bench suggests when a
+// recipe resolves; the player is free to ignore them and pay for it.
+export const HYDRATION_TARGETS: Record<string, number> = {
+  'Koji Cultivation': 0,
+  'Blackening': 0,
+  'Miso/Paste': 25,
+  'Garum': 40,
+  'Lacto-Fermentation': 120,
+  'Shoyu/Sauce': 130,
+  'Alcoholic Brew': 130,
+  'Vinegar': 150,
+  'Bio-Hazard': 60,
+};
+export const DEFAULT_HYDRATION = 60;
+export const MAX_HYDRATION = 200;
+
 // --- ECONOMY ---
 // The bench used to have no running costs and no ceiling on volume, so a single
 // good recipe repeated forever was always the optimal play. These constants give
