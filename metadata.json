@@ -1,0 +1,6 @@
+{
+  "name": "Fermenta Tycoon",
+  "description": "A sophisticated, Noma-inspired culinary fermentation simulation. Master the science of Koji, Garums, and Misos in a high-stakes lab environment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
