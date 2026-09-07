@@ -57,6 +57,12 @@ Sale price flows through one function, `calculateOffer`:
 - **The week has a bill**: `120 rent + 18/vessel beyond the first two + 1.10/watt + wages`.
 - **Three consecutive weeks in the red closes the lab.**
 
+## Working on this
+
+Read [CLAUDE.md](CLAUDE.md) first — it carries the invariants that are easy to
+break because the reason for them is not local to the code you would be editing.
+[OUTSTANDING.md](OUTSTANDING.md) says where the work stopped.
+
 ## Learning recipes
 
 Recipes are not listed for you. There are three states:
