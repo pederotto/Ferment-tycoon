@@ -3,6 +3,7 @@ import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
 import { RECIPES, VESSELS, eraForRecipe } from '../constants';
 import { getMastery, masteryReveal } from '../services/mastery';
 import RecipeCard from './RecipeCard';
+import { HarvestReportBody } from './HarvestReport';
 import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
 import { Star, Sparkles, Award, CheckCircle2, HelpCircle, Thermometer, Droplets, Clock, Box, BookOpen } from 'lucide-react';
 import { CloseIcon, BookIcon, SearchIcon } from './icons';
@@ -23,6 +24,9 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
   // difference the books system created and the Codex was flattening away.
   const [shelf, setShelf] = useState<'all' | 'discovered' | 'cooked' | 'book' | 'unknown'>('all');
   const [openCard, setOpenCard] = useState<string | null>(null);
+  // Which archived run is expanded. The archive listed a name and a price and
+  // nothing about the run itself; the full record is one click down now.
+  const [openEntry, setOpenEntry] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
 
@@ -305,7 +309,11 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                   });
                   return (
-                    <div key={entry.id} className="wood-panel" style={{ borderRadius: 12, padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+                    <div key={entry.id} className="wood-panel arch-entry" style={{ borderRadius: 12, padding: 16 }}>
+                     <button type="button" className="arch-summary"
+                             onClick={() => setOpenEntry(openEntry === entry.id ? null : entry.id)}
+                             aria-expanded={openEntry === entry.id}
+                             title={entry.record ? 'Open the full run record' : 'Archived before full records were kept'}>
                       <div style={{ flex: 1, minWidth: 220 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }} className="mono">
                           <span style={{ fontWeight: 700, fontSize: 12 }}>{entry.recipeName}</span>
@@ -325,7 +333,10 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                           <div className="section-lbl" style={{ marginBottom: 2 }}>Yield</div>
                           <div className="mono" style={{ fontWeight: 700, color: 'var(--moss)', fontSize: 13 }}>${entry.value ? entry.value.toLocaleString() : '0'}</div>
                         </div>
+                        <span className={`arch-chev${openEntry === entry.id ? ' open' : ''}`} aria-hidden>&rsaquo;</span>
                       </div>
+                     </button>
+                     {openEntry === entry.id && <HarvestReportBody entry={entry} />}
                     </div>
                   );
                 })

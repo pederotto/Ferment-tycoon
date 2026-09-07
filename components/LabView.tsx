@@ -10,6 +10,7 @@ interface LabViewProps {
   onSelectSlot: (batch: Batch | null) => void;
   onIntervention: (batch: Batch, action: string) => void;
   onQuickHarvest?: (batch: Batch) => void;
+  onQuickKeep?: (batch: Batch) => void;
   usedSlots: number;
   gameSpeed: number;
   analyzedRecipeIds: string[]; // For Discovery Fog
@@ -21,6 +22,7 @@ const LabView: React.FC<LabViewProps> = ({
   onSelectSlot,
   onIntervention,
   onQuickHarvest,
+  onQuickKeep,
   usedSlots,
   gameSpeed,
   analyzedRecipeIds
@@ -167,13 +169,25 @@ const LabView: React.FC<LabViewProps> = ({
                     Ventilate
                   </button>
                 ) : (isPeak || isReadyToHarvest) ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (onQuickHarvest) { onQuickHarvest(batch); } else { onSelectSlot(batch); } }}
-                    className="mini-btn harvest"
-                    title="Instantly harvest to the best offer"
-                  >
-                    Harvest
-                  </button>
+                  /* Selling was the only one-click ending, which made every run
+                     implicitly for sale. Keep banks it instead — for a recipe
+                     that needs it as an input, or for a better market later. */
+                  <span className="mini-pair">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (onQuickHarvest) { onQuickHarvest(batch); } else { onSelectSlot(batch); } }}
+                      className="mini-btn harvest"
+                      title="Instantly sell to the best offer going"
+                    >
+                      Sell
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (onQuickKeep) { onQuickKeep(batch); } else { onSelectSlot(batch); } }}
+                      className="mini-btn keep"
+                      title="Take it off the bench and stock it, without selling"
+                    >
+                      Keep
+                    </button>
+                  </span>
                 ) : (
                   <span className="section-lbl" style={{ paddingLeft: 2 }}>#{batch.id.slice(-4)}</span>
                 )}

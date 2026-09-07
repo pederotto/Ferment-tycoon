@@ -498,10 +498,21 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                 )}
 
                 <div className="market">
-                  <button className="harvest-cta" onClick={onQuickHarvest} type="button">
-                    <span className="big">Quick Harvest</span>
-                    <span className="small">Sell to best offer (${highestOffer})</span>
-                  </button>
+                  <div className="cta-pair">
+                    <button className="harvest-cta" onClick={onQuickHarvest} type="button">
+                      <span className="big">Quick Harvest</span>
+                      <span className="small">Sell to best offer (${highestOffer})</span>
+                    </button>
+                    {onStore && (
+                      /* The counterpart to selling. Some batches are inputs, not
+                         products — a koji you are about to make miso with should
+                         not have to be sold and bought back. */
+                      <button className="harvest-cta keep" onClick={onStore} type="button">
+                        <span className="big">Keep</span>
+                        <span className="small">Stock it instead of selling</span>
+                      </button>
+                    )}
+                  </div>
                   <div className="buyer-list">
                     {buyers.slice(0, 3).map(buyer => {
                       const willBuy = buyerWillTake(batch, recipe, buyer, score);

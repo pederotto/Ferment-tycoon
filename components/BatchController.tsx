@@ -172,6 +172,40 @@ const BatchController: React.FC<BatchControllerProps> = ({
     return quantities;
   }, [selectedIngredients, requiredSaltMass, requiredWaterMass, reagentGrams]);
 
+  /**
+   * SCALE TO THE VESSEL, KEEPING THE RECIPE
+   *
+   * Batch value goes as mass^0.62 while ingredients cost linearly, so a
+   * half-filled vessel is cheaper per gram but occupies the bench for the same
+   * number of weeks — filling it is always right, which made the amount half of
+   * the reagent dial a chore rather than a decision. This does the arithmetic:
+   * one multiplier applied to every solid, so every ratio the player set is
+   * preserved exactly.
+   *
+   * Salt and water fall out for free, because they are already derived as a
+   * percentage of the solids rather than stored as grams. Scale the solids and
+   * the salinity and hydration you chose come with them untouched.
+   *
+   * It scales down as readily as up, which is the answer to an overflowing
+   * vessel: same recipe, less of it.
+   */
+  const scaleToVessel = () => {
+    const target = capacityLimitL * 1000;
+    const current = dynamics.totalMass;
+    if (current <= 0 || target <= 0) return;
+    const k = target / current;
+    if (Math.abs(k - 1) < 0.005) return;
+
+    const next: Record<string, number> = { ...reagentGrams };
+    selectedIngredients.forEach(i => {
+      if (i.id === 'salt' || i.id === 'trapani_salt' || i.id === 'water') return;
+      const grams = reagentGrams[i.id] ?? i.mass ?? 0;
+      next[i.id] = Math.max(1, Math.round(grams * k));
+    });
+    setReagentGrams(next);
+    setErrorNotice(null);
+  };
+
   // Aggregated display
   const aggregatedIngredients = useMemo(() => {
     const map = new Map<string, { ing: Ingredient; count: number }>();
@@ -762,6 +796,14 @@ const BatchController: React.FC<BatchControllerProps> = ({
                     {isOverflowing ? `overflowing by ${(fillL - capacityLimitL).toFixed(2)}L` : `${fillPct.toFixed(0)}%`}
                   </span>
                 </div>
+                {(fillPct < 98 || isOverflowing) && (
+                  <button type="button" className="fill-scale" onClick={scaleToVessel}
+                          title="Multiplies every solid by the same factor, so the salinity, hydration and every ratio you set stay exactly as they are — only the amount changes.">
+                    {isOverflowing
+                      ? `Scale down to ${capacityLimitL}L — same recipe, less of it`
+                      : `Fill to ${capacityLimitL}L at these proportions`}
+                  </button>
+                )}
                 <div className="ftrack">
                   <div className={`ffill ${isOverflowing ? 'over' : isFull ? 'full' : ''}`} style={{ width: `${fillPct}%` }} />
                 </div>

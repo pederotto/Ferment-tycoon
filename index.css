@@ -387,7 +387,11 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .lcol-right { flex: 1; min-width: 320px; padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
 
 .ring-stage { position: relative; width: 190px; height: 190px; display: flex; align-items: center; justify-content: center; }
-.ring-stage svg.ring { position: absolute; inset: 0; }
+/* The ring is authored at 220 and the stage is 190, and an SVG's width/height
+   attributes beat the box it sits in — so it rendered 220px from the top-left
+   corner and sat 15px down and right of the vessel it is supposed to encircle.
+   Forcing it to fill the stage lets the viewBox scale it into place. */
+.ring-stage svg.ring { position: absolute; inset: 0; width: 100%; height: 100%; }
 .ribbon { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--amber); color: #1d1206; padding: 6px 14px; border-radius: 999px; text-align: center; }
 .progress-num { font-size: 12px; color: var(--text-lo); text-align: center; }
 .progress-num b { color: var(--text-hi); font-size: 15px; }
@@ -1668,3 +1672,127 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .cp-facts .f.hi { color: var(--brass); border-color: rgba(193, 154, 88, 0.5); }
 .cp-facts .f.bad { color: var(--brick); border-color: rgba(166, 86, 65, 0.55); }
+
+/* Scale-to-vessel. Sits under the fill bar because it is an answer to what that
+   bar is showing — an underfilled vessel, or an overflowing one. */
+.fill-scale {
+  width: 100%;
+  margin-top: 7px;
+  padding: 6px 8px;
+  font-size: 10.5px; letter-spacing: 0.04em;
+  color: var(--brass);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px dashed rgba(193, 154, 88, 0.42);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.fill-scale:hover {
+  color: var(--text-hi);
+  border-color: var(--brass);
+  border-style: solid;
+  background: rgba(193, 154, 88, 0.10);
+}
+
+/* =============================================================================
+   HARVEST REPORT — shown once when a batch comes off the bench, and again
+   inside the Vintage Archives. Same component, so one set of rules.
+   ============================================================================= */
+.hreport {
+  position: relative;
+  width: min(560px, 92vw);
+  max-height: 86vh;
+  display: flex; flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+.hreport.inline {
+  width: auto; max-height: none; box-shadow: none;
+  background: transparent; border: 0;
+  border-top: 1px solid var(--line);
+  margin-top: 13px; padding-top: 13px;
+  border-radius: 0;
+}
+.hr-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.hr-head .kicker {
+  display: block; font-size: 9.5px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--brass); margin-bottom: 3px;
+}
+.hr-head h2 { font-size: 19px; color: var(--text-hi); margin: 0; }
+.hr-scroll { overflow-y: auto; padding: 4px 20px 8px; }
+.hr-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 20px 16px; border-top: 1px solid var(--line);
+}
+.hr-foot .note { font-size: 10.5px; color: var(--text-lo); }
+
+.hr-body { padding: 14px 0 4px; }
+.hr-verdict {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 12px 14px; margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--line); border-radius: 3px;
+}
+.hr-verdict .sc, .hr-verdict .paid { display: flex; flex-direction: column; gap: 2px; }
+.hr-verdict .paid { text-align: right; }
+.hr-verdict .n { font-size: 21px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text-hi); }
+.hr-verdict .n.good { color: var(--moss); }
+.hr-verdict .n.bad { color: var(--brick); }
+.hr-verdict .l { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); }
+.hr-verdict .stars { display: flex; gap: 2px; }
+
+.hr-lbl {
+  display: block; margin: 15px 0 7px;
+  font-size: 9.5px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--brass);
+}
+.hr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 3px 16px; }
+.hr-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 4px 0; border-bottom: 1px dotted rgba(243, 233, 216, 0.07);
+  font-size: 11.5px;
+}
+.hr-row .k { color: var(--text-lo); white-space: nowrap; }
+.hr-row .v { color: var(--text-hi); text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+.hr-row .ok { color: var(--moss); }
+.hr-row .warn { color: var(--amber); }
+.hr-row .bad { color: var(--brick); }
+
+.hr-prose { font-size: 11.5px; line-height: 1.55; color: var(--text-mid); margin: 0 0 6px; }
+.hr-prose.ok { color: var(--moss); }
+.hr-thin { font-size: 11.5px; color: var(--text-lo); font-style: italic; margin-bottom: 10px; }
+.hr-faults { margin: 0; padding-left: 17px; }
+.hr-faults li { font-size: 11.5px; line-height: 1.55; color: var(--brick); margin-bottom: 3px; }
+
+/* Archive rows fold open into the same report. */
+.arch-summary {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 14px; width: 100%; padding: 0;
+  background: none; border: 0; color: inherit; text-align: left; cursor: pointer;
+}
+.arch-chev {
+  font-size: 17px; color: var(--text-lo);
+  transition: transform 0.15s ease, color 0.15s;
+}
+.arch-summary:hover .arch-chev { color: var(--brass); }
+.arch-chev.open { transform: rotate(90deg); color: var(--brass); }
+
+/* Sell / Keep pairs. */
+.mini-pair { display: inline-flex; gap: 4px; }
+.mini-btn.keep { background: rgba(0, 0, 0, 0.28); color: var(--text-mid); }
+.mini-btn.keep:hover { color: var(--text-hi); border-color: var(--teal); }
+.cta-pair { display: flex; gap: 8px; align-items: stretch; }
+.cta-pair .harvest-cta { flex: 1 1 auto; }
+.cta-pair .harvest-cta.keep {
+  flex: 0 1 40%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line-strong);
+  color: var(--text-mid);
+}
+.cta-pair .harvest-cta.keep:hover { border-color: var(--teal); color: var(--text-hi); }

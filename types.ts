@@ -280,6 +280,36 @@ export interface LogEntry {
         vesselId: string;
         params: { temp: number, humidity: number, salinity: number };
     };
+
+    /**
+     * THE FULL RUN RECORD
+     *
+     * The archive used to keep a name, a substrate and a price, which is enough
+     * to remember that a batch happened and nothing about why it went the way it
+     * did. This is everything the post-mortem knows, kept so a run can be read
+     * back months later — and so the harvest report and the logbook can be the
+     * same component looking at the same data.
+     *
+     * Optional because it postdates a lot of saved entries.
+     */
+    record?: {
+        score: number;
+        vesselName: string;
+        massG: number;
+        buyer: string;
+        renown: number;
+        peakPulledAt: number;       // progress % at harvest
+        peakWindow: [number, number];
+        held: { temp: number; humidity: number; salinity: number };
+        target: { temp: number; humidity: number; salinity: number };
+        peakTemp?: number;
+        offTargetPct?: number;      // share of the run outside the band
+        enzymes?: EnzymeProfile;
+        faults: string[];           // human-readable, already labelled
+        controls?: ChamberControls;
+        lineage?: Lineage;
+        spoiled: boolean;
+    };
 }
 
 // --- RECIPE BOOKS ---

@@ -13,9 +13,10 @@ import BatchInspector from './components/BatchInspector';
 import StaffManager from './components/StaffManager';
 import WelcomeScreen from './components/WelcomeScreen';
 import LogbookModal from './components/LogbookModal';
+import HarvestReport from './components/HarvestReport';
 import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
-import { grantMastery } from './services/mastery';
+import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import DevPanel from './components/DevPanel';
 import FirstCulture from './components/FirstCulture';
@@ -808,6 +809,10 @@ export default function App() {
     }));
   };
 
+  // The report shown immediately after a harvest. It is the LogEntry itself, so
+  // what pops up and what the archive keeps are guaranteed to be the same thing.
+  const [harvestReport, setHarvestReport] = useState<LogEntry | null>(null);
+
   const handleStopBatch = (batch: Batch) => {
     setGameState(prev => ({
       ...prev,
@@ -965,6 +970,17 @@ export default function App() {
     });
   };
 
+  /**
+   * The other half of a quick harvest: take it off the bench and keep it, rather
+   * than taking the best price going. Selling was the only one-click ending a
+   * batch could have, which quietly meant every run was for sale — no way to
+   * bank a good one for a recipe that needs it, or to hold stock for a better
+   * market, without opening the inspector and hunting for the button.
+   */
+  const handleQuickKeep = (batch: Batch) => {
+    handleStore(batch);
+  };
+
   const handleSell = (buyer: Buyer, price: number, renownGain: number) => {
     const batch = activeBatchForTest;
     if (!batch) return;
@@ -1020,6 +1036,32 @@ export default function App() {
       rating: Math.min(5, Math.max(1, Math.floor(calculatedScore / 20))), 
       value: moneyGain,
       notes: isSporulation ? 'Sporulated for Lineage' : `Sold to ${buyerName}`,
+      // Everything the post-mortem knows, so a run can be read back later and so
+      // the harvest report and the archive can share one component.
+      record: (() => {
+        const hist = batch.history ?? [];
+        const temps = hist.map(h => h.temp);
+        const ideal = recipe?.idealParams.temp ?? 0;
+        const offBand = hist.filter(h => Math.abs(h.temp - ideal) > 5).length;
+        return {
+          score: Math.round(calculatedScore),
+          vesselName: VESSELS.find(v => v.id === batch.vesselId)?.name ?? batch.vesselId,
+          massG: Math.round(batch.totalMass || 0),
+          buyer: isSporulation ? 'Sporulated' : buyerName,
+          renown: renownGain,
+          peakPulledAt: Math.round(batch.progress),
+          peakWindow: [recipe?.peakWindowStart ?? 0, recipe?.peakWindowEnd ?? 100] as [number, number],
+          held: { ...batch.params },
+          target: recipe?.idealParams ?? { temp: 0, humidity: 0, salinity: 0 },
+          peakTemp: temps.length ? Math.max(...temps) : undefined,
+          offTargetPct: hist.length ? Math.round((offBand / hist.length) * 100) : undefined,
+          enzymes: batch.enzymes,
+          faults: recipe ? diagnoseBatch(batch, recipe).map(f => FAULT_LABELS[f] ?? f) : [],
+          controls: batch.controls,
+          lineage: batch.lineage,
+          spoiled: batch.status === 'spoiled',
+        };
+      })(),
       config: {
           recipeId: batch.recipeId,
           substrateId: batch.substrateId,
@@ -1133,6 +1175,9 @@ export default function App() {
           : [...prev.discoveredRecipeIds, batch.recipeId],
     }));
     setUiState(prev => ({ ...prev, activeBatchId: null }));
+    // Show what actually came out. Sporulation is not a harvest in this sense —
+    // there is no product to report on, only spores — so it skips the report.
+    if (!isSporulation) setHarvestReport(logEntry);
   };
   
   const handleStore = (targetBatch?: Batch) => {
@@ -1500,6 +1545,7 @@ export default function App() {
              onSelectSlot={handleSlotClick} 
              onIntervention={handleIntervention}
              onQuickHarvest={handleQuickHarvest}
+             onQuickKeep={handleQuickKeep}
              usedSlots={usedSlots}
              gameSpeed={gameSpeed}
              analyzedRecipeIds={gameState.analyzedRecipeIds} // Pass discovery state
@@ -1622,6 +1668,10 @@ export default function App() {
              onEvaluate={handleEvaluateBatch}
              initialTab={activeBatchForTest.status === 'ready' || activeBatchForTest.status === 'analyzed' ? 'harvest' : 'telemetry'}
           />
+      )}
+
+      {harvestReport && (
+        <HarvestReport entry={harvestReport} onClose={() => setHarvestReport(null)} />
       )}
 
       {uiState.showStaff && (
