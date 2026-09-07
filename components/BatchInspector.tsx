@@ -16,6 +16,7 @@ interface BatchInspectorProps {
   activeStaff?: Record<StaffRoleType, boolean>;
   playerRenown?: number;
   playerXp?: number;
+  playerReputation?: number;
   marketDemand?: Record<string, number>;
   onClose: () => void;
   onIntervention: (action: string) => void;
@@ -74,6 +75,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   activeStaff,
   playerRenown = 50,
   playerXp = 0,
+  playerReputation = 0,
   marketDemand,
   onClose,
   onIntervention,
@@ -126,7 +128,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
 
   const canFilter = hasCentrifuge && !batch.isFiltered && (recipe.type === FermentType.GARUM || recipe.type === FermentType.VINEGAR);
 
-  const buyers = getInterestedBuyers(batch, recipe, score, playerRenown, playerXp);
+  const buyers = getInterestedBuyers(batch, recipe, score, playerRenown, playerXp, playerReputation);
 
   // Quick Harvest calculation for persistent toolbar.
   // REBALANCE: scales with the real score, with only a $5 salvage floor instead

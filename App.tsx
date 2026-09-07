@@ -1277,6 +1277,10 @@ export default function App() {
 
         {/* RIGHT: ASSETS, RENOWN & MODAL LAUNCHERS */}
         <div className="flex items-center gap-3">
+          <div className="ticket hidden lg:flex" title="Selling safe, well-made stock opens better restaurants.">
+            <span className="lbl">Standing</span>
+            <span className="num">{Math.max(0, Math.round(gameState.reputation))}</span>
+          </div>
           <div className="ticket renown hidden sm:flex">
             <span className="lbl">Renown</span>
             <span className="num mono">{gameState.renown}</span>
@@ -1399,6 +1403,7 @@ export default function App() {
                   onBuyBook={handleBuyBook}
                   ownedBookIds={gameState.ownedBookIds}
                   playerXp={gameState.xp}
+             playerReputation={gameState.reputation}
                   undergroundTier={getUndergroundTierFromXp(gameState.xp)}
                   onOpenHardware={() => toggleDrawer('hardware')}
               />

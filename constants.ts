@@ -978,6 +978,100 @@ export const GREY_MARKET_SOURCES: { id: string; tier: number; heat: number }[] =
   { id: 'scallops', tier: 2, heat: 4 },
 ];
 
+// --- HIGHER-TIER STOCK ---
+// Supplier loyalty levels up from spending, and the shelf gates on
+// tierRequired — but several suppliers had nothing above tier 1 or 2, so
+// levelling them paid out nothing. These are the rewards at the top of each
+// ladder: higher quality (which raises the terroir cap) and stronger stats,
+// so they raise the ceiling on what a batch can become.
+const HIGH_TIER: Ingredient[] = [
+  {
+    id: 'aspergillus_luchuensis',
+    name: 'A. Luchuensis (Black Koji)',
+    type: IngredientType.STARTER,
+    baseCost: 90,
+    currency: 'money',
+    quality: 92,
+    description: 'Citric-acid producing black koji. Protects a warm ferment from itself.',
+    idealFor: ['garum', 'shoyu'],
+    supplierId: 'biolab',
+    tierRequired: 2,
+    hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 2 },
+    mass: 20, unitDisplay: 'g', isLiving: true,
+  },
+  {
+    id: 'lacto_starter',
+    name: 'Heirloom Lacto Culture',
+    type: IngredientType.STARTER,
+    baseCost: 130,
+    currency: 'money',
+    quality: 95,
+    description: 'A stable, vigorous LAB culture. Sours cleanly instead of wildly.',
+    idealFor: ['lacto'],
+    supplierId: 'biolab',
+    tierRequired: 3,
+    hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 9, fatContent: 0, proteinContent: 1 },
+    mass: 25, unitDisplay: 'g', isLiving: true,
+  },
+  {
+    id: 'aged_soybeans',
+    name: 'Three-Year Soybeans',
+    type: IngredientType.SUBSTRATE,
+    baseCost: 34,
+    currency: 'money',
+    quality: 96,
+    description: 'Dry-stored until the starch has gone. Almost pure protein.',
+    idealFor: ['miso', 'shoyu'],
+    supplierId: 'asia_import',
+    tierRequired: 3,
+    hiddenStats: { sugarContent: 1, nativeSalinity: 0, microbialDiversity: 3, fatContent: 6, proteinContent: 11 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+  {
+    id: 'bluefin_trim',
+    name: 'Bluefin Trim',
+    type: IngredientType.SUBSTRATE,
+    baseCost: 120,
+    currency: 'money',
+    quality: 100,
+    description: 'Offcuts from the good part of the fish. The highest umami ceiling money buys.',
+    idealFor: ['garum'],
+    supplierId: 'prime',
+    tierRequired: 4,
+    hiddenStats: { sugarContent: 0, nativeSalinity: 1, microbialDiversity: 4, fatContent: 9, proteinContent: 13 },
+    mass: 1000, unitDisplay: 'kg', tags: ['SEAFOOD'],
+  },
+  {
+    id: 'noma_salt',
+    name: 'Hand-Harvested Flor de Sal',
+    type: IngredientType.ADDITIVE,
+    baseCost: 26,
+    currency: 'money',
+    quality: 100,
+    description: 'Raked off the surface by hand. Nothing in it but salt and the sea.',
+    idealFor: ['all'],
+    supplierId: 'prime',
+    tierRequired: 5,
+    hiddenStats: { sugarContent: 0, nativeSalinity: 100, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+  {
+    id: 'winter_ceps',
+    name: 'Winter Black Trumpet',
+    type: IngredientType.SUBSTRATE,
+    baseCost: 68,
+    currency: 'money',
+    quality: 94,
+    description: 'Foraged after the first frost. Deeply savoury for a mushroom.',
+    idealFor: ['lacto', 'miso'],
+    supplierId: 'nordic',
+    tierRequired: 4,
+    hiddenStats: { sugarContent: 2, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 8 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+];
+INGREDIENTS.push(...HIGH_TIER);
+
 // Generated from the real entries above, so a grey copy can never drift from the
 // ingredient it is a copy of.
 GREY_MARKET_SOURCES.forEach(({ id, tier, heat }) => {

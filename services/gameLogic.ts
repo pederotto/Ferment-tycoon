@@ -873,7 +873,8 @@ export const getInterestedBuyers = (
     recipe: Recipe,
     score: number,
     renown: number,
-    xp: number = 0
+    xp: number = 0,
+    reputation: number = 0
 ): Buyer[] => {
     const tier = getUndergroundTier(xp);
     const matching = BUYERS.filter(b => {
@@ -887,6 +888,10 @@ export const getInterestedBuyers = (
             return buyerWillTake(batch, recipe, b, score) || b.pricesContraband === true;
         }
         if (!b.desiredTypes.includes(recipe.type)) return false;
+        // Reputation was declared on all 13 buyers and never once checked, so the
+        // whole licensed ladder was open from day one. Selling safe, good stock is
+        // what opens the better restaurants.
+        if (reputation < b.minReputation) return false;
         if (score < b.minScore - 25) return false;
         return true;
     });
