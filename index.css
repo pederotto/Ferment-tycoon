@@ -1561,3 +1561,10 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .maturity-note .l { font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--plum); font-weight: 700; }
 .maturity-note .v { font-size: 11.5px; color: var(--text-mid); font-style: italic; }
+
+/* Era tag on a Codex entry — fermentation has a history and the game showed none of it */
+.era-tag {
+  font-size: 7.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+  background: rgba(157, 139, 176, 0.14); color: var(--plum); border: 1px solid rgba(157, 139, 176, 0.3);
+}

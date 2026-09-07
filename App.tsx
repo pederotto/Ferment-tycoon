@@ -40,6 +40,7 @@ export default function App() {
     logbook: [],
     unlockedRecipes: [],   // formulas known; filled by books and by cooking
     ownedBookIds: [],
+    discoveredRecipeIds: [],
     analyzedRecipeIds: [], // Start with empty discovery
     equipmentSlots: 8,
     ownedVesselIds: ['mason_jar', 'koji_tray'], // Initial unlocked vessels
@@ -829,6 +830,10 @@ export default function App() {
           unlockedRecipes: prev.unlockedRecipes.includes(batch.recipeId)
               ? prev.unlockedRecipes
               : [...prev.unlockedRecipes, batch.recipeId],
+          // If you produced it without having read it first, you found it yourself.
+          discoveredRecipeIds: prev.unlockedRecipes.includes(batch.recipeId) || prev.discoveredRecipeIds.includes(batch.recipeId)
+              ? prev.discoveredRecipeIds
+              : [...prev.discoveredRecipeIds, batch.recipeId],
           batches: prev.batches.map(b => b.id === batch.id ? { ...b, status: 'analyzed', evaluationScore: score } : b)
       }));
   };
@@ -1077,6 +1082,10 @@ export default function App() {
       unlockedRecipes: prev.unlockedRecipes.includes(batch.recipeId)
           ? prev.unlockedRecipes
           : [...prev.unlockedRecipes, batch.recipeId],
+      // If you produced it without having read it first, you found it yourself.
+      discoveredRecipeIds: prev.unlockedRecipes.includes(batch.recipeId) || prev.discoveredRecipeIds.includes(batch.recipeId)
+          ? prev.discoveredRecipeIds
+          : [...prev.discoveredRecipeIds, batch.recipeId],
     }));
     setUiState(prev => ({ ...prev, activeBatchId: null }));
   };
@@ -1587,6 +1596,7 @@ export default function App() {
               recipeMastery={gameState.recipeMastery}
               unlockedRecipes={gameState.unlockedRecipes}
               ownedBookIds={gameState.ownedBookIds}
+              discoveredRecipeIds={gameState.discoveredRecipeIds}
           />
       )}
 

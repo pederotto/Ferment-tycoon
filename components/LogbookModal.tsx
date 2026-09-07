@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
-import { RECIPES, VESSELS } from '../constants';
+import { RECIPES, VESSELS, eraForRecipe } from '../constants';
 import { getMastery, masteryReveal } from '../services/mastery';
 import RecipeCard from './RecipeCard';
 import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
@@ -13,14 +13,15 @@ interface LogbookModalProps {
   analyzedRecipeIds: string[];
   recipeMastery: Record<string, RecipeMastery>;
   unlockedRecipes?: string[];
+  discoveredRecipeIds?: string[];
   ownedBookIds?: string[];
 }
 
-const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes = [], ownedBookIds = [] }) => {
+const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes = [], ownedBookIds = [], discoveredRecipeIds = [] }) => {
   const [activeTab, setActiveTab] = useState<'codex' | 'archives'>('codex');
   // The Library splits what you have MADE from what you have only READ — the
   // difference the books system created and the Codex was flattening away.
-  const [shelf, setShelf] = useState<'all' | 'cooked' | 'book' | 'unknown'>('all');
+  const [shelf, setShelf] = useState<'all' | 'discovered' | 'cooked' | 'book' | 'unknown'>('all');
   const [openCard, setOpenCard] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
@@ -32,6 +33,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
       const k = getRecipeKnowledge(recipe.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds);
       const matchesShelf =
         shelf === 'all' ? true :
+        shelf === 'discovered' ? discoveredRecipeIds.includes(recipe.id) :
         shelf === 'cooked' ? k === 'analyzed' :
         shelf === 'book' ? k === 'known' : k === 'unknown';
       if (!matchesShelf) return false;
@@ -39,7 +41,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                             recipe.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesType && matchesSearch;
     });
-  }, [searchQuery, selectedType, shelf, unlockedRecipes, analyzedRecipeIds, ownedBookIds]);
+  }, [searchQuery, selectedType, shelf, unlockedRecipes, analyzedRecipeIds, ownedBookIds, discoveredRecipeIds]);
 
   const filteredArchives = useMemo(() => {
     return logbook.filter(entry => {
@@ -138,6 +140,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
           <div className="shelf-row">
             {([
               { id: 'all', label: 'Everything' },
+              { id: 'discovered', label: 'Discovered' },
               { id: 'cooked', label: 'Cooked' },
               { id: 'book', label: 'In the book' },
               { id: 'unknown', label: 'Unknown' },
@@ -210,9 +213,16 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                           <span className="vessel-badge">{recipe.type}</span>
+                          {(() => { const era = eraForRecipe(recipe.id); return era ? (
+                            <span className="era-tag" title={`${era.title} · ${era.years}`}>{era.title}</span>
+                          ) : null; })()}
                           {isAnalyzed ? (
                             <span className="status-chip ready" style={{ background: 'rgba(138,154,107,0.15)', color: 'var(--moss)' }}>
                               <CheckCircle2 size={10} /> Analyzed
+                            </span>
+                          ) : discoveredRecipeIds.includes(recipe.id) ? (
+                            <span className="status-chip" style={{ background: 'rgba(217,164,65,0.15)', color: 'var(--amber)' }}>
+                              <Sparkles size={10} /> Found it yourself
                             </span>
                           ) : knowledge === 'known' ? (
                             <span className="status-chip" style={{ background: 'rgba(157,139,176,0.15)', color: 'var(--plum)' }}>

@@ -248,6 +248,8 @@ export interface Book {
 
 // unknown -> known (you have the formula) -> analyzed (you have actually run it)
 export type RecipeKnowledge = 'unknown' | 'known' | 'analyzed';
+// How a formula came to be known.
+export type LearnedVia = 'book' | 'discovery' | 'unknown';
 
 // --- RECIPE MATRIX ---
 // The combination that produces each named recipe. Recipe.requiredIngredients is
@@ -387,6 +389,10 @@ export interface GameState {
   unlockedRecipes: string[];
   analyzedRecipeIds: string[];
   ownedBookIds: string[];
+  // Recipe ids you worked out at the bench rather than read in a book. Kept
+  // separately because "I found this" and "I bought this" are different
+  // achievements and the Codex should not flatten them together.
+  discoveredRecipeIds: string[];
 
   equipmentSlots: number;
   ownedVesselIds: string[]; // NEW: Track owned vessels

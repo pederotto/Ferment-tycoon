@@ -256,6 +256,104 @@ export const AGEING_VALUE_BONUS = 0.9;      // up to +90% price at full maturity
 export const CELLAR_TICK_DIVISOR = 6;       // the cellar ages slowly and safely
 export const CELLAR_CAPACITY = 6;
 
+// --- ERAS ---
+// The campaign frame. Fermentation has a history, and the game had none of it:
+// colatura and rose garum sat side by side with no indication that one is a
+// Roman industry and the other a 2015 Copenhagen experiment. Each era gives the
+// context, names the tools it turns on, and opens when you have shown you can
+// work the one before it.
+export interface Era {
+  id: string;
+  ordinal: number;
+  title: string;
+  years: string;
+  premise: string;      // what the era is about
+  technique: string;    // the idea it teaches
+  recipes: string[];
+  vessels: string[];
+  unlocksAtXp: number;
+}
+
+export const ERAS: Era[] = [
+  {
+    id: 'antiquity',
+    ordinal: 1,
+    title: 'The Salt Roads',
+    years: 'c. 600 BCE – 400 CE',
+    premise:
+      'Rome ran on fish sauce. Garum was industrial — vats along the coast of Baetica, ' +
+      'amphorae shipped the length of the empire, grades from the cheap muria to the ' +
+      'ruinous garum sociorum. There was no refrigeration and no microbiology, only salt ' +
+      'and sun and the accumulated knowledge of which is enough.',
+    technique:
+      'Salt as the whole method. At a fifth of the weight nothing harmful can live, so a ' +
+      'vat can sit open in the Mediterranean sun for a season and come out safe. Everything ' +
+      'you make in this era is preserved by salinity alone.',
+    recipes: ['garum_sociorum', 'colatura', 'nuoc_mam', 'bottarga', 'sauerkraut', 'lacto_ceps'],
+    vessels: ['mason_jar', 'koji_tray', 'oak_cask'],
+    unlocksAtXp: 0,
+  },
+  {
+    id: 'silkroad',
+    ordinal: 2,
+    title: 'The Mould Masters',
+    years: 'c. 300 – 1600 CE',
+    premise:
+      'East Asia took a different road: instead of preserving protein with salt, cultivate a ' +
+      'mould that takes it apart. Aspergillus oryzae was domesticated over centuries into ' +
+      'strains bred for opposite ends of the enzyme spectrum, and around it grew miso, shoyu, ' +
+      'sake and the entire jang tradition of Korea.',
+    technique:
+      'Enzymes as the method. Koji does with amylase and protease in weeks what salt and time ' +
+      'do in years — and unlike salt, you choose what it makes. This is where the bench stops ' +
+      'being a pantry and becomes a laboratory.',
+    recipes: ['barley_koji', 'shio_koji', 'amazake', 'shiro_miso', 'hatcho_miso', 'douchi',
+              'gochujang', 'doubanjiang', 'tempeh', 'natto', 'meju', 'doenjang', 'makgeolli',
+              'nukazuke', 'katsuobushi', 'yellow_peaso'],
+    vessels: ['onggi', 'cedar_barrel', 'incubator'],
+    unlocksAtXp: 200,
+  },
+  {
+    id: 'cellars',
+    ordinal: 3,
+    title: 'The Cellars of Europe',
+    years: 'c. 800 – 1900 CE',
+    premise:
+      'Cold changed everything. A northern cellar holds a steady low temperature for months, ' +
+      'and that patience produced the aged traditions: hung salumi, pierced blue cheese, ' +
+      'crocks of kraut buried through a winter, vinegar drawn from wine that had already turned.',
+    technique:
+      'Time and cold as the method. Nothing here is fast. The ferments of this era improve for ' +
+      'months or years rather than peaking and falling over — which is what the cellar is for.',
+    recipes: ['salumi', 'blue_cheese', 'ricotta_forte', 'kimchi', 'coconut_vin', 'cheong',
+              'surstromming', 'bagoong', 'casu_marzu', 'kombucha'],
+    vessels: ['cedar_barrel', 'oak_cask'],
+    unlocksAtXp: 700,
+  },
+  {
+    id: 'modern',
+    ordinal: 4,
+    title: 'The New Nordic Bench',
+    years: '2003 – present',
+    premise:
+      'The modern restaurant fermentation lab did something the tradition never did: it took ' +
+      'the techniques apart and applied them where they did not belong. Koji on beef. Garum ' +
+      'from grasshoppers. Fruit blackened for sixty days in a warming cabinet. The grammar of ' +
+      'the old methods, used on anything at all.',
+    technique:
+      'Method as a grammar rather than a recipe. If you understand that protease frees glutamate ' +
+      'and that heat can replace salt, you can build a ferment nobody has made before — which ' +
+      'is exactly what the undiscovered combinations in your matrix are for.',
+    recipes: ['rose_garum', 'black_apple', 'scallop_fudge', 'lacto_ceps', 'tears_garum',
+              'ancient_garum', 'primordial_garum'],
+    vessels: ['incubator'],
+    unlocksAtXp: 1500,
+  },
+];
+
+export const eraForRecipe = (recipeId: string): Era | undefined =>
+  ERAS.find(e => e.recipes.includes(recipeId));
+
 // --- WHAT THE BOOKS ACTUALLY SAY ---
 // Authored guidance, keyed by recipe. This is the half of the advice a player
 // BUYS: available the moment the book is on the shelf, identical for everyone,

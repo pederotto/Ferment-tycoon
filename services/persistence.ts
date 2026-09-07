@@ -52,6 +52,7 @@ function migrate(state: Partial<GameState>): GameState {
       }])
     ),
     ownedBookIds: state.ownedBookIds ?? [],
+    discoveredRecipeIds: state.discoveredRecipeIds ?? [],
     undergroundBusts: state.undergroundBusts ?? 0,
     // An existing save has clearly got past the opening.
     onboardingDone: state.onboardingDone ?? true,
