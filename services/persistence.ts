@@ -1,4 +1,5 @@
 import { GameState, FermentType } from '../types';
+import { INGREDIENTS } from '../constants';
 
 /**
  * SAVE / LOAD
@@ -33,6 +34,7 @@ function migrate(state: Partial<GameState>): GameState {
     gameOver: state.gameOver ?? false,
     recipeMastery: state.recipeMastery ?? {},
     ownedBookIds: state.ownedBookIds ?? [],
+    undergroundBusts: state.undergroundBusts ?? 0,
     // Older saves seeded unlockedRecipes with a bogus id and used it for nothing.
     // It now means "formula known", so it is rebuilt from what has been cooked.
     unlockedRecipes: Array.from(new Set([
@@ -84,7 +86,15 @@ export function loadGame(): GameState | null {
     // Timestamps are wall-clock; a batch resumed hours later must not think it
     // sat unattended the whole time. Re-anchor every running batch to now.
     const now = Date.now();
-    migrated.batches = migrated.batches.map(b => ({ ...b, lastTick: now, startTime: now - (b.progress * 1000) }));
+    migrated.batches = migrated.batches.map(b => ({
+      ...b,
+      lastTick: now,
+      startTime: now - (b.progress * 1000),
+      // Older saves predate the flag; recover it from what went into the batch.
+      contraband: b.contraband ?? (b.inputIngredientIds ?? []).some(
+        id => INGREDIENTS.find(i => i.id === id)?.contraband === true
+      ),
+    }));
 
     return migrated;
   } catch {

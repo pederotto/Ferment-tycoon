@@ -2,6 +2,7 @@
 import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge } from '../types';
 import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
+  getUndergroundTierFromXp,
   YIELD_SCALING_EXPONENT, WEEKLY_BENCH_RENT, WEEKLY_VESSEL_UPKEEP, FREE_UPKEEP_VESSELS,
   UTILITY_COST_PER_WATT, DEMAND_FLOOR, DEMAND_CEILING, DEMAND_DROP_PER_YIELD, DEMAND_RECOVERY_PER_WEEK
 } from '../constants';
@@ -30,6 +31,13 @@ export const resolveRecipeFromMatrix = (
   ingredients: Ingredient[], 
   vesselId: string
 ): Recipe => {
+  // A grey-market copy is chemically the same fish, so it resolves as its legal
+  // counterpart. Only its `quality` differs, and that is paid for through the
+  // existing terroir cap in calculateCriticScore — no separate penalty.
+  ingredients = ingredients.map(i =>
+    i.legitCounterpartId ? { ...i, id: i.legitCounterpartId } : i
+  );
+
   const hasId = (idPart: string) => ingredients.some(i => i.id.includes(idPart));
   const sub = ingredients.find(i => i.type === IngredientType.SUBSTRATE);
   
@@ -798,9 +806,24 @@ export const generateInitialQuality = (ingredients: Ingredient[]): FlavorProfile
     };
 };
 
-export const getInterestedBuyers = (batch: Batch, recipe: Recipe, score: number, renown: number): Buyer[] => {
+export const getInterestedBuyers = (
+    batch: Batch,
+    recipe: Recipe,
+    score: number,
+    renown: number,
+    xp: number = 0
+): Buyer[] => {
+    const tier = getUndergroundTier(xp);
     const matching = BUYERS.filter(b => {
-        if (b.type === 'Underground' && renown < 50) return false;
+        if (b.type === 'Underground') {
+            // Standing at the bench, not reputation, is what gets you in the door.
+            // Renown used to gate this, which was backwards: it gated the
+            // underground behind the currency the underground paid out in.
+            if ((b.undergroundTier ?? 1) > tier) return false;
+            if (!b.desiredTypes.includes(recipe.type)) return false;
+            // Fences apply their own criteria; the score band does not apply.
+            return buyerWillTake(batch, recipe, b, score) || b.pricesContraband === true;
+        }
         if (!b.desiredTypes.includes(recipe.type)) return false;
         if (score < b.minScore - 25) return false;
         return true;
@@ -821,6 +844,50 @@ export const getInterestedBuyers = (batch: Batch, recipe: Recipe, score: number,
     }
 
     return matching;
+};
+
+/* =========================================================================
+   THE UNDERGROUND — valuation and access.
+   Fences do not price on correctness. They price on character, rot and risk,
+   which is why a batch the licensed trade calls a failure is worth something
+   here and a clean textbook batch is worth nothing.
+   ========================================================================= */
+
+export const getUndergroundTier = (xp: number): number => getUndergroundTierFromXp(xp);
+
+/** True when the batch was built with at least one contraband reagent. */
+export const isContrabandBatch = (batch: Batch): boolean => {
+  if (batch.contraband !== undefined) return batch.contraband;
+  return (batch.inputIngredientIds ?? []).some(
+    id => INGREDIENTS.find(i => i.id === id)?.contraband === true
+  );
+};
+
+/** What a fence sees in a batch: funk, hazard and potency. Roughly 18-150. */
+export const getContrabandValue = (batch: Batch): number => {
+  const q = batch.quality;
+  const funk = Math.min(120, q.funk) * 0.55;
+  const hazard = Math.max(0, 60 - q.safety) * 0.9;      // 0 when safe, 54 when dead
+  const potency = Math.max(0, q.umami + q.acidity) * 0.25;
+  return 18 + funk + hazard + potency;
+};
+
+/**
+ * One gate for every buyer. Licensed buyers judge on the critic score; fences
+ * have their own, stricter, stranger criteria.
+ */
+export const buyerWillTake = (
+  batch: Batch,
+  recipe: Recipe,
+  buyer: Buyer,
+  score: number
+): boolean => {
+  if (buyer.type !== 'Underground') return score >= buyer.minScore;
+  if (buyer.requiresContraband && !isContrabandBatch(batch)) return false;
+  if (buyer.requiresIntact && batch.status === 'spoiled') return false;
+  // maxSafety inverts the usual test: this fence only wants what is NOT saleable.
+  if (buyer.maxSafety !== undefined && batch.quality.safety > buyer.maxSafety) return false;
+  return score >= buyer.minScore;
 };
 
 /* =========================================================================
@@ -932,7 +999,9 @@ export const calculateOffer = (
   ctx: OfferContext
 ): { money: number; renown: number } => {
   const { score, activeStaff, marketDemand } = ctx;
-  if (score <= 0) return { money: 0, renown: 0 };
+  // A fence will happily buy something that scored zero — that is its entire
+  // trade — so only the licensed buyers bail out here.
+  if (score <= 0 && !buyer.pricesContraband) return { money: 0, renown: 0 };
 
   const chefMultiplier = activeStaff?.chef ? 1.15 : 1.0;
   const yieldMult = getYieldMultiplier(batch.yieldVolume || 1);
@@ -945,6 +1014,16 @@ export const calculateOffer = (
       (score / 5) * buyer.priceMultiplier * Math.min(1.5, Math.sqrt(yieldMult))
     );
     return { money: 0, renown: Math.max(0, renown) };
+  }
+
+  // Fences price on what they can actually shift, not on the critic score, and
+  // they are deliberately outside marketDemand in both directions — which makes
+  // the underground the release valve for a glutted legitimate market.
+  if (buyer.pricesContraband) {
+    const fenceMoney = Math.floor(
+      getContrabandValue(batch) * yieldMult * buyer.priceMultiplier * chefMultiplier
+    );
+    return { money: Math.max(0, fenceMoney), renown: 0 };
   }
 
   const money = Math.floor(
@@ -986,7 +1065,7 @@ export const getBestOffer = (
   let buyerName = 'Metropolitan Culinary Co-op';
 
   for (const buyer of buyers) {
-    if (ctx.score < buyer.minScore) continue;
+    if (!buyerWillTake(batch, recipe, buyer, ctx.score)) continue;
     const offer = calculateOffer(batch, recipe, buyer, ctx);
     if (offer.money > money) { money = offer.money; buyerName = buyer.name; }
     if (offer.renown > renown) { renown = offer.renown; }

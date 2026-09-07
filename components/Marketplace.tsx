@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Ingredient, Supplier, IngredientType, Vessel, Book } from '../types';
-import { SUPPLIERS, VESSELS, BOOKS } from '../constants';
+import { SUPPLIERS, VESSELS, BOOKS, UNDERGROUND_TIER_XP } from '../constants';
 import MolecularScan from './MolecularScan';
 import { ChevronUp, Lock, Sparkles, Zap } from 'lucide-react';
 import { BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, VesselLineIcon, JarOutlineIcon, ArrowRightIcon, WrenchIcon, BookIcon } from './icons';
@@ -19,6 +19,7 @@ interface MarketplaceProps {
   onBuyBook?: (book: Book) => void;
   ownedBookIds?: string[];
   playerXp?: number;
+  undergroundTier?: number;
   onOpenHardware?: () => void;
 }
 
@@ -44,6 +45,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({
   onBuyBook,
   ownedBookIds = [],
   playerXp = 0,
+  undergroundTier = 1,
   onOpenHardware
 }) => {
   const [showBlackMarket, setShowBlackMarket] = useState(false);
@@ -192,7 +194,12 @@ const Marketplace: React.FC<MarketplaceProps> = ({
 
                   <div className="items">
                     {supplierIngs.map((ing) => {
-                      const isLocked = rel.level < ing.tierRequired;
+                      // The fence has no loyalty ladder — it gates on your standing
+                      // at the bench. Using supplier level here was what made its
+                      // tier-2 and tier-5 goods permanently unbuyable.
+                      const isLocked = supplier.id === 'black_market'
+                        ? (ing.undergroundTier ?? 1) > undergroundTier
+                        : rel.level < ing.tierRequired;
                       const unitCost = Math.floor(ing.baseCost * (1 - discount));
                       const totalCost = unitCost * buyQuantity;
                       const isRenown = ing.currency === 'renown';
@@ -232,7 +239,11 @@ const Marketplace: React.FC<MarketplaceProps> = ({
                                 {ing.isLiving && <span className="living-tag">Living</span>}
                               </div>
                               <div className="meta">
-                                {isLocked ? `Requires Lvl ${ing.tierRequired}` : <>Stock <b>{getInventoryCount(ing.id)}</b> &middot; {massLabel}/unit</>}
+                                {isLocked
+                                  ? (supplier.id === 'black_market'
+                                      ? `They don't deal this to a bench your size · ${UNDERGROUND_TIER_XP[(ing.undergroundTier ?? 1) - 1]} xp`
+                                      : `Requires Lvl ${ing.tierRequired}`)
+                                  : <>Stock <b>{getInventoryCount(ing.id)}</b> &middot; {massLabel}/unit{ing.heatPerUnit ? <> &middot; <span style={{ color: 'var(--brick)' }}>+{ing.heatPerUnit} heat</span></> : null}</>}
                               </div>
                             </div>
                           </div>

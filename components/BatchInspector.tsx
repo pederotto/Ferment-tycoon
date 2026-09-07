@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Batch, Recipe, FermentType, Buyer, StaffRoleType } from '../types';
 import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor } from '../services/gameLogic';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
 import {
   CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
@@ -15,6 +15,7 @@ interface BatchInspectorProps {
   inventory?: Record<string, number>;
   activeStaff?: Record<StaffRoleType, boolean>;
   playerRenown?: number;
+  playerXp?: number;
   marketDemand?: Record<string, number>;
   onClose: () => void;
   onIntervention: (action: string) => void;
@@ -72,6 +73,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   inventory = {},
   activeStaff,
   playerRenown = 50,
+  playerXp = 0,
   marketDemand,
   onClose,
   onIntervention,
@@ -124,7 +126,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
 
   const canFilter = hasCentrifuge && !batch.isFiltered && (recipe.type === FermentType.GARUM || recipe.type === FermentType.VINEGAR);
 
-  const buyers = getInterestedBuyers(batch, recipe, score, playerRenown);
+  const buyers = getInterestedBuyers(batch, recipe, score, playerRenown, playerXp);
 
   // Quick Harvest calculation for persistent toolbar.
   // REBALANCE: scales with the real score, with only a $5 salvage floor instead
@@ -137,7 +139,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   let highestRenown = 0;
 
   buyers.forEach(buyer => {
-    if (score < buyer.minScore) return;
+    if (!buyerWillTake(batch, recipe, buyer, score)) return;
     const offer = calculateOffer(batch, recipe, buyer, offerCtx);
     if (offer.money > highestOffer) highestOffer = offer.money;
     if (offer.renown > highestRenown) highestRenown = offer.renown;
@@ -299,7 +301,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   </button>
                   <div className="buyer-list">
                     {buyers.slice(0, 3).map(buyer => {
-                      const willBuy = score >= buyer.minScore;
+                      const willBuy = buyerWillTake(batch, recipe, buyer, score);
                       const offer = calculateOffer(batch, recipe, buyer, offerCtx);
                       const price = offer.money;
                       const renownGain = offer.renown;
@@ -393,7 +395,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10, maxHeight: 260, overflowY: 'auto' }} className="custom-scrollbar">
                       {buyers.map(buyer => {
-                        const willBuy = score >= buyer.minScore;
+                        const willBuy = buyerWillTake(batch, recipe, buyer, score);
                         const offer = calculateOffer(batch, recipe, buyer, offerCtx);
                         const price = offer.money;
                         const renownGain = offer.renown;

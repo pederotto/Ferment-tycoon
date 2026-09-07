@@ -1,5 +1,5 @@
 
-import { Ingredient, IngredientType, Recipe, FermentType, Supplier, Vessel, Buyer, StaffRole, MatrixEntry, Book } from './types';
+import { Ingredient, IngredientType, Recipe, FermentType, Supplier, Vessel, Buyer, StaffRole, MatrixEntry, Book, HiddenStats } from './types';
 
 // --- CONFIGURATION ---
 // REBALANCE: was 3000 — enough to buy nearly every early vessel and ingredient
@@ -11,6 +11,37 @@ export const INITIAL_MAX_POWER = 100;
 // OPTIMIZATION: 8 seconds per day is very fast for a physics sim. 
 // If performance lags, increase this to 10000 or 12000 to lower tick rate requirements.
 export const DAY_DURATION_MS = 8000; 
+
+// --- THE UNDERGROUND ---
+// The black market used to be a closed renown-to-renown loop: every item was
+// priced in renown, the only fence paid in renown, and money never entered. On
+// top of that the renown purchase path awarded no supplier XP while the shelf
+// gated on supplier level, so two of its three items were permanently unbuyable.
+//
+// It now runs on three separated currencies:
+//   MONEY  — what the fence charges and what every fence pays.
+//   HEAT   — the risk budget you spend for the edge. Raids scale with it.
+//   RENOWN — buys nothing; it only makes heat and inspectors go away.
+// Access is gated on bench XP (your standing), not on a loyalty ladder the fence
+// never had.
+export const UNDERGROUND_TIER_XP = [0, 250, 700, 1500];
+
+export const getUndergroundTierFromXp = (xp: number): number => {
+  let tier = 1;
+  for (let i = 1; i < UNDERGROUND_TIER_XP.length; i++) {
+    if (xp >= UNDERGROUND_TIER_XP[i]) tier = i + 1;
+  }
+  return tier;
+};
+
+// Heat
+export const HEAT_DECAY_PER_TICK = 0.05;
+export const HEAT_PER_ILLEGAL_BATCH = 0.2;
+export const HEAT_FROM_FILTH = 0.1;
+export const RAID_HEAT_THRESHOLD = 55;      // below this the inspector never calls
+export const RAID_BASE_CHANCE = 0.004;      // scaled by how far over the threshold you are
+export const GREASE_RENOWN_COST = 20;       // renown -> minus heat, the only thing renown buys
+export const GREASE_HEAT_RELIEF = 25;
 
 // --- RECIPE BOOKS ---
 // Priced at roughly $90 per point of combined difficulty taught. The Primer is
@@ -649,35 +680,41 @@ export const INGREDIENTS: Ingredient[] = [
         id: 'ancient_spores',
         name: 'Ancient Spores',
         type: IngredientType.STARTER,
-        baseCost: 100,
-        currency: 'renown',
+        baseCost: 420,
+        currency: 'money',
         quality: 100,
         description: 'Recovered from a clay pot 1000 years old. Unpredictable.',
         idealFor: ['garum'],
         supplierId: 'black_market',
-        tierRequired: 1,
+        tierRequired: 0,
         hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 10, fatContent: 0, proteinContent: 0 },
         mass: 5,
         unitDisplay: 'g',
         isLiving: true,
-        tags: ['HIGH_RISK']
+        tags: ['HIGH_RISK'],
+        contraband: true,
+        heatPerUnit: 12,
+        undergroundTier: 1
     },
     {
         id: 'fly_larvae',
         name: 'Cheese Fly Larvae',
         type: IngredientType.STARTER,
-        baseCost: 50,
-        currency: 'renown',
+        baseCost: 260,
+        currency: 'money',
         quality: 90,
         description: 'Piophila casei. Illegal in most countries.',
         idealFor: ['cheese'],
         supplierId: 'black_market',
-        tierRequired: 2,
+        tierRequired: 0,
         hiddenStats: { sugarContent: 0, nativeSalinity: 0, microbialDiversity: 10, fatContent: 5, proteinContent: 10 },
         mass: 50,
         unitDisplay: 'g',
         isLiving: true,
-        tags: ['BIOHAZARD']
+        tags: ['BIOHAZARD'],
+        contraband: true,
+        heatPerUnit: 15,
+        undergroundTier: 2
     },
 
     // --- ADDITIVES ---
@@ -760,16 +797,19 @@ export const INGREDIENTS: Ingredient[] = [
         id: 'tears',
         name: 'Vial of Tears',
         type: IngredientType.ADDITIVE,
-        baseCost: 200,
-        currency: 'renown',
+        baseCost: 900,
+        currency: 'money',
         quality: 100,
         description: 'Collected from the grieving. Saline and sorrowful.',
         idealFor: ['garum'],
         supplierId: 'black_market',
-        tierRequired: 5,
+        tierRequired: 0,
         hiddenStats: { sugarContent: 0, nativeSalinity: 9, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
         mass: 50,
-        unitDisplay: 'ml'
+        unitDisplay: 'ml',
+        contraband: true,
+        heatPerUnit: 22,
+        undergroundTier: 3
     },
     {
         id: 'wheat',
@@ -898,6 +938,53 @@ export const INGREDIENTS: Ingredient[] = [
 ];
 
 // --- BUYERS ---
+
+// Grey-market copies. Chemically the same fish — they resolve as their legal
+// counterpart in the recipe matrix — but the quality is 30 points lower, which
+// pays through the EXISTING terroir cap in calculateCriticScore
+// (qualityCap = 60 + avgQuality * 0.4). Cheap inputs cap your ceiling: irrelevant
+// when you are selling to a school district, decisive when it is fine dining.
+const greyCopy = (
+  src: { id: string; name: string; type: IngredientType; baseCost: number; quality: number;
+         idealFor: string[]; hiddenStats: HiddenStats; mass: number; unitDisplay: string; tags?: string[] },
+  tier: number,
+  heat: number
+): Ingredient => ({
+  id: `bm_${src.id}`,
+  name: `${src.name} (no papers)`,
+  type: src.type,
+  baseCost: Math.round(src.baseCost * 0.48),
+  currency: 'money',
+  quality: Math.max(10, src.quality - 30),
+  description: `Unlabelled ${src.name.toLowerCase()}. Half price, no provenance, no questions.`,
+  idealFor: src.idealFor,
+  supplierId: 'black_market',
+  tierRequired: 0,
+  hiddenStats: src.hiddenStats,
+  mass: src.mass,
+  unitDisplay: src.unitDisplay,
+  tags: [...(src.tags ?? []), 'GREY_MARKET'],
+  contraband: true,
+  heatPerUnit: heat,
+  legitCounterpartId: src.id,
+  undergroundTier: tier,
+});
+
+export const GREY_MARKET_SOURCES: { id: string; tier: number; heat: number }[] = [
+  { id: 'anchovies', tier: 1, heat: 2 },
+  { id: 'mackerel', tier: 1, heat: 2 },
+  { id: 'raw_milk', tier: 1, heat: 3 },
+  { id: 'mullet_roe', tier: 2, heat: 4 },
+  { id: 'scallops', tier: 2, heat: 4 },
+];
+
+// Generated from the real entries above, so a grey copy can never drift from the
+// ingredient it is a copy of.
+GREY_MARKET_SOURCES.forEach(({ id, tier, heat }) => {
+  const src = INGREDIENTS.find(i => i.id === id);
+  if (src) INGREDIENTS.push(greyCopy(src, tier, heat));
+});
+
 export const BUYERS: Buyer[] = [
     {
         id: 'culinary_coop',
@@ -1035,16 +1122,57 @@ export const BUYERS: Buyer[] = [
         dialogue: { intro: "Purity is paramount.", success: "Bio-availability is high. Proceed.", reject: "Contaminated." }
     },
     {
+        // --- THE FENCES ---
+        // These pay MONEY, and they buy exactly what the licensed trade refuses.
+        // That is the whole point: failure now has an outlet with teeth, instead
+        // of only the 0.4x Bio-Reclamation salvage floor.
+        id: 'bio_broker',
+        name: 'Vitrine & Sons',
+        type: 'Underground',
+        description: 'Reclamation brokers. No questions about what died in there.',
+        minReputation: 0,
+        desiredTypes: [FermentType.GARUM, FermentType.MISO, FermentType.LACTO, FermentType.SHOYU,
+                       FermentType.VINEGAR, FermentType.BLACK, FermentType.KOJI, FermentType.ALCOHOL, FermentType.FAIL],
+        minScore: 0,
+        paysIn: 'money',
+        priceMultiplier: 1.0,
+        undergroundTier: 1,
+        pricesContraband: true,
+        maxSafety: 55,          // refuses anything a legitimate buyer would take
+        heatPerSale: 8,
+        dialogue: { intro: "Show us the ruined stock.", success: "We can move that.", reject: "Too wholesome. Try a grocer." }
+    },
+    {
         id: 'collector',
         name: 'The Curator',
         type: 'Underground',
         description: 'Buys dangerous or extinct flavors. Illegal.',
-        minReputation: 0, 
-        desiredTypes: [FermentType.GARUM, FermentType.FAIL],
-        minScore: 90,
-        paysIn: 'renown',
-        priceMultiplier: 4.0,
+        minReputation: 0,
+        desiredTypes: [FermentType.GARUM, FermentType.MISO, FermentType.BLACK, FermentType.FAIL],
+        minScore: 0,
+        paysIn: 'money',
+        priceMultiplier: 3.2,
+        undergroundTier: 2,
+        pricesContraband: true,
+        requiresContraband: true,   // only wants things with no provenance
+        requiresIntact: true,       // but not rot — it must still be a thing
+        heatPerSale: 12,
         dialogue: { intro: "Do you have the forbidden sauce?", success: "Thrillingly toxic.", reject: "Boringly safe." }
+    },
+    {
+        id: 'night_market',
+        name: 'The Night Market',
+        type: 'Underground',
+        description: 'Cash, crates, no paperwork. Pays under the odds but never asks.',
+        minReputation: 0,
+        desiredTypes: [FermentType.LACTO, FermentType.MISO, FermentType.KOJI, FermentType.SHOYU,
+                       FermentType.VINEGAR, FermentType.ALCOHOL, FermentType.BLACK, FermentType.GARUM],
+        minScore: 25,
+        paysIn: 'money',
+        priceMultiplier: 0.9,
+        undergroundTier: 2,
+        heatPerSale: 5,
+        dialogue: { intro: "Cash tonight, no receipt.", success: "Pleasure.", reject: "Not worth the crate." }
     },
     {
         id: 'mixologist',

@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book } from './types';
-import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES } from './constants';
+import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS,
+  RAID_HEAT_THRESHOLD, RAID_BASE_CHANCE, HEAT_DECAY_PER_TICK, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
+  GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads } from './services/gameLogic';
 import LabView from './components/LabView';
 import Marketplace from './components/Marketplace';
@@ -59,7 +61,8 @@ export default function App() {
     marketDemand: Object.values(FermentType).reduce((acc, t) => ({ ...acc, [t]: 1 }), {} as Record<string, number>),
     insolvencyStrikes: 0,
     gameOver: false,
-    recipeMastery: {}
+    recipeMastery: {},
+    undergroundBusts: 0
   });
 
   // Any run left behind by a previous session, read once so the welcome screen
@@ -264,17 +267,26 @@ export default function App() {
         const newHygiene = Math.max(hygieneFloor, prev.hygiene - hygieneDecay);
         
         let heatChange = 0;
-        if (newHygiene < 40) heatChange += 0.1;
-        const illegalBatches = prev.batches.filter(b => {
-             const sub = INGREDIENTS.find(i => i.id === b.substrateId);
-             return sub?.currency === 'renown';
-        }).length;
-        if (illegalBatches > 0) heatChange += (illegalBatches * 0.2);
+        if (newHygiene < 40) heatChange += HEAT_FROM_FILTH;
+        // Contraband is now flagged on the batch itself. It used to be inferred
+        // from "substrate was bought with renown", which stopped meaning anything
+        // once the underground started charging money.
+        const illegalBatches = prev.batches.filter(b => b.contraband).length;
+        if (illegalBatches > 0) heatChange += illegalBatches * HEAT_PER_ILLEGAL_BATCH;
 
-        const newHeat = Math.min(100, Math.max(0, prev.heat + heatChange - 0.05)); 
+        // Once you have conceded a raid you are on a list, and heat no longer
+        // cools on its own — the only way down is to spend renown greasing it.
+        const decay = prev.undergroundBusts > 0 ? 0 : HEAT_DECAY_PER_TICK;
+        const newHeat = Math.min(100, Math.max(0, prev.heat + heatChange - decay));
 
-        if (newHeat > 80 && Math.random() < 0.01) {
-            setUiState(u => ({ ...u, inspectorRaid: true }));
+        // Heat is a risk budget, not a wall: the inspector's odds rise smoothly
+        // with how far over the threshold you are sitting, rather than being a
+        // flat 1% above 80.
+        if (newHeat > RAID_HEAT_THRESHOLD) {
+            const over = (newHeat - RAID_HEAT_THRESHOLD) / (100 - RAID_HEAT_THRESHOLD);
+            if (Math.random() < RAID_BASE_CHANCE * over * over * 8) {
+                setUiState(u => ({ ...u, inspectorRaid: true }));
+            }
         }
 
         // Re-calculate power internally to avoid dependency loop in useEffect
@@ -413,6 +425,19 @@ export default function App() {
     };
   }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, gameState.gameOver]); 
 
+  const handleGreaseTheFile = () => {
+    if (gameState.renown < GREASE_RENOWN_COST) {
+      setLabNotification({ id: Date.now(), text: `Not enough standing to make this go away.`, type: 'warn' });
+      return;
+    }
+    setGameState(prev => ({
+      ...prev,
+      renown: prev.renown - GREASE_RENOWN_COST,
+      heat: Math.max(0, prev.heat - GREASE_HEAT_RELIEF),
+    }));
+    setLabNotification({ id: Date.now(), text: `A word in the right ear. Heat down ${GREASE_HEAT_RELIEF}.`, type: 'info' });
+  };
+
   const handleBuyBook = (book: Book) => {
     if (gameState.ownedBookIds.includes(book.id)) return;
     if (gameState.money < book.price) {
@@ -490,7 +515,15 @@ export default function App() {
                const sub = INGREDIENTS.find(i => i.id === b.substrateId);
                return sub?.currency !== 'renown';
           });
-          setGameState(prev => ({ ...prev, batches: legalBatches, heat: 50, money: Math.max(0, prev.money - 200) }));
+          // Conceding puts you on a list: the fine scales with priors and heat
+          // stops cooling on its own from here.
+          setGameState(prev => ({
+            ...prev,
+            batches: legalBatches,
+            heat: 50,
+            undergroundBusts: prev.undergroundBusts + 1,
+            money: prev.money - (200 + prev.undergroundBusts * 250),
+          }));
           setUiState(u => ({ ...u, inspectorRaid: false }));
       }
   };
@@ -506,13 +539,42 @@ export default function App() {
     const discount = Math.min(0.25, (rel.level - 1) * 0.05);
     const isRenown = ingredient.currency === 'renown';
 
+    // The underground charges money like everyone else now. It used to take
+    // renown — and that branch never awarded supplier XP while the shelf gated on
+    // supplier LEVEL, so black_market was pinned at level 1 forever and its tier-2
+    // and tier-5 goods were permanently unbuyable. Access is bench xp now.
+    if (ingredient.supplierId === 'black_market') {
+        const tier = getUndergroundTierFromXp(gameState.xp);
+        if ((ingredient.undergroundTier ?? 1) > tier) {
+            setLabNotification({ id: Date.now(), text: `They don't deal that to a bench your size yet.`, type: 'warn' });
+            return;
+        }
+        const totalCost = ingredient.baseCost * quantity;
+        if (gameState.money < totalCost) {
+            setLabNotification({ id: Date.now(), text: `Not enough cash — ${ingredient.name} runs $${totalCost}.`, type: 'warn' });
+            return;
+        }
+        const heatGain = (ingredient.heatPerUnit ?? 8) * quantity;
+        setGameState(prev => ({
+            ...prev,
+            money: prev.money - totalCost,
+            heat: Math.min(100, prev.heat + heatGain),
+            inventory: { ...prev.inventory, [ingredient.id]: (prev.inventory[ingredient.id] || 0) + quantity },
+        }));
+        setLabNotification({
+            id: Date.now(),
+            text: `${quantity}x ${ingredient.name} — no receipt. Heat +${heatGain}.`,
+            type: 'warn'
+        });
+        return;
+    }
+
     if (isRenown) {
         const totalRenown = ingredient.baseCost * quantity;
         if (gameState.renown >= totalRenown) {
             setGameState(prev => ({
                 ...prev,
                 renown: prev.renown - totalRenown,
-                heat: prev.heat + (10 * quantity), // Buying illegal raises heat
                 inventory: { ...prev.inventory, [ingredient.id]: (prev.inventory[ingredient.id] || 0) + quantity },
             }));
         }
@@ -766,6 +828,11 @@ export default function App() {
   const handleSell = (buyer: Buyer, price: number, renownGain: number) => {
     const batch = activeBatchForTest;
     if (!batch) return;
+
+    // Dealing with a fence leaves a trace.
+    if (buyer.heatPerSale) {
+      setGameState(prev => ({ ...prev, heat: Math.min(100, prev.heat + buyer.heatPerSale!) }));
+    }
     
     // Process Harvest for a specific buyer
     processHarvest(batch, price, renownGain, 0, false, buyer.name);
@@ -1157,13 +1224,24 @@ export default function App() {
             <div className="val mono">{gameState.hygiene < 80 ? 'Clean $50' : `${Math.round(gameState.hygiene)}%`}</div>
             <div className="lbl">Hygiene</div>
           </button>
-          <div className="gauge">
+          <button
+            type="button"
+            className="gauge gauge-action"
+            onClick={handleGreaseTheFile}
+            disabled={gameState.renown < GREASE_RENOWN_COST || gameState.heat <= 0}
+            title={`Spend ${GREASE_RENOWN_COST} renown to lose ${GREASE_HEAT_RELIEF} heat`}
+            aria-label={`Inspector heat ${Math.round(gameState.heat)}%. Spend ${GREASE_RENOWN_COST} renown to reduce it.`}
+          >
             <div className="ring-wrap">
               <GaugeRing percent={gameState.heat} color={gameState.heat > 50 ? 'var(--brick)' : 'var(--moss)'} />
             </div>
-            <div className="val mono">{Math.round(gameState.heat)}%</div>
+            <div className="val mono">
+              {gameState.heat > 0 && gameState.renown >= GREASE_RENOWN_COST
+                ? `Grease ${GREASE_RENOWN_COST}`
+                : `${Math.round(gameState.heat)}%`}
+            </div>
             <div className="lbl">Inspector Heat</div>
-          </div>
+          </button>
         </div>
 
         {/* RIGHT: ASSETS, RENOWN & MODAL LAUNCHERS */}
@@ -1290,6 +1368,7 @@ export default function App() {
                   onBuyBook={handleBuyBook}
                   ownedBookIds={gameState.ownedBookIds}
                   playerXp={gameState.xp}
+                  undergroundTier={getUndergroundTierFromXp(gameState.xp)}
                   onOpenHardware={() => toggleDrawer('hardware')}
               />
           </div>
@@ -1321,6 +1400,7 @@ export default function App() {
              activeStaff={gameState.staff}
              playerRenown={gameState.renown}
              marketDemand={gameState.marketDemand}
+             playerXp={gameState.xp}
              onClose={() => setUiState(prev => ({ ...prev, activeBatchId: null }))}
              onIntervention={(action) => handleIntervention(activeBatchForTest, action)}
              onQuickHarvest={() => handleQuickHarvest(activeBatchForTest)}

@@ -33,6 +33,12 @@ export interface Ingredient {
   supplierId: string;
   tierRequired: number;
   tags?: string[]; // 'SEAFOOD', 'HIGH_RISK', etc.
+
+  // --- UNDERGROUND ---
+  contraband?: boolean;        // sold by the fence; a batch built with one is contraband
+  heatPerUnit?: number;        // inspector heat added per unit bought
+  legitCounterpartId?: string; // grey-market copy: resolves as this legal ingredient
+  undergroundTier?: number;    // min tier (from bench xp) the fence will sell this at
   hiddenStats: HiddenStats;
   variantGroup?: string; 
   
@@ -149,6 +155,10 @@ export interface Batch {
       isLidPropped: boolean;
   };
   
+  // Built with at least one contraband reagent. Stored on the batch so the
+  // fences and the heat tick never have to re-derive it from the ingredient list.
+  contraband?: boolean;
+
   // Post-Processing State
   isPressed?: boolean;
   isFiltered?: boolean;
@@ -239,6 +249,14 @@ export interface Buyer {
     paysIn: 'money' | 'renown';
     priceMultiplier: number; 
     
+    // --- UNDERGROUND FENCES ---
+    undergroundTier?: number;     // min bench tier before this fence exists
+    pricesContraband?: boolean;   // values funk/rot/potency instead of the critic score
+    requiresContraband?: boolean; // refuses clean-sourced batches
+    requiresIntact?: boolean;     // refuses spoiled stock
+    maxSafety?: number;           // refuses anything SAFER than this
+    heatPerSale?: number;
+
     dialogue: {
         intro: string;
         success: string;
@@ -316,6 +334,9 @@ export interface GameState {
 
   // Per-recipe mastery. Buys progressively more precise advice, never a bonus.
   recipeMastery: Record<string, RecipeMastery>;
+
+  // Raids conceded. Escalates later fines and stops heat decaying on its own.
+  undergroundBusts: number;
 
   // Consecutive weeks ended in the red. Three closes the lab.
   insolvencyStrikes: number;
