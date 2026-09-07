@@ -40,29 +40,32 @@ ingredient market that makes bulk genuinely dearer.
 
 ## Needs doing before anything else
 
-**A visual review.** Almost everything built in the last stretch was verified by
-DOM measurement rather than by eye, because the browser pane could not render
-screenshots for most of it. The geometry is right and the interactions work; how
-it *looks* — density, spacing, whether the composition bars read at a glance, the
-2×2 bench, the new Supply catalogue — has not been seen properly.
+**A visual review.** Still owed, and still the biggest gap. Everything is
+verified by DOM measurement and live interaction — geometry is right, controls
+respond, nothing overflows at 1366x768 — but the browser pane renders at a fixed
+size regardless of viewport emulation, so how it *looks* has not been judged by
+eye. The one alignment bug found this way (the progress ring sitting 15px off its
+vessel) was found by measuring, not by looking, which is exactly the point: a
+measurement pass cannot catch what only reads wrong.
 
 ## Asked for, not built
 
-**History mode.** Requested but never specified, and the readings diverge too far
-to guess: historical *eras* as a campaign (partly built — see `ERAS`), a
-reviewable log of past runs, or a scenario mode starting in a given period. Worth
-settling before building.
+**~~History mode.~~ Settled and built** as the reviewable-log reading: every
+harvest writes a full run record (`LogEntry.record`) and the Vintage Archives
+fold open into it. The *era campaign* reading remains only half-built — `ERAS`
+exists and tags recipes, but nothing sequences them into a progression.
 
-**Deeper interventions.** Stir / Flip / Skim / Ventilate are state-dependent now,
-but propping the lid on a koji bed is still the only one that genuinely steers an
-outcome. The others could carry similar weight.
+**Deeper interventions.** Vent, mist and the heat setpoint are held settings
+that genuinely steer an outcome. Stir / Flip / Skim remain one-off pokes that are
+state-dependent but not strategic. They could carry similar weight.
 
 **Staff.** Still fire-and-forget passive multipliers. Low ceiling as designed.
 
 ## Known dead scaffolding
 
-- `Ingredient.lineageBuffs` — set on master spores, never read; the buff is
-  recomputed from `generation` instead. Either wire it up or delete it.
+~~`Ingredient.lineageBuffs`~~ — replaced by `Ingredient.lineage`, which is read
+by the simulation and drifts with cultivation conditions. Nothing known is dead
+here now.
 
 ## Deliberately not done
 
