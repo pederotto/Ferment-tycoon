@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book } from './types';
-import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS,
+import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
   RAID_HEAT_THRESHOLD, RAID_BASE_CHANCE, HEAT_DECAY_PER_TICK, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
-import { processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads } from './services/gameLogic';
+import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads } from './services/gameLogic';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
 import BatchController from './components/BatchController';
@@ -75,6 +75,8 @@ export default function App() {
   // Game Speed State (0 = Paused, 1x, 2x, 4x, 8x)
   const [gameSpeed, setGameSpeed] = useState<number>(1);
   const lastActiveSpeed = useRef<number>(1);
+  // Counts sim ticks, so the cellar can run on a slower cadence than the bench.
+  const tickCount = useRef<number>(0);
 
   // Lab Event / Alert Notification
   // A queue, not a slot. There are 29 places that raise a notice — payroll,
@@ -119,7 +121,7 @@ export default function App() {
   }, []);
 
   // --- DEV TOOLS ---
-  // Ctrl/Cmd+Shift+D, or load the page with ?dev in the query string.
+  // Backtick (`), the DEV chip in the header, or ?dev in the query string.
   const [showDev, setShowDev] = useState<boolean>(() => {
     try { return new URLSearchParams(window.location.search).has('dev'); } catch { return false; }
   });
@@ -129,7 +131,10 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.shiftKey && (e.ctrlKey || e.metaKey) && e.code === 'KeyD') {
+      // Backtick, because Cmd/Ctrl+Shift+D is claimed by the browser itself
+      // (Chrome binds it to "Bookmark all tabs"), so the page never saw it.
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (!typing && (e.key === '`' || e.key === '~')) {
         e.preventDefault();
         setShowDev(v => !v);
       }
@@ -203,12 +208,16 @@ export default function App() {
   }, [allIngredients]);
 
   // Calculate dynamic resource usage
+  // A cellared batch is out of the way — it does not hold a bench slot or draw
+  // power, which is the whole point of moving it there.
   const usedSlots = gameState.batches.reduce((acc, b) => {
+     if (b.cellared) return acc;
      const v = VESSELS.find(v => v.id === b.vesselId);
      return acc + (v?.slotsRequired || 1);
   }, 0);
   
   const currentPower = gameState.batches.reduce((acc, b) => {
+     if (b.cellared) return acc;
      const v = VESSELS.find(v => v.id === b.vesselId);
      return acc + (v?.powerDraw || 0);
   }, 0);
@@ -275,6 +284,7 @@ export default function App() {
     
     // 1. BATCH SIMULATION LOOP (Runs every tickRate)
     const interval = setInterval(() => {
+        tickCount.current += 1;
       setGameState((prev) => {
         const isPowerAvailable = prev.power <= prev.maxPower;
         
@@ -293,6 +303,12 @@ export default function App() {
 
             if (recipe && substrate && batchIngredients.length > 0) {
               // Pass current weather and power availability to simulation
+              // The cellar is cool, dark and undisturbed: batches there tick at a
+              // fraction of the rate and are not exposed to bench hygiene.
+              if (batch.cellared) {
+                if (tickCount.current % CELLAR_TICK_DIVISOR !== 0) return batch;
+                return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true);
+              }
               return processBatchTick(batch, recipe, prev.hygiene, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, isPowerAvailable);
             }
           }
@@ -480,6 +496,37 @@ export default function App() {
       heat: Math.max(0, prev.heat - GREASE_HEAT_RELIEF),
     }));
     setLabNotification({ id: Date.now(), text: `A word in the right ear. Heat down ${GREASE_HEAT_RELIEF}.`, type: 'info' });
+  };
+
+  const handleCellarBatch = (batch: Batch) => {
+    const recipe = getRecipeForBatch(batch);
+    if (ageingBehaviour(recipe) !== 'matures') {
+      setLabNotification({ id: Date.now(), text: `${recipe.name} does not improve with age. Take it now.`, type: 'warn' });
+      return;
+    }
+    const inCellar = gameState.batches.filter(b => b.cellared).length;
+    if (inCellar >= CELLAR_CAPACITY) {
+      setLabNotification({ id: Date.now(), text: `The cellar is full — ${CELLAR_CAPACITY} vessels is all it holds.`, type: 'warn' });
+      return;
+    }
+    setGameState(prev => ({
+      ...prev,
+      batches: prev.batches.map(b => b.id === batch.id ? { ...b, cellared: true } : b),
+    }));
+    setUiState(prev => ({ ...prev, activeBatchId: null }));
+    setLabNotification({
+      id: Date.now(),
+      text: `${recipe.name} moved to the cellar. It will keep developing, slowly, and the bench slot is yours again.`,
+      type: 'info'
+    });
+  };
+
+  const handleUncellarBatch = (batch: Batch) => {
+    setGameState(prev => ({
+      ...prev,
+      batches: prev.batches.map(b => b.id === batch.id ? { ...b, cellared: false } : b),
+    }));
+    setLabNotification({ id: Date.now(), text: `Brought up from the cellar.`, type: 'info' });
   };
 
   const handleBuyBook = (book: Book) => {
@@ -1500,6 +1547,9 @@ export default function App() {
              onQuickHarvest={() => handleQuickHarvest(activeBatchForTest)}
              onSell={handleSell}
              onStore={() => handleStore(activeBatchForTest)}
+             onCellar={() => handleCellarBatch(activeBatchForTest)}
+             canCellar={!activeBatchForTest.cellared && ageingBehaviour(getRecipeForBatch(activeBatchForTest)) === 'matures'}
+             maturityNote={describeMaturity(activeBatchForTest, getRecipeForBatch(activeBatchForTest))}
              onDiscard={handleDiscard}
              onBackSlop={handleBackSlop}
              onSporulate={handleSporulate}

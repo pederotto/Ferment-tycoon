@@ -183,6 +183,36 @@ export const MATRIX_TOKEN_LABELS: Record<string, string> = {
   ancient_spores: 'Ancient spores',
 };
 
+// --- AGEING ---
+// Progress past the peak window used to mean one thing for every ferment:
+// decline, then spoilage at +40. That is true of a koji bed, which sporulates
+// and turns bitter, and of a lacto pickle, which goes soft and sour. It is
+// flatly wrong for the ferments that are *defined* by age — a hatcho miso is
+// buried for two to three years, a colatura draws for a year in the cask, a
+// garum deepens for months. Those should keep developing.
+export type AgeingBehaviour = 'matures' | 'peaks' | 'fragile';
+
+export const AGEING_BY_TYPE: Record<string, AgeingBehaviour> = {
+  'Miso/Paste': 'matures',
+  'Shoyu/Sauce': 'matures',
+  'Garum': 'matures',
+  'Vinegar': 'matures',
+  'Blackening': 'matures',
+  'Koji Cultivation': 'fragile',   // sporulates and turns bitter quickly
+  'Lacto-Fermentation': 'peaks',   // softens and over-sours
+  'Alcoholic Brew': 'peaks',
+  'Bio-Hazard': 'fragile',
+};
+
+// How far past 100% a maturing ferment can usefully go, and how much it gains.
+// The curve is deliberately logarithmic: the first year does most of the work,
+// the fourth is a refinement, and nothing improves forever.
+export const AGEING_MAX_PROGRESS = 500;
+export const AGEING_PEAK_BONUS = 0.28;      // up to +28% score at full maturity
+export const AGEING_VALUE_BONUS = 0.9;      // up to +90% price at full maturity
+export const CELLAR_TICK_DIVISOR = 6;       // the cellar ages slowly and safely
+export const CELLAR_CAPACITY = 6;
+
 // --- WHAT THE BOOKS ACTUALLY SAY ---
 // Authored guidance, keyed by recipe. This is the half of the advice a player
 // BUYS: available the moment the book is on the shelf, identical for everyone,

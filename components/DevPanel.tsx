@@ -6,7 +6,9 @@ import { CloseIcon } from './icons';
 /**
  * DEV PANEL — testing tools, not a game feature.
  *
- * Opened with Ctrl/Cmd+Shift+D, or by loading the page with ?dev in the URL.
+ * Opened with the backtick key, the DEV chip in the header, or ?dev in the URL.
+ * (Cmd/Ctrl+Shift+D was the original binding but Chrome claims it for
+ * "Bookmark all tabs", so the page never received it.)
  * Nothing here is reachable in normal play, and the whole component can be
  * deleted without touching game code.
  */
@@ -85,7 +87,7 @@ const DevPanel: React.FC<DevPanelProps> = ({ gameState, setGameState, onClose, g
       <div className="dev-head">
         <div>
           <h3>Dev tools</h3>
-          <span className="sub">Ctrl/Cmd+Shift+D to toggle · not reachable in normal play</span>
+          <span className="sub">Backtick ` to toggle · or the DEV chip in the header</span>
         </div>
         <button className="close-stamp" onClick={onClose} aria-label="Close dev tools">
           <CloseIcon size={12} />

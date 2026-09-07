@@ -5,7 +5,8 @@ import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
   getUndergroundTierFromXp,
   YIELD_SCALING_EXPONENT, WEEKLY_BENCH_RENT, WEEKLY_VESSEL_UPKEEP, FREE_UPKEEP_VESSELS,
-  UTILITY_COST_PER_WATT, DEMAND_FLOOR, DEMAND_CEILING, DEMAND_DROP_PER_YIELD, DEMAND_RECOVERY_PER_WEEK
+  UTILITY_COST_PER_WATT, DEMAND_FLOOR, DEMAND_CEILING, DEMAND_DROP_PER_YIELD, DEMAND_RECOVERY_PER_WEEK,
+  AGEING_BY_TYPE, AGEING_MAX_PROGRESS, AGEING_PEAK_BONUS, AGEING_VALUE_BONUS, CELLAR_TICK_DIVISOR
 } from '../constants';
 
 // --- GAMEPLAY CONSTANTS ---
@@ -791,8 +792,8 @@ export const processBatchTick = (
   // Status Check
   if (newQuality.safety < 20) {
     status = 'spoiled';
-  } else if (progress >= effectivePeakEnd + 40) {
-    status = 'spoiled'; // Over-fermented
+  } else if (progress >= effectivePeakEnd + 40 && ageingBehaviour(recipe) !== 'matures') {
+    status = 'spoiled'; // Over-fermented — but only for the ferments that can be
   } else if (progress >= 100 && batch.progress < 100) {
     status = 'ready';
     if (!messages.includes('Fermentation Complete (Peak Ready)')) {
@@ -845,8 +846,21 @@ export const processBatchTick = (
       newQuality.sweetness += (potential.sweetness - newQuality.sweetness) * convert * 0.6;
     }
     if (progress >= peakStart) newQuality.acidity += 0.05;
+  } else if (ageingBehaviour(recipe) === 'matures') {
+    // The ferments defined by age keep improving past the window rather than
+    // falling over: proteolysis continues slowly, sharp edges mellow, and the
+    // flavour darkens. Diminishing, never reversing.
+    const maturity = getMaturity(batch, recipe);
+    const gain = convert * 0.35 * (1 - maturity);
+    newQuality.umami += (potential.umami * 1.25 - newQuality.umami) * gain;
+    newQuality.funk += (potential.funk * 1.1 - newQuality.funk) * gain * 0.7;
+    // Acidity rounds off with time — the thing long ageing is actually for.
+    if (newQuality.acidity > recipe.idealFlavorProfile.acidity) {
+      newQuality.acidity -= 0.03;
+    }
   } else {
-    // Past the window it keeps going: umami breaks back down and it turns funky.
+    // Everything else declines past the window: koji sporulates and turns
+    // bitter, a lacto pickle softens and over-sours.
     newQuality.umami -= 0.12;
     newQuality.funk += 0.2;
   }
@@ -917,7 +931,11 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
 
   // Progress & Peak Window Dynamics
   const isPeak = batch.progress >= recipe.peakWindowStart && batch.progress <= recipe.peakWindowEnd;
-  if (isPeak) {
+  const maturity = getMaturity(batch, recipe);
+  if (maturity > 0) {
+      // A three-year miso is not a miso that missed its window.
+      score += 5 + Math.round(score * AGEING_PEAK_BONUS * maturity);
+  } else if (isPeak) {
       score += 5; // Peak window mastery bonus
   } else if (batch.progress < recipe.peakWindowStart && batch.status !== 'ready' && batch.status !== 'analyzed') {
       const completionRatio = Math.max(0.3, batch.progress / Math.max(1, recipe.peakWindowStart));
@@ -927,7 +945,10 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
   // TERROIR CAP: You cannot get a perfect score with bad ingredients.
   // If avg quality is 50 (Industrial Salt), max score is capped around 80.
   // If avg quality is 100 (Trapani Salt + High End Fish), max score is 100.
-  const qualityCap = 60 + (avgQuality * 0.4); // 50 qual -> 80 cap. 100 qual -> 100 cap.
+  // Age lifts the ceiling a little as well as the score — otherwise a long-aged
+  // miso made from ordinary beans would hit the terroir cap and the years would
+  // count for nothing.
+  const qualityCap = 60 + (avgQuality * 0.4) + Math.round(12 * maturity);
   
   return Math.floor(Math.min(qualityCap, score));
 };
@@ -1031,6 +1052,39 @@ export const getInterestedBuyers = (
     }
 
     return matching;
+};
+
+/* =========================================================================
+   AGEING — what happens after the peak window
+   ========================================================================= */
+
+export const ageingBehaviour = (recipe: Recipe) => AGEING_BY_TYPE[recipe.type] ?? 'peaks';
+
+/**
+ * Maturity as a 0..1 fraction of "as good as age will make it".
+ *
+ * Logarithmic on purpose: a hatcho miso gains most of its depth in the first
+ * year and refines slowly after, so the fifth year is worth chasing but not
+ * five times the first.
+ */
+export const getMaturity = (batch: Batch, recipe: Recipe): number => {
+  if (ageingBehaviour(recipe) !== 'matures') return 0;
+  const over = batch.progress - recipe.peakWindowEnd;
+  if (over <= 0) return 0;
+  const span = AGEING_MAX_PROGRESS - recipe.peakWindowEnd;
+  return Math.min(1, Math.log1p((over / span) * 9) / Math.log(10));
+};
+
+/** A human read of how far along a maturing batch is. */
+export const describeMaturity = (batch: Batch, recipe: Recipe): string | null => {
+  if (ageingBehaviour(recipe) !== 'matures') return null;
+  const m = getMaturity(batch, recipe);
+  if (m <= 0.001) return null;
+  if (m < 0.2) return 'Young — just past ready.';
+  if (m < 0.45) return 'Coming together. The edges are softening.';
+  if (m < 0.7) return 'Properly mature. This is what the age is for.';
+  if (m < 0.92) return 'Deep and dark. Very little left to gain.';
+  return 'As far as it goes. Nothing more will come of waiting.';
 };
 
 /* =========================================================================
@@ -1213,8 +1267,11 @@ export const calculateOffer = (
     return { money: Math.max(0, fenceMoney), renown: 0 };
   }
 
+  // Age commands a price of its own, on top of what it does to the score.
+  const ageMult = 1 + AGEING_VALUE_BONUS * getMaturity(batch, recipe);
+
   const money = Math.floor(
-    50 * recipe.difficulty * (score / 50) * yieldMult * buyer.priceMultiplier * chefMultiplier * demand
+    50 * recipe.difficulty * (score / 50) * yieldMult * buyer.priceMultiplier * chefMultiplier * demand * ageMult
   );
   return { money: Math.max(0, money), renown: 0 };
 };

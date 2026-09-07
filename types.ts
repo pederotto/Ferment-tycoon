@@ -201,6 +201,10 @@ export interface Batch {
   // fences and the heat tick never have to re-derive it from the ingredient list.
   contraband?: boolean;
 
+  // Moved to the cellar to age. Cellared batches free their bench slot, tick
+  // slowly, and are protected from the hazards of an open bench.
+  cellared?: boolean;
+
   // Post-Processing State
   isPressed?: boolean;
   isFiltered?: boolean;

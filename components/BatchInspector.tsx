@@ -25,6 +25,9 @@ interface BatchInspectorProps {
   onQuickHarvest: () => void;
   onSell?: (buyer: Buyer, price: number, renownGain: number) => void;
   onStore?: () => void;
+  onCellar?: () => void;
+  canCellar?: boolean;
+  maturityNote?: string | null;
   onDiscard?: () => void;
   onBackSlop?: () => void;
   onSporulate?: () => void;
@@ -84,6 +87,9 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   onQuickHarvest,
   onSell,
   onStore,
+  onCellar,
+  canCellar,
+  maturityNote,
   onDiscard,
   onBackSlop,
   onSporulate,
@@ -226,6 +232,12 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
               happening, on Harvest it is the post-mortem — and a finished batch
               opens straight onto Harvest, which is where it matters most. */}
           <div style={{ padding: '0 24px' }}>
+            {maturityNote && (
+              <div className="maturity-note">
+                <span className="l">Maturing</span>
+                <span className="v">{maturityNote}</span>
+              </div>
+            )}
             <RunTrace batch={batch} recipe={recipe} />
           </div>
 
@@ -458,6 +470,11 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   <div className="wood-panel" style={{ borderRadius: 10, padding: 14 }}>
                     <div className="section-lbl">Alternative Batch Destinations</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {onCellar && canCellar && (
+                        <button className="btn btn-plum" onClick={onCellar} title="Age this in the cellar — it frees the bench slot">
+                          <Package size={14} /> Lay down to age
+                        </button>
+                      )}
                       {onStore && (
                         <button className="btn btn-ghost" onClick={onStore} title="Store this batch into cellar inventory">
                           <Package size={14} /> Stock in Cellar
