@@ -6,8 +6,7 @@ import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DU
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads } from './services/gameLogic';
 import LabView from './components/LabView';
-import Marketplace from './components/Marketplace';
-import HardwareStore from './components/HardwareStore';
+import SupplyPanel from './components/SupplyPanel';
 import BatchController from './components/BatchController';
 import BatchInspector from './components/BatchInspector';
 import StaffManager from './components/StaffManager';
@@ -1181,12 +1180,9 @@ export default function App() {
   return (
     <div className="min-h-screen font-sans selection:bg-amber-500/30 relative flex flex-col" style={{ background: 'var(--bg-void)', color: 'var(--text-hi)' }}>
       
-      {/* GLOBAL BACKDROP FOR CLOSING DRAWERS
-          Stacking order matters here: scrim (z-20) < hardware drawer (z-25) <
-          HUD (z-30) < marketplace drawer (z-50). The scrim has to stay BELOW
-          the hardware drawer or it dims and blurs the very panel it is meant to
-          set apart, and the hardware drawer has to stay below the HUD so its
-          closed grab-tab does not cover the gauge rings. */}
+      {/* Scrim behind the Supply drawer. With the two shop drawers merged the
+          whole stack is now scrim(20) < HUD(30) < supply(50) < modals(100),
+          which removed the z-25 layer and the class of bug that came with it. */}
       {activeDrawer && (
           <div 
              className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px]"
@@ -1195,19 +1191,7 @@ export default function App() {
       )}
 
       {/* HARDWARE STORE (Top Drawer) */}
-      <HardwareStore 
-        isOpen={activeDrawer === 'hardware'}
-        onToggle={() => toggleDrawer('hardware')}
-        money={gameState.money}
-        ownedVesselIds={gameState.ownedVesselIds}
-        tools={toolIngredients}
-        inventory={gameState.inventory}
-        currentPower={currentPower}
-        maxPower={gameState.maxPower}
-        onBuyVessel={handleBuyVessel}
-        onBuyTool={handleBuyIngredient}
-        onUpgradePower={handleUpgradePower}
-      />
+
 
       {/* LAB NOTIFICATION TOAST */}
       {labNotification && (
@@ -1343,7 +1327,7 @@ export default function App() {
           </div>
           <div className="tabs-hud">
             <button
-              onClick={() => toggleDrawer('hardware')}
+              onClick={() => toggleDrawer('marketplace')}
               className={`tab-btn-hud${activeDrawer === 'hardware' ? ' active' : ''}`}
               title="Hardware Store & Vessels"
             >
@@ -1419,7 +1403,7 @@ export default function App() {
               <WaterDropIcon size={12} color="var(--teal)" /> Water &nbsp;<span className="n mono">{gameState.inventory['water'] || 0}L</span>
             </div>
             <div
-              onClick={() => toggleDrawer('hardware')}
+              onClick={() => toggleDrawer('marketplace')}
               className="pantry-item"
               style={{ cursor: 'pointer' }}
               title="Click to view & purchase hardware vessels"
@@ -1439,25 +1423,28 @@ export default function App() {
       </main>
 
       {/* Sourcing Drawer - Root Level to fix Stacking Context */}
+      {/* SUPPLY — one drawer, one place to spend money */}
       <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none px-0 md:px-4 h-0 overflow-visible">
-          <div className="w-full max-w-5xl pointer-events-none absolute bottom-0">
-              <Marketplace 
+          <div className="w-full max-w-[1400px] pointer-events-none absolute bottom-0">
+              <SupplyPanel
                   isOpen={activeDrawer === 'marketplace'}
                   onToggle={() => toggleDrawer('marketplace')}
-                  ingredients={activeIngredients} 
-                  inventory={gameState.inventory} 
-                  money={gameState.money} 
-                  renown={gameState.renown}
-                  relationships={gameState.supplierRelationships}
-                  onBuy={handleBuyIngredient} 
-                  ownedVesselIds={gameState.ownedVesselIds}
-                  onBuyVessel={handleBuyVessel}
-                  onBuyBook={handleBuyBook}
-                  ownedBookIds={gameState.ownedBookIds}
+                  ingredients={allIngredients}
+                  inventory={gameState.inventory}
+                  money={gameState.money}
                   playerXp={gameState.xp}
-             playerReputation={gameState.reputation}
                   undergroundTier={getUndergroundTierFromXp(gameState.xp)}
-                  onOpenHardware={() => toggleDrawer('hardware')}
+                  relationships={gameState.supplierRelationships}
+                  ownedVesselIds={gameState.ownedVesselIds}
+                  ownedBookIds={gameState.ownedBookIds}
+                  currentPower={currentPower}
+                  maxPower={gameState.maxPower}
+                  usedSlots={usedSlots}
+                  onBuy={handleBuyIngredient}
+                  onBuyVessel={handleBuyVessel}
+                  onBuyTool={handleBuyIngredient}
+                  onBuyBook={handleBuyBook}
+                  onUpgradePower={handleUpgradePower}
               />
           </div>
       </div>

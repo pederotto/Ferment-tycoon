@@ -111,16 +111,17 @@ App.tsx                    game loop, day/week tick, harvest and sale handlers
 types.ts                   GameState, Batch, Recipe, Ingredient, Buyer
 constants.ts               ingredients, recipes, buyers, suppliers, vessels, economy tuning
 services/gameLogic.ts      simulation, economy, recipe matrix, underground valuation
-services/mastery.ts        per-recipe XP and the advice ladder
+services/mastery.ts        per-recipe XP, batch diagnosis and the advice ladder
+services/koji.ts           enzyme development, strains and the koji hand-off
 services/persistence.ts    versioned localStorage save with forward migration
 components/
   LabView.tsx              the bench and its cubbies
   BatchController.tsx      the Inoculation Bench modal
   BatchInspector.tsx       telemetry, interventions, harvest and buyers
-  Marketplace.tsx          Sourcing & Exchange drawer
-  HardwareStore.tsx        vessels, tools and grid upgrades
+  SupplyPanel.tsx          one drawer: ingredients, vessels, tools, books, underground
+  RecipeCard.tsx           one recipe: the book's advice and your own results
   StaffManager.tsx         hiring
-  LogbookModal.tsx         Codex and archive
+  LogbookModal.tsx         the Library — Cooked / In the book / Unknown
   icons.tsx                hand-drawn vessel and ingredient art
 index.css                  the "warm artisan workshop" design system
 ```
@@ -138,11 +139,12 @@ screens stay consistent.
 Layered deliberately, and easy to break:
 
 ```
-scrim (20) < hardware drawer (25) < HUD (30) < marketplace drawer (50) < modals (100)
+scrim (20) < HUD (30) < supply drawer (50) < modals (100)
 ```
 
-The hardware drawer sits below the HUD so its closed grab-tab does not cover the gauge
-rings, and above the scrim so opening it does not dim itself.
+There used to be two shop drawers — a Hardware Store at the top and Sourcing at the
+bottom — which sold overlapping goods and fought each other and the HUD for stacking
+order. They are one `SupplyPanel` now, which removed a whole layer.
 
 ## Saves
 

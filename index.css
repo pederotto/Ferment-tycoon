@@ -1263,3 +1263,131 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .hand-strip .hs-l b { color: var(--brass); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0; }
 .hand-strip .hs-r { display: flex; align-items: center; gap: 3px; font-size: 10px; color: var(--amber); }
+
+/* =========================================================================
+   SUPPLY — the single place to spend money. Replaces the Hardware Store
+   (top drawer) and Sourcing & Exchange (bottom drawer), which sold
+   overlapping goods and fought each other and the HUD for stacking order.
+   ========================================================================= */
+
+.supply {
+  border-radius: 20px 20px 0 0; background: linear-gradient(180deg, #241c14, #191309);
+  border: 1px solid var(--line-strong); border-bottom: none;
+  box-shadow: 0 -30px 80px rgba(0, 0, 0, 0.6);
+  display: flex; flex-direction: column; overflow: hidden; pointer-events: auto;
+  transition: height 0.35s ease;
+}
+
+.sup-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 22px; border-bottom: 1px solid var(--line); flex-shrink: 0; cursor: pointer;
+}
+.sup-head .ttl { display: flex; align-items: center; gap: 12px; }
+.sup-head .ic {
+  width: 34px; height: 34px; border-radius: 9px; background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center;
+}
+.sup-head h1 { font-size: 16px; margin: 0; font-weight: 600; }
+.sup-head .sub { font-size: 10px; color: var(--text-lo); margin-top: 2px; }
+.sup-head .right { display: flex; align-items: center; gap: 12px; }
+
+.sup-tabs { display: flex; gap: 6px; padding: 10px 22px 0; flex-shrink: 0; flex-wrap: wrap; }
+.sup-tab {
+  display: flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 8px 8px 0 0;
+  font-size: 11px; font-weight: 600; color: var(--text-lo); cursor: pointer;
+  background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); border-bottom: none;
+}
+.sup-tab:hover { color: var(--text-hi); }
+.sup-tab.active { color: var(--amber); background: rgba(217, 164, 65, 0.1); border-color: rgba(217, 164, 65, 0.4); }
+.sup-tab.illicit.active { color: var(--brick); background: rgba(179, 69, 47, 0.12); border-color: rgba(179, 69, 47, 0.45); }
+
+.sup-controls {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 22px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); flex-shrink: 0;
+}
+.sup-controls .chips { display: flex; gap: 5px; flex: 1; flex-wrap: wrap; }
+
+/* Supplier as a tag with a loyalty bar, not a container you shop inside. */
+.loyalty-strip {
+  display: flex; gap: 7px; padding: 10px 22px; overflow-x: auto; flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+}
+.sup-supplier {
+  display: flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; white-space: nowrap;
+  font-size: 10px; color: var(--text-mid); cursor: pointer;
+  background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line);
+}
+.sup-supplier:hover { border-color: var(--brass); }
+.sup-supplier.active { border-color: var(--amber); color: var(--text-hi); background: rgba(217, 164, 65, 0.1); }
+.sup-supplier b { font-family: 'IBM Plex Mono', monospace; color: var(--brass); font-size: 9px; }
+.sup-supplier .dot { width: 6px; height: 6px; border-radius: 999px; }
+.sup-supplier .ltrack { width: 26px; height: 3px; border-radius: 999px; background: #0a0705; overflow: hidden; }
+.sup-supplier .lfill { display: block; height: 100%; background: var(--moss); }
+
+/* ---------- The catalogue ---------- */
+.cat-head, .cat-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 2.2fr) 96px 108px 58px 66px 128px;
+  align-items: center; gap: 12px; padding: 7px 22px;
+}
+.cat-head {
+  flex-shrink: 0; border-bottom: 1px solid var(--line); background: rgba(0, 0, 0, 0.2);
+  font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); font-weight: 700;
+}
+.cat-head .c-comp em { display: block; font-style: normal; letter-spacing: 0.04em; opacity: 0.6; text-transform: none; font-size: 8px; }
+.cat-head .c-sort {
+  display: flex; align-items: center; gap: 3px; justify-content: flex-end; background: none; border: none;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--text-lo); cursor: pointer; padding: 0;
+}
+.cat-head .c-sort:hover { color: var(--text-hi); }
+.cat-head .c-sort.active { color: var(--amber); }
+
+.catalogue { flex: 1; overflow-y: auto; min-height: 0; }
+.cat-row { border-bottom: 1px solid var(--line); transition: background 0.12s; }
+.cat-row:hover { background: rgba(217, 164, 65, 0.05); }
+.cat-row.locked { opacity: 0.42; }
+
+.cat-row .c-item { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cat-row .glyph {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; color: var(--amber);
+  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line-strong);
+  display: flex; align-items: center; justify-content: center;
+}
+.cat-row .txt { min-width: 0; }
+.cat-row .n { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--text-hi); }
+.cat-row .m { display: block; font-size: 9px; color: var(--text-lo); margin-top: 2px; }
+.cat-row .m .heat { color: var(--brick); }
+.living-tag.illicit { background: rgba(179, 69, 47, 0.2); color: #e0a58f; }
+
+.c-comp { display: flex; flex-direction: column; gap: 3px; }
+.cbar { display: block; height: 5px; border-radius: 999px; background: #0a0705; border: 1px solid var(--line); overflow: hidden; }
+.cbar .cfill { display: block; height: 100%; }
+
+.c-enz { font-size: 9.5px; font-family: 'IBM Plex Mono', monospace; }
+.c-enz .enz { color: var(--moss); }
+.c-enz .enz.strain { color: var(--plum); font-size: 8.5px; font-family: 'Work Sans', sans-serif; }
+.c-enz .enz.none { color: var(--text-lo); opacity: 0.5; }
+.c-qual { font-size: 10.5px; font-family: 'IBM Plex Mono', monospace; color: var(--text-mid); text-align: right; }
+.c-price { font-size: 11.5px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--amber); text-align: right; }
+.c-buy { display: flex; justify-content: flex-end; }
+.c-buy .buy-btn { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.cat-empty { padding: 40px; text-align: center; font-size: 11.5px; color: var(--text-lo); font-style: italic; }
+
+/* ---------- Hardware / books tabs ---------- */
+.sup-body { flex: 1; overflow-y: auto; min-height: 0; padding: 16px 22px 22px; display: flex; flex-direction: column; gap: 10px; }
+.sup-meta {
+  display: flex; gap: 16px; flex-wrap: wrap; padding: 9px 13px; border-radius: 9px; margin-bottom: 4px;
+  background: rgba(0, 0, 0, 0.22); border: 1px dashed var(--line-strong);
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--text-mid);
+}
+.sup-meta span { display: flex; align-items: center; gap: 5px; }
+.sup-lbl { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; margin-top: 6px; }
+.sup-lbl.illicit { color: var(--brick); }
+.eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 11px; }
+
+@media (max-width: 900px) {
+  .cat-head { display: none; }
+  .cat-row { grid-template-columns: 1fr auto; gap: 8px; padding: 10px 16px; }
+  .cat-row .c-comp, .cat-row .c-enz, .cat-row .c-qual { display: none; }
+  .sup-controls, .loyalty-strip, .sup-head, .sup-tabs { padding-left: 14px; padding-right: 14px; }
+}
