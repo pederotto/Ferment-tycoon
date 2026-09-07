@@ -482,8 +482,14 @@ export const MAX_REAGENT_UNITS = 60;
 // Weekly overheads. Rent is the floor you must beat; upkeep and utilities make
 // expansion a commitment rather than a free upgrade.
 export const WEEKLY_BENCH_RENT = 120;
-export const WEEKLY_VESSEL_UPKEEP = 18;     // per owned vessel beyond the starting two
-export const FREE_UPKEEP_VESSELS = 2;
+// Upkeep is charged on the VOLUME of bench you keep, not the number of pots on
+// it. Counting vessels was written when everything was a 1 kg jar; once reagents
+// could be dialled by the gram and scaled to capacity, it inverted — a bench of
+// two 60 L oak casks (120 L, four slots each) fell inside the free allowance and
+// paid nothing at all, while eight 2 L mason jars (16 L) paid six lots of it.
+// The free allowance is the starting jar and tray.
+export const FREE_UPKEEP_LITRES = 5;
+export const WEEKLY_UPKEEP_PER_LITRE = 2;
 export const UTILITY_COST_PER_WATT = 1.10;
 
 // Market saturation. Every sale depresses appetite for that ferment type;

@@ -40,6 +40,57 @@ ingredient market that makes bulk genuinely dearer.
 
 ## Needs doing before anything else
 
+**A design decision on bulk.** Scaling a batch to fill the vessel is now one
+click, which is right — but the value curve behind it was tuned for 1 kg jars.
+Measured over 30 weeks with market saturation and ingredient cost included, a
+full bench across four ferment types nets:
+
+| substrate | mason jars | onggi | oak casks |
+|---|---|---|---|
+| barley, $5/kg | $495/wk | $1,472/wk | $1,352/wk |
+| median, $35/kg | $207/wk | $236/wk | **-$448/wk** |
+| scallops, $400/kg | loss | loss | loss |
+
+Against a $120 floor. Two readings, and which is right is a design call, not a
+measurement:
+
+- *Working as intended.* Cheap commodity in bulk is how real fermentation
+  businesses make money, and expensive substrate in a 60 L cask should be
+  ruinous. The curve already punishes the wrong combinations.
+- *Broken.* 12x the floor by week 30 means the mid-game has no pressure left,
+  and the only lever is "buy barley, buy casks".
+
+Volume-based upkeep (below) closes the worst loophole but only moves the spread
+from 3.0x to 2.6x. The remaining levers are the demand floor (0.35 — a glutted
+market still pays a third), how far spreading across ferment types should dodge
+saturation, and whether recipe difficulty should scale with substrate cost.
+
+**Expensive substrates do not pay, and that is structural.** Revenue depends on
+difficulty, score, buyer and mass — never on what the substrate cost. Better
+ingredients lift the score ceiling (terroir cap, roughly 59 to 88 across the
+range) which is about 1.5x revenue, against up to 80x the price. At difficulty 3
+with a x1.5 buyer, scallops lose money at any mass. Either high-cost substrates
+need to gate high-difficulty recipes, or quality needs to pay more directly.
+Pre-existing, not caused by the fill button.
+
+## Asked for, not built — the vendor and quest layer
+
+Requested as groundwork before any story mode, and not started:
+
+- **More vendors, and more variety among them.** Currently 15, separated mainly
+  by a price multiplier and what they will accept.
+- **Depth per vendor** — more variables than multiplier and acceptance.
+- **Sub-quests and dialogue.**
+- **Unlock routes**: buying particular ingredients, random events, mastery of a
+  named recipe, completing N recipes above a given score, or story progression.
+
+Worth knowing before starting: `BUYERS` already carries `renownRequired`, and
+every entry currently sets it to 0 — so the gating field exists and does nothing.
+`getInterestedBuyers` takes renown, xp and reputation already. A quest system
+would want somewhere to live in `GameState`, which means the three-place rule.
+
+## Also outstanding
+
 **A visual review.** Still owed, and still the biggest gap. Everything is
 verified by DOM measurement and live interaction — geometry is right, controls
 respond, nothing overflows at 1366x768 — but the browser pane renders at a fixed

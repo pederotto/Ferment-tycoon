@@ -93,6 +93,13 @@ stock and old saves. `bias` drifts toward the conditions the parent bed was held
 at, in the same direction as `kojiDevelopment` — warm and wet selects amylase.
 If you change one, change both, or the game teaches two contradictory rules.
 
+**Upkeep is charged per litre of bench, not per vessel.** Counting pots was
+written when every batch was a 1 kg jar. Once reagents could be dialled by the
+gram and scaled to capacity, a bench of two 60 L oak casks fell inside the
+two-vessel free allowance and paid nothing, while eight 2 L jars paid six lots.
+If you touch this, check the opening bench (jar + tray = 5 L) still bills exactly
+the $120 floor and nothing more.
+
 **A heated chamber must be able to reach its setpoint before the batch spoils.**
 The incubator's heating is proportional to the gap for this reason; a flat rate
 meant a low-salt batch died in the twenties on its way to 60 °C, which made the

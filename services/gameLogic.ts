@@ -4,8 +4,8 @@ import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe } from
 import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
   getUndergroundTierFromXp,
-  YIELD_SCALING_EXPONENT, WEEKLY_BENCH_RENT, WEEKLY_VESSEL_UPKEEP, FREE_UPKEEP_VESSELS,
-  UTILITY_COST_PER_WATT, DEMAND_FLOOR, DEMAND_CEILING, DEMAND_DROP_PER_YIELD, DEMAND_RECOVERY_PER_WEEK,
+  YIELD_SCALING_EXPONENT, WEEKLY_BENCH_RENT,
+  UTILITY_COST_PER_WATT, FREE_UPKEEP_LITRES, WEEKLY_UPKEEP_PER_LITRE, DEMAND_FLOOR, DEMAND_CEILING, DEMAND_DROP_PER_YIELD, DEMAND_RECOVERY_PER_WEEK,
   AGEING_BY_TYPE, AGEING_MAX_PROGRESS, AGEING_PEAK_BONUS, AGEING_VALUE_BONUS, CELLAR_TICK_DIVISOR
 } from '../constants';
 
@@ -1505,9 +1505,14 @@ export const calculateOverheads = (
   wages: number
 ): Overheads => {
   const rent = WEEKLY_BENCH_RENT;
-  const totalVessels = Object.values(ownedVessels).reduce((a, b) => a + b, 0);
-  const billableVessels = Math.max(0, totalVessels - FREE_UPKEEP_VESSELS);
-  const upkeep = billableVessels * WEEKLY_VESSEL_UPKEEP;
+  // Litres, not pots. See FREE_UPKEEP_LITRES for why counting vessels stopped
+  // working once a batch could be scaled to fill whatever it was in.
+  const totalLitres = Object.entries(ownedVessels).reduce(
+    (acc, [id, n]) => acc + (VESSELS.find(v => v.id === id)?.capacityL ?? 0) * n,
+    0
+  );
+  const billableLitres = Math.max(0, totalLitres - FREE_UPKEEP_LITRES);
+  const upkeep = Math.round(billableLitres * WEEKLY_UPKEEP_PER_LITRE);
   const utilities = Math.round(currentPower * UTILITY_COST_PER_WATT);
   return { rent, upkeep, utilities, wages, total: rent + upkeep + utilities + wages };
 };
