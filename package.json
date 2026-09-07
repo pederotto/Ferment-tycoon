@@ -1,5 +1,5 @@
 {
-  "name": "copy-of-fermenta-tycoon/3.0-version",
+  "name": "fermenta-tycoon",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -23,5 +23,6 @@
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
-  }
+  },
+  "description": "A culinary fermentation tycoon sim \u2014 koji, garums and misos, simulated properly."
 }
