@@ -134,13 +134,14 @@ export const BOOKS: Book[] = [
 // resolveRecipeFromMatrix and is differential-tested against it.
 export const RECIPE_MATRIX: MatrixEntry[] = [
   // Direct koji substrates — these ran before everything else and ignore the vessel.
-  { recipeId: 'shio_koji', substrate: { kind: 'none' }, requires: ['koji', 'salt', 'water'], vesselId: null },
-  { recipeId: 'amazake',   substrate: { kind: 'none' }, requires: ['koji', 'water'], forbids: ['salt'], vesselId: null },
-  { recipeId: 'shio_koji', substrate: { kind: 'none' }, requires: ['koji', 'salt'], forbids: ['water'], vesselId: null },
+  { recipeId: 'shio_koji', substrate: { kind: 'kojiBase' }, requires: ['koji', 'salt', 'water'], vesselId: null },
+  { recipeId: 'amazake',   substrate: { kind: 'kojiBase' }, requires: ['koji', 'water'], forbids: ['salt'], vesselId: null },
+  { recipeId: 'shio_koji', substrate: { kind: 'kojiBase' }, requires: ['koji', 'salt'], forbids: ['water'], vesselId: null },
 
   { recipeId: 'colatura',       substrate: { kind: 'is', id: 'anchovies' },      requires: ['salt'], vesselId: 'oak_cask' },
   { recipeId: 'bottarga',       substrate: { kind: 'is', id: 'mullet_roe' },     requires: ['salt'], vesselId: 'koji_tray' },
-  { recipeId: 'ricotta_forte',  substrate: { kind: 'is', id: 'raw_milk' },       requires: ['salt'], vesselId: 'onggi' },
+  { recipeId: 'blue_cheese',    substrate: { kind: 'is', id: 'raw_milk' },       requires: ['p_roqueforti', 'salt'], vesselId: 'onggi' },
+  { recipeId: 'ricotta_forte',  substrate: { kind: 'is', id: 'raw_milk' },       requires: ['salt'], forbids: ['p_roqueforti'], vesselId: 'onggi' },
   // Roman garum used no koji at all — fish, salt, sun and time. Forbidding koji
   // here is both historically right and what makes the modern koji-driven method
   // reachable: without this, every fish-and-salt incubation resolved to the Roman
@@ -162,7 +163,8 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   { recipeId: 'scallop_fudge', substrate: { kind: 'is', id: 'scallops' },    requires: ['koji'],          vesselId: 'incubator' },
   { recipeId: 'lacto_ceps',    substrate: { kind: 'is', id: 'ceps' },        requires: ['salt'],          vesselId: 'mason_jar' },
   { recipeId: 'rose_garum',    substrate: { kind: 'is', id: 'rose_petals' }, requires: ['koji', 'water'], vesselId: 'incubator' },
-  { recipeId: 'black_apple',   substrate: { kind: 'oneOf', ids: ['garlic_bulbs', 'plums'] }, requires: [], forbids: ['salt'], vesselId: 'incubator' },
+  { recipeId: 'black_garlic',  substrate: { kind: 'is', id: 'garlic_bulbs' },   requires: [], forbids: ['salt'], vesselId: 'incubator' },
+  { recipeId: 'black_apple',   substrate: { kind: 'is', id: 'plums' },          requires: [], forbids: ['salt', 'sugar'], vesselId: 'incubator' },
   { recipeId: 'yellow_peaso',  substrate: { kind: 'is', id: 'yellow_peas' }, requires: ['barley_koji', 'salt'], vesselId: 'mason_jar' },
 
   { recipeId: 'tears_garum',   substrate: { kind: 'any' },               requires: ['tears', 'koji', 'salt'], vesselId: 'incubator' },
@@ -182,10 +184,17 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   { recipeId: 'kimchi',       substrate: { kind: 'is', id: 'napa_cabbage' },  requires: ['chili', 'salt'], vesselId: 'onggi' },
   { recipeId: 'sauerkraut',   substrate: { kind: 'is', id: 'white_cabbage' }, requires: ['salt'],          vesselId: 'onggi' },
   { recipeId: 'salumi',       substrate: { kind: 'is', id: 'pork_belly' },    requires: ['salt'],          vesselId: 'cedar_barrel' },
-  { recipeId: 'blue_cheese',  substrate: { kind: 'is', id: 'raw_milk' },      requires: ['p_roqueforti', 'salt'], vesselId: 'onggi' },
   { recipeId: 'surstromming', substrate: { kind: 'is', id: 'herring' },       requires: ['salt'],          vesselId: 'mason_jar' },
 
-  { recipeId: 'kombucha', substrate: { kind: 'is', id: 'black_tea' }, requires: ['scoby', 'sugar'], vesselId: 'mason_jar' },
+  { recipeId: 'kombucha',        substrate: { kind: 'is', id: 'black_tea' },  requires: ['scoby', 'sugar'],   vesselId: 'mason_jar' },
+  { recipeId: 'cultured_butter', substrate: { kind: 'is', id: 'heavy_cream' }, requires: [], forbids: ['salt'], vesselId: 'mason_jar' },
+  { recipeId: 'nut_miso',        substrate: { kind: 'is', id: 'hazelnuts' },   requires: ['koji', 'salt'],     vesselId: 'mason_jar' },
+  { recipeId: 'shio_tamago',     substrate: { kind: 'is', id: 'egg_yolks' },   requires: ['koji', 'salt'],     vesselId: 'mason_jar' },
+  { recipeId: 'maesil_cheong',   substrate: { kind: 'is', id: 'plums' },       requires: ['sugar'],            vesselId: 'mason_jar' },
+  { recipeId: 'tepache',         substrate: { kind: 'is', id: 'pineapple' },   requires: ['sugar'],            vesselId: 'mason_jar' },
+  { recipeId: 'cider_vinegar',   substrate: { kind: 'is', id: 'apples' },      requires: ['water'],            vesselId: 'cedar_barrel' },
+  // Dried chilies are an ADDITIVE, so there is no substrate to match on here.
+  { recipeId: 'chili_mash',      substrate: { kind: 'any' },                   requires: ['chili', 'salt'],    vesselId: 'oak_cask' },
 
   // Catch-all: anything sporulated on a tray becomes koji. Must stay last.
   { recipeId: 'barley_koji', substrate: { kind: 'present' }, requires: ['spores'], vesselId: 'koji_tray' },
@@ -399,6 +408,14 @@ export const BOOK_ADVICE: Record<string, string> = {
   kimchi: 'Brine the napa first, then dress it. Cold and slow gives you the sour effervescence; warm and fast gives you soft cabbage and regret.',
   salumi: 'Salt, then a slow fall in humidity across weeks. Drop it too quickly and the outside case-hardens, sealing the wet inside in to rot.',
   blue_cheese: 'The mould needs oxygen to strike, which is why the wheel is pierced. The blue follows the needle and nowhere else.',
+  cultured_butter: 'Mesophilic bacteria turn the citrate in cream into diacetyl — the compound that actually smells like butter. Sour it at room temperature, then churn.',
+  nut_miso: 'Half the weight of a hazelnut is oil. Protease builds the savour, but it is lipase working on that oil that turns it praline rather than rancid — and the difference is whether you kept the salt up.',
+  shio_tamago: 'Bury the yolks in salt and koji and refrigerate. Water leaves, protease firms what remains, and in a week you can grate it.',
+  maesil_cheong: 'Equal weights of fruit and sugar, and no water at all. The syrup draws itself out. There is no fermentation here if you keep it clean — only osmosis.',
+  tepache: 'The rind carries its own yeast. Sugar, water, four warm days, and burp it — this is the fastest thing on the bench and it turns to vinegar if you forget it.',
+  cider_vinegar: 'Two organisms in sequence: yeast makes the alcohol, Acetobacter oxidises it to acid. The second stage is strictly aerobic — seal the vessel and your vinegar simply stops.',
+  chili_mash: 'Salt heavy enough that only halotolerant bacteria survive, then years in wood. The heat rounds off into fruit.',
+  black_garlic: 'No microbe survives sixty degrees, so nothing here is fermenting. It is the Maillard reaction run slowly: reducing sugars meeting amino acids for six weeks until the cloves are black and sweet.',
   kombucha: 'Sweet tea, a mother, and air. Two ferments run at once: yeast makes alcohol from the sugar, acetic bacteria make acid from the alcohol. Seal it and you stop the second one.',
   surstromming: 'A brine deliberately too weak to preserve. It is not spoilage — it is a fermentation held at the edge of one, and the tin swells because it is still working.',
 };
@@ -1357,7 +1374,40 @@ const KOMBUCHA_KIT: Ingredient[] = [
   },
 ];
 
-INGREDIENTS.push(...ORGANISMS, ...NEW_SUBSTRATES, ...KOMBUCHA_KIT);
+const PATHWAY_SUBSTRATES: Ingredient[] = [
+  { id: 'heavy_cream', name: 'Heavy Cream', type: IngredientType.SUBSTRATE,
+    baseCost: 18, currency: 'money', quality: 82,
+    description: 'Almost pure butterfat. Nothing else in the pantry gives lipase this much to work on.',
+    idealFor: ['lacto'], supplierId: 'prime', tierRequired: 1,
+    hiddenStats: { starchContent: 0, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 4, fatContent: 10, proteinContent: 3 },
+    mass: 1000, unitDisplay: 'ml' },
+  { id: 'hazelnuts', name: 'Toasted Hazelnuts', type: IngredientType.SUBSTRATE,
+    baseCost: 42, currency: 'money', quality: 88,
+    description: 'Half fat by weight, and enough protein to build a paste around it.',
+    idealFor: ['miso'], supplierId: 'prime', tierRequired: 2,
+    hiddenStats: { starchContent: 1, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 2, fatContent: 9, proteinContent: 6 },
+    mass: 1000, unitDisplay: 'kg' },
+  { id: 'egg_yolks', name: 'Egg Yolks', type: IngredientType.SUBSTRATE,
+    baseCost: 24, currency: 'money', quality: 86,
+    description: 'Fat and protein and almost no water once the salt has had its way.',
+    idealFor: ['cure'], supplierId: 'prime', tierRequired: 1,
+    hiddenStats: { starchContent: 0, sugarContent: 1, nativeSalinity: 1, microbialDiversity: 2, fatContent: 9, proteinContent: 8 },
+    mass: 500, unitDisplay: 'g' },
+  { id: 'pineapple', name: 'Pineapple (rind & core)', type: IngredientType.SUBSTRATE,
+    baseCost: 8, currency: 'money', quality: 70,
+    description: 'The parts you would throw away. The yeast you need is already living on the skin.',
+    idealFor: ['tepache'], supplierId: 'asia_import', tierRequired: 0,
+    hiddenStats: { starchContent: 1, sugarContent: 9, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 1 },
+    mass: 1000, unitDisplay: 'kg' },
+  { id: 'apples', name: 'Cider Apples', type: IngredientType.SUBSTRATE,
+    baseCost: 7, currency: 'money', quality: 76,
+    description: 'Pressed for must. Sharp, tannic and full of the sugar two successive organisms want.',
+    idealFor: ['vinegar'], supplierId: 'nordic', tierRequired: 0,
+    hiddenStats: { starchContent: 1, sugarContent: 8, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 1 },
+    mass: 1000, unitDisplay: 'kg' },
+];
+
+INGREDIENTS.push(...ORGANISMS, ...NEW_SUBSTRATES, ...KOMBUCHA_KIT, ...PATHWAY_SUBSTRATES);
 
 // --- SPORE STRAINS ---
 // The same species bred in two directions. This is real: sake breweries and soy
@@ -1790,7 +1840,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 85,
     peakWindowEnd: 95,
     activeIntervention: 'Skim',
-    idealParams: { temp: 32, humidity: 50, salinity: 22 }, // Roman method: heavy salt does the preserving, sun does the rest
+    idealParams: { temp: 40, humidity: 50, salinity: 20 }, // Roman quick-garum: 40C / 20% salt
     idealFlavorProfile: { umami: 100, acidity: 15, funk: 80, sweetness: 0, safety: 95 },
     difficulty: 2
   },
@@ -2257,7 +2307,7 @@ export const RECIPES: Recipe[] = [
     name: 'Kimchi',
     type: FermentType.LACTO,
     description: 'Brined napa, chili, and a little fish sauce to feed it. Cold and slow in an onggi, sour and effervescent by the third week.',
-    requiredIngredients: { substrate: true, starter: null, additive: 'chili_flakes' },
+    requiredIngredients: { substrate: true, starter: null, additive: 'chili' },
     outputIngredientId: 'kimchi_jar',
     requiredVesselId: 'onggi',
     baseDurationSeconds: 85,
@@ -2312,12 +2362,148 @@ export const RECIPES: Recipe[] = [
     idealFlavorProfile: { umami: 85, acidity: 60, funk: 100, sweetness: 0, safety: 72 },
     difficulty: 5
   },
+
+  // ============================================================================
+  // LIPASE-DOMINANT — fat is the substrate, free fatty acids are the product
+  // ============================================================================
+  {
+    id: 'cultured_butter',
+    name: 'Cultured Cream',
+    type: FermentType.LACTO,
+    description: 'Mesophilic LAB turn citrate into diacetyl — the compound that makes butter smell like butter — while souring the cream underneath it.',
+    requiredIngredients: { substrate: true, starter: null, additive: null },
+    outputIngredientId: 'cultured_cream',
+    requiredVesselId: 'mason_jar',
+    baseDurationSeconds: 65,
+    peakWindowStart: 80, peakWindowEnd: 94,
+    activeIntervention: 'Stir',
+    idealParams: { temp: 21, humidity: 60, salinity: 0 },
+    idealFlavorProfile: { umami: 30, acidity: 60, funk: 45, sweetness: 20, safety: 98 },
+    difficulty: 2
+  },
+  {
+    id: 'nut_miso',
+    name: 'Hazelnut Miso',
+    type: FermentType.MISO,
+    description: 'High-fat substrate under barley koji. Proteases build the savour, lipases turn the nut oil praline-rich rather than rancid.',
+    requiredIngredients: { substrate: true, starter: 'koji', additive: 'salt' },
+    outputIngredientId: 'nut_miso_jar',
+    requiredVesselId: 'mason_jar',
+    baseDurationSeconds: 165,
+    peakWindowStart: 88, peakWindowEnd: 100,
+    activeIntervention: 'Clean',
+    idealParams: { temp: 20, humidity: 55, salinity: 8 },
+    idealFlavorProfile: { umami: 70, acidity: 20, funk: 60, sweetness: 25, safety: 100 },
+    difficulty: 3
+  },
+  {
+    id: 'shio_tamago',
+    name: 'Shio-Tamago',
+    type: FermentType.MISO,
+    description: 'Yolks buried in a salt-koji bed. Osmosis pulls the water out while proteases firm them into something translucent and gratable.',
+    requiredIngredients: { substrate: true, starter: 'koji', additive: 'salt' },
+    outputIngredientId: 'cured_yolk',
+    requiredVesselId: 'mason_jar',
+    baseDurationSeconds: 90,
+    peakWindowStart: 88, peakWindowEnd: 100,
+    activeIntervention: 'Clean',
+    idealParams: { temp: 6, humidity: 55, salinity: 10 },
+    idealFlavorProfile: { umami: 88, acidity: 10, funk: 40, sweetness: 15, safety: 100 },
+    difficulty: 3
+  },
+
+  // ============================================================================
+  // OSMOTIC — sugar does the work, no heat and no microbes wanted
+  // ============================================================================
+  {
+    id: 'maesil_cheong',
+    name: 'Maesil Cheong',
+    type: FermentType.VINEGAR,
+    description: 'Green plums under their own weight in sugar for a hundred days. Osmotic pressure draws the nectar out; nothing is heated and nothing ferments if you keep it clean.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'sugar' },
+    outputIngredientId: 'maesil_jar',
+    requiredVesselId: 'mason_jar',
+    baseDurationSeconds: 145,
+    peakWindowStart: 86, peakWindowEnd: 100,
+    activeIntervention: 'Clean',
+    idealParams: { temp: 20, humidity: 55, salinity: 0 },
+    idealFlavorProfile: { umami: 5, acidity: 45, funk: 10, sweetness: 95, safety: 100 },
+    difficulty: 2
+  },
+  {
+    id: 'tepache',
+    name: 'Tepache',
+    type: FermentType.ALCOHOL,
+    description: 'Pineapple rind, raw sugar, four warm days. The yeast is already on the skin — you are only giving it something to eat.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'sugar' },
+    outputIngredientId: 'tepache_jar',
+    requiredVesselId: 'mason_jar',
+    baseDurationSeconds: 60,
+    peakWindowStart: 76, peakWindowEnd: 90,
+    activeIntervention: 'Ventilate',
+    idealParams: { temp: 26, humidity: 60, salinity: 0 },
+    idealFlavorProfile: { umami: 10, acidity: 60, funk: 35, sweetness: 65, safety: 96 },
+    difficulty: 1
+  },
+
+  // ============================================================================
+  // ACETIC — strictly aerobic; a sealed vinegar never sours
+  // ============================================================================
+  {
+    id: 'cider_vinegar',
+    name: 'Cider Vinegar',
+    type: FermentType.VINEGAR,
+    description: 'Two stages in one vessel: yeast takes the fruit sugar to alcohol, then Acetobacter takes the alcohol to acid. The second stage needs air or it stops.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'water' },
+    outputIngredientId: 'cider_vinegar_jar',
+    requiredVesselId: 'cedar_barrel',
+    baseDurationSeconds: 175,
+    peakWindowStart: 84, peakWindowEnd: 100,
+    activeIntervention: 'Ventilate',
+    idealParams: { temp: 24, humidity: 65, salinity: 0 },
+    idealFlavorProfile: { umami: 15, acidity: 92, funk: 35, sweetness: 15, safety: 100 },
+    difficulty: 3
+  },
+  {
+    id: 'chili_mash',
+    name: 'Aged Chili Mash',
+    type: FermentType.LACTO,
+    description: 'Crushed chilies under salt in a cask for years. Halotolerant LAB round the heat off into something fruity rather than merely fierce.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
+    outputIngredientId: 'chili_mash_cask',
+    requiredVesselId: 'oak_cask',
+    baseDurationSeconds: 210,
+    peakWindowStart: 88, peakWindowEnd: 100,
+    activeIntervention: 'Stir',
+    idealParams: { temp: 22, humidity: 60, salinity: 9 },
+    idealFlavorProfile: { umami: 30, acidity: 80, funk: 55, sweetness: 25, safety: 100 },
+    difficulty: 3
+  },
+
+  // ============================================================================
+  // MAILLARD — no microbes at all; pure chemistry under steady heat
+  // ============================================================================
+  {
+    id: 'black_garlic',
+    name: 'Black Garlic',
+    type: FermentType.BLACK,
+    description: 'Not a fermentation at all — every microbe is dead at this temperature. Reducing sugars and amino acids react for six weeks until the cloves turn to sweet black balsamic.',
+    requiredIngredients: { substrate: true, starter: null, additive: null },
+    outputIngredientId: 'black_garlic_head',
+    requiredVesselId: 'incubator',
+    baseDurationSeconds: 230,
+    peakWindowStart: 90, peakWindowEnd: 100,
+    activeIntervention: 'Clean',
+    idealParams: { temp: 60, humidity: 80, salinity: 0 },
+    idealFlavorProfile: { umami: 55, acidity: 25, funk: 30, sweetness: 85, safety: 100 },
+    difficulty: 3
+  },
   {
     id: 'kombucha',
     name: 'Kombucha',
     type: FermentType.KOMBUCHA,
     description: 'Sweet tea under a cellulose raft. Yeast turns sugar to alcohol and acetic bacteria turn that to acid — two ferments running at once in the same jar.',
-    requiredIngredients: { substrate: true, starter: 'scoby', additive: 'sugar_cane' },
+    requiredIngredients: { substrate: true, starter: 'scoby', additive: 'sugar' },
     outputIngredientId: 'kombucha_jar',
     requiredVesselId: 'mason_jar',
     baseDurationSeconds: 110,

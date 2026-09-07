@@ -73,6 +73,15 @@ export const resolveRecipeFromMatrix = (
       case 'oneOf': return !!sub && m.ids.includes(sub.id);
       case 'includes': return !!sub?.id.includes(m.token);
       case 'none': return !sub;
+      // Shio koji and amazake are made FROM koji, with nothing else as the base.
+      // The original chain tested `!sub`, but both koji ingredients are typed
+      // SUBSTRATE, so that condition could never be true and both recipes have
+      // been unreachable since the game shipped — while the Bench Primer taught
+      // them. This asks the real question: is koji the base here?
+      case 'kojiBase': {
+        const substrates = ingredients.filter(i => i.type === IngredientType.SUBSTRATE);
+        return substrates.length > 0 && substrates.every(i => i.id.includes('koji'));
+      }
       case 'present': return !!sub;
       case 'any': return true;
     }
@@ -169,7 +178,7 @@ export const resolveRecipeFromMatrix = (
               activeIntervention: 'Skim',
               // The modern method: less than half the Roman salt, held at 60 C so the
               // heat does the preserving instead. Faster, cleaner, and far less salty.
-              idealParams: { temp: 60, humidity: 50, salinity: 9 },
+              idealParams: { temp: 60, humidity: 50, salinity: 13 },
               idealFlavorProfile: { 
                   umami: 95,      // fixed, and deliberately high: only a
                   acidity: 30,    // protein-rich substrate can ever reach it
@@ -1007,10 +1016,16 @@ export const getFlavorPotential = (
   // little of this on their own, which is how a plain lacto pickle works.
   const proteolysis = 0.18 + (enz.protease / 100) * 0.95;
   const saccharification = 0.15 + (enz.amylase / 100) * 1.0;
+  // Lipolysis frees butyric, caproic and caprylic acids from fat. That is where
+  // the sharp, pungent character of an aged dairy ferment or a cured roe comes
+  // from — fatContent was tracked all along and only ever used for rancidity.
+  const lipolysis = 0.1 + ((enz.lipase ?? 0) / 100) * 1.1;
 
   return {
     umami: h.proteinContent * 11 * c * proteolysis,
-    funk: h.microbialDiversity * 9 * c,
+    // Funk comes from two places: the wild life already in the substrate, and
+    // fat being taken apart.
+    funk: (h.microbialDiversity * 9 + h.fatContent * 6 * lipolysis) * c,
     // Free sugar is already there; starch only counts once amylase reaches it.
     sweetness: (h.sugarContent * 5 + h.starchContent * 7 * saccharification) * c,
   };

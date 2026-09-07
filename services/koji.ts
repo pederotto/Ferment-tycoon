@@ -6,10 +6,16 @@ import { Batch, Ingredient, Recipe, EnzymeProfile, IngredientType, FermentType }
  * Aspergillus is not a timer. It is an enzyme factory, and which enzymes it
  * makes is something you steer.
  *
- * Two families matter. AMYLASES cut starch into fermentable sugar — they are
+ * Three families matter. AMYLASES cut starch into fermentable sugar — they are
  * what makes amazake sweet and what feeds an alcoholic brew. PROTEASES cut
  * protein into free amino acids, glutamate above all, which is umami — they are
- * what makes a garum or a shoyu taste of anything.
+ * what makes a garum or a shoyu taste of anything. LIPASES cut fat into free
+ * fatty acids — butyric, caproic, caprylic — which is where the sharp, pungent,
+ * aged-dairy character of a ricotta forte or a casu marzu comes from.
+ *
+ * Lipase is not steered like the other two. It tracks the culture's general
+ * vigour and the fat actually present, because a mould cannot make much lipase
+ * out of a substrate with no fat in it.
  *
  * Four things decide the ratio, and all four are real practice:
  *
@@ -32,7 +38,7 @@ import { Batch, Ingredient, Recipe, EnzymeProfile, IngredientType, FermentType }
 const PEAK_ACTIVITY = 100;
 
 /** Ambient koji activity assumed when a recipe needs koji but none is present. */
-export const NO_ENZYMES: EnzymeProfile = { amylase: 0, protease: 0 };
+export const NO_ENZYMES: EnzymeProfile = { amylase: 0, protease: 0, lipase: 0 };
 
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
@@ -120,9 +126,15 @@ export const advanceEnzymes = (
   // balanced one near 55/55 — both meaningful, neither pinned to the cap.
   const step = PEAK_ACTIVITY * 0.027 * rate * phase;
 
+  // Lipase is induced by fat rather than steered between the other two, so it
+  // rides on overall vigour and on what there is to work on.
+  const fat = substrate?.hiddenStats.fatContent ?? 0;
+  const lipaseStep = step * 0.45 * Math.min(1, fat / 6);
+
   return {
     amylase: Math.min(100, e.amylase + step * amylaseShare),
     protease: Math.min(100, e.protease + step * (1 - amylaseShare)),
+    lipase: Math.min(100, (e.lipase ?? 0) + lipaseStep),
   };
 };
 
@@ -130,6 +142,9 @@ export const advanceEnzymes = (
 export const describeEnzymes = (e: EnzymeProfile): { label: string; detail: string } => {
   const total = e.amylase + e.protease;
   if (total < 12) return { label: 'Barely working', detail: 'Too little activity to convert much of anything.' };
+  if ((e.lipase ?? 0) > Math.max(e.amylase, e.protease) * 0.8) {
+    return { label: 'Fatty / lipase', detail: 'Works on fat, freeing the sharp acids behind aged dairy and cured roe.' };
+  }
   const share = e.amylase / total;
   if (share > 0.66) return { label: 'Sweet / amylase', detail: 'Converts starch to sugar. For amazake, sweet miso and brewing.' };
   if (share < 0.34) return { label: 'Savoury / protease', detail: 'Frees amino acids from protein. For garum, shoyu and dark miso.' };
@@ -153,6 +168,7 @@ export const getBatchEnzymes = (
 
   let amylase = 0;
   let protease = 0;
+  let lipase = 0;
   for (const i of ingredients) {
     if (!i.enzymes) continue;
     // A koji at 20% of the mass is roughly the classic miso ratio and should
@@ -160,8 +176,13 @@ export const getBatchEnzymes = (
     const share = Math.min(1, (massOf(i) / totalMass) / 0.2);
     amylase += i.enzymes.amylase * share;
     protease += i.enzymes.protease * share;
+    lipase += (i.enzymes.lipase ?? 0) * share;
   }
-  return { amylase: Math.min(120, amylase), protease: Math.min(120, protease) };
+  return {
+    amylase: Math.min(120, amylase),
+    protease: Math.min(120, protease),
+    lipase: Math.min(120, lipase),
+  };
 };
 
 /** Citric-acid protection carried by black koji, which shields a warm ferment. */
@@ -204,7 +225,7 @@ export const mintKojiProduct = (
     },
     mass: 1000,
     unitDisplay: 'g',
-    enzymes: { amylase: Math.round(e.amylase), protease: Math.round(e.protease) },
+    enzymes: { amylase: Math.round(e.amylase), protease: Math.round(e.protease), lipase: Math.round(e.lipase ?? 0) },
   };
 };
 

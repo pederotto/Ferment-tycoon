@@ -42,8 +42,9 @@ export interface HiddenStats {
  * differently lands somewhere else again, which is the decision this models.
  */
 export interface EnzymeProfile {
-  amylase: number;   // 0-100 activity units
-  protease: number;  // 0-100 activity units
+  amylase: number;   // starch -> sugar
+  protease: number;  // protein -> free amino acids (umami)
+  lipase?: number;   // triglycerides -> free fatty acids (pungency, aged funk)
 }
 
 export interface Ingredient {
@@ -262,6 +263,7 @@ export type MatrixSubstrate =
   | { kind: 'oneOf'; ids: string[] }    // sub.id is one of these
   | { kind: 'includes'; token: string } // sub.id contains token
   | { kind: 'none' }                    // no substrate present
+  | { kind: 'kojiBase' }                // koji IS the substrate, nothing else is
   | { kind: 'present' }                 // any substrate, identity irrelevant
   | { kind: 'any' };                    // substrate not consulted
 
