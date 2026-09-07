@@ -96,7 +96,8 @@ export enum FermentType {
   VINEGAR = 'Vinegar',
   BLACK = 'Blackening',
   FAIL = 'Bio-Hazard',
-  ALCOHOL = 'Alcoholic Brew'
+  ALCOHOL = 'Alcoholic Brew',
+  KOMBUCHA = 'Kombucha'
 }
 
 export interface Vessel {

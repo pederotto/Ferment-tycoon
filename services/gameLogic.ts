@@ -167,7 +167,9 @@ export const resolveRecipeFromMatrix = (
               peakWindowStart: 90,
               peakWindowEnd: 100,
               activeIntervention: 'Skim',
-              idealParams: { temp: 60, humidity: 50, salinity: 15 }, // Needs high heat
+              // The modern method: less than half the Roman salt, held at 60 C so the
+              // heat does the preserving instead. Faster, cleaner, and far less salty.
+              idealParams: { temp: 60, humidity: 50, salinity: 9 },
               idealFlavorProfile: { 
                   umami: 95,      // fixed, and deliberately high: only a
                   acidity: 30,    // protein-rich substrate can ever reach it
@@ -675,11 +677,33 @@ export const processBatchTick = (
       }
   }
 
+  // --- THERMAL SAFETY ---
+  // Salt is not the only preservative, and the sim only knew about salt. Heat is
+  // the other: pathogens do not grow above roughly 55 C, and they grow very
+  // slowly near freezing. Between the two lies the danger zone, which is exactly
+  // where salt has to do the work on its own.
+  //
+  // This is the difference between Roman garum and the modern method. The Romans
+  // used 20%+ salt and left it in the Mediterranean sun; Noma uses far less salt
+  // and holds it at 60 C instead. Both are safe. Either lever alone can carry a
+  // ferment, and lowering one means raising the other.
+  if (newParams.temp >= 55) {
+      riskFactor *= 0.15;                      // too hot for anything to establish
+  } else if (newParams.temp >= 48) {
+      riskFactor *= 0.45;
+  } else if (newParams.temp <= 8) {
+      riskFactor *= 0.35;                      // too cold to get going
+  } else if (newParams.temp >= 20 && newParams.temp <= 45) {
+      riskFactor *= 1.6;                       // the danger zone; salt must cover this
+  }
+
   // Salinity Preservative Barrier Dynamics
   if (recipe.idealParams.salinity > 0) {
       if (newParams.salinity < recipe.idealParams.salinity * 0.4) {
-          // Severely under-salted: Pathogens thrive
-          safetyDecay += 2;
+          // Severely under-salted — unless the heat is carrying it instead, which
+          // is a legitimate method rather than a mistake.
+          const heatIsCarryingIt = newParams.temp >= 55;
+          if (!heatIsCarryingIt) safetyDecay += 2;
           if (Math.random() < 0.05 && !messages.includes('Under-salted: Pathogen Risk')) {
               messages.push('Under-salted: Pathogen Risk');
           }

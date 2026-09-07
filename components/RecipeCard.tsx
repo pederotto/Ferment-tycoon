@@ -1,6 +1,6 @@
 import React from 'react';
 import { Recipe, RecipeMastery, RecipeKnowledge } from '../types';
-import { BOOK_ADVICE, BOOKS, MASTERY_RUNG_TITLES } from '../constants';
+import { BOOK_ADVICE, BOOKS, MASTERY_RUNG_TITLES, SALT_AND_HEAT_NOTE } from '../constants';
 import { describeFormula } from '../services/gameLogic';
 import { getMasteryLadder, benchAdvice, xpToNextLevel, masteryReveal } from '../services/mastery';
 import { CloseIcon, BookIcon } from './icons';
@@ -98,7 +98,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, knowledge, mastery, own
               {teachingBook && <em> · {teachingBook.title}</em>}
             </span>
             {showBookText ? (
-              <p className="rc-prose">“{bookText}”</p>
+              <>
+                <p className="rc-prose">“{bookText}”</p>
+                {(recipe.type === 'Garum' || recipe.type === 'Shoyu/Sauce') && (
+                  <p className="rc-prose" style={{ marginTop: 8 }}>“{SALT_AND_HEAT_NOTE}”</p>
+                )}
+              </>
             ) : (
               <p className="rc-locked">
                 <HelpCircle size={12} />

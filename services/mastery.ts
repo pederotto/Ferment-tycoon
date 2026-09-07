@@ -292,7 +292,7 @@ const rungTwo = (recipe: Recipe): string => {
     recipe.type === FermentType.KOJI
       ? ' You are not cooking here, you are farming enzymes. Warm and wet grows amylase for sweetness; cool and dry grows protease for savour.'
       : recipe.type === FermentType.GARUM || recipe.type === FermentType.SHOYU
-        ? ' This lives or dies on protease. Bring a savoury koji and a protein-rich substrate, or it will taste of nothing.'
+        ? ' This lives or dies on protease — bring a savoury koji and a protein-rich substrate. And note which safety route it takes: heavy salt at room temperature is the Roman way, light salt held above 55 °C is the modern one. Lower both and you are just incubating whatever lands in it.'
         : recipe.type === FermentType.MISO
           ? ' The koji you bring decides this more than the beans do. Protease for a dark, savoury paste; amylase for a sweet pale one.'
           : recipe.type === FermentType.ALCOHOL

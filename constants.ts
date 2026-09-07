@@ -141,7 +141,11 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   { recipeId: 'colatura',       substrate: { kind: 'is', id: 'anchovies' },      requires: ['salt'], vesselId: 'oak_cask' },
   { recipeId: 'bottarga',       substrate: { kind: 'is', id: 'mullet_roe' },     requires: ['salt'], vesselId: 'koji_tray' },
   { recipeId: 'ricotta_forte',  substrate: { kind: 'is', id: 'raw_milk' },       requires: ['salt'], vesselId: 'onggi' },
-  { recipeId: 'garum_sociorum', substrate: { kind: 'is', id: 'mackerel' },       requires: ['salt'], vesselId: 'incubator' },
+  // Roman garum used no koji at all — fish, salt, sun and time. Forbidding koji
+  // here is both historically right and what makes the modern koji-driven method
+  // reachable: without this, every fish-and-salt incubation resolved to the Roman
+  // recipe and the low-salt/high-heat route could never be built.
+  { recipeId: 'garum_sociorum', substrate: { kind: 'is', id: 'mackerel' }, requires: ['salt'], forbids: ['koji'], vesselId: 'incubator' },
 
   { recipeId: 'doubanjiang', substrate: { kind: 'is', id: 'broad_beans' },    requires: ['chili', 'koji', 'salt'], vesselId: 'onggi' },
   { recipeId: 'douchi',      substrate: { kind: 'is', id: 'black_soybeans' }, requires: ['spores', 'salt'],        vesselId: 'mason_jar' },
@@ -165,6 +169,24 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   { recipeId: 'casu_marzu',    substrate: { kind: 'is', id: 'raw_milk' }, requires: ['larvae'],               vesselId: 'koji_tray' },
   { recipeId: 'ancient_garum', substrate: { kind: 'is', id: 'mackerel' }, requires: ['ancient_spores'],       vesselId: 'onggi' },
 
+  // --- Era II, continued ---
+  { recipeId: 'tempeh',       substrate: { kind: 'includes', token: 'soybean' }, requires: ['rhizopus'],        vesselId: 'koji_tray' },
+  { recipeId: 'natto',        substrate: { kind: 'includes', token: 'soybean' }, requires: ['bacillus_natto'],  vesselId: 'incubator' },
+  { recipeId: 'katsuobushi',  substrate: { kind: 'is', id: 'bonito' },           requires: ['a_glaucus'],       vesselId: 'koji_tray' },
+  { recipeId: 'meju',         substrate: { kind: 'includes', token: 'soybean' }, requires: [], forbids: ['spores', 'koji', 'salt', 'rhizopus', 'bacillus_natto'], vesselId: 'koji_tray' },
+  { recipeId: 'doenjang',     substrate: { kind: 'any' },                        requires: ['meju_block', 'salt'], vesselId: 'onggi' },
+  { recipeId: 'makgeolli',    substrate: { kind: 'present' },                    requires: ['nuruk', 'water'],  vesselId: 'onggi' },
+  { recipeId: 'nukazuke',     substrate: { kind: 'present' },                    requires: ['rice_bran', 'salt'], vesselId: 'onggi' },
+
+  // --- Era III ---
+  { recipeId: 'kimchi',       substrate: { kind: 'is', id: 'napa_cabbage' },  requires: ['chili', 'salt'], vesselId: 'onggi' },
+  { recipeId: 'sauerkraut',   substrate: { kind: 'is', id: 'white_cabbage' }, requires: ['salt'],          vesselId: 'onggi' },
+  { recipeId: 'salumi',       substrate: { kind: 'is', id: 'pork_belly' },    requires: ['salt'],          vesselId: 'cedar_barrel' },
+  { recipeId: 'blue_cheese',  substrate: { kind: 'is', id: 'raw_milk' },      requires: ['p_roqueforti', 'salt'], vesselId: 'onggi' },
+  { recipeId: 'surstromming', substrate: { kind: 'is', id: 'herring' },       requires: ['salt'],          vesselId: 'mason_jar' },
+
+  { recipeId: 'kombucha', substrate: { kind: 'is', id: 'black_tea' }, requires: ['scoby', 'sugar'], vesselId: 'mason_jar' },
+
   // Catch-all: anything sporulated on a tray becomes koji. Must stay last.
   { recipeId: 'barley_koji', substrate: { kind: 'present' }, requires: ['spores'], vesselId: 'koji_tray' },
 ];
@@ -181,7 +203,27 @@ export const MATRIX_TOKEN_LABELS: Record<string, string> = {
   larvae: 'Cheese fly larvae',
   barley_koji: 'Barley koji',
   ancient_spores: 'Ancient spores',
+  rhizopus: 'R. oligosporus',
+  bacillus_natto: 'B. subtilis (nattō)',
+  nuruk: 'Nuruk cake',
+  p_roqueforti: 'P. roqueforti',
+  a_glaucus: 'A. glaucus',
+  meju_block: 'Meju block',
+  rice_bran: 'Rice bran',
+  scoby: 'SCOBY mother',
 };
+
+// The one piece of theory the whole garum family turns on. Written as a book
+// note because it is the sort of thing a text teaches and experience confirms.
+export const SALT_AND_HEAT_NOTE =
+  'Two things keep a ferment safe, and you may choose between them. SALT: above ' +
+  'roughly a fifth of the weight, nothing harmful can establish, and the ferment ' +
+  'can sit at room temperature for a year — this is the Roman way, and why old ' +
+  'garum is punishingly salty. HEAT: above about 55 °C nothing establishes either, ' +
+  'so a ferment held hot needs far less salt — this is the modern way, and why a ' +
+  'garum run at 60 °C tastes of fish rather than of the sea. What you must not do ' +
+  'is lower both. Between 20 and 45 °C, with little salt, you are not fermenting ' +
+  'anything; you are incubating whatever lands in it.';
 
 // --- AGEING ---
 // Progress past the peak window used to mean one thing for every ferment:
@@ -201,6 +243,7 @@ export const AGEING_BY_TYPE: Record<string, AgeingBehaviour> = {
   'Koji Cultivation': 'fragile',   // sporulates and turns bitter quickly
   'Lacto-Fermentation': 'peaks',   // softens and over-sours
   'Alcoholic Brew': 'peaks',
+  'Kombucha': 'peaks',   // goes to vinegar if you leave it
   'Bio-Hazard': 'fragile',
 };
 
@@ -243,6 +286,23 @@ export const BOOK_ADVICE: Record<string, string> = {
   yellow_peaso: 'A northern miso in everything but name. Barley koji, peas, and a long cold winter.',
   tears_garum: 'Written in a hand I do not recognise. The proportions are given but not the reason.',
   ancient_garum: 'The spores are older than the recipe. Expect it to behave unlike anything you have grown.',
+
+  // --- Era II, continued ---
+  tempeh: 'Rhizopus is not koji. It makes almost no enzyme — it knits the beans into a cake with mycelium and stops. Warm, humid, and give it air or the centre goes black.',
+  natto: 'A bacterium, and it wants what no mould would survive: forty degrees and saturated air. The ropiness is the polyglutamic acid, and it is the point.',
+  meju: 'No starter at all. You press the beans into bricks, hang them in a cold room, and let whatever is in your air decide what you get. Every house tastes different.',
+  doenjang: 'Break the meju into strong brine and leave it through a summer. The solids sink and become the paste; the liquid you draw off the top is ganjang. One process, two products.',
+  makgeolli: 'Nuruk saccharifies and ferments at the same time, in the same vessel — parallel fermentation. Keep it cool or it turns to vinegar in front of you.',
+  nukazuke: 'The bed is the recipe. Salt, bran, and your own hands turning it every single day; vegetables are only passing through. Neglect it for a week and it dies.',
+  katsuobushi: 'Simmered, smoked, then moulded and sunned in cycles for four to six months. Each cycle draws out more water. When it rings like wood it is finished.',
+
+  // --- Era III ---
+  sauerkraut: 'Two percent salt by the weight of the cabbage, and nothing else. It must stay under its own liquid — everything that goes wrong with kraut goes wrong at the surface.',
+  kimchi: 'Brine the napa first, then dress it. Cold and slow gives you the sour effervescence; warm and fast gives you soft cabbage and regret.',
+  salumi: 'Salt, then a slow fall in humidity across weeks. Drop it too quickly and the outside case-hardens, sealing the wet inside in to rot.',
+  blue_cheese: 'The mould needs oxygen to strike, which is why the wheel is pierced. The blue follows the needle and nowhere else.',
+  kombucha: 'Sweet tea, a mother, and air. Two ferments run at once: yeast makes alcohol from the sugar, acetic bacteria make acid from the alcohol. Seal it and you stop the second one.',
+  surstromming: 'A brine deliberately too weak to preserve. It is not spoilage — it is a fermentation held at the edge of one, and the tin swells because it is still working.',
 };
 
 // --- RECIPE MASTERY ---
@@ -285,6 +345,7 @@ export const HYDRATION_TARGETS: Record<string, number> = {
   'Lacto-Fermentation': 120,
   'Shoyu/Sauce': 130,
   'Alcoholic Brew': 130,
+  'Kombucha': 180,
   'Vinegar': 150,
   'Bio-Hazard': 60,
 };
@@ -1044,6 +1105,162 @@ export const GREY_MARKET_SOURCES: { id: string; tier: number; heat: number }[] =
   { id: 'scallops', tier: 2, heat: 4 },
 ];
 
+// --- OTHER ORGANISMS ---
+// The game only knew Aspergillus, which is a narrow view of fermentation. These
+// are the other workhorses, and they behave genuinely differently: Rhizopus
+// binds rather than saccharifies, Bacillus is a bacterium that wants heat no
+// mould would survive, Penicillium ripens from the outside in, and nuruk is a
+// wild consortium rather than a single selected strain.
+const ORGANISMS: Ingredient[] = [
+  {
+    id: 'rhizopus',
+    name: 'R. Oligosporus (Tempeh)',
+    type: IngredientType.STARTER,
+    baseCost: 35,
+    currency: 'money',
+    quality: 88,
+    description: 'Binds cooked beans into a solid cake with white mycelium. Very little enzyme — it knits rather than digests.',
+    idealFor: ['tempeh'],
+    supplierId: 'biolab',
+    tierRequired: 1,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 0 },
+    mass: 15, unitDisplay: 'g', isLiving: true,
+    strainBias: 0.45,
+  },
+  {
+    id: 'bacillus_natto',
+    name: 'B. Subtilis var. natto',
+    type: IngredientType.STARTER,
+    baseCost: 30,
+    currency: 'money',
+    quality: 86,
+    description: 'A bacterium, not a mould. Wants 40°C and wet air — conditions that would kill koji outright.',
+    idealFor: ['natto'],
+    supplierId: 'biolab',
+    tierRequired: 2,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 9, fatContent: 0, proteinContent: 0 },
+    mass: 10, unitDisplay: 'g', isLiving: true,
+    strainBias: 0.2,
+  },
+  {
+    id: 'nuruk',
+    name: 'Nuruk Cake',
+    type: IngredientType.STARTER,
+    baseCost: 48,
+    currency: 'money',
+    quality: 82,
+    description: 'A wild Korean starter cake: moulds, yeasts and bacteria together. Less predictable than koji, and more alive.',
+    idealFor: ['makgeolli', 'jang'],
+    supplierId: 'asia_import',
+    tierRequired: 2,
+    hiddenStats: { starchContent: 3, sugarContent: 1, nativeSalinity: 0, microbialDiversity: 10, fatContent: 0, proteinContent: 1 },
+    mass: 200, unitDisplay: 'g', isLiving: true,
+    strainBias: 0.7,
+  },
+  {
+    id: 'p_roqueforti',
+    name: 'P. Roqueforti',
+    type: IngredientType.STARTER,
+    baseCost: 55,
+    currency: 'money',
+    quality: 90,
+    description: 'Blue mould. Needs air in the paste to strike, which is why the cheese is pierced.',
+    idealFor: ['cheese'],
+    supplierId: 'biolab',
+    tierRequired: 3,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 0 },
+    mass: 10, unitDisplay: 'g', isLiving: true,
+    strainBias: 0.25,
+  },
+  {
+    id: 'a_glaucus',
+    name: 'A. Glaucus (Katsuobushi)',
+    type: IngredientType.STARTER,
+    baseCost: 70,
+    currency: 'money',
+    quality: 94,
+    description: 'Draws moisture out of dried fish over months of repeated sunning and moulding. Nothing is faster.',
+    idealFor: ['katsuobushi'],
+    supplierId: 'asia_import',
+    tierRequired: 3,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 0 },
+    mass: 10, unitDisplay: 'g', isLiving: true,
+    strainBias: 0.1,
+  },
+];
+
+const NEW_SUBSTRATES: Ingredient[] = [
+  {
+    id: 'napa_cabbage', name: 'Napa Cabbage', type: IngredientType.SUBSTRATE,
+    baseCost: 6, currency: 'money', quality: 72,
+    description: 'Loose-leaved and full of water. Salted down, it gives up its liquid and makes its own brine.',
+    idealFor: ['lacto', 'kimchi'], supplierId: 'nordic', tierRequired: 0,
+    hiddenStats: { starchContent: 1, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 1 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+  {
+    id: 'white_cabbage', name: 'White Cabbage', type: IngredientType.SUBSTRATE,
+    baseCost: 4, currency: 'money', quality: 70,
+    description: 'Dense and dry-leaved. Shredded and weighted, it ferments under its own liquid for months.',
+    idealFor: ['lacto'], supplierId: 'nordic', tierRequired: 0,
+    hiddenStats: { starchContent: 1, sugarContent: 5, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 1 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+  {
+    id: 'pork_belly', name: 'Pork Belly', type: IngredientType.SUBSTRATE,
+    baseCost: 55, currency: 'money', quality: 84,
+    description: 'Fat and lean in layers. Cured and hung, the fat carries everything the culture makes.',
+    idealFor: ['salumi'], supplierId: 'prime', tierRequired: 2,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 1, microbialDiversity: 3, fatContent: 9, proteinContent: 7 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+  {
+    id: 'herring', name: 'Baltic Herring', type: IngredientType.SUBSTRATE,
+    baseCost: 22, currency: 'money', quality: 76,
+    description: 'Oily, and it turns fast. In a weak brine it ferments rather than cures — which is the point.',
+    idealFor: ['garum', 'surstromming'], supplierId: 'prime', tierRequired: 1,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 2, microbialDiversity: 6, fatContent: 8, proteinContent: 8 },
+    mass: 1000, unitDisplay: 'kg', tags: ['SEAFOOD', 'HIGH_RISK'],
+  },
+  {
+    id: 'bonito', name: 'Skipjack Bonito', type: IngredientType.SUBSTRATE,
+    baseCost: 48, currency: 'money', quality: 92,
+    description: 'Lean, dense and almost fat-free — which is what lets it dry to something like wood.',
+    idealFor: ['katsuobushi'], supplierId: 'prime', tierRequired: 3,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 1, microbialDiversity: 3, fatContent: 1, proteinContent: 12 },
+    mass: 1000, unitDisplay: 'kg', tags: ['SEAFOOD'],
+  },
+  {
+    id: 'rice_bran', name: 'Rice Bran (Nuka)', type: IngredientType.ADDITIVE,
+    baseCost: 7, currency: 'money', quality: 74,
+    description: 'The polishings. A bran bed lives for decades if you turn it by hand every day.',
+    idealFor: ['nukazuke'], supplierId: 'asia_import', tierRequired: 1,
+    hiddenStats: { starchContent: 5, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 9, fatContent: 4, proteinContent: 3 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+];
+
+const KOMBUCHA_KIT: Ingredient[] = [
+  {
+    id: 'scoby', name: 'SCOBY (Kombucha mother)', type: IngredientType.STARTER,
+    baseCost: 28, currency: 'money', quality: 84,
+    description: 'A cellulose raft of yeast and acetic bacteria. The yeast makes alcohol, the bacteria eat it and make acid — both at once.',
+    idealFor: ['kombucha'], supplierId: 'biolab', tierRequired: 1,
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 10, fatContent: 0, proteinContent: 0 },
+    mass: 150, unitDisplay: 'g', isLiving: true, strainBias: 0.5,
+  },
+  {
+    id: 'black_tea', name: 'Black Tea', type: IngredientType.SUBSTRATE,
+    baseCost: 9, currency: 'money', quality: 80,
+    description: 'Brewed strong. The tannins feed the culture as much as the sugar does — herbal infusions alone will starve it.',
+    idealFor: ['kombucha'], supplierId: 'asia_import', tierRequired: 0,
+    hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 1, fatContent: 0, proteinContent: 0 },
+    mass: 1000, unitDisplay: 'ml',
+  },
+];
+
+INGREDIENTS.push(...ORGANISMS, ...NEW_SUBSTRATES, ...KOMBUCHA_KIT);
+
 // --- SPORE STRAINS ---
 // The same species bred in two directions. This is real: sake breweries and soy
 // sauce brewers have selected A. oryzae for opposite ends of the enzyme ratio
@@ -1475,7 +1692,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 85,
     peakWindowEnd: 95,
     activeIntervention: 'Skim',
-    idealParams: { temp: 40, humidity: 50, salinity: 20 },
+    idealParams: { temp: 32, humidity: 50, salinity: 22 }, // Roman method: heavy salt does the preserving, sun does the rest
     idealFlavorProfile: { umami: 100, acidity: 15, funk: 80, sweetness: 0, safety: 95 },
     difficulty: 2
   },
@@ -1808,6 +2025,209 @@ export const RECIPES: Recipe[] = [
     idealParams: { temp: 55, humidity: 70, salinity: 0 },
     idealFlavorProfile: { umami: 20, acidity: 10, funk: 10, sweetness: 95, safety: 100 },
     difficulty: 1
+  },
+
+  // ============================================================================
+  // ERA II — THE SILK ROAD, continued
+  // ============================================================================
+  {
+    id: 'tempeh',
+    name: 'Tempeh',
+    type: FermentType.KOJI,   // solid-substrate mould cultivation
+    description: 'Rhizopus knits cooked beans into a firm white cake. It binds rather than digests — there is very little enzyme here.',
+    requiredIngredients: { substrate: true, starter: 'rhizopus', additive: null },
+    outputIngredientId: 'tempeh_block',
+    requiredVesselId: 'koji_tray',
+    baseDurationSeconds: 55,
+    peakWindowStart: 85, peakWindowEnd: 96,
+    activeIntervention: 'Ventilate',
+    idealParams: { temp: 31, humidity: 75, salinity: 0 },
+    idealFlavorProfile: { umami: 45, acidity: 10, funk: 35, sweetness: 10, safety: 100 },
+    difficulty: 2
+  },
+  {
+    id: 'natto',
+    name: 'Nattō',
+    type: FermentType.KOJI,
+    description: 'Bacillus, not a mould. It wants 40°C and saturated air — conditions that would kill koji outright — and it turns the beans ropy.',
+    requiredIngredients: { substrate: true, starter: 'bacillus_natto', additive: null },
+    outputIngredientId: 'natto_pack',
+    requiredVesselId: 'incubator',
+    baseDurationSeconds: 50,
+    peakWindowStart: 88, peakWindowEnd: 100,
+    activeIntervention: 'Ventilate',
+    idealParams: { temp: 40, humidity: 95, salinity: 0 },
+    idealFlavorProfile: { umami: 80, acidity: 15, funk: 85, sweetness: 5, safety: 95 },
+    difficulty: 3
+  },
+  {
+    id: 'meju',
+    name: 'Meju Block',
+    type: FermentType.KOJI,
+    description: 'Crushed soybeans pressed into bricks and hung to catch whatever is in the air. The wild ancestor of every Korean jang.',
+    requiredIngredients: { substrate: true, starter: null, additive: null },
+    outputIngredientId: 'meju_block',
+    requiredVesselId: 'koji_tray',
+    baseDurationSeconds: 120,
+    peakWindowStart: 88, peakWindowEnd: 100,
+    activeIntervention: 'Flip',
+    idealParams: { temp: 22, humidity: 65, salinity: 0 },
+    idealFlavorProfile: { umami: 70, acidity: 20, funk: 75, sweetness: 8, safety: 88 },
+    difficulty: 4
+  },
+  {
+    id: 'doenjang',
+    name: 'Doenjang',
+    type: FermentType.MISO,
+    description: 'Meju broken into brine and left in an onggi through a summer. The paste sinks; the liquid drawn off the top becomes ganjang.',
+    requiredIngredients: { substrate: true, starter: 'meju_block', additive: 'salt' },
+    outputIngredientId: 'doenjang_jar',
+    requiredVesselId: 'onggi',
+    baseDurationSeconds: 260,
+    peakWindowStart: 90, peakWindowEnd: 100,
+    activeIntervention: 'Clean',
+    idealParams: { temp: 24, humidity: 55, salinity: 16 },
+    idealFlavorProfile: { umami: 90, acidity: 25, funk: 70, sweetness: 12, safety: 100 },
+    difficulty: 4
+  },
+  {
+    id: 'makgeolli',
+    name: 'Makgeolli',
+    type: FermentType.ALCOHOL,
+    description: 'Nuruk, rice and water. A wild consortium does the saccharifying and the fermenting at once — parallel, not sequential.',
+    requiredIngredients: { substrate: true, starter: 'nuruk', additive: 'water' },
+    outputIngredientId: 'makgeolli_jar',
+    requiredVesselId: 'onggi',
+    baseDurationSeconds: 110,
+    peakWindowStart: 80, peakWindowEnd: 94,
+    activeIntervention: 'Stir',
+    idealParams: { temp: 25, humidity: 60, salinity: 0 },
+    idealFlavorProfile: { umami: 25, acidity: 55, funk: 40, sweetness: 60, safety: 95 },
+    difficulty: 3
+  },
+  {
+    id: 'nukazuke',
+    name: 'Nukazuke',
+    type: FermentType.LACTO,
+    description: 'A living bed of rice bran, salt and lactobacillus. Vegetables go in for a day and come out sour; the bed is turned by hand and outlives its keeper.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'rice_bran' },
+    outputIngredientId: 'nukazuke_jar',
+    requiredVesselId: 'onggi',
+    baseDurationSeconds: 70,
+    peakWindowStart: 82, peakWindowEnd: 95,
+    activeIntervention: 'Stir',
+    idealParams: { temp: 22, humidity: 60, salinity: 8 },
+    idealFlavorProfile: { umami: 40, acidity: 70, funk: 45, sweetness: 15, safety: 96 },
+    difficulty: 2
+  },
+  {
+    id: 'katsuobushi',
+    name: 'Katsuobushi',
+    type: FermentType.MISO,   // curing mechanic
+    description: 'Bonito simmered, smoked, then moulded and sunned in cycles for months until it can be shaved like wood. The hardest food on earth.',
+    requiredIngredients: { substrate: true, starter: 'a_glaucus', additive: null },
+    outputIngredientId: 'katsuobushi_block',
+    requiredVesselId: 'koji_tray',
+    baseDurationSeconds: 300,
+    peakWindowStart: 92, peakWindowEnd: 100,
+    activeIntervention: 'Flip',
+    idealParams: { temp: 26, humidity: 35, salinity: 4 },
+    idealFlavorProfile: { umami: 100, acidity: 5, funk: 55, sweetness: 5, safety: 100 },
+    difficulty: 5
+  },
+
+  // ============================================================================
+  // ERA III — THE CELLARS OF EUROPE
+  // ============================================================================
+  {
+    id: 'sauerkraut',
+    name: 'Sauerkraut',
+    type: FermentType.LACTO,
+    description: 'Shredded cabbage, two percent salt, and its own weight pressing it under its own liquid. The simplest ferment there is, and unforgiving of air.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
+    outputIngredientId: 'sauerkraut_crock',
+    requiredVesselId: 'onggi',
+    baseDurationSeconds: 95,
+    peakWindowStart: 85, peakWindowEnd: 98,
+    activeIntervention: 'Clean',
+    idealParams: { temp: 18, humidity: 60, salinity: 2 },
+    idealFlavorProfile: { umami: 20, acidity: 85, funk: 25, sweetness: 20, safety: 100 },
+    difficulty: 1
+  },
+  {
+    id: 'kimchi',
+    name: 'Kimchi',
+    type: FermentType.LACTO,
+    description: 'Brined napa, chili, and a little fish sauce to feed it. Cold and slow in an onggi, sour and effervescent by the third week.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'chili_flakes' },
+    outputIngredientId: 'kimchi_jar',
+    requiredVesselId: 'onggi',
+    baseDurationSeconds: 85,
+    peakWindowStart: 82, peakWindowEnd: 96,
+    activeIntervention: 'Clean',
+    idealParams: { temp: 8, humidity: 65, salinity: 3 },
+    idealFlavorProfile: { umami: 45, acidity: 75, funk: 55, sweetness: 20, safety: 98 },
+    difficulty: 2
+  },
+  {
+    id: 'salumi',
+    name: 'Cured Salumi',
+    type: FermentType.MISO,   // curing mechanic
+    description: 'Salt, then a slow drop in humidity over weeks. Too fast and the outside case-hardens, sealing the wet inside to rot.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
+    outputIngredientId: 'salumi_hung',
+    requiredVesselId: 'cedar_barrel',
+    baseDurationSeconds: 220,
+    peakWindowStart: 90, peakWindowEnd: 100,
+    activeIntervention: 'Flip',
+    idealParams: { temp: 13, humidity: 75, salinity: 3 },
+    idealFlavorProfile: { umami: 75, acidity: 25, funk: 60, sweetness: 5, safety: 92 },
+    difficulty: 4
+  },
+  {
+    id: 'blue_cheese',
+    name: 'Blue Cheese',
+    type: FermentType.LACTO,
+    description: 'Penicillium needs air to strike, so the paste is pierced. The blue follows the needle tracks and nothing else.',
+    requiredIngredients: { substrate: true, starter: 'p_roqueforti', additive: 'salt' },
+    outputIngredientId: 'blue_wheel',
+    requiredVesselId: 'onggi',
+    baseDurationSeconds: 175,
+    peakWindowStart: 88, peakWindowEnd: 100,
+    activeIntervention: 'Ventilate',
+    idealParams: { temp: 11, humidity: 92, salinity: 4 },
+    idealFlavorProfile: { umami: 70, acidity: 40, funk: 95, sweetness: 5, safety: 90 },
+    difficulty: 4
+  },
+  {
+    id: 'surstromming',
+    name: 'Surströmming',
+    type: FermentType.GARUM,
+    description: 'Herring in a brine too weak to preserve it, sealed in the tin and left to work. Not spoiled — fermented, deliberately, at the edge.',
+    requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
+    outputIngredientId: 'surstromming_tin',
+    requiredVesselId: 'mason_jar',
+    baseDurationSeconds: 190,
+    peakWindowStart: 86, peakWindowEnd: 100,
+    activeIntervention: 'Skim',
+    idealParams: { temp: 16, humidity: 60, salinity: 6 },
+    idealFlavorProfile: { umami: 85, acidity: 60, funk: 100, sweetness: 0, safety: 72 },
+    difficulty: 5
+  },
+  {
+    id: 'kombucha',
+    name: 'Kombucha',
+    type: FermentType.KOMBUCHA,
+    description: 'Sweet tea under a cellulose raft. Yeast turns sugar to alcohol and acetic bacteria turn that to acid — two ferments running at once in the same jar.',
+    requiredIngredients: { substrate: true, starter: 'scoby', additive: 'sugar_cane' },
+    outputIngredientId: 'kombucha_jar',
+    requiredVesselId: 'mason_jar',
+    baseDurationSeconds: 110,
+    peakWindowStart: 78, peakWindowEnd: 92,
+    activeIntervention: 'Ventilate',
+    idealParams: { temp: 24, humidity: 60, salinity: 0 },
+    idealFlavorProfile: { umami: 15, acidity: 78, funk: 40, sweetness: 35, safety: 98 },
+    difficulty: 2
   },
   {
     id: 'bio_sludge',
