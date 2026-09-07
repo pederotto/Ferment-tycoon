@@ -1,4 +1,4 @@
-import { Recipe, RecipeMastery, FermentType } from '../types';
+import { Recipe, RecipeMastery, FermentType, Batch, BatchOutcome } from '../types';
 import {
   MASTERY_MAX_LEVEL,
   MASTERY_XP_SCORE_FLOOR,
@@ -29,7 +29,7 @@ import {
  * hands, and it stops compounding the moment it is known.
  */
 
-const EMPTY: RecipeMastery = { xp: 0, level: 0, cooks: 0, bestScore: 0 };
+const EMPTY: RecipeMastery = { xp: 0, level: 0, cooks: 0, bestScore: 0, avgScore: 0, recent: [] };
 
 /** Procedural recipes share one track per ferment family; named recipes get their own. */
 export const masteryKeyFor = (recipe: Recipe): string =>
@@ -81,7 +81,8 @@ export const xpToNextLevel = (m: RecipeMastery): number | null => {
 export const grantMastery = (
   current: Record<string, RecipeMastery>,
   recipe: Recipe,
-  score: number
+  score: number,
+  batch?: Batch
 ): { next: Record<string, RecipeMastery>; key: string; gained: number; leveledTo: number | null } => {
   const key = masteryKeyFor(recipe);
   if (recipe.type === FermentType.FAIL || recipe.id === 'bio_sludge') {
@@ -93,13 +94,138 @@ export const grantMastery = (
   const xp = prev.xp + gained;
   const bestScore = Math.max(prev.bestScore, score);
   const level = levelForMastery(xp, bestScore);
+  const cooks = prev.cooks + 1;
+  const avgScore = ((prev.avgScore ?? 0) * prev.cooks + score) / cooks;
+
+  // Keep the last five runs with their faults, so the bench can say what the
+  // player KEEPS getting wrong rather than only how the last one went.
+  const outcome: BatchOutcome = {
+    score,
+    pulledAt: batch ? Math.round(batch.progress) : recipe.peakWindowStart,
+    faults: batch ? diagnoseBatch(batch, recipe) : [],
+  };
+  const recent = [outcome, ...(prev.recent ?? [])].slice(0, 5);
 
   return {
-    next: { ...current, [key]: { xp, level, cooks: prev.cooks + 1, bestScore } },
+    next: { ...current, [key]: { xp, level, cooks, bestScore, avgScore, recent } },
     key,
     gained,
     leveledTo: level > prev.level ? level : null,
   };
+};
+
+/* ------------------------------------------------------------------------- */
+/* DIAGNOSIS — what went wrong with THIS run                                  */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Compare a finished batch against what the recipe was asking for, and name the
+ * faults. These tags accumulate across runs so the bench can eventually tell the
+ * player what they *keep* doing, which is a far more useful thing to know than
+ * any single score.
+ */
+export const FAULT_LABELS: Record<string, string> = {
+  'pulled-early': 'pulled before the peak',
+  'left-too-long': 'left past the window',
+  'acid-heavy': 'came in sharp and acidic',
+  'flat': 'never developed any acidity',
+  'thin': 'thin — not enough umami',
+  'over-umami': 'pushed past the umami it wanted',
+  'oversweet': 'too sweet',
+  'characterless': 'clean but characterless',
+  'over-funky': 'funkier than it should be',
+  'ran-cold': 'held too cold',
+  'ran-hot': 'held too hot',
+  'under-salted': 'under-salted',
+  'over-salted': 'over-salted',
+  'dilute': 'watered down',
+  'unsafe': 'unsafe by the time it was taken',
+};
+
+export const diagnoseBatch = (batch: Batch, recipe: Recipe): string[] => {
+  const faults: string[] = [];
+  const q = batch.quality;
+  const t = recipe.idealFlavorProfile;
+  const p = batch.params;
+  const ip = recipe.idealParams;
+
+  // Timing
+  if (batch.progress < recipe.peakWindowStart - 3) faults.push('pulled-early');
+  else if (batch.progress > recipe.peakWindowEnd + 3) faults.push('left-too-long');
+
+  // Flavour, judged against what this recipe actually wants
+  const gap = (actual: number, target: number) => actual - target;
+  if (gap(q.acidity, t.acidity) > 18) faults.push('acid-heavy');
+  else if (t.acidity > 25 && gap(q.acidity, t.acidity) < -18) faults.push('flat');
+
+  if (gap(q.umami, t.umami) < -20) faults.push('thin');
+  else if (gap(q.umami, t.umami) > 25) faults.push('over-umami');
+
+  if (gap(q.sweetness, t.sweetness) > 20) faults.push('oversweet');
+  if (gap(q.funk, t.funk) > 22) faults.push('over-funky');
+  else if (t.funk > 30 && gap(q.funk, t.funk) < -22) faults.push('characterless');
+
+  // Conditions held
+  if (p.temp < ip.temp - 6) faults.push('ran-cold');
+  else if (p.temp > ip.temp + 6) faults.push('ran-hot');
+
+  if (ip.salinity > 0) {
+    if (p.salinity < ip.salinity * 0.6) faults.push('under-salted');
+    else if (p.salinity > ip.salinity * 1.5) faults.push('over-salted');
+  }
+
+  if (q.safety < 60) faults.push('unsafe');
+
+  return faults;
+};
+
+/** The most persistent faults across recent runs, worst first. */
+export const recurringFaults = (m: RecipeMastery): { tag: string; count: number }[] => {
+  const counts: Record<string, number> = {};
+  (m.recent ?? []).forEach(r => (r.faults ?? []).forEach(f => { counts[f] = (counts[f] ?? 0) + 1; }));
+  return Object.entries(counts)
+    .map(([tag, count]) => ({ tag, count }))
+    .filter(f => f.count >= 2)
+    .sort((a, b) => b.count - a.count);
+};
+
+/**
+ * Advice generated from the player's OWN results on this recipe, as opposed to
+ * the authored text a book gives them. This is the half that can say "you keep
+ * doing this", which no book can.
+ */
+export const benchAdvice = (m: RecipeMastery, recipe: Recipe): string[] => {
+  if (!m.cooks) return [];
+  const out: string[] = [];
+  const recurring = recurringFaults(m);
+
+  if (recurring.length === 0 && m.avgScore >= 78) {
+    out.push('Nothing consistent going wrong. Your runs land where you point them.');
+  }
+
+  for (const { tag, count } of recurring.slice(0, 3)) {
+    const label = FAULT_LABELS[tag] ?? tag;
+    out.push(`${count} of your last ${Math.min(m.recent.length, 5)} runs ${label}.`);
+  }
+
+  // Timing is the single most common thing players get wrong, so call the number.
+  const pulls = (m.recent ?? []).map(r => r.pulledAt).filter(n => typeof n === 'number');
+  if (pulls.length >= 2) {
+    const avgPull = pulls.reduce((a, b) => a + b, 0) / pulls.length;
+    if (avgPull < recipe.peakWindowStart - 4) {
+      out.push(`You pull at about ${avgPull.toFixed(0)}%. This one is not ready until ${recipe.peakWindowStart}%.`);
+    } else if (avgPull > recipe.peakWindowEnd + 4) {
+      out.push(`You pull at about ${avgPull.toFixed(0)}%, past the ${recipe.peakWindowEnd}% window. It goes backwards from there.`);
+    }
+  }
+
+  if (m.cooks >= 3 && m.avgScore < 55) {
+    out.push(`Averaging ${m.avgScore.toFixed(0)} across ${m.cooks} runs — worth rereading the book on this one.`);
+  } else if (m.cooks >= 3) {
+    out.push(`Averaging ${m.avgScore.toFixed(0)} across ${m.cooks} runs, best ${m.bestScore}.`);
+  }
+
+  return out;
 };
 
 /* ------------------------------------------------------------------------- */

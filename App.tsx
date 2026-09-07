@@ -987,7 +987,7 @@ export default function App() {
 
     // Cooking a recipe is how you learn it. Weighted by the critic score, so a
     // good run teaches disproportionately more and a failure teaches nothing.
-    const mastery = grantMastery(gameState.recipeMastery, recipe, calculatedScore);
+    const mastery = grantMastery(gameState.recipeMastery, recipe, calculatedScore, batch);
     if (mastery.leveledTo) {
       setLabNotification({
         id: Date.now() + 2,
@@ -1064,7 +1064,7 @@ export default function App() {
 
     const currentScore = batch.evaluationScore || calculateCriticScore(batch, recipe, gameState.staff);
     // Cellaring a batch is still a completed run, so it teaches the same as a sale.
-    const storeMastery = grantMastery(gameState.recipeMastery, recipe, currentScore);
+    const storeMastery = grantMastery(gameState.recipeMastery, recipe, currentScore, batch);
     if (storeMastery.leveledTo) {
       setLabNotification({
         id: Date.now() + 2,

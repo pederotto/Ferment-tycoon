@@ -265,11 +265,20 @@ export interface MatrixEntry {
 // --- RECIPE MASTERY ---
 // One track per recipe. Levels are persisted rather than recomputed so a
 // level-up is detectable at the moment it happens.
+/** One finished run, kept so the bench can tell you what you keep getting wrong. */
+export interface BatchOutcome {
+    score: number;
+    pulledAt: number;   // progress % when it was taken
+    faults: string[];   // diagnosis tags, see services/mastery.ts
+}
+
 export interface RecipeMastery {
     xp: number;         // cumulative, never decreases
     level: number;      // 1..MASTERY_MAX_LEVEL
     cooks: number;      // completed batches on this track
     bestScore: number;  // highest critic score reached; gates the top rung
+    avgScore: number;   // running mean across every run
+    recent: BatchOutcome[];  // last few runs, newest first
 }
 
 // --- BUYER SYSTEM ---

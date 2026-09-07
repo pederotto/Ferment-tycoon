@@ -32,7 +32,14 @@ function migrate(state: Partial<GameState>): GameState {
     marketDemand: state.marketDemand ?? freshDemand(),
     insolvencyStrikes: state.insolvencyStrikes ?? 0,
     gameOver: state.gameOver ?? false,
-    recipeMastery: state.recipeMastery ?? {},
+    // Older saves predate the outcome history; backfill so the card can render.
+    recipeMastery: Object.fromEntries(
+      Object.entries(state.recipeMastery ?? {}).map(([k, m]) => [k, {
+        ...(m as any),
+        avgScore: (m as any).avgScore ?? (m as any).bestScore ?? 0,
+        recent: (m as any).recent ?? [],
+      }])
+    ),
     ownedBookIds: state.ownedBookIds ?? [],
     undergroundBusts: state.undergroundBusts ?? 0,
     // Older saves seeded unlockedRecipes with a bogus id and used it for nothing.

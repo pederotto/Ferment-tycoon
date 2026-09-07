@@ -5,6 +5,7 @@ import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTe
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
 import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../services/gameLogic';
 import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias } from '../services/koji';
+import RecipeCard from './RecipeCard';
 import MolecularScan, { ScanTarget } from './MolecularScan';
 import {
   Play,
@@ -80,6 +81,8 @@ const BatchController: React.FC<BatchControllerProps> = ({
   // UI State
   const [hoveredItem, setHoveredItem] = useState<HoveredItem>(null);
   const [showVintageLoader, setShowVintageLoader] = useState(false);
+  // Guidance lives on the recipe card, not stacked on top of the Seal button.
+  const [showCard, setShowCard] = useState(false);
 
   // Preview State
   const [projectedRecipeName, setProjectedRecipeName] = useState<string>('Empty Vessel');
@@ -915,71 +918,14 @@ const BatchController: React.FC<BatchControllerProps> = ({
               )}
             </div>
 
-            {benchFormula && (
-              <div className="formula-card" style={{ marginBottom: 11 }}>
-                <span className="fl">The formula</span>
-                <div className="frow"><span className="k">Base</span><span className="n">{benchFormula.substrateLabel}</span></div>
-                {benchFormula.addLabels.length > 0 && (
-                  <div className="frow"><span className="k">Add</span><span className="n">{benchFormula.addLabels.join(' · ')}</span></div>
-                )}
-                {benchFormula.forbidLabels.length > 0 && (
-                  <div className="frow"><span className="k">Without</span><span className="n brick">{benchFormula.forbidLabels.join(' · ')}</span></div>
-                )}
-                <div className="frow"><span className="k">In</span><span className="n">{benchFormula.vesselName}</span></div>
-              </div>
-            )}
-
             {earnedRungs.length > 0 && !isUndiscovered && (
-              <div className="ladder">
-                <div className="lh">
-                  <span className="l">
-                    <Lightbulb size={12} color="var(--brass)" /> The hand
-                  </span>
-                  <span className="lv">
-                    {handLevel} / 5
-                    {mastery!.cooks > 0 && <span className="runs"> · {mastery!.cooks} run{mastery!.cooks === 1 ? '' : 's'}</span>}
-                  </span>
-                </div>
-
-                {earnedRungs.map(rung => (
-                  <div key={rung.level} className="rung">
-                    <span className="rt">{rung.level}. {rung.title}</span>
-                    <p>{rung.body}</p>
-                    {rung.rows && (
-                      <div className="rrows">
-                        {rung.rows.map(r => (
-                          <span key={r.k} className="rrow"><span className="k">{r.k}</span><span className="n">{r.n}</span></span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {nextRung && (
-                  <div className="rung sealed">
-                    <span className="rt">{nextRung.level}. {nextRung.title}</span>
-                    <p>
-                      {toNext !== null && toNext > 0
-                        ? `Sealed — ${toNext} more xp on this recipe.`
-                        : 'Sealed — needs a run scoring 80 or better.'}
-                    </p>
-                  </div>
-                )}
-
-                {handLevel >= 5 && resolvedRecipe && (
-                  <button
-                    className="btn btn-ghost"
-                    style={{ width: '100%', marginTop: 9, fontSize: 10 }}
-                    onClick={() => {
-                      setTemp(resolvedRecipe.idealParams.temp);
-                      setHumidity(resolvedRecipe.idealParams.humidity);
-                      if (hasSalt) setSalinity(resolvedRecipe.idealParams.salinity);
-                    }}
-                  >
-                    Set to the book
-                  </button>
-                )}
-              </div>
+              <button className="hand-strip" onClick={() => setShowCard(true)}>
+                <span className="hs-l">
+                  <Lightbulb size={12} color="var(--brass)" /> The hand
+                  <b>{handLevel}/5</b>
+                </span>
+                <span className="hs-r">Read the card <ChevronRight size={12} /></span>
+              </button>
             )}
 
             {kojiSteer && (
@@ -1047,6 +993,16 @@ const BatchController: React.FC<BatchControllerProps> = ({
             </button>
           </section>
         </div>
+
+        {showCard && resolvedRecipe && (
+          <RecipeCard
+            recipe={resolvedRecipe}
+            knowledge={getRecipeKnowledge(resolvedRecipe.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds)}
+            mastery={mastery!}
+            ownedBookIds={ownedBookIds}
+            onClose={() => setShowCard(false)}
+          />
+        )}
 
         {/* ---------- SPECTROMETER DOCK ---------- */}
         <div className="scan-dock">

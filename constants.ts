@@ -183,6 +183,38 @@ export const MATRIX_TOKEN_LABELS: Record<string, string> = {
   ancient_spores: 'Ancient spores',
 };
 
+// --- WHAT THE BOOKS ACTUALLY SAY ---
+// Authored guidance, keyed by recipe. This is the half of the advice a player
+// BUYS: available the moment the book is on the shelf, identical for everyone,
+// and about the craft rather than about them. The other half is generated from
+// their own results (services/mastery.ts benchAdvice).
+export const BOOK_ADVICE: Record<string, string> = {
+  barley_koji: 'Spread it thin and keep it breathing. The bed will make its own heat once the mycelium takes — that is the sign it is working, and the moment it can run away from you.',
+  shio_koji: 'Equal parts koji, salt and water, left somewhere it will be forgotten for a fortnight. It should smell of sweet apple, never of solvent.',
+  amazake: 'Hold it at blood heat and no higher. Amylase works fastest just below the point where it dies; too hot and you get starch soup, too cool and you wait all week.',
+  hatcho_miso: 'Soybean koji only, almost no water, weighted down under stone for years rather than months. Colour comes from time, not heat.',
+  shiro_miso: 'Rice koji heavy, salt light, and short. It is the sweetness you are after — the moment it turns savoury you have gone past it.',
+  douchi: 'Salt-cured after the mould has set, then dried until the beans rattle. Anaerobic throughout, or it turns.',
+  gochujang: 'Keep it cool. Warm gochujang converts its own sugar to alcohol and you lose the sweetness that makes it worth eating.',
+  doubanjiang: 'The broad beans go in whole and the chili goes in late. Sun by day, covered by night, and stirred every time you pass it.',
+  colatura: 'Anchovy and salt in a cask, pressed under its own weight, and drawn off from the bottom after a year. There is no shortcut and no substitute for the wood.',
+  nuoc_mam: 'The first pressing is the only one worth selling. Everything after is for the kitchen.',
+  garum_sociorum: 'Heat is the whole method — the enzymes do in weeks what a cellar would take a year to do. Hold it high and salt it hard, or it will putrefy rather than ferment.',
+  bagoong: 'It wants air on it. Keep the vessel open and let it oxidise; a sealed bagoong stays grey and tastes of nothing.',
+  bottarga: 'Pressed, salted, and hung somewhere with moving air below forty percent. Humidity is the only thing that can kill it, and it kills it quickly.',
+  ricotta_forte: 'Controlled rot, stirred daily. The stirring is not optional — it is what keeps the wrong moulds from taking the surface.',
+  casu_marzu: 'Everything you have been taught about sanitation is wrong here. The larvae need the filth. Clean the room and you starve them.',
+  lacto_ceps: 'Two percent salt by weight of mushroom, submerged, and left cool. If it floats it spoils.',
+  cheong: 'Sugar by weight, equal to the fruit, and no water at all. The syrup draws itself out. Wild yeast will turn it alcoholic if the room is dirty.',
+  coconut_vin: 'Sap to alcohol first, alcohol to acid second, and the second stage needs air. A sealed vinegar never sours.',
+  black_apple: 'Sixty days of gentle, humid heat. This is not fermentation at all, it is the Maillard reaction taken to its conclusion. Let it dry out and it simply bakes.',
+  scallop_fudge: 'Dry heat, and patience. You are concentrating what is already there rather than making anything new.',
+  rose_garum: 'The petals go in at the end. Everything aromatic you add early is lost to the heat.',
+  yellow_peaso: 'A northern miso in everything but name. Barley koji, peas, and a long cold winter.',
+  tears_garum: 'Written in a hand I do not recognise. The proportions are given but not the reason.',
+  ancient_garum: 'The spores are older than the recipe. Expect it to behave unlike anything you have grown.',
+};
+
 // --- RECIPE MASTERY ---
 // Every recipe carries its own "Hand" track, 1-5. Cooking that recipe earns XP
 // weighted by the critic score, so a good run teaches disproportionately more

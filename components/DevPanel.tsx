@@ -38,7 +38,7 @@ const DevPanel: React.FC<DevPanelProps> = ({ gameState, setGameState, onClose, g
   const maxMastery = () => {
     const all: GameState['recipeMastery'] = {};
     RECIPES.forEach(r => {
-      all[r.id] = { xp: 9999, level: 5, cooks: 99, bestScore: 100 };
+      all[r.id] = { xp: 9999, level: 5, cooks: 99, bestScore: 100, avgScore: 88, recent: [] };
     });
     patch({ recipeMastery: all });
     say('Every recipe at Hand 5 — the full advice ladder is readable.');

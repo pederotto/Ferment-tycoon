@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
 import { RECIPES, VESSELS } from '../constants';
 import { getMastery, masteryReveal } from '../services/mastery';
+import RecipeCard from './RecipeCard';
 import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
 import { Star, Sparkles, Award, CheckCircle2, HelpCircle, Thermometer, Droplets, Clock, Box, BookOpen } from 'lucide-react';
 import { CloseIcon, BookIcon, SearchIcon } from './icons';
@@ -17,6 +18,10 @@ interface LogbookModalProps {
 
 const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes = [], ownedBookIds = [] }) => {
   const [activeTab, setActiveTab] = useState<'codex' | 'archives'>('codex');
+  // The Library splits what you have MADE from what you have only READ — the
+  // difference the books system created and the Codex was flattening away.
+  const [shelf, setShelf] = useState<'all' | 'cooked' | 'book' | 'unknown'>('all');
+  const [openCard, setOpenCard] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
 
@@ -24,11 +29,17 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
     return RECIPES.filter(recipe => {
       if (recipe.id === 'bio_sludge') return false;
       const matchesType = selectedType === 'ALL' || recipe.type === selectedType;
+      const k = getRecipeKnowledge(recipe.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds);
+      const matchesShelf =
+        shelf === 'all' ? true :
+        shelf === 'cooked' ? k === 'analyzed' :
+        shelf === 'book' ? k === 'known' : k === 'unknown';
+      if (!matchesShelf) return false;
       const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             recipe.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesType && matchesSearch;
     });
-  }, [searchQuery, selectedType]);
+  }, [searchQuery, selectedType, shelf, unlockedRecipes, analyzedRecipeIds, ownedBookIds]);
 
   const filteredArchives = useMemo(() => {
     return logbook.filter(entry => {
@@ -124,6 +135,32 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
         </div>
 
         {activeTab === 'codex' && (
+          <div className="shelf-row">
+            {([
+              { id: 'all', label: 'Everything' },
+              { id: 'cooked', label: 'Cooked' },
+              { id: 'book', label: 'In the book' },
+              { id: 'unknown', label: 'Unknown' },
+            ] as const).map(sh => {
+              const n = RECIPES.filter(r => r.id !== 'bio_sludge' && (() => {
+                const k = getRecipeKnowledge(r.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds);
+                return sh.id === 'all' ? true : sh.id === 'cooked' ? k === 'analyzed' : sh.id === 'book' ? k === 'known' : k === 'unknown';
+              })()).length;
+              return (
+                <button
+                  key={sh.id}
+                  onClick={() => setShelf(sh.id)}
+                  className={`chip-tab${shelf === sh.id ? ' active' : ''}`}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {sh.label} <span className="cnt">{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {activeTab === 'codex' && (
           <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 8, overflowX: 'auto', flexShrink: 0 }} className="custom-scrollbar">
             {fermentTypes.map(ft => (
               <button
@@ -162,7 +199,12 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                   <div
                     key={recipe.id}
                     className="wood-panel"
-                    style={{ borderRadius: 12, padding: 16, opacity: isDiscovered ? 1 : 0.7, display: 'flex', flexDirection: 'column', gap: 10 }}
+                    onClick={() => setOpenCard(recipe.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenCard(recipe.id); } }}
+                    title="Open the recipe card"
+                    style={{ borderRadius: 12, padding: 16, opacity: isDiscovered ? 1 : 0.7, display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer' }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div>
@@ -287,6 +329,20 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
           <span>Press ESC or close to exit</span>
         </div>
       </div>
+
+      {openCard && (() => {
+        const r = RECIPES.find(x => x.id === openCard);
+        if (!r) return null;
+        return (
+          <RecipeCard
+            recipe={r}
+            knowledge={getRecipeKnowledge(r.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds)}
+            mastery={getMastery(recipeMastery, r)}
+            ownedBookIds={ownedBookIds}
+            onClose={() => setOpenCard(null)}
+          />
+        );
+      })()}
     </div>
   );
 };
