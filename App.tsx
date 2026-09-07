@@ -1703,6 +1703,18 @@ export default function App() {
         />
       )}
 
+      {/* Dismissing the guide used to be permanent, which punished closing it
+          once to see the screen underneath. */}
+      {gameState.onboardingDone && !uiState.showWelcome && !gameState.gameOver && (
+        <button
+          className="guide-recall"
+          onClick={() => setGameState(prev => ({ ...prev, onboardingDone: false }))}
+          title="Reopen the first-culture guide"
+        >
+          Guide
+        </button>
+      )}
+
       {showDev && (
         <DevPanel
           gameState={gameState}
