@@ -16,6 +16,7 @@ import LogbookModal from './components/LogbookModal';
 import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
 import { grantMastery } from './services/mastery';
+import DevPanel from './components/DevPanel';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon } from './components/icons';
 
@@ -103,6 +104,36 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // --- DEV TOOLS ---
+  // Ctrl/Cmd+Shift+D, or load the page with ?dev in the query string.
+  const [showDev, setShowDev] = useState<boolean>(() => {
+    try { return new URLSearchParams(window.location.search).has('dev'); } catch { return false; }
+  });
+  const [godMode, setGodMode] = useState<boolean>(() => {
+    try { return new URLSearchParams(window.location.search).has('god'); } catch { return false; }
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.shiftKey && (e.ctrlKey || e.metaKey) && e.code === 'KeyD') {
+        e.preventDefault();
+        setShowDev(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // God mode restores the balance every tick rather than patching every spend
+  // site, so nothing in the game logic has to know it exists.
+  const GOD_FLOOR = 1_000_000;
+  useEffect(() => {
+    if (!godMode) return;
+    if (gameState.money < GOD_FLOOR) {
+      setGameState(prev => ({ ...prev, money: GOD_FLOOR, insolvencyStrikes: 0, gameOver: false }));
+    }
+  }, [godMode, gameState.money]);
 
   // Drawer State
   const [activeDrawer, setActiveDrawer] = useState<'hardware' | 'marketplace' | null>(null);
@@ -1436,6 +1467,16 @@ export default function App() {
               unlockedRecipes={gameState.unlockedRecipes}
               ownedBookIds={gameState.ownedBookIds}
           />
+      )}
+
+      {showDev && (
+        <DevPanel
+          gameState={gameState}
+          setGameState={setGameState}
+          onClose={() => setShowDev(false)}
+          godMode={godMode}
+          setGodMode={setGodMode}
+        />
       )}
 
       {/* LAB CLOSED — terminal state */}
