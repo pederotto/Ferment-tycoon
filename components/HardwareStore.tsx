@@ -42,7 +42,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({
         // offset by the 72px header height and the whole drawer sits behind the
         // HUD (z-20 vs the HUD's z-30) while it slides.
         <div
-            className="fixed top-0 left-0 right-0 z-20 flex flex-col items-center pointer-events-none"
+            className="fixed top-0 left-0 right-0 z-[25] flex flex-col items-center pointer-events-none"
             style={{
                 transform: isOpen ? 'translateY(0)' : 'translateY(calc(-100% + 46px + var(--hud-h)))',
                 transition: 'transform 0.5s ease'

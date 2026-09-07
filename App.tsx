@@ -968,15 +968,20 @@ export default function App() {
   return (
     <div className="min-h-screen font-sans selection:bg-amber-500/30 relative flex flex-col" style={{ background: 'var(--bg-void)', color: 'var(--text-hi)' }}>
       
-      {/* GLOBAL BACKDROP FOR CLOSING DRAWERS */}
+      {/* GLOBAL BACKDROP FOR CLOSING DRAWERS
+          Stacking order matters here: scrim (z-20) < hardware drawer (z-25) <
+          HUD (z-30) < marketplace drawer (z-50). The scrim has to stay BELOW
+          the hardware drawer or it dims and blurs the very panel it is meant to
+          set apart, and the hardware drawer has to stay below the HUD so its
+          closed grab-tab does not cover the gauge rings. */}
       {activeDrawer && (
           <div 
-             className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+             className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px]"
              onClick={() => setActiveDrawer(null)}
           ></div>
       )}
 
-      {/* HARDWARE STORE (Top Drawer) - Z-INDEX 50 */}
+      {/* HARDWARE STORE (Top Drawer) */}
       <HardwareStore 
         isOpen={activeDrawer === 'hardware'}
         onToggle={() => toggleDrawer('hardware')}
