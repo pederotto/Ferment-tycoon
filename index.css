@@ -905,6 +905,20 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .chem-note .l { font-size: 8.5px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; display: block; margin-bottom: 3px; }
 .chem-note p { margin: 0; font-size: 10.5px; line-height: 1.45; color: var(--text-mid); font-style: italic; }
 
+/* ---------- Recipe formula card (bought in a book) ---------- */
+.formula-card {
+  border: 1px dashed var(--line-strong); border-radius: 9px; padding: 9px 11px;
+  background: rgba(157, 139, 176, 0.07); display: flex; flex-direction: column; gap: 4px;
+}
+.formula-card .fl {
+  font-size: 8px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--plum);
+  font-weight: 700; margin-bottom: 2px;
+}
+.formula-card .frow { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.formula-card .frow .k { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-lo); flex-shrink: 0; }
+.formula-card .frow .n { font-size: 10.5px; color: var(--text-hi); text-align: right; }
+.formula-card .frow .n.brick { color: #e0a58f; }
+
 /* ---------- The advice ladder (recipe mastery) ---------- */
 .ladder {
   padding: 12px; border-radius: 10px; margin-bottom: 11px; flex-shrink: 0;

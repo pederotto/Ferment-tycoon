@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType } from './types';
+import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book } from './types';
 import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES } from './constants';
 import { processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads } from './services/gameLogic';
 import LabView from './components/LabView';
@@ -34,7 +34,8 @@ export default function App() {
     inventory: { 'koji_spores': 2, 'salt': 10, 'barley': 5, 'water': 50 },
     batches: [],
     logbook: [],
-    unlockedRecipes: ['lacto_plums', 'barley_koji'],
+    unlockedRecipes: [],   // formulas known; filled by books and by cooking
+    ownedBookIds: [],
     analyzedRecipeIds: [], // Start with empty discovery
     equipmentSlots: 8,
     ownedVesselIds: ['mason_jar', 'koji_tray'], // Initial unlocked vessels
@@ -412,6 +413,39 @@ export default function App() {
     };
   }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, gameState.gameOver]); 
 
+  const handleBuyBook = (book: Book) => {
+    if (gameState.ownedBookIds.includes(book.id)) return;
+    if (gameState.money < book.price) {
+      setLabNotification({ id: Date.now(), text: `Not enough for ${book.title} ($${book.price}).`, type: 'warn' });
+      return;
+    }
+    if (gameState.xp < book.xpRequired) {
+      setLabNotification({ id: Date.now(), text: `${book.title} is not sold to a bench this green.`, type: 'warn' });
+      return;
+    }
+    if (book.gatedBy) {
+      const rel = gameState.supplierRelationships[book.gatedBy.supplierId];
+      if (!rel || rel.level < book.gatedBy.level) {
+        setLabNotification({ id: Date.now(), text: `${book.title} is kept behind the counter for regulars.`, type: 'warn' });
+        return;
+      }
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      money: prev.money - book.price,
+      heat: Math.min(100, prev.heat + (book.heatOnPurchase ?? 0)),
+      ownedBookIds: [...prev.ownedBookIds, book.id],
+      unlockedRecipes: Array.from(new Set([...prev.unlockedRecipes, ...book.teaches])),
+    }));
+
+    setLabNotification({
+      id: Date.now(),
+      text: `${book.title} shelved — ${book.teaches.length} formula${book.teaches.length === 1 ? '' : 's'} legible.`,
+      type: 'info'
+    });
+  };
+
   // --- PERSISTENCE ---
   // Mirror progress to localStorage once per in-game day rather than on every
   // tick — a full serialize at the physics tick rate is wasted work.
@@ -622,6 +656,9 @@ export default function App() {
           analyzedRecipeIds: prev.analyzedRecipeIds.includes(batch.recipeId) 
               ? prev.analyzedRecipeIds 
               : [...prev.analyzedRecipeIds, batch.recipeId],
+          unlockedRecipes: prev.unlockedRecipes.includes(batch.recipeId)
+              ? prev.unlockedRecipes
+              : [...prev.unlockedRecipes, batch.recipeId],
           batches: prev.batches.map(b => b.id === batch.id ? { ...b, status: 'analyzed', evaluationScore: score } : b)
       }));
   };
@@ -862,6 +899,9 @@ export default function App() {
       analyzedRecipeIds: prev.analyzedRecipeIds.includes(batch.recipeId) 
           ? prev.analyzedRecipeIds 
           : [...prev.analyzedRecipeIds, batch.recipeId],
+      unlockedRecipes: prev.unlockedRecipes.includes(batch.recipeId)
+          ? prev.unlockedRecipes
+          : [...prev.unlockedRecipes, batch.recipeId],
     }));
     setUiState(prev => ({ ...prev, activeBatchId: null }));
   };
@@ -1247,6 +1287,9 @@ export default function App() {
                   onBuy={handleBuyIngredient} 
                   ownedVesselIds={gameState.ownedVesselIds}
                   onBuyVessel={handleBuyVessel}
+                  onBuyBook={handleBuyBook}
+                  ownedBookIds={gameState.ownedBookIds}
+                  playerXp={gameState.xp}
                   onOpenHardware={() => toggleDrawer('hardware')}
               />
           </div>
@@ -1308,6 +1351,8 @@ export default function App() {
               logbook={gameState.logbook}
               analyzedRecipeIds={gameState.analyzedRecipeIds}
               recipeMastery={gameState.recipeMastery}
+              unlockedRecipes={gameState.unlockedRecipes}
+              ownedBookIds={gameState.ownedBookIds}
           />
       )}
 

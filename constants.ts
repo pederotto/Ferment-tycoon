@@ -1,5 +1,5 @@
 
-import { Ingredient, IngredientType, Recipe, FermentType, Supplier, Vessel, Buyer, StaffRole } from './types';
+import { Ingredient, IngredientType, Recipe, FermentType, Supplier, Vessel, Buyer, StaffRole, MatrixEntry, Book } from './types';
 
 // --- CONFIGURATION ---
 // REBALANCE: was 3000 — enough to buy nearly every early vessel and ingredient
@@ -11,6 +11,146 @@ export const INITIAL_MAX_POWER = 100;
 // OPTIMIZATION: 8 seconds per day is very fast for a physics sim. 
 // If performance lags, increase this to 10000 or 12000 to lower tick rate requirements.
 export const DAY_DURATION_MS = 8000; 
+
+// --- RECIPE BOOKS ---
+// Priced at roughly $90 per point of combined difficulty taught. The Primer is
+// deliberately under that rule because it is the on-ramp. The xp gates matter as
+// much as the prices: on the $1800 opening float only the Primer is buyable, so
+// you cannot spend the float on books and then miss the first rent.
+export const BOOKS: Book[] = [
+  {
+    id: 'primer_bench',
+    title: 'The Bench Primer',
+    author: 'Anon., trade printing',
+    blurb: 'The three things every culture house starts with, and the rules of thumb behind the generated ferments.',
+    teaches: ['barley_koji', 'shio_koji', 'amazake'],
+    revealsProcedural: true,
+    price: 150,
+    xpRequired: 0,
+    shelf: 'bindery',
+  },
+  {
+    id: 'tome_salt_sun',
+    title: 'Salt & Sun',
+    author: 'M. Ferreira',
+    blurb: 'Curing in dry air: roe, mushroom, and the patience they ask for.',
+    teaches: ['bottarga', 'lacto_ceps', 'cheong'],
+    price: 450,
+    xpRequired: 150,
+    shelf: 'bindery',
+  },
+  {
+    id: 'tome_jang',
+    title: 'Jang: The Red Pastes',
+    author: 'Seo Ji-woo',
+    blurb: 'Chili, grain and koji, buried in earthenware until they turn.',
+    teaches: ['gochujang', 'doubanjiang', 'coconut_vin'],
+    price: 540,
+    xpRequired: 300,
+    gatedBy: { supplierId: 'asia_import', level: 2 },
+    shelf: 'bindery',
+  },
+  {
+    id: 'tome_soy',
+    title: 'The Soybean Papers',
+    author: 'K. Tanaka',
+    blurb: 'Two misos and a black bean, and why the vessel decides which one you get.',
+    teaches: ['hatcho_miso', 'shiro_miso', 'douchi'],
+    price: 630,
+    xpRequired: 300,
+    gatedBy: { supplierId: 'asia_import', level: 2 },
+    shelf: 'bindery',
+  },
+  {
+    id: 'tome_mezzogiorno',
+    title: 'Il Quaderno del Mezzogiorno',
+    author: 'G. Riina',
+    blurb: 'Anchovy, milk and mackerel worked the southern way. Needs a cask and a warm room.',
+    teaches: ['colatura', 'ricotta_forte', 'garum_sociorum', 'nuoc_mam'],
+    price: 980,
+    xpRequired: 600,
+    gatedBy: { supplierId: 'prime', level: 2 },
+    shelf: 'bindery',
+  },
+  {
+    id: 'tome_new_nordic',
+    title: 'Notes from the Cold Kitchen',
+    author: 'H. Lindqvist',
+    blurb: 'The modern canon: blackening, rose, scallop, shrimp, pea.',
+    teaches: ['black_apple', 'rose_garum', 'scallop_fudge', 'bagoong', 'yellow_peaso'],
+    price: 1150,
+    xpRequired: 900,
+    gatedBy: { supplierId: 'biolab', level: 3 },
+    shelf: 'bindery',
+  },
+  {
+    id: 'codex_lacrimarum',
+    title: 'Codex Lacrimarum',
+    author: 'unattributed',
+    blurb: 'Photocopied, twice removed, and missing its first eleven pages. You do not ask where it came from.',
+    teaches: ['tears_garum', 'ancient_garum', 'casu_marzu'],
+    price: 1400,
+    xpRequired: 1200,
+    heatOnPurchase: 25,
+    shelf: 'underground',
+  },
+];
+
+// --- RECIPE MATRIX ---
+// ORDER IS LOAD-BEARING. The resolver returns the first match, so the specific
+// entries must precede the barley_koji catch-all at the bottom. This table was
+// extracted verbatim from the if-chain that used to live in
+// resolveRecipeFromMatrix and is differential-tested against it.
+export const RECIPE_MATRIX: MatrixEntry[] = [
+  // Direct koji substrates — these ran before everything else and ignore the vessel.
+  { recipeId: 'shio_koji', substrate: { kind: 'none' }, requires: ['koji', 'salt', 'water'], vesselId: null },
+  { recipeId: 'amazake',   substrate: { kind: 'none' }, requires: ['koji', 'water'], forbids: ['salt'], vesselId: null },
+  { recipeId: 'shio_koji', substrate: { kind: 'none' }, requires: ['koji', 'salt'], forbids: ['water'], vesselId: null },
+
+  { recipeId: 'colatura',       substrate: { kind: 'is', id: 'anchovies' },      requires: ['salt'], vesselId: 'oak_cask' },
+  { recipeId: 'bottarga',       substrate: { kind: 'is', id: 'mullet_roe' },     requires: ['salt'], vesselId: 'koji_tray' },
+  { recipeId: 'ricotta_forte',  substrate: { kind: 'is', id: 'raw_milk' },       requires: ['salt'], vesselId: 'onggi' },
+  { recipeId: 'garum_sociorum', substrate: { kind: 'is', id: 'mackerel' },       requires: ['salt'], vesselId: 'incubator' },
+
+  { recipeId: 'doubanjiang', substrate: { kind: 'is', id: 'broad_beans' },    requires: ['chili', 'koji', 'salt'], vesselId: 'onggi' },
+  { recipeId: 'douchi',      substrate: { kind: 'is', id: 'black_soybeans' }, requires: ['spores', 'salt'],        vesselId: 'mason_jar' },
+  { recipeId: 'gochujang',   substrate: { kind: 'is', id: 'glutinous_rice' }, requires: ['koji', 'chili', 'salt'], vesselId: 'onggi' },
+  { recipeId: 'cheong',      substrate: { kind: 'is', id: 'pine_needles' },   requires: ['sugar'],                 vesselId: 'mason_jar' },
+
+  { recipeId: 'hatcho_miso', substrate: { kind: 'includes', token: 'soybean' }, requires: ['spores', 'salt'], vesselId: 'cedar_barrel' },
+  { recipeId: 'shiro_miso',  substrate: { kind: 'includes', token: 'soybean' }, requires: ['koji', 'salt'],   vesselId: 'mason_jar' },
+
+  { recipeId: 'nuoc_mam',    substrate: { kind: 'is', id: 'anchovies' },   requires: ['salt'], vesselId: 'cedar_barrel' },
+  { recipeId: 'bagoong',     substrate: { kind: 'is', id: 'shrimp_fry' },  requires: ['salt'], vesselId: 'mason_jar' },
+  { recipeId: 'coconut_vin', substrate: { kind: 'is', id: 'coconut_sap' }, requires: [],       vesselId: 'mason_jar' },
+
+  { recipeId: 'scallop_fudge', substrate: { kind: 'is', id: 'scallops' },    requires: ['koji'],          vesselId: 'incubator' },
+  { recipeId: 'lacto_ceps',    substrate: { kind: 'is', id: 'ceps' },        requires: ['salt'],          vesselId: 'mason_jar' },
+  { recipeId: 'rose_garum',    substrate: { kind: 'is', id: 'rose_petals' }, requires: ['koji', 'water'], vesselId: 'incubator' },
+  { recipeId: 'black_apple',   substrate: { kind: 'oneOf', ids: ['garlic_bulbs', 'plums'] }, requires: [], forbids: ['salt'], vesselId: 'incubator' },
+  { recipeId: 'yellow_peaso',  substrate: { kind: 'is', id: 'yellow_peas' }, requires: ['barley_koji', 'salt'], vesselId: 'mason_jar' },
+
+  { recipeId: 'tears_garum',   substrate: { kind: 'any' },               requires: ['tears', 'koji', 'salt'], vesselId: 'incubator' },
+  { recipeId: 'casu_marzu',    substrate: { kind: 'is', id: 'raw_milk' }, requires: ['larvae'],               vesselId: 'koji_tray' },
+  { recipeId: 'ancient_garum', substrate: { kind: 'is', id: 'mackerel' }, requires: ['ancient_spores'],       vesselId: 'onggi' },
+
+  // Catch-all: anything sporulated on a tray becomes koji. Must stay last.
+  { recipeId: 'barley_koji', substrate: { kind: 'present' }, requires: ['spores'], vesselId: 'koji_tray' },
+];
+
+// Human labels for the tokens above, used by the recipe-book formula card.
+export const MATRIX_TOKEN_LABELS: Record<string, string> = {
+  salt: 'Salt',
+  koji: 'Live koji',
+  spores: 'Spores',
+  chili: 'Chili or pepper',
+  sugar: 'Sugar',
+  water: 'Water',
+  tears: 'Vial of Tears',
+  larvae: 'Cheese fly larvae',
+  barley_koji: 'Barley koji',
+  ancient_spores: 'Ancient spores',
+};
 
 // --- RECIPE MASTERY ---
 // Every recipe carries its own "Hand" track, 1-5. Cooking that recipe earns XP

@@ -172,6 +172,48 @@ export interface LogEntry {
     };
 }
 
+// --- RECIPE BOOKS ---
+// Recipes used to be learnable only by brute-forcing 35 ingredients against 6
+// vessels. A book is the deliberate path: it names the combination outright.
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  blurb: string;
+  teaches: string[];            // Recipe ids written into unlockedRecipes on purchase
+  revealsProcedural?: boolean;  // the Primer alone unfogs the generated recipes
+  price: number;
+  xpRequired: number;           // gated on lifetime bench xp, not on cash alone
+  gatedBy?: { supplierId: string; level: number };
+  heatOnPurchase?: number;
+  shelf: 'bindery' | 'underground';
+}
+
+// unknown -> known (you have the formula) -> analyzed (you have actually run it)
+export type RecipeKnowledge = 'unknown' | 'known' | 'analyzed';
+
+// --- RECIPE MATRIX ---
+// The combination that produces each named recipe. Recipe.requiredIngredients is
+// too vague to read from — it says {substrate: true, additive: 'salt'} for
+// Colatura and never names anchovies — so this table is the single place the real
+// combination lives. The resolver iterates it and the recipe books print from it,
+// which is what stops the two from drifting apart.
+export type MatrixSubstrate =
+  | { kind: 'is'; id: string }          // sub.id === id
+  | { kind: 'oneOf'; ids: string[] }    // sub.id is one of these
+  | { kind: 'includes'; token: string } // sub.id contains token
+  | { kind: 'none' }                    // no substrate present
+  | { kind: 'present' }                 // any substrate, identity irrelevant
+  | { kind: 'any' };                    // substrate not consulted
+
+export interface MatrixEntry {
+  recipeId: string;
+  substrate: MatrixSubstrate;
+  requires: string[];
+  forbids?: string[];
+  vesselId: string | null;   // null = vessel not consulted
+}
+
 // --- RECIPE MASTERY ---
 // One track per recipe. Levels are persisted rather than recomputed so a
 // level-up is detectable at the moment it happens.
@@ -247,9 +289,14 @@ export interface GameState {
   batches: Batch[];
   logbook: LogEntry[];
   
-  // Discovery System
-  unlockedRecipes: string[]; // Recipes available in the "Book"
-  analyzedRecipeIds: string[]; // Recipes successfully cooked and analyzed (removes Fog)
+  // Discovery System.
+  // unlockedRecipes = you know the formula (bought in a book, or learned by
+  // cooking it). analyzedRecipeIds = you have actually produced it at least once.
+  // Cooking writes BOTH, so analyzedRecipeIds is always a subset and no read site
+  // has to check twice.
+  unlockedRecipes: string[];
+  analyzedRecipeIds: string[];
+  ownedBookIds: string[];
 
   equipmentSlots: number;
   ownedVesselIds: string[]; // NEW: Track owned vessels

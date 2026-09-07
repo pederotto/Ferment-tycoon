@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Ingredient, Supplier, IngredientType, Vessel } from '../types';
-import { SUPPLIERS, VESSELS } from '../constants';
+import { Ingredient, Supplier, IngredientType, Vessel, Book } from '../types';
+import { SUPPLIERS, VESSELS, BOOKS } from '../constants';
 import MolecularScan from './MolecularScan';
 import { ChevronUp, Lock, Sparkles, Zap } from 'lucide-react';
-import { BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, VesselLineIcon, JarOutlineIcon, ArrowRightIcon, WrenchIcon } from './icons';
+import { BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, VesselLineIcon, JarOutlineIcon, ArrowRightIcon, WrenchIcon, BookIcon } from './icons';
 
 interface MarketplaceProps {
   isOpen: boolean;
@@ -16,6 +16,9 @@ interface MarketplaceProps {
   onBuy: (ingredient: Ingredient, quantity?: number) => void;
   ownedVesselIds?: string[];
   onBuyVessel?: (vessel: Vessel) => void;
+  onBuyBook?: (book: Book) => void;
+  ownedBookIds?: string[];
+  playerXp?: number;
   onOpenHardware?: () => void;
 }
 
@@ -38,6 +41,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({
   onBuy,
   ownedVesselIds = [],
   onBuyVessel,
+  onBuyBook,
+  ownedBookIds = [],
+  playerXp = 0,
   onOpenHardware
 }) => {
   const [showBlackMarket, setShowBlackMarket] = useState(false);
@@ -246,6 +252,88 @@ const Marketplace: React.FC<MarketplaceProps> = ({
                 </div>
               );
             })}
+
+            {(() => {
+              const shelf = showBlackMarket ? 'underground' : 'bindery';
+              const books = BOOKS.filter(b => b.shelf === shelf);
+              if (!onBuyBook || books.length === 0) return null;
+              return (
+              <div className="stall" style={{ '--ac': showBlackMarket ? 'var(--brick)' : 'var(--plum)' } as React.CSSProperties}>
+                <div className="awning" />
+                <div className="stall-head">
+                  <div className="row1">
+                    <div>
+                      <h3>
+                        <BookIcon size={13} color={showBlackMarket ? 'var(--brick)' : 'var(--plum)'} />
+                        {showBlackMarket ? ' The Restricted Shelf' : ' The Bindery'}
+                      </h3>
+                      <div className="d">
+                        {showBlackMarket
+                          ? 'Photocopied, twice removed, no receipts'
+                          : 'Formulas in print — what goes in, and in what'}
+                      </div>
+                    </div>
+                    <span className={`lvl-badge${showBlackMarket ? ' illegal' : ''}`}>Books</span>
+                  </div>
+                </div>
+                <div className="items">
+                  {books.map(book => {
+                    const owned = ownedBookIds.includes(book.id);
+                    const tooGreen = playerXp < book.xpRequired;
+                    const rel = book.gatedBy ? relationships[book.gatedBy.supplierId] : undefined;
+                    const notRegular = !!book.gatedBy && (!rel || rel.level < book.gatedBy.level);
+                    const canAfford = money >= book.price;
+                    const locked = owned || tooGreen || notRegular;
+
+                    return (
+                      <div
+                        key={book.id}
+                        className={`item${locked && !owned ? ' locked' : ''}`}
+                        title={book.blurb}
+                        onMouseEnter={() => setHoveredIng(null)}
+                      >
+                        <div className="left">
+                          <div className={`avatar${locked ? ' dim' : ''}`}>
+                            <BookIcon size={13} color="currentColor" />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="n">{book.title}</div>
+                            <div className="meta">
+                              {owned
+                                ? 'on the shelf'
+                                : tooGreen
+                                  ? `needs ${book.xpRequired} bench xp`
+                                  : notRegular
+                                    ? 'kept for regulars'
+                                    : `teaches ${book.teaches.length}`}
+                              {book.heatOnPurchase ? ` · +${book.heatOnPurchase} heat` : ''}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="right">
+                          {owned ? (
+                            <span className="buy-btn locked">Owned</span>
+                          ) : (
+                            <>
+                              <span className="price">${book.price.toLocaleString()}</span>
+                              <button
+                                disabled={locked || !canAfford}
+                                onClick={() => !locked && canAfford && onBuyBook(book)}
+                                className={`buy-btn${locked || !canAfford ? ' locked' : ''}`}
+                                aria-label={`Buy ${book.title} for $${book.price}`}
+                              >
+                                Buy
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              );
+            })()}
 
             {!showBlackMarket && (selectedType === IngredientType.TOOL || selectedType === 'all') && (
               <div className="stall" style={{ '--ac': 'var(--teal)' } as React.CSSProperties}>

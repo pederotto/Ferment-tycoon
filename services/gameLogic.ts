@@ -1,7 +1,7 @@
 
-import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState } from '../types';
+import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge } from '../types';
 import {
-  RECIPES, VESSELS, BUYERS, INGREDIENTS,
+  RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
   YIELD_SCALING_EXPONENT, WEEKLY_BENCH_RENT, WEEKLY_VESSEL_UPKEEP, FREE_UPKEEP_VESSELS,
   UTILITY_COST_PER_WATT, DEMAND_FLOOR, DEMAND_CEILING, DEMAND_DROP_PER_YIELD, DEMAND_RECOVERY_PER_WEEK
 } from '../constants';
@@ -43,44 +43,39 @@ export const resolveRecipeFromMatrix = (
   const hasTears = hasId('tears');
   const hasLarvae = hasId('larvae');
 
-  // --- SPECIAL: DIRECT KOJI SUBSTRATE (Shio Koji, Amazake) ---
-  if (!sub && hasKoji) {
-     if (hasSalt && hasWater) return RECIPES.find(r => r.id === 'shio_koji')!;
-     if (hasWater && !hasSalt) return RECIPES.find(r => r.id === 'amazake')!;
-     if (hasSalt && !hasWater) return RECIPES.find(r => r.id === 'shio_koji')!; 
+  // Token semantics for RECIPE_MATRIX. 'koji' means live koji rather than spores,
+  // and 'chili' also matches peppers — both carried over from the old chain.
+  const matrixToken = (t: string): boolean => {
+    if (t === 'koji') return hasKoji;
+    if (t === 'chili') return hasChili;
+    return hasId(t);
+  };
+
+  // --- 1. NAMED RECIPES, FROM THE MATRIX TABLE ---
+  // This was a 24-line if-chain. It is a data table now (constants.RECIPE_MATRIX)
+  // so the recipe books can print the same combination the resolver matches on —
+  // Recipe.requiredIngredients is too vague to read from, it never names the
+  // substrate. Order is load-bearing and the table preserves it; the extraction
+  // was differential-tested over 8,064 ingredient/vessel combinations.
+  const matchSubstrate = (m: MatrixSubstrate): boolean => {
+    switch (m.kind) {
+      case 'is': return sub?.id === m.id;
+      case 'oneOf': return !!sub && m.ids.includes(sub.id);
+      case 'includes': return !!sub?.id.includes(m.token);
+      case 'none': return !sub;
+      case 'present': return !!sub;
+      case 'any': return true;
+    }
+  };
+
+  for (const entry of RECIPE_MATRIX) {
+    if (entry.vesselId !== null && entry.vesselId !== vesselId) continue;
+    if (!matchSubstrate(entry.substrate)) continue;
+    if (!entry.requires.every(matrixToken)) continue;
+    if (entry.forbids?.some(matrixToken)) continue;
+    const found = RECIPES.find(r => r.id === entry.recipeId);
+    if (found) return found;
   }
-
-  // --- 1. CHECK HARDCODED "LEGENDARY" RECIPES FIRST ---
-  // (Preserves special logic for things like Bottarga, Colatura, etc.)
-
-  if (sub?.id === 'anchovies' && hasSalt && vesselId === 'oak_cask') return RECIPES.find(r => r.id === 'colatura')!;
-  if (sub?.id === 'mullet_roe' && hasSalt && vesselId === 'koji_tray') return RECIPES.find(r => r.id === 'bottarga')!;
-  if (sub?.id === 'raw_milk' && hasSalt && vesselId === 'onggi') return RECIPES.find(r => r.id === 'ricotta_forte')!;
-  if (sub?.id === 'mackerel' && hasSalt && vesselId === 'incubator') return RECIPES.find(r => r.id === 'garum_sociorum')!;
-  
-  if (sub?.id === 'broad_beans' && hasChili && hasKoji && hasSalt && vesselId === 'onggi') return RECIPES.find(r => r.id === 'doubanjiang')!;
-  if (sub?.id === 'black_soybeans' && hasSpores && hasSalt && vesselId === 'mason_jar') return RECIPES.find(r => r.id === 'douchi')!;
-  if (sub?.id === 'glutinous_rice' && hasKoji && hasChili && hasSalt && vesselId === 'onggi') return RECIPES.find(r => r.id === 'gochujang')!;
-  if (sub?.id === 'pine_needles' && hasSugar && vesselId === 'mason_jar') return RECIPES.find(r => r.id === 'cheong')!;
-  
-  if (sub?.id.includes('soybean') && hasSpores && hasSalt && vesselId === 'cedar_barrel') return RECIPES.find(r => r.id === 'hatcho_miso')!;
-  if (sub?.id.includes('soybean') && hasKoji && hasSalt && vesselId === 'mason_jar') return RECIPES.find(r => r.id === 'shiro_miso')!;
-
-  if (sub?.id === 'anchovies' && hasSalt && vesselId === 'cedar_barrel') return RECIPES.find(r => r.id === 'nuoc_mam')!;
-  if (sub?.id === 'shrimp_fry' && hasSalt && vesselId === 'mason_jar') return RECIPES.find(r => r.id === 'bagoong')!;
-  if (sub?.id === 'coconut_sap' && vesselId === 'mason_jar') return RECIPES.find(r => r.id === 'coconut_vin')!;
-
-  if (sub?.id === 'scallops' && hasKoji && vesselId === 'incubator') return RECIPES.find(r => r.id === 'scallop_fudge')!;
-  if (sub?.id === 'ceps' && hasSalt && vesselId === 'mason_jar') return RECIPES.find(r => r.id === 'lacto_ceps')!;
-  if (sub?.id === 'rose_petals' && hasKoji && hasWater && vesselId === 'incubator') return RECIPES.find(r => r.id === 'rose_garum')!;
-  if (vesselId === 'incubator' && (sub?.id === 'garlic_bulbs' || sub?.id === 'plums') && !hasSalt) return RECIPES.find(r => r.id === 'black_apple')!;
-  if (sub?.id === 'yellow_peas' && hasId('barley_koji') && hasSalt && vesselId === 'mason_jar') return RECIPES.find(r => r.id === 'yellow_peaso')!;
-
-  if (hasTears && hasKoji && hasSalt && vesselId === 'incubator') return RECIPES.find(r => r.id === 'tears_garum')!;
-  if (sub?.id === 'raw_milk' && hasLarvae && vesselId === 'koji_tray') return RECIPES.find(r => r.id === 'casu_marzu')!;
-  if (sub?.id === 'mackerel' && hasId('ancient_spores') && vesselId === 'onggi') return RECIPES.find(r => r.id === 'ancient_garum')!;
-
-  if (vesselId === 'koji_tray' && hasSpores && sub) return RECIPES.find(r => r.id === 'barley_koji')!;
 
   // --- 2. PROCEDURAL GENERATION FALLBACKS ---
   // If no specific recipe matches, apply chemical logic to generate a generic one.
@@ -826,6 +821,70 @@ export const getInterestedBuyers = (batch: Batch, recipe: Recipe, score: number,
     }
 
     return matching;
+};
+
+/* =========================================================================
+   RECIPE KNOWLEDGE — what the player knows, and how they came to know it.
+   ========================================================================= */
+
+/**
+ * Three states, not two. You can know a formula without ever having run it
+ * (a book), and you cannot have run it without knowing it (cooking writes both).
+ */
+export const getRecipeKnowledge = (
+  recipeId: string,
+  unlockedRecipes: string[],
+  analyzedRecipeIds: string[],
+  ownedBookIds: string[] = []
+): RecipeKnowledge => {
+  if (analyzedRecipeIds.includes(recipeId)) return 'analyzed';
+  if (unlockedRecipes.includes(recipeId)) return 'known';
+  // Procedural recipes carry generated ids (lacto_<sub>_gen and friends). They are
+  // never written into unlockedRecipes — that array would grow one entry per
+  // substrate — so the Primer unfogs the whole family at once instead.
+  if (recipeId.endsWith('_gen') &&
+      ownedBookIds.some(id => BOOKS.find(b => b.id === id)?.revealsProcedural)) {
+    return 'known';
+  }
+  return 'unknown';
+};
+
+export const getMatrixEntry = (recipeId: string): MatrixEntry | undefined =>
+  RECIPE_MATRIX.find(e => e.recipeId === recipeId);
+
+/**
+ * The readable form of a recipe's combination, for the book card and the Codex.
+ * Reads the same table the resolver matches on, so the two cannot drift.
+ */
+export const describeFormula = (recipeId: string): {
+  substrateLabel: string;
+  addLabels: string[];
+  forbidLabels: string[];
+  vesselName: string;
+} | null => {
+  const entry = getMatrixEntry(recipeId);
+  if (!entry) return null;
+
+  const nameOf = (id: string) => INGREDIENTS.find(i => i.id === id)?.name ?? id;
+
+  let substrateLabel: string;
+  switch (entry.substrate.kind) {
+    case 'is': substrateLabel = nameOf(entry.substrate.id); break;
+    case 'oneOf': substrateLabel = entry.substrate.ids.map(nameOf).join(' or '); break;
+    case 'includes': substrateLabel = `Any ${entry.substrate.token}`; break;
+    case 'none': substrateLabel = 'No substrate'; break;
+    case 'present': substrateLabel = 'Any substrate'; break;
+    default: substrateLabel = 'Any substrate';
+  }
+
+  return {
+    substrateLabel,
+    addLabels: entry.requires.map(t => MATRIX_TOKEN_LABELS[t] ?? t),
+    forbidLabels: (entry.forbids ?? []).map(t => MATRIX_TOKEN_LABELS[t] ?? t),
+    vesselName: entry.vesselId
+      ? (VESSELS.find(v => v.id === entry.vesselId)?.name ?? entry.vesselId)
+      : 'Any vessel',
+  };
 };
 
 /* =========================================================================

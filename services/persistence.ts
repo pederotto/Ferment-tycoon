@@ -32,6 +32,13 @@ function migrate(state: Partial<GameState>): GameState {
     insolvencyStrikes: state.insolvencyStrikes ?? 0,
     gameOver: state.gameOver ?? false,
     recipeMastery: state.recipeMastery ?? {},
+    ownedBookIds: state.ownedBookIds ?? [],
+    // Older saves seeded unlockedRecipes with a bogus id and used it for nothing.
+    // It now means "formula known", so it is rebuilt from what has been cooked.
+    unlockedRecipes: Array.from(new Set([
+      ...(state.unlockedRecipes ?? []).filter(id => id !== 'lacto_plums'),
+      ...(state.analyzedRecipeIds ?? []),
+    ])),
     customIngredients: state.customIngredients ?? [],
     analyzedRecipeIds: state.analyzedRecipeIds ?? [],
     ownedVesselIds: state.ownedVesselIds ?? ['mason_jar', 'koji_tray'],

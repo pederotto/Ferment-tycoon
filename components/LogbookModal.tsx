@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
 import { RECIPES, VESSELS } from '../constants';
 import { getMastery, masteryReveal } from '../services/mastery';
-import { Star, Sparkles, Award, CheckCircle2, HelpCircle, Thermometer, Droplets, Clock, Box } from 'lucide-react';
+import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
+import { Star, Sparkles, Award, CheckCircle2, HelpCircle, Thermometer, Droplets, Clock, Box, BookOpen } from 'lucide-react';
 import { CloseIcon, BookIcon, SearchIcon } from './icons';
 
 interface LogbookModalProps {
@@ -10,9 +11,11 @@ interface LogbookModalProps {
   logbook: LogEntry[];
   analyzedRecipeIds: string[];
   recipeMastery: Record<string, RecipeMastery>;
+  unlockedRecipes: string[];
+  ownedBookIds: string[];
 }
 
-const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery }) => {
+const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes, ownedBookIds }) => {
   const [activeTab, setActiveTab] = useState<'codex' | 'archives'>('codex');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
@@ -41,6 +44,10 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
     const known = RECIPES.filter(r => analyzedRecipeIds.includes(r.id) && r.id !== 'bio_sludge');
     return known.length;
   }, [analyzedRecipeIds]);
+  const knownCount = useMemo(() => {
+    return RECIPES.filter(r => r.id !== 'bio_sludge' &&
+      getRecipeKnowledge(r.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds) !== 'unknown').length;
+  }, [unlockedRecipes, analyzedRecipeIds, ownedBookIds]);
 
   const fermentTypes = [
     { label: 'All Schools', value: 'ALL' },
@@ -71,6 +78,11 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
               <div>
                 <span className="section-lbl" style={{ marginBottom: 0, display: 'block' }}>Discovered</span>
                 <span style={{ fontWeight: 700, color: 'var(--moss)' }}>{discoveredCount} / {RECIPES.length - 1}</span>
+                {knownCount > discoveredCount && (
+                  <span style={{ fontSize: 9, color: 'var(--plum)', display: 'block' }}>
+                    +{knownCount - discoveredCount} in the book
+                  </span>
+                )}
               </div>
               <div className="divider-line" style={{ height: 20 }} />
               <div>
@@ -131,7 +143,14 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
           {activeTab === 'codex' ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
               {filteredRecipes.map(recipe => {
-                const isDiscovered = analyzedRecipeIds.includes(recipe.id);
+                // Three states: unknown / known (bought the formula in a book, never
+                // run it) / analyzed (actually produced it). A book buys you the name,
+                // the description and the combination; the flavour target and the peak
+                // window are still earned at the bench.
+                const knowledge = getRecipeKnowledge(recipe.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds);
+                const formula = knowledge !== 'unknown' ? describeFormula(recipe.id) : null;
+                const isAnalyzed = knowledge === 'analyzed';
+                const isDiscovered = knowledge !== 'unknown';
                 // Cooking a recipe once used to hand over its exact target temp and
                 // humidity. Precision is now bought with mastery: a band at rung 3-4,
                 // the exact figures only at rung 5.
@@ -149,9 +168,13 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                           <span className="vessel-badge">{recipe.type}</span>
-                          {isDiscovered ? (
+                          {isAnalyzed ? (
                             <span className="status-chip ready" style={{ background: 'rgba(138,154,107,0.15)', color: 'var(--moss)' }}>
                               <CheckCircle2 size={10} /> Analyzed
+                            </span>
+                          ) : knowledge === 'known' ? (
+                            <span className="status-chip" style={{ background: 'rgba(157,139,176,0.15)', color: 'var(--plum)' }}>
+                              <BookOpen size={10} /> In the book
                             </span>
                           ) : (
                             <span className="status-chip" style={{ color: 'var(--text-lo)', background: 'rgba(0,0,0,0.2)' }}>
@@ -169,8 +192,22 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                     </div>
 
                     <p style={{ fontSize: 11, color: 'var(--text-mid)', lineHeight: 1.5 }}>
-                      {isDiscovered ? recipe.description : 'Analyze this batch to decipher its molecular characteristics and optimal brewing matrix.'}
+                      {isDiscovered ? recipe.description : 'Buy the formula in a book, or stumble onto the combination yourself.'}
                     </p>
+
+                    {formula && (
+                      <div className="formula-card">
+                        <span className="fl">The formula</span>
+                        <div className="frow"><span className="k">Base</span><span className="n">{formula.substrateLabel}</span></div>
+                        {formula.addLabels.length > 0 && (
+                          <div className="frow"><span className="k">Add</span><span className="n">{formula.addLabels.join(' · ')}</span></div>
+                        )}
+                        {formula.forbidLabels.length > 0 && (
+                          <div className="frow"><span className="k">Without</span><span className="n brick">{formula.forbidLabels.join(' · ')}</span></div>
+                        )}
+                        <div className="frow"><span className="k">In</span><span className="n">{formula.vesselName}</span></div>
+                      </div>
+                    )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--line)', borderRadius: 9, padding: 10, textAlign: 'center' }} className="mono">
                       <div>
@@ -194,7 +231,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                           Hand {hand.level}/5 · {hand.cooks} run{hand.cooks === 1 ? '' : 's'}
                         </span>
                       )}
-                      {isDiscovered && (
+                      {isAnalyzed && (
                         <span>Umami {recipe.idealFlavorProfile.umami} &middot; Sweet {recipe.idealFlavorProfile.sweetness}</span>
                       )}
                     </div>
