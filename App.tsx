@@ -1390,6 +1390,16 @@ export default function App() {
             <span className="num mono">${gameState.money.toLocaleString()}</span>
           </div>
           <div className="tabs-hud">
+            {/* A visible way into the dev tools. The keyboard route alone was not
+                enough: the original binding (Cmd/Ctrl+Shift+D) is claimed by
+                Chrome for "Bookmark all tabs", so the page never saw it. */}
+            <button
+              className="dev-chip"
+              onClick={() => setShowDev(v => !v)}
+              title="Dev tools and god mode — or press the backtick key"
+            >
+              DEV
+            </button>
             <button
               onClick={() => toggleDrawer('marketplace')}
               className={`tab-btn-hud${activeDrawer === 'hardware' ? ' active' : ''}`}
