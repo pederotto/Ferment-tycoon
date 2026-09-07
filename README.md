@@ -57,13 +57,61 @@ Sale price flows through one function, `calculateOffer`:
 - **The week has a bill**: `120 rent + 18/vessel beyond the first two + 1.10/watt + wages`.
 - **Three consecutive weeks in the red closes the lab.**
 
+## Learning recipes
+
+Recipes are not listed for you. There are three states:
+
+| state | how you get there | what it gives you |
+| --- | --- | --- |
+| unknown | — | `Unknown Reaction ???` |
+| **known** | buy a book, or cook it | the name, the description, and **the formula** — what goes in, and in what vessel |
+| **analyzed** | cook it | the flavour target and the peak window |
+
+Books are sold from **The Bindery** in the sourcing drawer, gated on lifetime bench
+XP as well as price, so the opening float can't be spent on the whole shelf.
+
+The formula card reads from `RECIPE_MATRIX` — the same table `resolveRecipeFromMatrix`
+matches on — so the book and the resolver can never drift. If you add a named recipe,
+add its matrix entry, or it is unreachable and unprintable.
+
+## Mastery — "the Hand"
+
+Every recipe carries its own 1–5 track. XP comes from cooking *that* recipe, convex
+in the critic score, so a good run teaches much more than a sloppy one and anything
+under 25 teaches nothing. The top rung also needs a run scoring 80+.
+
+The rungs escalate from direction to precision: flavour text → which dial is the
+lever → coarse bands → the peak window and duration → the exact figures and the
+flavour target. **Mastery grants information only, never a score bonus** — a bonus
+would land before the terroir cap and so be worth nothing with good ingredients and
+everything with cheap ones, letting mastery substitute for buying quality.
+
+Because of this, the Codex and the molecular scan deliberately show `??` for target
+temp/humidity until the track is high enough. Don't "fix" that.
+
+## The Underground
+
+Three currencies, three jobs:
+
+- **Money** — what the fence charges and what every fence pays.
+- **Heat** — the risk budget you spend for the edge. Raids scale with it.
+- **Renown** — buys nothing. It only makes heat go away (the Grease action).
+
+Access gates on bench XP, not supplier loyalty. Supply is grey-market copies at ~48%
+of list, generated from their legal counterparts and paying their penalty through the
+existing terroir cap. Demand is three fences that buy what the licensed trade refuses
+— spoiled, unsafe, contraband — priced on funk, hazard and potency rather than the
+critic score, and deliberately outside `marketDemand` so the underground doubles as
+the release valve for a glutted market.
+
 ## Layout
 
 ```
 App.tsx                    game loop, day/week tick, harvest and sale handlers
 types.ts                   GameState, Batch, Recipe, Ingredient, Buyer
 constants.ts               ingredients, recipes, buyers, suppliers, vessels, economy tuning
-services/gameLogic.ts      simulation + the economy (one source of truth for pricing)
+services/gameLogic.ts      simulation, economy, recipe matrix, underground valuation
+services/mastery.ts        per-recipe XP and the advice ladder
 services/persistence.ts    versioned localStorage save with forward migration
 components/
   LabView.tsx              the bench and its cubbies

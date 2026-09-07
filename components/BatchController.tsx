@@ -3,6 +3,7 @@ import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentTyp
 import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION } from '../constants';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
+import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
 import MolecularScan, { ScanTarget } from './MolecularScan';
 import {
   Play,
@@ -45,6 +46,8 @@ interface BatchControllerProps {
   ownedVesselIds: string[];
   analyzedRecipeIds: string[];
   recipeMastery: Record<string, RecipeMastery>;
+  unlockedRecipes: string[];
+  ownedBookIds: string[];
 }
 
 type HoveredItem = ScanTarget | null;
@@ -61,7 +64,9 @@ const BatchController: React.FC<BatchControllerProps> = ({
   logbook, 
   ownedVesselIds, 
   analyzedRecipeIds,
-  recipeMastery
+  recipeMastery,
+  unlockedRecipes,
+  ownedBookIds
 }) => {
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
   const [vesselId, setVesselId] = useState<string>('');
@@ -191,7 +196,10 @@ const BatchController: React.FC<BatchControllerProps> = ({
       const recipe = resolveRecipeFromMatrix(selectedIngredients, vesselId);
       setResolvedRecipe(recipe);
       
-      const isKnown = analyzedRecipeIds.includes(recipe.id) || recipe.type === FermentType.FAIL;
+      // A book makes the name legible before you have ever run it — that is what
+      // you paid for. Cooking it is still what reveals the flavour target.
+      const isKnown = getRecipeKnowledge(recipe.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds) !== 'unknown'
+        || recipe.type === FermentType.FAIL;
       setIsUndiscovered(!isKnown);
 
       // Suggest the mash this ferment family wants, until the player overrides it.
@@ -215,7 +223,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
       setIsUndiscovered(false);
       setDynamics({ yieldVolume: 0, concentration: 0, speedModifier: 1, totalMass: 0 });
     }
-  }, [selectedIngredientIds, vesselId, selectedIngredients, customQuantities, analyzedRecipeIds, hydrationTouched]);
+  }, [selectedIngredientIds, vesselId, selectedIngredients, customQuantities, analyzedRecipeIds, unlockedRecipes, ownedBookIds, hydrationTouched]);
 
   /**
    * Add up to `count` units, stopping at whatever the vessel and the pantry
@@ -424,7 +432,13 @@ const BatchController: React.FC<BatchControllerProps> = ({
   const ladder = resolvedRecipe && mastery ? getMasteryLadder(resolvedRecipe, handLevel, mastery.cooks) : [];
   const earnedRungs = ladder.filter(r => r.earned);
   const nextRung = ladder.find(r => !r.earned) || null;
-  const toNext = mastery ? xpToNextLevel(mastery) : null;
+  // Must read the FLOORED level: a freshly identified recipe sits at raw level 0
+  // while displaying as rung 1, and xpToNextLevel(0) returns 0, which made the
+  // next rung claim it needed a score of 80 rather than the xp it actually wants.
+  const toNext = mastery ? xpToNextLevel({ ...mastery, level: handLevel }) : null;
+  // Only worth printing before you have run it; after that the ladder says more.
+  const benchFormula = resolvedRecipe && !isUndiscovered && !analyzedRecipeIds.includes(resolvedRecipe.id)
+    ? describeFormula(resolvedRecipe.id) : null;
 
   return (
     <div className="modal-overlay" style={{ padding: 0 }}>
@@ -859,6 +873,20 @@ const BatchController: React.FC<BatchControllerProps> = ({
                 <span className="flag">Uncharted ferment</span>
               )}
             </div>
+
+            {benchFormula && (
+              <div className="formula-card" style={{ marginBottom: 11 }}>
+                <span className="fl">The formula</span>
+                <div className="frow"><span className="k">Base</span><span className="n">{benchFormula.substrateLabel}</span></div>
+                {benchFormula.addLabels.length > 0 && (
+                  <div className="frow"><span className="k">Add</span><span className="n">{benchFormula.addLabels.join(' · ')}</span></div>
+                )}
+                {benchFormula.forbidLabels.length > 0 && (
+                  <div className="frow"><span className="k">Without</span><span className="n brick">{benchFormula.forbidLabels.join(' · ')}</span></div>
+                )}
+                <div className="frow"><span className="k">In</span><span className="n">{benchFormula.vesselName}</span></div>
+              </div>
+            )}
 
             {earnedRungs.length > 0 && !isUndiscovered && (
               <div className="ladder">

@@ -1388,6 +1388,8 @@ export default function App() {
            ownedVesselIds={gameState.ownedVesselIds}
            analyzedRecipeIds={gameState.analyzedRecipeIds} // Pass discovery state
            recipeMastery={gameState.recipeMastery}
+           unlockedRecipes={gameState.unlockedRecipes}
+           ownedBookIds={gameState.ownedBookIds}
         />
       )}
 
