@@ -1205,7 +1205,7 @@ export default function App() {
           </div>
           <div className="divider-line hidden md:block" />
           {/* GAME SPEED & TIME ENGINE */}
-          <div className="flex items-center gap-1 rounded-xl p-1 border border-line-strong ml-1 shadow-inner relative z-50" style={{ background: 'rgba(0,0,0,0.25)' }}>
+          <div className="hud-speed flex items-center gap-1 rounded-xl p-1 border border-line-strong ml-1 shadow-inner relative z-50" style={{ background: 'rgba(0,0,0,0.25)' }}>
             <button
               onClick={() => {
                 if (gameSpeed === 0) {
@@ -1234,7 +1234,7 @@ export default function App() {
         </div>
 
         {/* CENTER: GAUGE RINGS */}
-        <div className="gauges hidden md:flex">
+        <div className="gauges flex">
           <div className="gauge">
             <div className="ring-wrap">
               <GaugeRing percent={(currentPower / gameState.maxPower) * 100} color={currentPower > gameState.maxPower ? 'var(--brick)' : 'var(--amber)'} />

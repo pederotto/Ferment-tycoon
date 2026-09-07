@@ -630,7 +630,15 @@ input[type="range"].dial-slider::-moz-range-thumb {
    below 900px the header is allowed to wrap onto two rows. */
 @media (max-width: 1100px) {
   .hud { gap: 14px; padding: 0 14px; }
-  .hud .gauges { display: none !important; }
+  /* The gauge rings are too wide to keep here, but two of these gauges are
+     ACTIONS — Deep Clean and Grease the File — so hiding the block outright made
+     them unreachable on a phone. Drop the rings, keep the row. */
+  .hud .gauges { gap: 8px; }
+  .hud .gauge { width: auto; flex-direction: row; align-items: baseline; gap: 5px; padding: 5px 8px;
+                border: 1px dashed var(--line-strong); border-radius: 6px; background: rgba(0,0,0,0.18); }
+  .hud .gauge .ring-wrap { display: none; }
+  .hud .gauge .val { font-size: 10px; margin-top: 0; }
+  .hud .gauge .lbl { font-size: 7.5px; }
   /* The hardware drawer's closed grab tab is 46px tall and horizontally centred.
      On wide screens it lands in the empty middle of the bench header row; once
      the viewport narrows it reaches far enough left to sit on top of the
@@ -650,6 +658,22 @@ input[type="range"].dial-slider::-moz-range-thumb {
   .tabs-hud { padding-left: 0; border-left: none; }
   .tab-btn-hud span { display: none; }
   .tab-btn-hud { padding: 8px 10px; }
+  /* The speed row used to overflow the header and clip 4x/8x off the right edge,
+     making them unreachable on a phone. It wraps to its own line now rather than
+     losing controls. */
+  .hud-speed { flex-wrap: wrap; justify-content: center; margin-left: 0 !important; }
+  .hud .chip-tab { padding: 6px 7px; font-size: 9.5px; }
+  .almanac .season { font-size: 10.5px; }
+  .hud .ticket { padding: 4px 8px; }
+  .hud .ticket .num { font-size: 12px; }
+}
+@media (max-width: 420px) {
+  :root { --hud-h: 150px; }
+  .hud-speed { width: 100%; }
+  .hud { padding: 6px 8px; gap: 7px; }
+  .hud .chip-tab { padding: 5px 5px; font-size: 9px; }
+  .brand .wordmark .title { font-size: 15px; }
+  .seal { width: 32px; height: 32px; }
 }
 
 /* =========================================================================
