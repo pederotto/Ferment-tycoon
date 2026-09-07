@@ -13,6 +13,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import LogbookModal from './components/LogbookModal';
 import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
+import { grantMastery } from './services/mastery';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon } from './components/icons';
 
@@ -56,7 +57,8 @@ export default function App() {
     weather: { type: 'Cloudy', tempModifier: 0, humidityModifier: 0, description: 'Overcast' },
     marketDemand: Object.values(FermentType).reduce((acc, t) => ({ ...acc, [t]: 1 }), {} as Record<string, number>),
     insolvencyStrikes: 0,
-    gameOver: false
+    gameOver: false,
+    recipeMastery: {}
   });
 
   // Any run left behind by a previous session, read once so the welcome screen
@@ -765,7 +767,6 @@ export default function App() {
     const recipe = getRecipeForBatch(batch);
     const substrate = [...INGREDIENTS, ...gameState.customIngredients].find(i => i.id === batch.substrateId);
     const calculatedScore = batch.evaluationScore || calculateCriticScore(batch, recipe, gameState.staff);
-    const xpGain = Math.floor(moneyGain / 10) + (sporeAmount * 10) + (renownGain * 5) + 15;
 
     const logEntry: LogEntry = {
       id: batch.id,
@@ -831,8 +832,20 @@ export default function App() {
     const soldType = recipe?.type;
     const demandHit = isSporulation ? 0 : getDemandHitForSale(batch);
 
+    // Cooking a recipe is how you learn it. Weighted by the critic score, so a
+    // good run teaches disproportionately more and a failure teaches nothing.
+    const mastery = grantMastery(gameState.recipeMastery, recipe, calculatedScore);
+    if (mastery.leveledTo) {
+      setLabNotification({
+        id: Date.now() + 2,
+        text: `Hand steadied — ${recipe.name}, note ${mastery.leveledTo} of 5 unsealed.`,
+        type: 'info'
+      });
+    }
+
     setGameState(prev => ({
       ...prev,
+      recipeMastery: mastery.next,
       marketDemand: soldType && demandHit > 0
         ? { ...prev.marketDemand, [soldType]: Math.max(DEMAND_FLOOR, (prev.marketDemand[soldType] ?? 1) - demandHit) }
         : prev.marketDemand,
@@ -840,7 +853,7 @@ export default function App() {
       renown: prev.renown + renownGain, // ADD RENOWN HERE
       batches: prev.batches.filter(b => b.id !== batch.id),
       reputation: prev.reputation + (batch.quality.safety > 80 ? 2 : -5), // Small rep gain for safe sales
-      xp: prev.xp + xpGain,
+      xp: prev.xp + mastery.gained,
       hygiene: Math.max(0, prev.hygiene - 5),
       logbook: [logEntry, ...prev.logbook],
       inventory: newInventory,
@@ -893,6 +906,15 @@ export default function App() {
     }
 
     const currentScore = batch.evaluationScore || calculateCriticScore(batch, recipe, gameState.staff);
+    // Cellaring a batch is still a completed run, so it teaches the same as a sale.
+    const storeMastery = grantMastery(gameState.recipeMastery, recipe, currentScore);
+    if (storeMastery.leveledTo) {
+      setLabNotification({
+        id: Date.now() + 2,
+        text: `Hand steadied — ${recipe.name}, note ${storeMastery.leveledTo} of 5 unsealed.`,
+        type: 'info'
+      });
+    }
     const logEntry: LogEntry = {
       id: batch.id,
       recipeName: recipe.name,
@@ -909,7 +931,8 @@ export default function App() {
       batches: prev.batches.filter(b => b.id !== batch.id),
       customIngredients: newCustomIngredients,
       logbook: [logEntry, ...prev.logbook],
-      xp: prev.xp + 25,
+      recipeMastery: storeMastery.next,
+      xp: prev.xp + storeMastery.gained,
       hygiene: Math.max(0, prev.hygiene - 3),
       analyzedRecipeIds: prev.analyzedRecipeIds.includes(batch.recipeId) 
         ? prev.analyzedRecipeIds 
@@ -1242,6 +1265,7 @@ export default function App() {
            logbook={gameState.logbook}
            ownedVesselIds={gameState.ownedVesselIds}
            analyzedRecipeIds={gameState.analyzedRecipeIds} // Pass discovery state
+           recipeMastery={gameState.recipeMastery}
         />
       )}
 
@@ -1283,6 +1307,7 @@ export default function App() {
               onClose={() => setUiState(prev => ({ ...prev, showLogbook: false }))}
               logbook={gameState.logbook}
               analyzedRecipeIds={gameState.analyzedRecipeIds}
+              recipeMastery={gameState.recipeMastery}
           />
       )}
 

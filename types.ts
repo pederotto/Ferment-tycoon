@@ -172,6 +172,16 @@ export interface LogEntry {
     };
 }
 
+// --- RECIPE MASTERY ---
+// One track per recipe. Levels are persisted rather than recomputed so a
+// level-up is detectable at the moment it happens.
+export interface RecipeMastery {
+    xp: number;         // cumulative, never decreases
+    level: number;      // 1..MASTERY_MAX_LEVEL
+    cooks: number;      // completed batches on this track
+    bestScore: number;  // highest critic score reached; gates the top rung
+}
+
 // --- BUYER SYSTEM ---
 export type BuyerType = 'Restaurant' | 'Supermarket' | 'Private' | 'Industry' | 'Underground';
 
@@ -256,6 +266,9 @@ export interface GameState {
   // Market appetite per ferment type (1 = normal). Every sale depresses the
   // type you sold; appetite recovers weekly. Stops one recipe paying forever.
   marketDemand: Record<string, number>;
+
+  // Per-recipe mastery. Buys progressively more precise advice, never a bonus.
+  recipeMastery: Record<string, RecipeMastery>;
 
   // Consecutive weeks ended in the red. Three closes the lab.
   insolvencyStrikes: number;

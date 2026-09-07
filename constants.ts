@@ -12,6 +12,32 @@ export const INITIAL_MAX_POWER = 100;
 // If performance lags, increase this to 10000 or 12000 to lower tick rate requirements.
 export const DAY_DURATION_MS = 8000; 
 
+// --- RECIPE MASTERY ---
+// Every recipe carries its own "Hand" track, 1-5. Cooking that recipe earns XP
+// weighted by the critic score, so a good run teaches disproportionately more
+// than a sloppy one and a failure teaches nothing at all. Levels buy INFORMATION
+// only — never a score bonus; see services/mastery.ts for why.
+export const MASTERY_MAX_LEVEL = 5;
+export const MASTERY_XP_SCORE_FLOOR = 25;   // below this a batch teaches nothing
+export const MASTERY_XP_BASE = 100;         // xp for a flawless difficulty-1 run
+export const MASTERY_XP_CURVE = 1.5;        // convex: good runs teach much more
+export const MASTERY_XP_DIFFICULTY_STEP = 0.25;
+export const MASTERY_L5_MIN_BEST_SCORE = 80; // the top rung must be earned, not ground
+export const MASTERY_THRESHOLDS: Record<number, number> = {
+  1: 0,
+  2: 120,
+  3: 400,
+  4: 1000,
+  5: 2200,
+};
+export const MASTERY_RUNG_TITLES: Record<number, string> = {
+  1: 'First run',
+  2: 'Getting a feel',
+  3: 'Measured',
+  4: 'Timed',
+  5: 'Second nature',
+};
+
 // --- HYDRATION ---
 // Water is titrated as a percentage of solids mass, exactly as salt is. Every
 // ferment family wants a different mash: koji is cultivated dry on a tray and

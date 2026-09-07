@@ -31,6 +31,7 @@ function migrate(state: Partial<GameState>): GameState {
     marketDemand: state.marketDemand ?? freshDemand(),
     insolvencyStrikes: state.insolvencyStrikes ?? 0,
     gameOver: state.gameOver ?? false,
+    recipeMastery: state.recipeMastery ?? {},
     customIngredients: state.customIngredients ?? [],
     analyzedRecipeIds: state.analyzedRecipeIds ?? [],
     ownedVesselIds: state.ownedVesselIds ?? ['mason_jar', 'koji_tray'],

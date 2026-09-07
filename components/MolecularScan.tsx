@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { Ingredient, Vessel, Recipe } from '../types';
+import { masteryReveal } from '../services/mastery';
 import { Activity, Zap, Thermometer, Droplets, Flame, Utensils } from 'lucide-react';
 import { SearchIcon } from './icons';
 
 export type ScanTarget =
   | { type: 'ingredient'; data: Ingredient }
   | { type: 'vessel'; data: Vessel }
-  | { type: 'recipe'; data: Recipe };
+  | { type: 'recipe'; data: Recipe; masteryLevel?: number };
 
 interface MolecularScanProps {
   target: ScanTarget;
@@ -64,6 +65,8 @@ const MolecularScan: React.FC<MolecularScanProps> = ({ target, className = '', e
         );
       }
       case 'recipe': {
+        // Same gate as the Codex: hovering a recipe must not leak what mastery sells.
+        const rev = masteryReveal(target.data, target.masteryLevel ?? 0);
         const r = data as Recipe;
         return (
           <div className="space-y-2 w-full">
@@ -71,11 +74,11 @@ const MolecularScan: React.FC<MolecularScanProps> = ({ target, className = '', e
              <div className="grid grid-cols-2 gap-2 mt-1">
                 <div className="p-1 rounded text-center" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)' }}>
                    <div className="text-[8px] uppercase" style={{ color: 'var(--text-lo)' }}>Temp</div>
-                   <div className="text-sm font-mono font-bold" style={{ color: 'var(--moss)' }}>{r.idealParams.temp}°</div>
+                   <div className="text-sm font-mono font-bold" style={{ color: 'var(--moss)' }}>{rev.temp}</div>
                 </div>
                 <div className="p-1 rounded text-center" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid var(--line)' }}>
                    <div className="text-[8px] uppercase" style={{ color: 'var(--text-lo)' }}>Humid</div>
-                   <div className="text-sm font-mono font-bold" style={{ color: 'var(--teal)' }}>{r.idealParams.humidity}%</div>
+                   <div className="text-sm font-mono font-bold" style={{ color: 'var(--teal)' }}>{rev.humidity}</div>
                 </div>
              </div>
           </div>

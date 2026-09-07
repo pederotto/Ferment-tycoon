@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentType } from '../types';
+import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentType, RecipeMastery } from '../types';
 import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION } from '../constants';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
+import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
 import MolecularScan, { ScanTarget } from './MolecularScan';
 import {
   Play,
@@ -43,6 +44,7 @@ interface BatchControllerProps {
   logbook: LogEntry[];
   ownedVesselIds: string[];
   analyzedRecipeIds: string[];
+  recipeMastery: Record<string, RecipeMastery>;
 }
 
 type HoveredItem = ScanTarget | null;
@@ -58,7 +60,8 @@ const BatchController: React.FC<BatchControllerProps> = ({
   availableSlots, 
   logbook, 
   ownedVesselIds, 
-  analyzedRecipeIds 
+  analyzedRecipeIds,
+  recipeMastery
 }) => {
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
   const [vesselId, setVesselId] = useState<string>('');
@@ -295,28 +298,6 @@ const BatchController: React.FC<BatchControllerProps> = ({
     setShowVintageLoader(false);
   };
 
-  const getRecipeHint = (id: string, type: FermentType) => {
-    switch (id) {
-      case 'bottarga': return "Requires low humidity to cure properly. High humidity causes rot.";
-      case 'bagoong': return "This paste needs to breathe. Oxidation (Open Lid) is key for color.";
-      case 'casu_marzu': return "Sanitation is the enemy of this living cheese. Keep it dirty.";
-      case 'cheong': return "High sugar prevents spoilage, but wild yeast (low hygiene) creates alcohol.";
-      case 'colatura': return "Wood aging is essential. Patience is the only way.";
-      case 'gochujang': return "Keep cool to preserve sweetness. High heat converts starch to alcohol.";
-      case 'scallop_fudge': return "Dehydration concentrates flavor. Dry heat is needed.";
-      case 'black_apple': return "Needs high humidity to keep the fruit moist during the Maillard reaction.";
-      default:
-        switch (type) {
-          case FermentType.KOJI: return "The 'Engine'. Generates its own heat. Don't let it overheat in insulated vessels.";
-          case FermentType.GARUM: return "Enzymatic Autolysis. Needs high heat (60°C) to break down proteins rapidly.";
-          case FermentType.MISO: return "Anaerobic amino paste. Keep air out to prevent oxidation.";
-          case FermentType.LACTO: return "Simple salinity check. Keep it anaerobic and cool for crisp texture.";
-          case FermentType.VINEGAR: return "Aerobic process. Acetobacter needs oxygen to convert alcohol to acid.";
-          default: return "Balance your parameters.";
-        }
-    }
-  };
-
   const handleStart = () => {
     if (selectedIngredientIds.length === 0 || !vesselId) return;
     
@@ -432,7 +413,18 @@ const BatchController: React.FC<BatchControllerProps> = ({
   }, [ingredients, inventory, pantryCategory, pantrySearch]);
 
   const canStart = selectedIngredientIds.length > 0 && !!vesselId && !isOverflowing;
-  const hintText = resolvedRecipe ? getRecipeHint(resolvedRecipe.id, resolvedRecipe.type) : null;
+  // The advice ladder replaces the single static hint: rungs you have earned are
+  // readable, the next one is shown sealed so the track is visible.
+  const mastery = resolvedRecipe ? getMastery(recipeMastery, resolvedRecipe) : null;
+  // Identifying a recipe always comes with rung 1. handleEvaluateBatch can mark a
+  // recipe analyzed without ever granting mastery (you can analyze a batch and
+  // never harvest it), and without this floor that path would leave the bench
+  // with no note at all — a regression on the old always-visible hint.
+  const handLevel = mastery ? (isUndiscovered ? mastery.level : Math.max(1, mastery.level)) : 0;
+  const ladder = resolvedRecipe && mastery ? getMasteryLadder(resolvedRecipe, handLevel, mastery.cooks) : [];
+  const earnedRungs = ladder.filter(r => r.earned);
+  const nextRung = ladder.find(r => !r.earned) || null;
+  const toNext = mastery ? xpToNextLevel(mastery) : null;
 
   return (
     <div className="modal-overlay" style={{ padding: 0 }}>
@@ -852,7 +844,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
 
             <div
               className={`compound ${isBioSludge ? 'sludge' : isUndiscovered ? 'unknown' : ''}`}
-              onMouseEnter={() => resolvedRecipe && !isUndiscovered && setHoveredItem({ type: 'recipe', data: resolvedRecipe })}
+              onMouseEnter={() => resolvedRecipe && !isUndiscovered && setHoveredItem({ type: 'recipe', data: resolvedRecipe, masteryLevel: handLevel })}
               onMouseLeave={() => setHoveredItem(null)}
             >
               <div className="ch">
@@ -868,13 +860,56 @@ const BatchController: React.FC<BatchControllerProps> = ({
               )}
             </div>
 
-            {hintText && !isUndiscovered && (
-              <div className="chem-note">
-                <Lightbulb size={14} color="var(--brass)" style={{ flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <span className="l">Bench note</span>
-                  <p>“{hintText}”</p>
+            {earnedRungs.length > 0 && !isUndiscovered && (
+              <div className="ladder">
+                <div className="lh">
+                  <span className="l">
+                    <Lightbulb size={12} color="var(--brass)" /> The hand
+                  </span>
+                  <span className="lv">
+                    {handLevel} / 5
+                    {mastery!.cooks > 0 && <span className="runs"> · {mastery!.cooks} run{mastery!.cooks === 1 ? '' : 's'}</span>}
+                  </span>
                 </div>
+
+                {earnedRungs.map(rung => (
+                  <div key={rung.level} className="rung">
+                    <span className="rt">{rung.level}. {rung.title}</span>
+                    <p>{rung.body}</p>
+                    {rung.rows && (
+                      <div className="rrows">
+                        {rung.rows.map(r => (
+                          <span key={r.k} className="rrow"><span className="k">{r.k}</span><span className="n">{r.n}</span></span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {nextRung && (
+                  <div className="rung sealed">
+                    <span className="rt">{nextRung.level}. {nextRung.title}</span>
+                    <p>
+                      {toNext !== null && toNext > 0
+                        ? `Sealed — ${toNext} more xp on this recipe.`
+                        : 'Sealed — needs a run scoring 80 or better.'}
+                    </p>
+                  </div>
+                )}
+
+                {handLevel >= 5 && resolvedRecipe && (
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: '100%', marginTop: 9, fontSize: 10 }}
+                    onClick={() => {
+                      setTemp(resolvedRecipe.idealParams.temp);
+                      setHumidity(resolvedRecipe.idealParams.humidity);
+                      if (hasSalt) setSalinity(resolvedRecipe.idealParams.salinity);
+                    }}
+                  >
+                    Set to the book
+                  </button>
+                )}
               </div>
             )}
 

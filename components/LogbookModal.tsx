@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { LogEntry, Recipe, FermentType } from '../types';
+import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
 import { RECIPES, VESSELS } from '../constants';
+import { getMastery, masteryReveal } from '../services/mastery';
 import { Star, Sparkles, Award, CheckCircle2, HelpCircle, Thermometer, Droplets, Clock, Box } from 'lucide-react';
 import { CloseIcon, BookIcon, SearchIcon } from './icons';
 
@@ -8,9 +9,10 @@ interface LogbookModalProps {
   onClose: () => void;
   logbook: LogEntry[];
   analyzedRecipeIds: string[];
+  recipeMastery: Record<string, RecipeMastery>;
 }
 
-const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds }) => {
+const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery }) => {
   const [activeTab, setActiveTab] = useState<'codex' | 'archives'>('codex');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
@@ -130,6 +132,11 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
               {filteredRecipes.map(recipe => {
                 const isDiscovered = analyzedRecipeIds.includes(recipe.id);
+                // Cooking a recipe once used to hand over its exact target temp and
+                // humidity. Precision is now bought with mastery: a band at rung 3-4,
+                // the exact figures only at rung 5.
+                const hand = getMastery(recipeMastery, recipe);
+                const reveal = masteryReveal(recipe, isDiscovered ? Math.max(1, hand.level) : 0);
                 const vessel = VESSELS.find(v => v.id === recipe.requiredVesselId);
 
                 return (
@@ -168,20 +175,25 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--line)', borderRadius: 9, padding: 10, textAlign: 'center' }} className="mono">
                       <div>
                         <div className="section-lbl" style={{ marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}><Thermometer size={10} color="var(--brick)" /> Temp</div>
-                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? `${recipe.idealParams.temp}°` : '??°'}</div>
+                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? reveal.temp : '??°'}</div>
                       </div>
                       <div style={{ borderLeft: '1px solid var(--line)' }}>
                         <div className="section-lbl" style={{ marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}><Droplets size={10} color="var(--teal)" /> Humid</div>
-                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? `${recipe.idealParams.humidity}%` : '??%'}</div>
+                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? reveal.humidity : '??%'}</div>
                       </div>
                       <div style={{ borderLeft: '1px solid var(--line)' }}>
                         <div className="section-lbl" style={{ marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}><Clock size={10} color="var(--amber)" /> Time</div>
-                        <div style={{ fontWeight: 700, fontSize: 12 }}>{recipe.baseDurationSeconds}s</div>
+                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? reveal.duration : '??s'}</div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-lo)', paddingTop: 8, borderTop: '1px solid var(--line)' }} className="mono">
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Box size={11} color="var(--plum)" /> {vessel?.name || 'Any Vessel'}</span>
+                      {hand.cooks > 0 && (
+                        <span style={{ color: 'var(--brass)' }} title={`${hand.xp} xp on this recipe`}>
+                          Hand {hand.level}/5 · {hand.cooks} run{hand.cooks === 1 ? '' : 's'}
+                        </span>
+                      )}
                       {isDiscovered && (
                         <span>Umami {recipe.idealFlavorProfile.umami} &middot; Sweet {recipe.idealFlavorProfile.sweetness}</span>
                       )}

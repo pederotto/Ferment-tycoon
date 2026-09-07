@@ -905,6 +905,31 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .chem-note .l { font-size: 8.5px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; display: block; margin-bottom: 3px; }
 .chem-note p { margin: 0; font-size: 10.5px; line-height: 1.45; color: var(--text-mid); font-style: italic; }
 
+/* ---------- The advice ladder (recipe mastery) ---------- */
+.ladder {
+  padding: 12px; border-radius: 10px; margin-bottom: 11px; flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line);
+  max-height: 260px; overflow-y: auto;
+}
+.ladder .lh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.ladder .lh .l { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
+.ladder .lh .lv { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--brass); }
+.ladder .lh .runs { color: var(--text-lo); font-weight: 400; }
+.ladder .rung { padding: 8px 0; border-top: 1px solid var(--line); }
+.ladder .rung:first-of-type { border-top: none; padding-top: 0; }
+.ladder .rung .rt { display: block; font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss); font-weight: 700; margin-bottom: 4px; }
+.ladder .rung p { margin: 0; font-size: 10.5px; line-height: 1.5; color: var(--text-mid); }
+.ladder .rung.sealed { opacity: 0.5; }
+.ladder .rung.sealed .rt { color: var(--text-lo); }
+.ladder .rung.sealed p { font-style: italic; }
+.ladder .rrows { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.ladder .rrow {
+  display: flex; align-items: baseline; gap: 5px; padding: 3px 8px; border-radius: 5px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line);
+}
+.ladder .rrow .k { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-lo); }
+.ladder .rrow .n { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--text-hi); }
+
 .dial-block { padding: 13px; border-radius: 10px; margin-bottom: 11px; flex-shrink: 0; background: rgba(0, 0, 0, 0.24); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 13px; }
 .dial-ctl .dh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
 .dial-ctl .dh .l { display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
