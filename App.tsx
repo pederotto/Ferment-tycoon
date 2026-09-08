@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book, Lineage, ChamberControls } from './types';
+import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book, Lineage, ChamberControls, CrewMember } from './types';
 import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
   RAID_HEAT_THRESHOLD, RAID_BASE_CHANCE, HEAT_DECAY_PER_TICK, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage } from './services/koji';
+import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
 import BatchController from './components/BatchController';
@@ -69,6 +70,10 @@ export default function App() {
     vendorStanding: {},
     contracts: [],
     unlockedVendorIds: [],
+    // Hires are people now rather than four switches. The pool rotates, so who
+    // is going at any moment is part of the situation.
+    crew: [],
+    crewPool: rollCrewPool(1),
     weather: { type: 'Cloudy', tempModifier: 0, humidityModifier: 0, description: 'Overcast' },
     marketDemand: Object.values(FermentType).reduce((acc, t) => ({ ...acc, [t]: 1 }), {} as Record<string, number>),
     insolvencyStrikes: 0,
@@ -317,9 +322,9 @@ export default function App() {
               // fraction of the rate and are not exposed to bench hygiene.
               if (batch.cellared) {
                 if (tickCount.current % CELLAR_TICK_DIVISOR !== 0) return batch;
-                return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true);
+                return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true, prev.crew ?? []);
               }
-              return processBatchTick(batch, recipe, prev.hygiene, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, isPowerAvailable);
+              return processBatchTick(batch, recipe, prev.hygiene, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, isPowerAvailable, prev.crew ?? []);
             }
           }
           return batch;
@@ -401,6 +406,8 @@ export default function App() {
             let newStanding = prev.vendorStanding ?? {};
             let newContracts = prev.contracts ?? [];
             let newUnlockedVendorIds = prev.unlockedVendorIds ?? [];
+            let newCrew = prev.crew ?? [];
+            let newCrewPool = prev.crewPool ?? [];
 
             // Start of a New Week
             if (newDay > 7) {
@@ -411,7 +418,10 @@ export default function App() {
                 // The bench used to cost nothing to keep open, so there was no
                 // floor to beat and no reason not to sprawl. Rent, per-vessel
                 // upkeep and metered power give every week a number to clear.
-                const totalWages = STAFF_ROLES.reduce((acc, role) => prev.staff[role.id] ? acc + role.weeklyWage : acc, 0);
+                // Payroll is the crew's actual wages. The old flat per-role figure could not
+                // express a cheap junior or an expensive veteran, which is most of what
+                // makes hiring a decision.
+                const totalWages = crewWages(prev.crew ?? []);
                 const drawnWatts = prev.batches.reduce((acc, b) => acc + (VESSELS.find(v => v.id === b.vesselId)?.powerDraw || 0), 0);
                 const bills = calculateOverheads(prev.ownedVessels, drawnWatts, totalWages);
 
@@ -420,6 +430,10 @@ export default function App() {
                 if (newMoney < 0) {
                     // Staff walk first — they are the largest and most optional cost.
                     if (totalWages > 0) {
+                        // People leave when they are not paid. They do not
+                        // become false; they go, and the pool does not hold
+                        // them for you.
+                        newCrew = [];
                         newStaff = { cleaner: false, tech: false, chef: false, rd: false };
                     }
                     newStrikes = prev.insolvencyStrikes + 1;
@@ -454,6 +468,12 @@ export default function App() {
                     }
                     newStrikes = 0;
                 }
+
+                // The crew get better at the job, and ask for more when they do.
+                // The pool refreshes monthly — who is looking for work is part of
+                // the situation, not a permanent shop.
+                newCrew = advanceCrew(prev.crew ?? []);
+                if (newWeek % 4 === 1 || newCrewPool.length === 0) newCrewPool = rollCrewPool(newWeek);
 
                 // Appetite for every ferment type drifts back toward normal.
                 newMarketDemand = recoverDemand(prev.marketDemand);
@@ -538,7 +558,6 @@ export default function App() {
                 month: newMonth,
                 year: newYear,
                 money: newMoney,
-                staff: newStaff,
                 weather: newWeather,
                 marketDemand: newMarketDemand,
                 insolvencyStrikes: newStrikes,
@@ -546,6 +565,12 @@ export default function App() {
                 vendorStanding: newStanding,
                 contracts: newContracts,
                 unlockedVendorIds: newUnlockedVendorIds,
+                crew: newCrew,
+                crewPool: newCrewPool,
+                // The boolean roles stay as the derived summary, so everything
+                // that already reads gameState.staff keeps working. A crew that
+                // walked out leaves every flag false, which is exactly right.
+                staff: newCrew.length > 0 ? crewToStaffFlags(newCrew) : newStaff,
             };
         });
     }, dayRate);
@@ -866,6 +891,39 @@ export default function App() {
    * run, so there is no disturbance penalty and no hygiene cost. The cost is
    * that it keeps applying whether or not you were still paying attention.
    */
+  /**
+   * Take someone on. The hiring cost is up front; the wage is what actually
+   * matters, and it recurs whether or not the bench is busy.
+   */
+  const handleHire = (candidate: CrewMember) => {
+    if (gameState.money < candidate.hiringCost) {
+      setLabNotification({ id: Date.now(), text: `Not enough to take ${candidate.name} on.`, type: 'warn' });
+      return;
+    }
+    setGameState(prev => {
+      const crew = [...prev.crew, { ...candidate, hiredWeek: prev.week }];
+      return {
+        ...prev,
+        money: prev.money - candidate.hiringCost,
+        crew,
+        crewPool: prev.crewPool.filter(c => c.id !== candidate.id),
+        staff: crewToStaffFlags(crew),
+      };
+    });
+    setLabNotification({ id: Date.now(), text: `${candidate.name} starts Monday. $${candidate.weeklyWage}/week.`, type: 'info' });
+  };
+
+  const handleLetGo = (id: string) => {
+    setGameState(prev => {
+      const leaving = prev.crew.find(c => c.id === id);
+      const crew = prev.crew.filter(c => c.id !== id);
+      if (leaving) {
+        setLabNotification({ id: Date.now(), text: `${leaving.name} has gone. That is ${leaving.weeksWorked} weeks of knowing your benches walking out.`, type: 'warn' });
+      }
+      return { ...prev, crew, staff: crewToStaffFlags(crew) };
+    });
+  };
+
   const handleSetControl = (batch: Batch, patch: Partial<ChamberControls>) => {
     setGameState(prev => ({
       ...prev,
@@ -1471,24 +1529,6 @@ export default function App() {
     setUiState(prev => ({ ...prev, activeBatchId: null }));
   };
 
-  const handleHire = (roleId: StaffRoleType) => {
-      const role = STAFF_ROLES.find(r => r.id === roleId);
-      if (role && gameState.money >= role.hiringCost) {
-          setGameState(prev => ({
-              ...prev,
-              money: prev.money - role.hiringCost,
-              staff: { ...prev.staff, [roleId]: true }
-          }));
-      }
-  };
-
-  const handleFire = (roleId: StaffRoleType) => {
-      setGameState(prev => ({
-          ...prev,
-          staff: { ...prev.staff, [roleId]: false }
-      }));
-  };
-
   // Helper for ambient display
   const currentAmbient = getAmbientConditions(gameState.month, gameState.weather);
 
@@ -1855,10 +1895,12 @@ export default function App() {
       {uiState.showStaff && (
           <StaffManager 
               onClose={() => setUiState(prev => ({ ...prev, showStaff: false }))}
-              activeStaff={gameState.staff}
+              crew={gameState.crew ?? []}
+              pool={gameState.crewPool ?? []}
               money={gameState.money}
+              week={gameState.week}
               onHire={handleHire}
-              onFire={handleFire}
+              onLetGo={handleLetGo}
           />
       )}
 

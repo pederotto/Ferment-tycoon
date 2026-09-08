@@ -1,87 +1,169 @@
 import React from 'react';
+import { CrewMember, StaffRoleType } from '../types';
 import { STAFF_ROLES } from '../constants';
-import { StaffRoleType } from '../types';
-import { CloseIcon, StaffGroupIcon, getStaffIcon } from './icons';
+import { getTrait, describeCrewMember, crewWages } from '../services/crew';
+import { CloseIcon } from './icons';
+import { Users, UserPlus, TrendingUp, AlertTriangle } from 'lucide-react';
+
+/**
+ * THE CREW
+ *
+ * This used to be four switches with fixed prices: you flipped the ones you
+ * could afford and never thought about them again. The only question it asked
+ * was whether you had the money, which is arithmetic, not a decision.
+ *
+ * Now it is a roster and a hiring pool. Everyone has a name, a wage they came
+ * with, a trait that makes them good at one thing, and a skill that grows while
+ * they work — so a cheap green technician who will be excellent in six months
+ * is a genuinely different bet from an expensive one who is excellent today.
+ *
+ * The pool rotates monthly. Who is looking for work is part of the situation.
+ */
 
 interface StaffManagerProps {
   onClose: () => void;
-  activeStaff: Record<StaffRoleType, boolean>;
+  crew: CrewMember[];
+  pool: CrewMember[];
   money: number;
-  onHire: (roleId: StaffRoleType) => void;
-  onFire: (roleId: StaffRoleType) => void;
+  week: number;
+  onHire: (candidate: CrewMember) => void;
+  onLetGo: (id: string) => void;
 }
 
-const StaffManager: React.FC<StaffManagerProps> = ({ onClose, activeStaff, money, onHire, onFire }) => {
-  const totalWages = STAFF_ROLES.reduce((acc, role) => activeStaff[role.id] ? acc + role.weeklyWage : acc, 0);
-  const activeCount = STAFF_ROLES.filter(role => activeStaff[role.id]).length;
+const ROLE_NAME: Record<StaffRoleType, string> = {
+  cleaner: 'Porter',
+  tech: 'Technician',
+  chef: 'Sous Chef',
+  rd: 'Head of R&D',
+};
+
+const Pips: React.FC<{ n: number }> = ({ n }) => (
+  <span className="cw-pips" title={`Skill ${n} of 5`}>
+    {Array.from({ length: 5 }, (_, i) => (
+      <span key={i} className={`pip${i < n ? ' on' : ''}`} />
+    ))}
+  </span>
+);
+
+const StaffManager: React.FC<StaffManagerProps> = ({
+  onClose, crew, pool, money, week, onHire, onLetGo,
+}) => {
+  const payroll = crewWages(crew);
 
   return (
-    <div className="modal-overlay">
-      <div className="backdrop-blurscene">
-        <div className="ghost-cubby" /><div className="ghost-cubby" /><div className="ghost-cubby" /><div className="ghost-cubby" />
-      </div>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="crewroom" onClick={e => e.stopPropagation()}>
+        <span className="corner c-tl" />
+        <span className="corner c-br" />
 
-      <div className="ledger" style={{ width: 'min(1080px, 94vw)', height: 'min(660px, 88vh)' }}>
-        <div className="corner c-tl" /><div className="corner c-tr" /><div className="corner c-bl" /><div className="corner c-br" />
-
-        <div className="lhead">
-          <div className="ttl-row">
-            <div className="ic"><StaffGroupIcon size={18} /></div>
-            <div>
-              <h1 className="slab">Laboratory Personnel</h1>
-              <div className="sub">Retain specialists to automate sanitation, monitoring &amp; quality control</div>
-            </div>
+        <div className="cw-head">
+          <div>
+            <span className="kicker">Week {week}</span>
+            <h2>The Crew</h2>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div className="payroll">
-              <div className="l">Active {activeCount}/{STAFF_ROLES.length} &middot; Weekly Payroll</div>
-              <div className="v mono">&minus;${totalWages} / wk</div>
-            </div>
-            <button onClick={onClose} className="close-stamp" style={{ marginLeft: 20 }} title="Close">
-              <CloseIcon size={13} />
-            </button>
-          </div>
+          <button className="close-stamp" onClick={onClose} aria-label="Close the crew roster">
+            <CloseIcon size={13} />
+          </button>
         </div>
 
-        <div className="roster custom-scrollbar" style={{ gridTemplateRows: 'auto auto' }}>
-          {STAFF_ROLES.map(role => {
-            const isHired = activeStaff[role.id];
-            const canAfford = money >= role.hiringCost;
-            const RoleIcon = getStaffIcon(role.id);
+        <div className="cw-payroll">
+          <span className="l"><Users size={12} /> Payroll</span>
+          <span className={`v${payroll > 900 ? ' bad' : payroll > 450 ? ' warn' : ''}`}>
+            ${payroll.toLocaleString()} / week
+          </span>
+          <span className="n">
+            {payroll === 0
+              ? 'Nobody on the books. Every vessel you own, you turn yourself.'
+              : payroll > 900
+                ? 'This is a serious wage bill. It comes out whether the benches are busy or not.'
+                : 'Paid every week, busy or idle.'}
+          </span>
+        </div>
 
-            return (
-              <div key={role.id} className={`role-card${isHired ? ' active' : ''}`}>
-                <div className="role-top">
-                  <div className="role-left">
-                    <div className="role-ic"><RoleIcon size={20} /></div>
+        <div className="cw-body custom-scrollbar">
+          <section>
+            <span className="cw-lbl">On the books</span>
+            {crew.length === 0 ? (
+              <p className="cw-empty">
+                You are running this alone. That is fine while everything fits in a
+                jar — a large vessel stratifies faster than one person can turn it.
+              </p>
+            ) : crew.map(c => {
+              const trait = getTrait(c.traitId);
+              return (
+                <div key={c.id} className="cw-member">
+                  <div className="mh">
                     <div>
-                      <div className="role-name">{role.name}</div>
-                      <div className="role-wage">
-                        <span className="wage-tag">${role.weeklyWage}/wk</span>
-                        {!isHired && <span className="onboard-tag">Onboarding ${role.hiringCost}</span>}
-                      </div>
+                      <span className="nm">{c.name}</span>
+                      <span className="rl">{ROLE_NAME[c.role]} · {trait.label}</span>
+                    </div>
+                    <div className="rt">
+                      <Pips n={c.skill} />
+                      <span className="wg">${c.weeklyWage}/wk</span>
                     </div>
                   </div>
-                  <span className={`status-pill ${isHired ? 'active' : 'vacant'}`}>{isHired ? 'Active' : 'Vacant'}</span>
+                  <p className="dsc">{describeCrewMember(c)}</p>
+                  <div className="mf">
+                    <span className="srv">
+                      <TrendingUp size={10} /> {c.weeksWorked} week{c.weeksWorked === 1 ? '' : 's'} in
+                      {c.skill < 5 && <em> · still improving</em>}
+                    </span>
+                    <button className="btn btn-ghost sm" onClick={() => onLetGo(c.id)}>Let go</button>
+                  </div>
                 </div>
+              );
+            })}
+          </section>
 
-                <div className="role-desc">{role.effectDescription}</div>
+          <section>
+            <span className="cw-lbl"><UserPlus size={12} /> Looking for work</span>
+            <p className="cw-note">
+              This lot are available now. The list changes every month whether you
+              hire from it or not.
+            </p>
+            {pool.length === 0 ? (
+              <p className="cw-empty">Nobody about this month.</p>
+            ) : pool.map(c => {
+              const trait = getTrait(c.traitId);
+              const afford = money >= c.hiringCost;
+              return (
+                <div key={c.id} className={`cw-candidate${afford ? '' : ' poor'}`}>
+                  <div className="mh">
+                    <div>
+                      <span className="nm">{c.name}</span>
+                      <span className="rl">{ROLE_NAME[c.role]} · {trait.label}</span>
+                    </div>
+                    <div className="rt">
+                      <Pips n={c.skill} />
+                      <span className="wg">${c.weeklyWage}/wk</span>
+                    </div>
+                  </div>
+                  <p className="quote">“{c.line}”</p>
+                  <p className="dsc">{trait.blurb}</p>
+                  <div className="mf">
+                    <span className="srv">${c.hiringCost} to take on</span>
+                    <button className="btn btn-amber sm" disabled={!afford} onClick={() => onHire(c)}>
+                      {afford ? 'Hire' : 'Cannot afford'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
 
-                {isHired ? (
-                  <button onClick={() => onFire(role.id)} className="role-action dismiss">Dismiss Contract</button>
-                ) : (
-                  <button
-                    onClick={() => onHire(role.id)}
-                    disabled={!canAfford}
-                    className="role-action hire"
-                    style={!canAfford ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-                  >
-                    {canAfford ? `Hire for $${role.hiringCost}` : 'Insufficient Treasury Funds'}
-                  </button>
-                )}
+          <section>
+            <span className="cw-lbl">What each role is for</span>
+            {STAFF_ROLES.map(r => (
+              <div key={r.id} className="cw-role">
+                <span className="rn">{ROLE_NAME[r.id]}</span>
+                <span className="re">{r.effectDescription}</span>
               </div>
-            );
-          })}
+            ))}
+            <p className="cw-note">
+              <AlertTriangle size={10} /> A second person in the same role is worth
+              having, but never as much as the first.
+            </p>
+          </section>
         </div>
       </div>
     </div>

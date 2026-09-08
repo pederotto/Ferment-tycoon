@@ -1,5 +1,6 @@
 import { GameState, FermentType } from '../types';
 import { INGREDIENTS } from '../constants';
+import { rollCrewPool } from './crew';
 
 /**
  * SAVE / LOAD
@@ -56,6 +57,16 @@ function migrate(state: Partial<GameState>): GameState {
     // been trading, but we cannot reconstruct with whom, so everyone starts
     // level and builds standing from here.
     vendorStanding: state.vendorStanding ?? {},
+    // Saves made before the crew existed keep whatever boolean roles they had
+    // running for free until the player hires someone real; there is no fair way
+    // to invent names and wages for staff they already paid for.
+    crew: state.crew ?? [],
+    // A save that predates the crew has no pool, and the pool only rolls every
+    // fourth week — so without seeding one here the hiring list would be empty
+    // for up to a month after loading, which reads as a broken screen.
+    crewPool: (state.crewPool && state.crewPool.length > 0)
+      ? state.crewPool
+      : rollCrewPool(state.week ?? 1),
     contracts: state.contracts ?? [],
     unlockedVendorIds: state.unlockedVendorIds ?? [],
     discoveredRecipeIds: state.discoveredRecipeIds ?? [],

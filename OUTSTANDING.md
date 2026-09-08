@@ -61,21 +61,25 @@ real shape is: cheap substrate wins on absolute income and needs machinery,
 luxury wins per slot and needs recipe knowledge and buyer access. Whether that
 reads clearly enough in play is a separate question, and untested.
 
-## Asked for, not built — the vendor and quest layer
+## The vendor and crew layer — built
 
-Requested as groundwork before any story mode, and not started:
+Standing, contracts and unlock routes are in (`services/vendors.ts`, the order
+book), and staff are named hires with traits and growing skill rather than four
+booleans (`services/crew.ts`, the crew room).
 
-- **More vendors, and more variety among them.** Currently 15, separated mainly
-  by a price multiplier and what they will accept.
-- **Depth per vendor** — more variables than multiplier and acceptance.
-- **Sub-quests and dialogue.**
-- **Unlock routes**: buying particular ingredients, random events, mastery of a
-  named recipe, completing N recipes above a given score, or story progression.
+What is *not* built from the original ask:
 
-Worth knowing before starting: `BUYERS` already carries `renownRequired`, and
-every entry currently sets it to 0 — so the gating field exists and does nothing.
-`getInterestedBuyers` takes renown, xp and reputation already. A quest system
-would want somewhere to live in `GameState`, which means the three-place rule.
+- **Sub-quests and dialogue trees.** Vendors have warmth lines keyed to standing
+  and a contract pitch, which is dialogue in the loosest sense. There is no
+  branching conversation and no quest chain.
+- **Random events as an unlock route.** The other four routes are live
+  (ingredient purchase, recipe mastery, N recipes above a score, introduction by
+  another vendor, plus the stat gates). There is no event system to hang the
+  fifth on.
+- **More vendors.** Still fifteen. Eight now carry warmth lines, appetite and
+  unlock routes; the other seven are as they were.
+- **Crew beyond the bench.** Traits touch stratification, hygiene and sale
+  value. Nobody can be assigned to a specific vessel, and morale does not exist.
 
 ## Also outstanding
 

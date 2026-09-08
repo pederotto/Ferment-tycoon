@@ -142,6 +142,23 @@ it a vendor shows as locked in the order book while still appearing in the buyer
 list, which is worse than having no routes at all. `unlockedVendorIds` is a
 latch — once met, a condition stays met.
 
+## The crew
+
+**Skill must cut both ways round the right way.** In `crewEffect`, a trait that
+helps (raw below 1) is delivered *more* fully with skill; one that hurts is
+delivered *less*. Scaling both by the same factor made a green technician get
+steadily worse the longer they worked for you.
+
+**`gameState.staff` is now derived, not authoritative.** `crewToStaffFlags`
+recomputes it from the crew every week, and everything that already read the
+booleans keeps working. The one exception is a save that predates the crew: it
+keeps its old flags until the player hires someone real, because there is no
+fair way to invent names and wages for staff they already paid for.
+
+**The hiring pool must never be empty on load.** It only rolls every fourth
+week, so `migrate()` seeds one — otherwise a loaded save shows an empty hiring
+screen for up to a month, which reads as broken rather than as quiet.
+
 ## Layout
 
 Stacking order, which three separate bugs came from getting wrong:

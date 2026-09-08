@@ -1,7 +1,8 @@
 
-import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage, GameState } from '../types';
+import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage, GameState, CrewMember } from '../types';
 import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe } from './koji';
 import { standingTier, isVendorUnlocked } from './vendors';
+import { crewEffect } from './crew';
 import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
   getUndergroundTierFromXp,
@@ -591,7 +592,13 @@ export const processBatchTick = (
     inventory: Record<string, number>, 
     currentMonth: number,
     weather: WeatherState,
-    isPowerAvailable: boolean = true
+    isPowerAvailable: boolean = true,
+    /**
+     * The actual people employed, so a skilled methodical technician slows
+     * stratification more than a green one. Without this the crew would be a
+     * wage with a name attached.
+     */
+    crew: CrewMember[] = []
 ): Batch => {
   const newParams = { ...batch.params };
   const newQuality = { ...batch.quality };
@@ -631,11 +638,13 @@ export const processBatchTick = (
   // technician watching the benches turns things before they stratify.
   let evenness = batch.evenness ?? 100;
   const hasAgitator = (inventory['agitator'] || 0) > 0;
+  // Who is on the benches, and how good they are. crewEffect already folds in
+  // skill and diminishing returns, so a second technician helps and helps less.
+  const crewUpkeep = crew.length > 0
+    ? crewEffect(crew, 'upkeep', ['tech', 'cleaner'])
+    : (activeStaff['tech'] ? 0.5 : 1) * (activeStaff['cleaner'] ? 0.85 : 1);
   const evenDecay = unevennessRate(totalMass, concentration)
-    // A technician walks the benches and turns things before they stratify.
-    // This is the first job in the game that is genuinely worth a wage.
-    * (activeStaff['tech'] ? 0.5 : 1)
-    * (activeStaff['cleaner'] ? 0.85 : 1)
+    * crewUpkeep
     // A geared agitator does the work continuously and does not get tired,
     // which is the whole argument for buying one.
     * (hasAgitator ? 0.18 : 1);

@@ -515,8 +515,55 @@ export type VendorUnlock =
   | { kind: 'recipeCount'; count: number; minScore: number; label: string }
   | { kind: 'introduction'; byBuyerId: string; standing: number; label: string };
 
-// --- STAFF SYSTEM ---
+/* =============================================================================
+   THE CREW
+
+   Staff were four booleans. You paid a flat wage for a flat multiplier, nobody
+   had a name, and the only decision was whether you could afford it — which is
+   not a decision, it is arithmetic.
+
+   Hires are people now. Each has a name, a role, a wage they came with, a skill
+   that grows while they work, and a trait that makes them good at one thing and
+   awkward at another. They are drawn from a rotating pool, so who is available
+   this month is part of the situation rather than a fixed menu.
+
+   This is the other side of the volume problem. A large vessel stratifies and
+   needs turning; a good technician is how you buy that labour back. It is also
+   where the game has people in it at all, which is what a story would need.
+   ============================================================================= */
+
 export type StaffRoleType = 'cleaner' | 'tech' | 'chef' | 'rd';
+
+export interface CrewTrait {
+  id: string;
+  label: string;
+  /** What they are good at, in their own words. */
+  blurb: string;
+  /** Multipliers applied on top of the role. 1 = no change. */
+  effects: {
+    upkeep?: number;      // how much they slow stratification
+    hygiene?: number;     // contamination resistance
+    wage?: number;        // what they cost relative to the role's base
+    quality?: number;     // effect on sale value
+  };
+}
+
+export interface CrewMember {
+  id: string;
+  name: string;
+  role: StaffRoleType;
+  traitId: string;
+  /** 1-5. Rises with weeks worked; a raw hire is cheap and clumsy. */
+  skill: number;
+  /** Accumulated weeks of service, which is what raises skill. */
+  weeksWorked: number;
+  weeklyWage: number;
+  hiringCost: number;
+  /** Week they were taken on, for the crew list. */
+  hiredWeek: number;
+  /** One line of theirs, shown on the roster. */
+  line: string;
+}
 
 export interface StaffRole {
     id: StaffRoleType;
@@ -582,6 +629,10 @@ export interface GameState {
   
   // Staff
   staff: Record<StaffRoleType, boolean>;
+  /** Named hires. The boolean roles above remain as the derived summary. */
+  crew: CrewMember[];
+  /** Who is available to hire right now. Rotates. */
+  crewPool: CrewMember[];
 
   /** What each buyer thinks of you, keyed by buyer id. Absent = never dealt with. */
   vendorStanding: Record<string, VendorStanding>;
