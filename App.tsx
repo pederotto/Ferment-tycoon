@@ -404,18 +404,6 @@ export default function App() {
             let newStrikes = prev.insolvencyStrikes;
             let newGameOver = prev.gameOver;
 
-            // --- THE INSPECTOR ---
-            // Rolled once a day rather than once a tick. Per tick, the odds
-            // scaled with the speed control — at 8x and full heat the inspector
-            // called every four real seconds — and no per-tick number is
-            // possible for a player to reason about. Once a day at full heat is
-            // roughly a visit a fortnight, and it drops away fast as heat does.
-            if (prev.heat > RAID_HEAT_THRESHOLD && !uiState.inspectorRaid) {
-                const over = (prev.heat - RAID_HEAT_THRESHOLD) / (100 - RAID_HEAT_THRESHOLD);
-                if (Math.random() < RAID_CHANCE_PER_DAY * over * over) {
-                    setUiState(u => ({ ...u, inspectorRaid: true }));
-                }
-            }
             let newStanding = prev.vendorStanding ?? {};
             let newContracts = prev.contracts ?? [];
             let newUnlockedVendorIds = prev.unlockedVendorIds ?? [];
@@ -1558,6 +1546,34 @@ export default function App() {
     setUiState(prev => ({ ...prev, activeBatchId: null }));
   };
 
+  /* --------------------------------------------------------------------------
+     THE INSPECTOR
+
+     This roll lived inside a setGameState updater, and updaters must be pure —
+     React double-invokes them under StrictMode, which this app runs. So
+     Math.random() was called twice every game day and the raid fired at roughly
+     double the rate its own constant claims, from whichever invocation happened
+     to win. That is the "randomly, and far too often" people were reporting.
+
+     It rolls here instead: once per game day, keyed on the date so a re-render
+     cannot repeat it, entirely outside any updater.
+     -------------------------------------------------------------------------- */
+  const lastRaidRollDay = useRef<string>('');
+  useEffect(() => {
+    const today = `${gameState.year}-${gameState.month}-${gameState.week}-${gameState.day}`;
+    if (today === lastRaidRollDay.current) return;
+    lastRaidRollDay.current = today;
+
+    if (uiState.inspectorRaid || uiState.showWelcome || gameState.gameOver) return;
+    if (gameState.heat <= RAID_HEAT_THRESHOLD) return;
+
+    const over = (gameState.heat - RAID_HEAT_THRESHOLD) / (100 - RAID_HEAT_THRESHOLD);
+    if (Math.random() < RAID_CHANCE_PER_DAY * over * over) {
+      setUiState(u => ({ ...u, inspectorRaid: true }));
+    }
+  }, [gameState.day, gameState.week, gameState.month, gameState.year,
+      gameState.heat, gameState.gameOver, uiState.inspectorRaid, uiState.showWelcome]);
+
   // Helper for ambient display
   const currentAmbient = getAmbientConditions(gameState.month, gameState.weather);
 
@@ -1914,12 +1930,13 @@ export default function App() {
         <HarvestReport entry={harvestReport} onClose={() => setHarvestReport(null)} />
       )}
 
-      {openTool === 'wooden_press' && (
+      {(openTool === 'wooden_press' || openTool === 'centrifuge') && (
         <PressRoom
+          tool={openTool as 'wooden_press' | 'centrifuge'}
           batches={gameState.batches}
           customIngredients={gameState.customIngredients}
           onClose={() => setOpenTool(null)}
-          onPress={(b) => { setOpenTool(null); handleProcessBatch('press', b); }}
+          onPress={(b) => { const a = openTool === 'centrifuge' ? 'filter' : 'press'; setOpenTool(null); handleProcessBatch(a, b); }}
         />
       )}
 

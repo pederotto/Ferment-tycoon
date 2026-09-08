@@ -204,6 +204,18 @@ calling however clean the bench then was. It is a reduced rate now, and a
 spotless bench actively cools their interest rather than merely not attracting
 it.
 
+## React correctness
+
+**Never put a side effect inside a state updater.** This app runs StrictMode, so
+React double-invokes every `setGameState(prev => ...)` callback. The inspector
+raid was rolled inside one, which meant `Math.random()` ran twice a game day and
+the raid fired at roughly double the rate its own constant claims, from whichever
+invocation won — the "randomly, and far too often" people reported. It rolls in
+an effect now, keyed on the date so a re-render cannot repeat it.
+
+The `setLabNotification` calls still inside that updater have the same defect in
+milder form: they can post twice. Worth moving when convenient.
+
 ## Hardware
 
 **Appliances in the room are decorative; the simulation reads the inventory.**

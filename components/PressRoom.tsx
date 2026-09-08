@@ -21,6 +21,8 @@ import { ArrowRight } from 'lucide-react';
  */
 
 interface PressRoomProps {
+  /** Which machine's screen this is. Both separate; they separate differently. */
+  tool: 'wooden_press' | 'centrifuge';
   batches: Batch[];
   customIngredients: typeof INGREDIENTS;
   onClose: () => void;
@@ -42,11 +44,12 @@ const previewYield = (batch: Batch, recipe: Recipe, ingredients: typeof INGREDIE
   };
 };
 
-const PressRoom: React.FC<PressRoomProps> = ({ batches, customIngredients, onClose, onPress }) => {
+const PressRoom: React.FC<PressRoomProps> = ({ tool, batches, customIngredients, onClose, onPress }) => {
+  const isPress = tool === 'wooden_press';
   const all = [...INGREDIENTS, ...customIngredients];
 
   const pressable = batches
-    .filter(b => !b.isPressed && b.status !== 'spoiled')
+    .filter(b => (isPress ? !b.isPressed : !b.isFiltered) && b.status !== 'spoiled')
     .map(b => {
       const recipe = getRecipeForBatch(b);
       const ings = b.inputIngredientIds
@@ -66,7 +69,7 @@ const PressRoom: React.FC<PressRoomProps> = ({ batches, customIngredients, onClo
           <svg viewBox="0 0 260 190" width="100%" height="100%">
             <ellipse cx="130" cy="168" rx="96" ry="20" fill="rgba(0,0,0,0.35)" />
             <g transform="translate(130,112) scale(1.85)">
-              <IsoAppliance id="wooden_press" />
+              <IsoAppliance id={tool} />
             </g>
           </svg>
         </div>
@@ -74,27 +77,28 @@ const PressRoom: React.FC<PressRoomProps> = ({ batches, customIngredients, onClo
         <div className="pr-head">
           <div>
             <span className="kicker">Hardware</span>
-            <h2>The Press</h2>
+            <h2>{isPress ? 'The Press' : 'The Centrifuge'}</h2>
           </div>
-          <button className="close-stamp" onClick={onClose} aria-label="Close the press">
+          <button className="close-stamp" onClick={onClose} aria-label={isPress ? 'Close the press' : 'Close the centrifuge'}>
             <CloseIcon size={13} />
           </button>
         </div>
 
         <div className="pr-body custom-scrollbar">
           <p className="pr-lede">
-            A press separates, it does not create. Everything that comes out was
-            already in there — the question is only how much of the liquid you can
-            persuade to leave the solids.
+            {isPress
+              ? 'A press separates, it does not create. Everything that comes out was already in there — the question is only how much of the liquid you can persuade to leave the solids.'
+              : 'Spinning throws the solids to the wall and leaves the liquid clear. You lose a tenth of the volume to what you throw away, and what remains is worth more than what went in.'}
           </p>
 
           {pressable.length === 0 ? (
             <p className="pr-empty">
-              Nothing on the bench to press. A wet mash gives up liquid; a dry one
-              only compacts.
+              {isPress
+                ? 'Nothing on the bench to press. A wet mash gives up liquid; a dry one only compacts.'
+                : 'Nothing to clarify. The centrifuge is for liquids — a garum or a vinegar, not a paste.'}
             </p>
           ) : pressable.map(({ batch, recipe, y }) => (
-            <div key={batch.id} className={`pr-job${y.wet ? '' : ' dry'}`}>
+            <div key={batch.id} className={`pr-job${(isPress && !y.wet) ? ' dry' : ''}`}>
               <div className="pj-head">
                 <span className="n">{recipe.name}</span>
                 <span className="v mono">{(y.totalMass / 1000).toFixed(1)} kg · {Math.round(y.waterRatio * 100)}% water</span>
@@ -109,7 +113,20 @@ const PressRoom: React.FC<PressRoomProps> = ({ batches, customIngredients, onClo
 
                 <ArrowRight size={15} className="pj-arrow" />
 
-                {y.wet ? (
+                {!isPress ? (
+                  <>
+                    <div className="pj-side out">
+                      <span className="l">Clarified</span>
+                      <span className="m mono">{(y.totalMass * 0.9 / 1000).toFixed(1)} kg</span>
+                      <span className="d">clear, and worth more</span>
+                    </div>
+                    <div className="pj-side cake">
+                      <span className="l">Thrown out</span>
+                      <span className="m mono">{(y.totalMass * 0.1 / 1000).toFixed(1)} kg</span>
+                      <span className="d">lees and sediment</span>
+                    </div>
+                  </>
+                ) : y.wet ? (
                   <>
                     <div className="pj-side out">
                       <span className="l">Liquid</span>
@@ -133,14 +150,16 @@ const PressRoom: React.FC<PressRoomProps> = ({ batches, customIngredients, onClo
 
               <div className="pj-foot">
                 <span className="why">
-                  {y.isMoromi
-                    ? 'A moromi has been breaking down for months, so it gives its liquid up almost completely — 92% against 80% for a loose mash. This is the step that turns it into soy sauce.'
-                    : y.wet
-                      ? 'Wet enough to separate. The liquid is worth more than the mash it came from.'
-                      : 'Too dry to run off. Pressing only packs it down.'}
+                  {!isPress
+                    ? 'Spinning drops the lees out. You give up a tenth of the volume and get back something clear enough to sell as a finished sauce.'
+                    : y.isMoromi
+                      ? 'A moromi has been breaking down for months, so it gives its liquid up almost completely — 92% against 80% for a loose mash. This is the step that turns it into soy sauce.'
+                      : y.wet
+                        ? 'Wet enough to separate. The liquid is worth more than the mash it came from.'
+                        : 'Too dry to run off. Pressing only packs it down.'}
                 </span>
                 <button className="btn btn-amber" onClick={() => onPress(batch)}>
-                  {y.wet ? `Press for ${y.liquidUnits} L` : 'Compact it'}
+                  {!isPress ? 'Spin it clear' : y.wet ? `Press for ${y.liquidUnits} L` : 'Compact it'}
                 </button>
               </div>
             </div>
