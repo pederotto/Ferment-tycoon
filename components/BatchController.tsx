@@ -3,6 +3,7 @@ import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentTyp
 import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION , KOJI_INOCULATION_TEMP } from '../constants';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
+import { artFor } from './IngredientArt';
 import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../services/gameLogic';
 import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias } from '../services/koji';
 import RecipeCard from './RecipeCard';
@@ -782,7 +783,10 @@ const BatchController: React.FC<BatchControllerProps> = ({
                   const remaining = getRemainingInventory(ing.id);
                   const wouldOverflow = (dynamics.totalMass + (ing.mass || 0)) / 1000 > capacityLimitL;
                   const atCapacity = wouldOverflow || selectedIngredientIds.length >= MAX_REAGENT_UNITS;
-                  const IngGlyph = getIngredientIcon(ing);
+                  // Real art where it exists, the generic glyph where it does
+                  // not — so filling in the remaining ingredients is additive
+                  // and nothing looks broken in the meantime.
+                  const IngGlyph = artFor(ing.id) ?? getIngredientIcon(ing);
                   const weightDisplay = ing.mass > 0
                     ? (ing.mass >= 1000 ? `${ing.mass / 1000}kg` : `${ing.mass}${ing.unitDisplay}`)
                     : '1 unit';
