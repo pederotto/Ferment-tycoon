@@ -239,6 +239,22 @@ switches to 2×2 between 768 px and 1150 px. That mid range was a dead zone —
 four columns at ~230 px each, while the phone step-through did not start until
 767 px.
 
+**The spectrometer dock must yield before the stations do.** `.scan-dock` was a
+fixed 148px that never shrank, so on a short window it took a fifth of the
+modal while reading "Spectrometer idle" and left each station 227px against
+station 04's 373px of content. It steps down with viewport height and
+disappears in the 2x2 range. Stations went 225px to 299px from that alone.
+
+**Put an override AFTER the rule it overrides.** The first attempt at the above
+was written ~250 lines above `.scan-dock`'s own declaration, same specificity,
+so source order silently won and nothing changed. Height overrides for it belong
+at the end of the file.
+
+**The Seal button needs `z-index`, not just `position: sticky`.** The sliders
+above it create their own stacking contexts and painted straight over it, so the
+primary action of the screen appeared to have a temperature row printed across
+it.
+
 **Re-measure the bench after adding anything to station 04.** Every guidance
 system added there pushed the Seal button — the point of the screen — closer to
 falling off the bottom. It eventually did, at 1366×768. Guidance belongs on the
