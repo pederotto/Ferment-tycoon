@@ -120,6 +120,19 @@ export interface Lineage {
   vigor: number;       // growth speed multiplier, 1.0 = founder stock
   resilience: number;  // stress tolerance and effective hygiene buffer
   bias: number;        // 0 = pure protease, 1 = pure amylase
+  /**
+   * STRENGTH OF THE CULTURE, 1.0 = the stock you can buy.
+   *
+   * How well the parent bed was actually run — clean, unstressed, properly
+   * developed — decides how strong its children are. Without it every
+   * sporulation was a free upgrade: vigour and resilience climbed a fixed step
+   * per generation whatever you did, so ten careless runs bought +45% speed and
+   * +45 effective hygiene at no risk, and generation alone set the price.
+   *
+   * Potency is what makes a lineage something you can improve OR ruin, and it
+   * is what a strain is actually worth.
+   */
+  potency?: number;    // ~0.45 (sickly) to ~1.4 (exceptional)
 }
 
 export enum FermentType {

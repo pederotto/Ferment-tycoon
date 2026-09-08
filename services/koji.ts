@@ -395,10 +395,45 @@ const logPhaseConditions = (history: TelemetrySample[] | undefined) => {
  * vigour and resilience outright, and its bias slides back toward the middle
  * because you have killed off whatever you had been selecting for.
  */
+/**
+ * HOW STRONG THE CHILDREN OF THIS BED WILL BE, ~0.45 to ~1.4.
+ *
+ * Selection is husbandry, not arithmetic. A clean, unstressed, well-developed
+ * bed throws vigorous spores; a contaminated or neglected one throws weak ones,
+ * and a strain propagated carelessly for a few generations gets worse rather
+ * than staying put. That is what makes a house culture an achievement instead of
+ * a counter.
+ */
+export const sporePotency = (
+  safety: number,
+  stress: number,
+  enzymes?: { amylase: number; protease: number }
+): number => {
+  // Each term is centred on 1.0 at "this bed was run properly", so the result
+  // reads as a multiple of ordinary stock rather than as a penalty stack.
+  const clean = Math.max(0, Math.min(1.15, (safety - 40) / 50));       // 90 -> 1.00
+  const calm  = Math.max(0.45, Math.min(1.05, 1 - stress / 150));      //  8 -> 0.95
+  const grown = enzymes                                                // 100 -> 1.00
+    ? Math.max(0.6, Math.min(1.25, (enzymes.amylase + enzymes.protease) / 100))
+    : 1;
+
+  // WEIGHTED, NOT MULTIPLIED. Three sub-1 terms multiplied compound viciously:
+  // a genuinely good bed (safety 90, low stress, fair enzymes) came out at 0.75
+  // and everything at or below 80 safety hit the floor together, so the middle
+  // of the range — where most play happens — carried no information at all.
+  const raw = clean * 0.45 + calm * 0.25 + grown * 0.30;
+
+  // Contamination still gets the last word. A bed that was not safe cannot throw
+  // good spore however well the rest of it went.
+  const ceiling = safety < 60 ? 0.7 : safety < 75 ? 0.95 : 1.4;
+  return Math.max(0.45, Math.min(ceiling, raw));
+};
+
 export const propagateLineage = (
   parent: Lineage,
   history: TelemetrySample[] | undefined,
-  damaged: boolean
+  damaged: boolean,
+  potency = 1
 ): Lineage => {
   const cond = logPhaseConditions(history);
 
@@ -408,6 +443,7 @@ export const propagateLineage = (
       vigor: Math.max(1, parent.vigor - 0.05),
       resilience: Math.max(0, parent.resilience - 5),
       bias: parent.bias + (0.5 - parent.bias) * 0.5,
+      potency: Math.max(0.45, (parent.potency ?? 1) - 0.15),
     };
   }
 
@@ -422,13 +458,24 @@ export const propagateLineage = (
   }
 
   const generation = parent.generation + 1;
+
+  // SELECTION CUTS BOTH WAYS. These used to climb a fixed step every generation
+  // whatever the bed had been through, so sporulating was free progress and ten
+  // careless runs bought +45% speed and +45 effective hygiene at no risk. They
+  // move toward what THIS bed earned: a potency of 1 holds station, above it
+  // improves, below it degrades. Still saturating at the top, because the
+  // interesting axis is bias and a compounding speed buff would drown it.
+  const gain = (potency - 1) * 2;   // -1.1 .. +0.8
+  const carried = (parent.potency ?? 1);
+
   return {
     generation,
-    // Vigour and resilience still climb, but they saturate — the interesting
-    // axis is bias, and an endlessly compounding speed buff would drown it.
-    vigor: Math.min(1.55, parent.vigor + 0.05),
-    resilience: Math.min(50, parent.resilience + 5),
+    vigor: Math.max(0.8, Math.min(1.55, parent.vigor + 0.05 * gain)),
+    resilience: Math.max(0, Math.min(50, parent.resilience + 5 * gain)),
     bias,
+    // The strain's own strength drifts toward the bed that raised it, so one bad
+    // generation is a setback rather than a catastrophe and three are a ruin.
+    potency: Math.max(0.45, Math.min(1.4, carried + (potency - carried) * 0.45)),
   };
 };
 

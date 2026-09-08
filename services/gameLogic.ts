@@ -1,6 +1,6 @@
 
 import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage, GameState, CrewMember } from '../types';
-import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe } from './koji';
+import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe , sporePotency } from './koji';
 import { standingTier, isVendorUnlocked } from './vendors';
 import { crewEffect } from './crew';
 import {
@@ -1693,15 +1693,88 @@ export const sporulation = (batch: Batch, recipe: Recipe): number => {
   return Math.min(1, (batch.progress - SPORULATION_START) / span);
 };
 
-/** How many packets a bed yields, and whether it can be taken at all. */
+/**
+ * How many packets a bed yields, and whether it can be taken at all.
+ *
+ * Fourteen at full sporulation was far too many. A koji bed is worth about $70
+ * of food and gives up roughly $18 of that to fruit, so thirteen packets of a
+ * strain that costs $250 to replace made sporulating about a hundred times
+ * better than selling — no decision at all, and spore supply became infinite
+ * after the first koji anyone ran.
+ *
+ * Six at full strength keeps a bed self-sustaining (a run consumes one) without
+ * the supply running away, and potency means a badly-run bed barely replaces
+ * what it used.
+ */
 export const sporeYield = (batch: Batch, recipe: Recipe): number => {
   const s = sporulation(batch, recipe);
   if (s <= 0 || batch.progress > SPORULATION_SPOIL) return 0;
-  // A healthy bed fruits more heavily than a stressed one. Score is not the gate
-  // any more, but it still decides how much you get.
-  const health = Math.max(0.35, Math.min(1.25, batch.quality.safety / 100));
-  return Math.max(1, Math.round(14 * s * health));
+  const p = sporePotency(batch.quality.safety, batch.stress ?? 0, batch.enzymes);
+  // Three at full strength, not six. A koji run consumes one packet, so three
+  // keeps a bed comfortably self-sustaining while leaving a surplus that is a
+  // trickle rather than a torrent — at six, an exemplary bed sold for $539
+  // against a $120 weekly rent, which is a printing press, not a decision.
+  return Math.max(1, Math.round(3 * s * p));
 };
+
+/**
+ * WHAT A PACKET OF HOUSE SPORE IS WORTH.
+ *
+ * Generation alone used to set it — $150 + $50 a generation — so farming
+ * generations inflated the price of a strain that might be getting weaker. It is
+ * strength that is worth money; generation only says how long you have been
+ * selecting, and it is worth something only because a settled strain is
+ * predictable. A weak gen-8 culture is worth less than a strong gen-3 one, which
+ * is the whole point of tracking potency.
+ */
+export const sporeValue = (lineage: Lineage): number => {
+  const p = lineage.potency ?? 1;
+  const shop = 15;                      // a packet of bought A. Oryzae
+  // Cubed, so the gap between a good strain and a poor one is the headline.
+  const strength = Math.pow(p, 3);
+  const settled = 1 + Math.min(0.6, (lineage.generation - 1) * 0.07);
+  return Math.max(4, Math.round(shop * 3.2 * strength * settled));
+};
+
+/** The key cultures trade under in `marketDemand`. */
+export const CULTURE_DEMAND_KEY = 'Cultures';
+
+/**
+ * WHAT A BUYER ACTUALLY PAYS, WHICH IS NOT WHAT THE STRAIN IS WORTH.
+ *
+ * `sporeValue` is the culture's worth to you — what it would cost to replace.
+ * Selling it is wholesale to someone who will mark it up, and the market for
+ * tane-koji is thin: you cannot dump seven packets a day into it. Both halves
+ * matter, because without the saturation an exemplary bed printed $539 a run.
+ *
+ * Saturation runs through the same `marketDemand` map every other product uses,
+ * so it recovers on the same weekly drift and nothing new has to be remembered.
+ */
+export const CULTURE_WHOLESALE = 0.45;
+export const CULTURE_DEMAND_DROP = 0.09;   // per packet sold
+
+export const cultureSalePrice = (
+  lineage: Lineage,
+  marketDemand: Record<string, number> | undefined,
+  packets: number
+): number => {
+  let demand = marketDemand?.[CULTURE_DEMAND_KEY] ?? 1;
+  const unit = sporeValue(lineage) * CULTURE_WHOLESALE;
+  let total = 0;
+  // Priced packet by packet, so selling ten at once earns less per packet than
+  // selling one — the glut is in the transaction, not only in the week after it.
+  for (let i = 0; i < packets; i++) {
+    total += unit * demand;
+    demand = Math.max(0.25, demand - CULTURE_DEMAND_DROP);
+  }
+  return Math.max(1, Math.round(total));
+};
+
+/** What the market looks like after that sale. */
+export const cultureDemandAfter = (
+  marketDemand: Record<string, number> | undefined,
+  packets: number
+): number => Math.max(0.25, (marketDemand?.[CULTURE_DEMAND_KEY] ?? 1) - CULTURE_DEMAND_DROP * packets);
 
 export const describeSporulation = (batch: Batch, recipe: Recipe): string | null => {
   if (recipe.type !== FermentType.KOJI) return null;

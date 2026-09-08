@@ -5,8 +5,8 @@ import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER
   RAID_HEAT_THRESHOLD, RAID_CHANCE_PER_DAY, HEAT_DECAY_PER_TICK, HEAT_DECAY_AFTER_BUST,
   HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH, HYGIENE_NEGLECT_FLOOR,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
-import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield } from './services/gameLogic';
-import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage } from './services/koji';
+import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY } from './services/gameLogic';
+import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage , sporePotency } from './services/koji';
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
@@ -1292,6 +1292,35 @@ export default function App() {
     });
   };
 
+  /**
+   * Selling a strain. A culture you have selected is an asset, and its worth is
+   * its STRENGTH — a strong gen-3 is worth more than a weak gen-8, which is the
+   * point of tracking potency at all. Generation only buys a little, for being
+   * settled and predictable.
+   */
+  const handleSellCulture = (ingredient: Ingredient, quantity: number) => {
+    if (!ingredient.lineage) return;
+    const held = gameState.inventory[ingredient.id] || 0;
+    const n = Math.max(0, Math.min(held, quantity));
+    if (n <= 0) return;
+    const gross = cultureSalePrice(ingredient.lineage, gameState.marketDemand, n);
+    setGameState(prev => ({
+      ...prev,
+      money: prev.money + gross,
+      inventory: { ...prev.inventory, [ingredient.id]: (prev.inventory[ingredient.id] || 0) - n },
+      // Cultures glut like anything else. Same map, same weekly recovery drift.
+      marketDemand: {
+        ...prev.marketDemand,
+        [CULTURE_DEMAND_KEY]: cultureDemandAfter(prev.marketDemand, n),
+      },
+    }));
+    setLabNotification({
+      id: Date.now(),
+      text: `Sold ${n} packet${n === 1 ? '' : 's'} of ${ingredient.name} for $${gross.toLocaleString()}.`,
+      type: 'info',
+    });
+  };
+
   const handleSporulate = () => {
     const batch = activeBatchForTest;
     if (!batch) return;
@@ -1369,7 +1398,10 @@ export default function App() {
     // hidden number.
     if (sporeAmount > 0) {
         const parent = getLineage(batch);
-        const child = propagateLineage(parent, batch.history, batch.lineageDamaged);
+        // How well THIS bed was run decides what its children are worth. Without
+        // it every sporulation was a free step up the ladder.
+        const potency = sporePotency(batch.quality.safety, batch.stress ?? 0, batch.enzymes);
+        const child = propagateLineage(parent, batch.history, batch.lineageDamaged, potency);
         const strain = lineageStrainKey(child.bias);
         const nextGen = child.generation;
 
@@ -1382,9 +1414,14 @@ export default function App() {
         const merged: Lineage = existingIdx >= 0 && newCustomIngredients[existingIdx].lineage
             ? {
                 generation: nextGen,
-                vigor: Math.max(newCustomIngredients[existingIdx].lineage!.vigor, child.vigor),
-                resilience: Math.max(newCustomIngredients[existingIdx].lineage!.resilience, child.resilience),
+                // Blending kept the BEST of vigour and resilience, which meant a
+                // ruined generation could never actually cost you anything — you
+                // simply kept the old numbers. A strain is the average of how you
+                // have been treating it, good and bad.
+                vigor: (newCustomIngredients[existingIdx].lineage!.vigor + child.vigor) / 2,
+                resilience: Math.round((newCustomIngredients[existingIdx].lineage!.resilience + child.resilience) / 2),
                 bias: (newCustomIngredients[existingIdx].lineage!.bias + child.bias) / 2,
+                potency: ((newCustomIngredients[existingIdx].lineage!.potency ?? 1) + (child.potency ?? 1)) / 2,
               }
             : child;
 
@@ -1392,9 +1429,10 @@ export default function App() {
             id: sporeId,
             name: `Master Spores (Gen ${nextGen} · ${lineageStrainLabel(merged.bias)})`,
             type: IngredientType.STARTER,
-            baseCost: 150 + (nextGen * 50),
+            // Priced on strength, not on how many times you have propagated it.
+            baseCost: sporeValue(merged),
             currency: 'money',
-            quality: 100,
+            quality: Math.round(Math.max(20, Math.min(100, (merged.potency ?? 1) * 78))),
             description: describeLineage(merged),
             idealFor: ['koji'],
             supplierId: 'in_house',
@@ -1936,6 +1974,8 @@ export default function App() {
                   maxPower={gameState.maxPower}
                   usedSlots={usedSlots}
                   onBuy={handleBuyIngredient}
+                  onSellCulture={handleSellCulture}
+                  marketDemand={gameState.marketDemand}
                   onBuyVessel={handleBuyVessel}
                   onBuyTool={handleBuyIngredient}
                   onBuyBook={handleBuyBook}

@@ -6,6 +6,8 @@ import {
   JarOutlineIcon, WrenchIcon, BookIcon, BoltIcon,
 } from './icons';
 import { Lock, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { sporeValue, cultureSalePrice } from '../services/gameLogic';
+import { SporeClusterIcon } from './icons';
 
 /**
  * SUPPLY — one place to spend money.
@@ -22,7 +24,7 @@ import { Lock, ChevronUp, ArrowUpDown } from 'lucide-react';
  * whole shelf by protein, by starch, or by price and see the answer at once.
  */
 
-type Tab = 'ingredients' | 'hardware' | 'books' | 'underground';
+type Tab = 'ingredients' | 'hardware' | 'books' | 'underground' | 'cultures';
 type SortKey = 'name' | 'price' | 'protein' | 'starch' | 'quality';
 
 interface SupplyPanelProps {
@@ -40,6 +42,8 @@ interface SupplyPanelProps {
   maxPower: number;
   usedSlots: number;
   onBuy: (ingredient: Ingredient, quantity?: number) => void;
+  marketDemand?: Record<string, number>;
+  onSellCulture?: (ingredient: Ingredient, quantity: number) => void;
   onBuyVessel: (vessel: Vessel) => void;
   onBuyTool: (tool: Ingredient) => void;
   onBuyBook: (book: Book) => void;
@@ -64,7 +68,7 @@ const Bar: React.FC<{ v: number; tone: string; title: string }> = ({ v, tone, ti
 const SupplyPanel: React.FC<SupplyPanelProps> = ({
   isOpen, onToggle, ingredients, inventory, money, playerXp, undergroundTier,
   relationships, ownedVessels, ownedBookIds, currentPower, maxPower, usedSlots,
-  onBuy, onBuyVessel, onBuyTool, onBuyBook, onUpgradePower,
+  onBuy, onSellCulture, marketDemand, onBuyVessel, onBuyTool, onBuyBook, onUpgradePower,
 }) => {
   const [tab, setTab] = useState<Tab>('ingredients');
   const [search, setSearch] = useState('');
@@ -152,6 +156,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               { id: 'ingredients', label: 'Ingredients', icon: <BagIcon size={13} color="currentColor" /> },
               { id: 'hardware', label: 'Vessels & Tools', icon: <WrenchIcon size={13} color="currentColor" /> },
               { id: 'books', label: 'Books', icon: <BookIcon size={13} color="currentColor" /> },
+              { id: 'cultures', label: 'Culture Bank', icon: <SporeClusterIcon size={13} color="currentColor" /> },
               { id: 'underground', label: 'Underground', icon: <ShieldIcon size={12} color="currentColor" /> },
             ] as const).map(t => (
               <button
@@ -163,6 +168,68 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               </button>
             ))}
           </div>
+
+          {/* ---------- THE CULTURE BANK ----------
+              A strain you have selected is an asset, and until now it had a
+              price nobody could realise: house spores are excluded from the buy
+              list (you cannot buy your own), so the number on them was
+              decoration. Strength is what sells — a strong gen-3 culture is
+              worth more than a weak gen-8 one — which is the whole reason the
+              lineage carries potency. */}
+          {tab === 'cultures' && (
+            <div className="sup-list custom-scrollbar">
+              {(() => {
+                const held = ingredients.filter(
+                  i => i.supplierId === 'in_house' && i.lineage && (inventory[i.id] || 0) > 0
+                );
+                if (held.length === 0) {
+                  return (
+                    <p className="sup-empty">
+                      No house cultures yet. Hold a koji bed past its peak until it
+                      fruits, and take the spores — the bed is spent, but the strain
+                      is yours.
+                    </p>
+                  );
+                }
+                return held.map(ing => {
+                  const n = inventory[ing.id] || 0;
+                  // What it is worth, and what a buyer will actually pay — two
+                  // different numbers, and the player should see both.
+                  const worth = sporeValue(ing.lineage!);
+                  const one = cultureSalePrice(ing.lineage!, marketDemand, 1);
+                  const lot = cultureSalePrice(ing.lineage!, marketDemand, n);
+                  const pot = ing.lineage!.potency ?? 1;
+                  return (
+                    <div key={ing.id} className="culture-row">
+                      <div className="cr-main">
+                        <span className="cr-name">{ing.name}</span>
+                        <span className="cr-desc">{ing.description}</span>
+                      </div>
+                      <div className="cr-stats mono">
+                        <span title="Strength of the culture against ordinary shop stock">
+                          <b className={pot >= 1.1 ? 'good' : pot < 0.8 ? 'poor' : ''}>
+                            {(pot * 100).toFixed(0)}%
+                          </b> strength
+                        </span>
+                        <span>{n} held</span>
+                        <span className="cr-price" title="What a buyer pays now. The market for tane-koji is thin — selling a lot at once earns less per packet.">
+                          ${one} each · worth ${'$'}{worth}
+                        </span>
+                      </div>
+                      <div className="cr-actions">
+                        <button className="btn btn-ghost" disabled={n < 1} onClick={() => onSellCulture?.(ing, 1)}>
+                          Sell 1 · ${one}
+                        </button>
+                        <button className="btn btn-amber" disabled={n < 1} onClick={() => onSellCulture?.(ing, n)}>
+                          Sell all · ${lot}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
 
           {/* ---------- INGREDIENTS / UNDERGROUND CATALOGUE ---------- */}
           {(tab === 'ingredients' || tab === 'underground') && (

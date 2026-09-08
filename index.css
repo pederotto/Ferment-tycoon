@@ -2466,3 +2466,24 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .dial-fixed-note {
   margin: 6px 0 0; font-size: 10px; line-height: 1.5; color: var(--text-lo);
 }
+
+/* The Culture Bank. A strain is an asset with a price, so it gets a row that
+   leads with its strength rather than its generation — a strong gen-3 is worth
+   more than a weak gen-8, and the number that says so should be the loud one. */
+.culture-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
+}
+.culture-row .cr-main { flex: 1 1 220px; min-width: 0; }
+.culture-row .cr-name { display: block; font-size: 12.5px; color: var(--text-hi); font-weight: 600; }
+.culture-row .cr-desc { display: block; font-size: 10.5px; line-height: 1.45; color: var(--text-lo); margin-top: 2px; }
+.culture-row .cr-stats {
+  display: flex; gap: 14px; font-size: 10px; color: var(--text-lo);
+  font-variant-numeric: tabular-nums; flex: 0 0 auto;
+}
+.culture-row .cr-stats b { color: var(--text-hi); }
+.culture-row .cr-stats b.good { color: var(--moss); }
+.culture-row .cr-stats b.poor { color: var(--brick); }
+.culture-row .cr-price { color: var(--brass); }
+.culture-row .cr-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.sup-empty { padding: 26px 18px; font-size: 12px; line-height: 1.6; color: var(--text-lo); }

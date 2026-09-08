@@ -87,6 +87,44 @@ door. Koji also has its own end (`SPORULATION_SPOIL`), because the generic
 "+40 past peak is spoiled" rule killed the bed at 140 — inside the window where
 it is still giving spores.
 
+**Selection cuts both ways, or it is not selection.** `propagateLineage` added
+a fixed +0.05 vigour and +5 resilience *every generation whatever the bed had
+been through*, and the blend-on-repropagate kept `Math.max` of old and new — so a
+ruined generation could never cost anything. Ten careless runs bought +45% speed
+and +45 effective hygiene at no risk. `sporePotency` (safety, stress, enzyme
+development) now drives the step: above 1 improves, below 1 degrades, and
+blending averages instead of taking the best. Measured over 8 generations — run
+well: vigour 1.20, potency 1.25. Run carelessly: vigour **0.80**, below founder
+stock. Recovering a ruined strain costs as many good generations as the bad ones
+that ruined it.
+
+- **Weight the potency terms, do not multiply them.** Three sub-1 factors
+  compound viciously: a genuinely good bed came out at 0.75 and everything at or
+  below 80 safety hit the floor together, so the middle of the range — where most
+  play happens — carried no information. Weighted 0.45/0.25/0.30 with each term
+  centred on 1.0 at "run properly", plus a hard ceiling when safety is low,
+  because a sick bed cannot throw good spore however well the rest went.
+
+**Spore economics: yield, worth and sale price are three different numbers.**
+Getting them confused broke the balance twice in one sitting.
+
+- **Yield** is 3 at full strength, scaled by potency. At 6 (and at the original
+  14) an exemplary bed sold for $539 against a $120 weekly rent.
+- **Worth** (`sporeValue`) is replacement cost, priced on strength cubed — a
+  strong gen-3 beats a weak gen-8, which is the entire point of tracking potency.
+  It was `150 + generation * 50`, so farming generations inflated the price of a
+  strain that might be getting weaker.
+- **Sale price** (`cultureSalePrice`) is wholesale at 0.45 of worth, saturating
+  per packet through the same `marketDemand` map every other product uses — so
+  it recovers on the existing weekly drift and needed no new state.
+
+Measured, against a koji bed worth $70: exemplary +$25, good -$5, ordinary -$43,
+neglected -$63. Sporulating pays only if you ran the bed well. And farming it is
+strictly worse than making koji — ten sporulations dumped into the market total
+$382 against $700 for simply selling the same beds as food, converging to $26 a
+run at the demand floor. The reward for a good lineage is what it does in the
+simulation, not cash.
+
 **Sporulation is a phase, not a reward.** The Sporulate button used to be gated
 on `score >= 85 && safety >= 90`, which got it backwards twice: a bed you ran
 well handed you a strain the instant it was ready, at no cost and no wait, and a
