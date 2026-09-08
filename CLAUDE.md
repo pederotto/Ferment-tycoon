@@ -206,6 +206,14 @@ it.
 
 ## React correctness
 
+**Hygiene must have a floor, and filth must scale.** Hygiene decays with bench
+load and had none without a cleaner, so any busy bench parked at zero — and
+because filth added 0.1 heat a tick against 0.05 shed, heat ratcheted to 100 and
+stayed. The inspector was not random; he was permanent on any bench that was
+actually being used. Filth now scales with how filthy (a bench at 39 is not one
+at 5) and neglect floors at `HYGIENE_NEGLECT_FLOOR`. Measured: a full bench with
+clean sourcing settles at 0 heat, one contraband batch still reaches 100.
+
 **Never put a side effect inside a state updater.** This app runs StrictMode, so
 React double-invokes every `setGameState(prev => ...)` callback. The inspector
 raid was rolled inside one, which meant `Math.random()` ran twice a game day and

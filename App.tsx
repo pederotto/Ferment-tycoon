@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book, Lineage, ChamberControls, CrewMember } from './types';
 import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
   RAID_HEAT_THRESHOLD, RAID_CHANCE_PER_DAY, HEAT_DECAY_PER_TICK, HEAT_DECAY_AFTER_BUST,
-  HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
+  HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH, HYGIENE_NEGLECT_FLOOR,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage } from './services/koji';
@@ -340,11 +340,20 @@ export default function App() {
         const activeBatchCount = prev.batches.filter(b => b.status === 'active').length;
         const loadMultiplier = 1 + activeBatchCount * 0.18;
         const hygieneDecay = (prev.staff['cleaner'] ? 0.03 : 0.06) * loadMultiplier;
-        const hygieneFloor = prev.staff['cleaner'] ? 50 : 0;
+        // A working bench gets dirty; it does not become derelict on its own.
+        // With no floor, hygiene parked at zero on any busy bench, and since
+        // filth added more heat than heat shed, the inspector became permanent —
+        // which is what "he turns up as soon as anything is brewing" was.
+        const hygieneFloor = prev.staff['cleaner'] ? 50 : HYGIENE_NEGLECT_FLOOR;
         const newHygiene = Math.max(hygieneFloor, prev.hygiene - hygieneDecay);
         
         let heatChange = 0;
-        if (newHygiene < 40) heatChange += HEAT_FROM_FILTH;
+        // Scaled by how filthy, not a cliff at 40. A bench at 39 is not the same
+        // as one at 5, and treating them alike is what let neglect alone ratchet
+        // heat to the ceiling and hold it there.
+        if (newHygiene < 40) {
+            heatChange += HEAT_FROM_FILTH * ((40 - newHygiene) / 40);
+        }
         // Contraband is now flagged on the batch itself. It used to be inferred
         // from "substrate was bought with renown", which stopped meaning anything
         // once the underground started charging money.

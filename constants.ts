@@ -38,6 +38,12 @@ export const getUndergroundTierFromXp = (xp: number): number => {
 export const HEAT_DECAY_PER_TICK = 0.05;
 export const HEAT_PER_ILLEGAL_BATCH = 0.2;
 export const HEAT_FROM_FILTH = 0.1;
+// Hygiene decays with bench load and had no floor without a cleaner, so any busy
+// bench parked at zero. Filth then added more heat per tick than heat shed, and
+// the inspector became a permanent fixture rather than a consequence. A neglected
+// bench sits here: bad for your batches, but not an automatic raid. Smuggling
+// still is one, which is the risk that ought to summon him.
+export const HYGIENE_NEGLECT_FLOOR = 25;
 export const RAID_HEAT_THRESHOLD = 55;      // below this the inspector never calls
 // Rolled once per game DAY, not per tick. Per tick meant the odds scaled with
 // the speed control — at 8x and full heat the inspector called every four real
