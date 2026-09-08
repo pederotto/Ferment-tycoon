@@ -317,6 +317,88 @@ export const getAmbientConditions = (month: number, weather: WeatherState) => {
  * APPLY INTERVENTION
  * Handles Mix, Mist, Lid Toggles, etc.
  */
+/**
+ * THE SKIN ON TOP.
+ *
+ * Anything with a wet surface open to air grows one. Three things decide how
+ * fast, and all three are the real ones: warmth (it is a culture), salt (which
+ * is what a brine is defending itself with), and how much free water is sitting
+ * on top. A sealed vessel starves it of oxygen and it barely moves.
+ *
+ * Vessels do not grow film in proportion to their volume — they grow it in
+ * proportion to their SURFACE, which is why a wide tray skins over faster than
+ * a narrow onggi of the same litreage and why a cask can be left longer.
+ */
+export const filmsOver = (recipe?: Recipe): boolean =>
+  !!recipe && [
+    FermentType.GARUM, FermentType.VINEGAR, FermentType.LACTO,
+    FermentType.SHOYU, FermentType.KOMBUCHA, FermentType.ALCOHOL,
+  ].includes(recipe.type);
+
+/**
+ * On a vinegar or a kombucha the film IS the culture — the mother, the SCOBY.
+ * Skimming it is not housekeeping, it is throwing the ferment away. The whole
+ * point of making it one quantity is that the player has to know which vessel
+ * they are standing over.
+ */
+export const filmIsTheCulture = (recipe?: Recipe): boolean =>
+  !!recipe && (recipe.type === FermentType.VINEGAR || recipe.type === FermentType.KOMBUCHA);
+
+/** Points of film per tick. Zero for anything dry, packed or sealed shut. */
+export const filmGrowthRate = (
+  recipe: Recipe | undefined,
+  temp: number,
+  salinity: number,
+  surfaceWater: number,
+  vent: number
+): number => {
+  if (!filmsOver(recipe)) return 0;
+  // A hump, not a ramp. Surface yeasts and moulds run best around blood heat
+  // and are killed off by the same heat that pasteurises everything else — a
+  // ramp made the 60 C low-salt route the fastest-filming vessel in the game,
+  // which is backwards: that route is hot precisely so nothing establishes.
+  // Zero below 8 C, peak at 29 C, zero again by 50 C.
+  const warmth = Math.max(0, 1 - Math.abs(temp - 29) / 21);
+  // Salt is the brine's defence. Past ~18% almost nothing establishes on top,
+  // which is the same threshold the rest of the safety model uses.
+  const brine = Math.max(0.05, 1 - salinity / 18);
+  // A dry surface has nothing to grow in; a flooded one is a petri dish.
+  const wet = 0.35 + (surfaceWater / 100) * 0.9;
+  // Air is the other half of it. Sealed, a film still forms, but slowly.
+  const air = vent >= 2 ? 1.25 : vent >= 1 ? 1 : 0.45;
+  return 0.9 * warmth * brine * wet * air;
+};
+
+/**
+ * HOW MUCH OF THE VESSEL ONE PASS OF HANDLING ACTUALLY REACHES.
+ *
+ * A jar you stir through completely; a 60 L cask you do not — you get the top
+ * third and the rest keeps doing what it was doing. This is why volume needs
+ * MORE handling rather than the same handling.
+ *
+ * The ladder is the whole reason the hardware exists, and it was half wired: the
+ * paddle was read here and the agitator was not, so the most expensive tool in
+ * the game did nothing for the action it was named after. A paddle extends your
+ * arm; a geared agitator drives the whole vessel, so volume stops mattering at
+ * all. That is what you are buying.
+ */
+export const interventionReach = (
+  litres: number,
+  inventory?: Record<string, number>
+): number => {
+  if ((inventory?.['agitator'] || 0) > 0) return 1;
+  const paddleBonus = (inventory?.['mash_paddle'] || 0) > 0 ? 1.9 : 1;
+  return Math.max(0.25, Math.min(1, (1.35 * paddleBonus) / Math.pow(Math.max(0.1, litres), 0.42)));
+};
+
+/** Which implement `interventionReach` just used, for the UI to name. */
+export const reachImplement = (
+  inventory?: Record<string, number>
+): { id: string; name: string } | null =>
+  (inventory?.['agitator'] || 0) > 0 ? { id: 'agitator', name: 'Geared agitator' }
+  : (inventory?.['mash_paddle'] || 0) > 0 ? { id: 'mash_paddle', name: 'Mash paddle' }
+  : null;
+
 export const applyBatchIntervention = (
     batch: Batch, 
     action: string, 
@@ -331,6 +413,7 @@ export const applyBatchIntervention = (
     let enzymes = batch.enzymes ? { ...batch.enzymes } : undefined;
     let stress = batch.stress ?? 0;
     let evenness = batch.evenness ?? 100;
+    let surfaceFilm = batch.surfaceFilm ?? 0;
 
     // How much of the batch one pass of handling actually reaches. A jar you
     // stir through completely; a 60 L cask you do not — you get the top third
@@ -341,8 +424,7 @@ export const applyBatchIntervention = (
     // A long paddle reaches the bottom of a cask; a spoon does not. This is the
     // cheap answer to volume, and it is deliberately cheap — the expensive
     // answer is the agitator, which removes the labour rather than easing it.
-    const paddleBonus = (inventory?.['mash_paddle'] || 0) > 0 ? 1.9 : 1;
-    const reach = Math.max(0.25, Math.min(1, (1.35 * paddleBonus) / Math.pow(litres, 0.42)));
+    const reach = interventionReach(litres, inventory);
 
     // Interventions used to be flat, context-free bumps — Stir always gave +2
     // umami whether or not stirring was what the batch needed, so there was
@@ -410,45 +492,98 @@ export const applyBatchIntervention = (
             break;
 
         case 'Stir': {
-            // Keeps the surface from setting and the solids from packing down.
-            // Only really matters for the ferments that ask for it.
+            // Stirring a liquid ferment does two real things: it breaks the skin
+            // back into the mass, and it puts substrate back in contact with the
+            // enzyme that is working on it. The second is why a roused garum
+            // develops and a still one stalls.
+            //
+            // It used to be a flat +0.4 umami, or +2.5 if the recipe happened to
+            // ask for stirring. That is a button, not a decision. Both halves now
+            // scale with the state it finds: a vessel with a skin on it and
+            // solids settled out has a great deal to gain, a clear one has none.
             disturbance = 2;
-            // Stirring is gentler than turning but far cheaper in lost time, and
-            // on anything liquid it is the right tool — a brine actually moves.
+            const filmBroken = Math.min(surfaceFilm, surfaceFilm * 0.55 * reach);
+
+            if (filmIsTheCulture(recipe)) {
+                // Rousing a vinegar sinks the mother. It survives, but it has to
+                // re-form at the surface before it does anything again.
+                surfaceFilm = Math.max(0, surfaceFilm - filmBroken);
+                quality.acidity = Math.max(0, quality.acidity - filmBroken * 0.12);
+                messages.push(filmBroken > 3
+                  ? `Roused it — the mother sank. It will have to re-form.`
+                  : 'Roused. Little in suspension to move.');
+                break;
+            }
+
+            surfaceFilm = Math.max(0, surfaceFilm - filmBroken);
+            // Anything that stratifies gains from being moved; anything that does
+            // not simply has nothing to redistribute, and the term is zero.
             const stirEvened = (100 - evenness) * (onPoint ? 0.45 : 0.3) * reach;
             evenness = Math.min(100, evenness + stirEvened);
-            if (onPoint) {
-                quality.umami += 2.5;
-                quality.safety = Math.min(100, quality.safety + 2);
-                messages.push(stirEvened > 4
-                  ? `Stirred through — it had started to separate.`
-                  : 'Stirred through. This one wants the movement.');
+
+            // The hydrolysis half. Worth most mid-run, when there is both
+            // substrate left and enzyme working; worth nothing before the culture
+            // has established or after it has finished.
+            const window = inLogPhase ? 1 : 0.15;
+            const headroom = Math.max(0, (recipe?.idealFlavorProfile.umami ?? 60) - quality.umami);
+            const drawn = headroom * 0.055 * reach * window * (onPoint ? 1.6 : 0.7);
+            quality.umami = Math.min(100, quality.umami + drawn);
+
+            if (!onPoint && (recipe?.type === FermentType.LACTO || recipe?.type === FermentType.MISO)) {
+                // Opening an anaerobic ferment to stir it is the fault, not the fix.
+                quality.safety = Math.max(0, quality.safety - 3);
+                messages.push('Stirred a sealed ferment — you have just given it air.');
+            } else if (filmBroken > 3 && drawn > 1) {
+                messages.push(`Stirred through — skin broken up, ${drawn.toFixed(1)} points of savour drawn out.`);
+            } else if (filmBroken > 3) {
+                messages.push(`Stirred through — ${filmBroken.toFixed(0)} points of skin broken back in.`);
+            } else if (drawn > 1) {
+                messages.push(`Roused — ${drawn.toFixed(1)} points of savour drawn out of the solids.`);
+            } else if (stirEvened > 4) {
+                messages.push('Stirred. It needed evening out, if nothing else.');
             } else {
-                quality.umami += 0.4;
-                messages.push(stirEvened > 4
-                  ? 'Stirred. It needed evening out, if nothing else.'
-                  : 'Stirred. Little to gain here.');
+                messages.push('Stirred. Nothing much had settled or formed.');
             }
             break;
         }
 
         case 'Skim': {
-            // Pulling the film off a garum. Meaningful when something has
-            // actually formed on top — i.e. when safety has started to slip.
+            // Taking the film off. It used to read the safety number and nudge it,
+            // which made it a weaker Clean — there was nothing on the surface for
+            // it to remove because nothing accumulated there. Now there is, so
+            // the action has a size, and leaving it too long has a price.
             disturbance = 2;
-            const slipping = quality.safety < 92;
-            // Taking the surface off removes the most divergent layer there is —
-            // the part that has been in contact with air the whole time.
+
+            if (filmIsTheCulture(recipe)) {
+                // The player is allowed to do this. They should not want to.
+                const lost = surfaceFilm;
+                surfaceFilm = 0;
+                quality.acidity = Math.max(0, quality.acidity - lost * 0.35);
+                messages.push(lost > 8
+                  ? `You skimmed off the mother. That was the culture — ${lost.toFixed(0)} points of it.`
+                  : 'Skimmed. There was barely a mother there to lose.');
+                break;
+            }
+
+            // Reach matters more here than anywhere else: a skimmer takes the top
+            // off a jar completely and a cask one ladle at a time.
+            const taken = surfaceFilm * Math.min(0.95, 0.55 + reach * 0.4);
+            surfaceFilm = Math.max(0, surfaceFilm - taken);
+
+            // The film is the most divergent layer in the vessel — it has been in
+            // contact with air the whole run — so removing it evens what is left.
             evenness = Math.min(100, evenness + (100 - evenness) * 0.22 * reach);
-            if (onPoint && slipping) {
-                quality.safety = Math.min(100, quality.safety + 7);
-                quality.funk = Math.max(0, quality.funk - 2);
-                messages.push('Skimmed the film. That was about to turn.');
-            } else if (slipping) {
-                quality.safety = Math.min(100, quality.safety + 3);
-                messages.push('Skimmed.');
+
+            if (taken > 1) {
+                // What you win back is what the film had been costing, not a flat
+                // top-up: safety it had dragged down, funk it had pushed up.
+                quality.safety = Math.min(100, quality.safety + Math.min(12, taken * 0.35));
+                quality.funk = Math.max(0, quality.funk - taken * 0.14);
+                messages.push(taken > 22
+                  ? `Skimmed ${taken.toFixed(0)} points of film off. That was well on its way to turning.`
+                  : `Skimmed the surface — ${taken.toFixed(0)} points of film off.`);
             } else {
-                messages.push('Nothing on the surface worth skimming.');
+                messages.push('Surface is clear. Nothing to take off.');
             }
             break;
         }
@@ -470,6 +605,7 @@ export const applyBatchIntervention = (
         params: newParams,
         enzymes,
         evenness,
+        surfaceFilm,
         stress, 
         quality: quality,
         flags: flags,
@@ -685,6 +821,7 @@ export const processBatchTick = (
     hasFan
   );
   let surfaceWater = batch.surfaceWater ?? 0;
+  let surfaceFilm = batch.surfaceFilm ?? 0;
 
   // A batch drifts out of uniformity on its own; only handling brings it back.
   // Staff help because this is exactly the work you would hire someone for — a
@@ -916,6 +1053,34 @@ export const processBatchTick = (
       } else if (newParams.temp <= 10 && !messages.includes('Too cold to develop')) {
            messages.push('Too cold to develop');
       }
+  }
+
+  // A skin forms on anything wet and open while it is running. This is what
+  // gives Skim something to remove and Stir something to break up; without it
+  // both were reading the safety number and nudging it, which is why they felt
+  // like the same button twice.
+  if (status === 'active' && progress > 3 && filmsOver(recipe)) {
+    surfaceFilm = Math.min(100, surfaceFilm + filmGrowthRate(
+      recipe, newParams.temp, newParams.salinity, surfaceWater, ex.vent
+    ));
+
+    if (filmIsTheCulture(recipe)) {
+      // The mother is the engine. A vinegar with a good pellicle acidifies; one
+      // you keep skimming or rousing does not.
+      newQuality.acidity = Math.min(100, newQuality.acidity + surfaceFilm * 0.0035);
+      if (surfaceFilm > 30 && !messages.includes('A mother has formed on the surface')) {
+        messages.push('A mother has formed on the surface');
+      }
+    } else if (surfaceFilm > 25) {
+      // Past a quarter cover it stops being cosmetic. Safety slides and the funk
+      // it throws is the wrong kind — this is the cost of not looking in.
+      const cover = (surfaceFilm - 25) / 75;
+      newQuality.safety = Math.max(0, newQuality.safety - cover * 0.32);
+      newQuality.funk = Math.min(100, newQuality.funk + cover * 0.1);
+      if (surfaceFilm > 55 && !messages.includes('Film across the surface — it wants skimming')) {
+        messages.push('Film across the surface — it wants skimming');
+      }
+    }
   }
 
   // Uniformity decays while the batch is actually doing something. A dormant lag
@@ -1198,6 +1363,7 @@ export const processBatchTick = (
     lineageDamaged: lineageDamaged,
     controls,
     surfaceWater,
+    surfaceFilm,
     evenness,
     // Kept in step with the vent so the older call sites that ask the simple
     // open/closed question still get a true answer.
@@ -1706,6 +1872,211 @@ export const calculateOverheads = (
   return { rent, upkeep, utilities, wages, total: rent + upkeep + utilities + wages };
 };
 
+
+/* ===========================================================================
+   ORGANOLEPTIC NOTES
+
+   The panel was headed "Organoleptic Tasting Notes" and printed process
+   diagnostics: fixed strings, all caps, one per broken rule — "CHEMISTRY: High
+   protein substrate failed to yield Umami." Nothing in it described how the
+   thing tasted, two rules fired on the same fault so the list repeated itself,
+   and the same batch produced the same sentence every time because the sentence
+   never depended on more than one number.
+
+   These are notes. They read the whole state — where it landed against its
+   target, how far it got, what is on its surface, how evenly it ran, and what it
+   was made of — and describe the result. Diagnostics still exist; they are now
+   somewhere else, under a heading that admits what they are.
+
+   Variation is deterministic, seeded off the batch id: the same jar always reads
+   the same, two jars never read alike. It must not be Math.random — this is
+   called during render, and StrictMode would give two different answers.
+   =========================================================================== */
+
+export interface TastingNote {
+  facet: 'Colour' | 'Aroma' | 'Palate' | 'Texture' | 'Finish';
+  text: string;
+}
+
+const noteHash = (s: string): number => {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+};
+const pickFrom = <T,>(arr: T[], seed: string): T => arr[noteHash(seed) % arr.length];
+
+/** Clauses into one sentence: capitalised, Oxford-less, single full stop. */
+const sentence = (parts: string[]): string => {
+  // Clauses are written to stand alone, but some carry a leading conjunction
+  // from when they were concatenated by hand — strip it, or the join produces
+  // "wild and and a flat, yeasty note".
+  const clean = parts.map(p => p.trim().replace(/^(and|with)\s+/i, '')).filter(Boolean);
+  if (!clean.length) return '';
+  // Comma-joined, the way tasting notes are actually written. An " and " before
+  // the last clause fought the "and"s already inside the clauses themselves.
+  const joined = clean.join(', ');
+  return joined.charAt(0).toUpperCase() + joined.slice(1).replace(/\.?$/, '.');
+};
+
+/** House vocabulary per family. Real terms of art, not adjectives at random. */
+const FAMILY_COLOUR: Partial<Record<FermentType, string[]>> = {
+  [FermentType.GARUM]: ['a clear amber', 'the colour of weak tea', 'a deep russet'],
+  [FermentType.SHOYU]: ['near-black with a red edge', 'dark mahogany', 'black until you tilt it'],
+  [FermentType.MISO]: ['a warm ochre', 'the brown of wet clay', 'pale straw shot with darker flecks'],
+  [FermentType.KOJI]: ['bloomed white, close to the grain', 'a dense white felt', 'white going faintly green at the edges'],
+  [FermentType.VINEGAR]: ['bright and slightly hazy', 'clear gold', 'cloudy, with the mother suspended'],
+  [FermentType.LACTO]: ['dulled from raw, brine gone milky', 'olive-drab, as it should be', 'still bright under a cloudy brine'],
+  [FermentType.BLACK]: ['gone entirely black, glossy', 'black and slightly tacky', 'jet, with a bloom of sugar on the cut'],
+};
+
+export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[] => {
+  const q = batch.quality;
+  const t = recipe.idealFlavorProfile;
+  const id = batch.id || recipe.id;
+  const notes: TastingNote[] = [];
+
+  const ings = batch.inputIngredientIds
+    .map(i => INGREDIENTS.find(x => x.id === i))
+    .filter(Boolean) as Ingredient[];
+  const sub = ings.find(i => i.type === IngredientType.SUBSTRATE);
+  const fatty = (sub?.hiddenStats.fatContent ?? 0) > 4;
+  const proteinous = (sub?.hiddenStats.proteinContent ?? 0) > 5;
+
+  const film = batch.surfaceFilm ?? 0;
+  const even = batch.evenness ?? 100;
+  const under = batch.progress < recipe.peakWindowStart;
+  const over = batch.progress > recipe.peakWindowEnd + 20;
+  const spoiled = batch.status === 'spoiled' || q.safety < 60;
+
+  // How far each axis landed from where this recipe wanted it, so the notes talk
+  // about THIS ferment rather than about high or low numbers in the abstract.
+  const rel = (actual: number, target: number) => target <= 0 ? 0 : actual / target;
+
+  /* --- COLOUR ------------------------------------------------------------ */
+  const baseColour = FAMILY_COLOUR[recipe.type];
+  if (spoiled) {
+    notes.push({ facet: 'Colour', text: pickFrom([
+      'Grey at the edges and weeping. Whatever this was, it is not that now.',
+      'Dull, separated, with a slick on top. It has gone over.',
+    ], id + 'col') });
+  } else if (baseColour) {
+    let text = `Pours ${pickFrom(baseColour, id + 'col')}`;
+    if (recipe.type === FermentType.KOJI) text = `Comes up ${pickFrom(baseColour, id + 'col')}`;
+    if (under) text += ', paler than it should be for the age';
+    else if (over) text += ', darker than the window wanted';
+    if (film > 40 && !filmIsTheCulture(recipe)) text += ', with a skin you can lift off in one piece';
+    notes.push({ facet: 'Colour', text: text + '.' });
+  }
+
+  /* --- AROMA ------------------------------------------------------------- */
+  const aromaParts: string[] = [];
+  if (q.funk > 70) aromaParts.push(pickFrom(['barnyard and ripe', 'high, cheesy, insistent', 'pungent enough to carry across the room'], id + 'a1'));
+  else if (q.funk > 40) aromaParts.push(pickFrom(['savoury and a little wild', 'ripe without tipping over', 'earthy, mushroomy'], id + 'a1'));
+  else if (q.funk > 15) aromaParts.push(pickFrom(['quiet, mostly clean', 'restrained', 'faintly savoury'], id + 'a1'));
+  else aromaParts.push(pickFrom(['almost neutral', 'clean to the point of shy', 'barely there'], id + 'a1'));
+
+  if (recipe.type === FermentType.KOJI) {
+    aromaParts.push(q.sweetness > 60
+      ? pickFrom(['sweet chestnut and steamed rice', 'melon and cut hay'], id + 'a2')
+      : pickFrom(['damp cellar rather than chestnut', 'grainy, not yet sweet'], id + 'a2'));
+  } else if (proteinous && q.umami > 60) {
+    aromaParts.push(pickFrom(['deep anchovy underneath', 'a marine, brothy depth', 'cured-meat sweetness behind it'], id + 'a2'));
+  }
+  if (film > 55 && !filmIsTheCulture(recipe)) {
+    aromaParts.push(pickFrom(['and a flat, yeasty note off the surface that should have been skimmed', 'with a stale top note — that is the film talking'], id + 'a3'));
+  }
+  if (recipe.type === FermentType.VINEGAR && q.acidity > 80) {
+    aromaParts.push(pickFrom(['sharp enough to catch the back of the nose', 'acetic, right at the edge of solvent'], id + 'a3'));
+  }
+  notes.push({ facet: 'Aroma', text: sentence(aromaParts) });
+
+  /* --- PALATE ------------------------------------------------------------ */
+  const umamiRel = rel(q.umami, t.umami);
+  const sweetRel = rel(q.sweetness, t.sweetness);
+  const acidRel = rel(q.acidity, t.acidity);
+  const palate: string[] = [];
+
+  // Only speak to an axis the style actually cares about. Reading "sweeter than
+  // intended" off a garum whose sweetness target is 5 is arithmetic, not tasting
+  // — every batch trips it, which is exactly what made the panel feel canned.
+  const MATTERS = 20;
+  // Weighted, then cut to the two loudest. A batch that misses on all four axes
+  // was reporting all four in one sentence — "thin where the protein should have
+  // shown — the enzymes never got at it, short on sweetness — the starch never
+  // really turned, flat, wanting acid, salt over everything" — which is a fault
+  // list wearing a note's clothes. A taster says the two things that dominate.
+  const weighed: { w: number; text: string }[] = [];
+  if (t.umami >= MATTERS) {
+    weighed.push({
+      w: Math.abs(umamiRel - 1) + 0.35, // umami leads in almost every family here
+      text: umamiRel > 1.1 ? 'savour well past what the style asks for'
+        : umamiRel > 0.85 ? 'savoury right through, where it should be'
+        : umamiRel > 0.55 ? 'savoury, but it stops short'
+        : proteinous ? 'thin where the protein should have shown — the enzymes never got at it'
+        : 'thin, with little here to make savour from',
+    });
+  }
+  if (t.sweetness >= MATTERS && Math.abs(sweetRel - 1) > 0.25) {
+    weighed.push({ w: Math.abs(sweetRel - 1),
+      text: sweetRel > 1 ? 'sweeter than the style wants' : 'short on sweetness — the starch never turned' });
+  }
+  if (t.acidity >= MATTERS && Math.abs(acidRel - 1) > 0.25) {
+    weighed.push({ w: Math.abs(acidRel - 1),
+      text: acidRel > 1 ? 'sharp over the top of it' : 'flat, wanting acid' });
+  }
+  if (batch.params.salinity > 18) weighed.push({ w: 1.2, text: 'salt over everything — it needs cutting to be usable' });
+  else if (batch.params.salinity < 5 && recipe.type !== FermentType.KOJI) weighed.push({ w: 0.5, text: 'under-seasoned for what it is' });
+
+  // At most one clause carrying an em-dash aside. Two of them in one sentence
+  // ("salt over everything — it needs cutting, short on sweetness — the starch
+  // never turned") reads as two sentences jammed together.
+  const ranked = weighed.sort((a, b) => b.w - a.w);
+  let usedAside = false;
+  for (const c of ranked) {
+    if (palate.length >= 2) break;
+    const aside = c.text.includes('—');
+    if (aside && usedAside) continue;
+    if (aside) usedAside = true;
+    palate.push(c.text);
+  }
+  if (!palate.length) palate.push(spoiled ? 'nothing you would willingly put in your mouth' : 'balanced, with nothing pushing forward');
+  notes.push({ facet: 'Palate', text: sentence(palate) });
+
+  /* --- TEXTURE ----------------------------------------------------------- */
+  const texture: string[] = [];
+  if (batch.isPressed) texture.push('Pressed clear of its solids');
+  if (batch.isFiltered) texture.push('Spun bright');
+  if (fatty && batch.params.temp > 30 && batch.params.salinity >= 12) texture.push('rich and viscous where the fat has rendered in');
+  else if (fatty && batch.params.temp > 30) texture.push('with a rancid slick the salt was too low to prevent');
+  if (recipe.type === FermentType.KOJI) texture.push(batch.surfaceWater && batch.surfaceWater > 70 ? 'the bed sodden and matted' : 'the grain still separate under the bloom');
+  if (texture.length) notes.push({ facet: 'Texture', text: sentence(texture) });
+
+  /* --- FINISH ------------------------------------------------------------ */
+  let finish: string;
+  if (even < 60 && isAgitatedFerment(recipe)) {
+    finish = pickFrom([
+      'Different from one spoonful to the next — it never ran as one thing, and the jar tastes like an average of several.',
+      'Uneven. The top and the bottom are two different ferments and you can taste the seam.',
+    ], id + 'f');
+  } else if (under) {
+    finish = 'Short. It was pulled before it had finished saying anything.';
+  } else if (over) {
+    finish = 'Long but tired — the edges have gone soft and the top notes have burned off.';
+  } else if (q.safety < 90) {
+    finish = 'A faint off-note on the back of the tongue that will not leave.';
+  } else if (umamiRel > 0.85 && q.safety >= 95) {
+    finish = pickFrom([
+      'Holds for a long time after swallowing. This is the one.',
+      'Long, clean, and it keeps developing after it has gone. Nothing to fix here.',
+    ], id + 'f');
+  } else {
+    finish = 'Clean, and it fades quickly.';
+  }
+  notes.push({ facet: 'Finish', text: finish });
+
+  return notes;
+};
+
 // NEW: Detailed Feedback System
 export const generateCriticFeedback = (batch: Batch, recipe: Recipe): string[] => {
     const feedback: string[] = [];
@@ -1832,7 +2203,19 @@ export const generateCriticFeedback = (batch: Batch, recipe: Recipe): string[] =
         if (batch.params.temp < 25) feedback.push("ADVICE: Temperature too low. Mold went dormant.");
     }
 
-    if (feedback.length === 0) feedback.push("Chef's Kiss. A perfect specimen.");
-    
-    return feedback;
+    // Two rules fired on the same fault: the substrate rule ("High protein
+    // substrate failed to yield Umami") and the balance rule ("Lacks savory
+    // depth"), so a low-umami garum reported its one problem twice — which is
+    // what made the panel read as canned. The specific note wins; the generic
+    // one only speaks when nothing more precise did.
+    const saidUmami = feedback.some(f => f.includes('Umami') || f.includes('savory depth'));
+    const deduped = feedback.filter((f, i) =>
+      feedback.indexOf(f) === i &&
+      !(saidUmami && f === "ADVICE: Lacks savory depth (Umami). Needs more time or protein."
+        && feedback.some(g => g.startsWith('CHEMISTRY: High protein')))
+    );
+
+    if (deduped.length === 0) deduped.push("Nothing to fault in the process.");
+
+    return deduped;
 }

@@ -250,6 +250,22 @@ export interface Batch {
    */
   evenness?: number;
 
+  /**
+   * WHAT HAS GROWN ON THE SURFACE, 0 = clear.
+   *
+   * Anything wet and open grows a skin. On a brine or a garum that is kahm
+   * yeast and mould — you take it off, and if you leave it it pushes the whole
+   * vessel off. On a vinegar or a kombucha the same film is the mother, and
+   * taking it off is the mistake. Same physics, opposite meaning, which is why
+   * it is one quantity and not two.
+   *
+   * It exists because Skim had nothing to act on. It read the safety number and
+   * pushed it up a little, so it was a weaker Clean with a different label; and
+   * once stratification was correctly narrowed to koji and shoyu, Stir lost its
+   * scale on liquids too. Both now act on something that is actually there.
+   */
+  surfaceFilm?: number; // 0-100
+
   // Free water sitting ON the substrate, as opposed to vapour in the air around
   // it. Misting raises it, airflow drives it off. Chamber humidity and substrate
   // wetness are not the same quantity and conflating them is the classic error:

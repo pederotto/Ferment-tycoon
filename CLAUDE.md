@@ -116,13 +116,42 @@ caps the score accordingly. Two things about it are load-bearing —
 - **Below ~3 L the rate is exactly zero.** Not small, zero. A mason jar and a
   koji tray must never stratify, or the mechanic becomes early-game busywork.
   The `Math.cbrt(3)` subtraction is what guarantees that; do not smooth it out.
-- **Only koji, shoyu and garum are agitated.** `isAgitatedFerment` gates the whole
+- **Only koji and shoyu are agitated.** `isAgitatedFerment` gates the whole
 evenness mechanic, because "turn it" is only the right answer where turning is
-real practice — te-ire on a koji bed, kai-ire on a shoyu moromi, raking a garum.
+real practice — te-ire on a koji bed, kai-ire on a shoyu moromi. A colatura is
+layered and left alone; this file said "and garum" for a while after the code
+stopped agreeing, and the owner corrected it.
 A miso is packed, weighted and shut for months and you mix it when it comes out;
 a lacto pickle is anaerobic and opening it is the fault. Applying stratification
 to everything made the game a chore and taught something false about how these
 ferments are actually made.
+
+**The surface is its own quantity.** `surfaceFilm` grows on anything wet and
+open — a kahm skin on a brine, a pellicle on a vinegar. It exists because Stir
+and Skim had nothing to act on: once stratification was correctly narrowed to
+koji and shoyu, `evenness` was pinned at 100 for every other ferment, so both
+buttons fell through to nudging `quality.safety` and were the same weaker
+`Clean` twice over.
+
+- **Three defences, and the player picks one.** Salt, a closed lid, or the
+  skimmer. Measured over 400 ticks: 18% salt reaches 11 points of cover, a
+  sealed vessel 26, an open 12% one 71. Re-tune `filmGrowthRate` and re-check
+  that spread or the choice collapses to one answer.
+- **Warmth is a hump, not a ramp.** Peak at 29 °C, zero by 50 °C. A ramp made
+  the 60 °C low-salt route the fastest-filming vessel in the game, which is
+  backwards — that route runs hot precisely so nothing establishes.
+- **On a vinegar or a kombucha the film IS the culture.** `filmIsTheCulture`
+  flips the meaning: the mother drives acidification, and skimming or rousing it
+  sets the ferment back. Same quantity, opposite sign — do not split it into
+  two, the point is that the player has to know which vessel they are over.
+
+**An owned tool must be offered wherever it can act.** `interventionReach` reads
+the agitator as well as the paddle — the agitator was consulted only by the tick,
+so the most expensive tool in the game did nothing for the action it is named
+after. The ladder, measured to 90% even on a 60 L cask: 14 passes by hand, 7 with
+a paddle, 3 with an agitator, which is the same as a jar. That is what you are
+buying. The same rule fixed the centrifuge, which the inspector gated to garum
+and vinegar while the centrifuge's own screen accepted anything unfiltered.
 
 **Unevenness is asymptotic, not a slide to zero.** `evennessEquilibrium` is
 where a vessel settles — diffusion balances settling, so a barrel is uneven
@@ -150,6 +179,18 @@ the $120 floor and nothing more.
 The incubator's heating is proportional to the gap for this reason; a flat rate
 meant a low-salt batch died in the twenties on its way to 60 °C, which made the
 heat-instead-of-salt route unreachable even though the safety model supports it.
+
+**Tasting notes describe the thing; diagnostics describe the process.** They
+were the same list under one heading called "Organoleptic Tasting Notes", which
+is why it read as a lint report — all caps, one fixed string per broken rule, and
+two rules firing on the same fault so a low-umami garum reported it twice.
+`generateTastingNotes` reads the whole state (target-relative, not absolute) and
+writes colour, aroma, palate, texture and finish; `generateCriticFeedback` keeps
+the faults, under a heading that admits what they are. Three rules keep the prose
+from degenerating: only speak to an axis whose target is at least 20 (otherwise
+every garum trips "sweeter than intended"), at most two palate clauses, at most
+one em-dash aside per sentence. Variation is seeded off the batch id and never
+`Math.random` — this runs during render, and StrictMode would give two answers.
 
 **Two advice sources, kept separate.** `BOOK_ADVICE` is authored, bought, and
 identical for everyone — it is about the craft. `benchAdvice()` is generated from

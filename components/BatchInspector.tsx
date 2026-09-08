@@ -5,7 +5,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment } from '../services/gameLogic';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
 import {
   CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
@@ -127,6 +127,50 @@ const ChamberPanel: React.FC<{
           </div>
         </div>
       )}
+
+      {/* THE SURFACE. Skim was a button you pressed hopefully — there was no way
+          to see whether anything had formed, because nothing accumulated. Now
+          there is a quantity, so it gets a gauge, and the gauge says which of
+          the two things a film means in this particular vessel. */}
+      {filmsOver(recipe) && (() => {
+        const film = batch.surfaceFilm ?? 0;
+        const mother = filmIsTheCulture(recipe);
+        if (film < 3) {
+          return (
+            <p className="cp-even none">
+              {mother
+                ? 'Surface still clear. A vinegar needs a mother before it will acidify — leave it open and warm.'
+                : 'Surface clear. Salt, a closed lid and cool air are what keep it that way.'}
+            </p>
+          );
+        }
+        const bad = !mother && film > 55;
+        const warn = !mother && film > 25;
+        return (
+          <div className="cp-even">
+            <div className="eh">
+              <span className="l">{mother ? 'Mother' : 'Surface film'}</span>
+              <span className={`v${bad ? ' bad' : warn ? ' warn' : ''}`}>
+                {film.toFixed(0)}% cover
+              </span>
+            </div>
+            <div className="etrack">
+              <div className={`efill${bad ? ' bad' : warn ? ' warn' : ''}`} style={{ width: `${film}%` }} />
+            </div>
+            <p>
+              {mother
+                ? film > 30
+                  ? 'A good mother. This is the culture — skimming or rousing it sets the vinegar back.'
+                  : 'A mother is forming. Leave it be; it is what turns the alcohol to acid.'
+                : film > 55
+                  ? 'Well covered. It is pulling safety down and throwing the wrong kind of funk. Skim it.'
+                  : film > 25
+                    ? 'A skin has set. It has started to cost you — skim it, or seal the vessel and starve it of air.'
+                    : 'A skin is starting. Nothing lost yet.'}
+            </p>
+          </div>
+        );
+      })()}
 
       {(() => {
         const even = batch.evenness ?? 100;
@@ -326,6 +370,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   const score = calculateCriticScore(batch, recipe, activeStaff);
   const stars = Math.min(5, Math.max(1, Math.floor(score / 20)));
   const feedback = generateCriticFeedback(batch, recipe);
+  const tastingNotes = generateTastingNotes(batch, recipe);
 
   const isExemplary = score >= 85 && batch.quality.safety >= 90;
 
@@ -342,7 +387,15 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
     (recipe.type === FermentType.MISO && isWetMash)
   );
 
-  const canFilter = hasCentrifuge && !batch.isFiltered && (recipe.type === FermentType.GARUM || recipe.type === FermentType.VINEGAR);
+  // Once you own the machine, it is offered wherever it can actually be used.
+  // This was hard-coded to garum and vinegar while the centrifuge's own screen
+  // accepted anything unfiltered, so a shoyu could be spun from one place in the
+  // game and not the other. If the tool can act on it, the option is there.
+  const canFilter = hasCentrifuge && !batch.isFiltered && batch.status !== 'spoiled' && (
+    isWetMash ||
+    [FermentType.GARUM, FermentType.VINEGAR, FermentType.SHOYU,
+     FermentType.KOMBUCHA, FermentType.ALCOHOL].includes(recipe.type)
+  );
 
   const buyers = getInterestedBuyers(batch, recipe, score, playerRenown, playerXp, playerReputation, gameState);
 
@@ -385,7 +438,18 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   }
   if (isLiquid) {
     tools.push({ key: 'stir', label: 'Stir', icon: MixToolIcon, onClick: () => onIntervention('Stir') });
-    if (isGarum) tools.push({ key: 'skim', label: 'Skim', icon: CleanToolIcon, onClick: () => onIntervention('Skim') });
+  }
+  // Skim follows the surface, not the recipe's name. Anything wet and open
+  // grows a skin — a lacto brine throws kahm yeast as readily as a garum does —
+  // and it was offered on garum alone, so every other vessel that could film
+  // over had no way to deal with it.
+  if (filmsOver(recipe)) {
+    tools.push({
+      key: 'skim',
+      label: filmIsTheCulture(recipe) ? 'Skim (mother)' : 'Skim',
+      icon: CleanToolIcon,
+      onClick: () => onIntervention('Skim'),
+    });
   }
   if (isSolid) {
     tools.push({ key: 'clean', label: 'Clean', icon: CleanToolIcon, onClick: () => onIntervention('Clean') });
@@ -580,6 +644,27 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                         </button>
                       ))}
                     </div>
+                    {/* What you are working with, and what it buys. The paddle
+                        had been silently multiplying reach for a long time and
+                        the agitator was not read here at all — so the two tools
+                        the player pays most for said nothing about themselves at
+                        the moment they were used. */}
+                    {(() => {
+                      const litres = Math.max(0.1, (batch.totalMass || 1000) / 1000);
+                      const reach = interventionReach(litres, inventory);
+                      const impl = reachImplement(inventory);
+                      if (reach > 0.98 && !impl) return null;
+                      return (
+                        <p className="tool-reach">
+                          {impl ? <b>{impl.name}</b> : <b>By hand</b>}
+                          {' · '}
+                          {reach > 0.98
+                            ? 'reaches the whole vessel in one pass'
+                            : `one pass reaches ${Math.round(reach * 100)}% of ${litres.toFixed(0)}L`}
+                          {!impl && reach < 0.7 && ' — a paddle or an agitator would work more of it'}
+                        </p>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -683,13 +768,27 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
 
                   <div className="wood-panel" style={{ borderRadius: 10, padding: 14 }}>
                     <div className="section-lbl">Organoleptic Tasting Notes</div>
-                    {feedback.length === 0 ? (
-                      <div className="log-strip ok"><span>Clean balanced profile. Ready for culinary evaluation.</span></div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {feedback.slice(0, 3).map((note, i) => (
-                          <div key={i} className="log-strip"><span>{note}</span></div>
-                        ))}
+                    {/* Notes describe the thing. Diagnostics say what went wrong
+                        with the process — they were printed under this heading
+                        for a long time, which is why it read like a lint report
+                        instead of a tasting. Both are useful; they are not the
+                        same document. */}
+                    <dl className="tnotes">
+                      {tastingNotes.map((n, i) => (
+                        <div key={i} className="tnote">
+                          <dt>{n.facet}</dt>
+                          <dd>{n.text}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {feedback.length > 0 && (
+                      <div className="tdiag">
+                        <div className="section-lbl">What the process did</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {feedback.slice(0, 4).map((note, i) => (
+                            <div key={i} className="log-strip"><span>{note}</span></div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
