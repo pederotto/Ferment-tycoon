@@ -1805,6 +1805,8 @@ export default function App() {
              onIntervention={handleIntervention}
              inventory={gameState.inventory}
              onOpenTool={setOpenTool}
+             month={gameState.month}
+             weather={gameState.weather}
              onQuickHarvest={handleQuickHarvest}
              onQuickKeep={handleQuickKeep}
              usedSlots={usedSlots}

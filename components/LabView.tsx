@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Batch, Recipe, FermentType } from '../types';
+import { Batch, Recipe, FermentType, WeatherState } from '../types';
 import { RECIPES, VESSELS } from '../constants';
 import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
 import IsoAppliance, { ApplianceId } from './IsoAppliance';
+import IsoWindow from './IsoWindow';
 
 /**
  * THE BENCH, AS A ROOM
@@ -39,6 +40,9 @@ interface LabViewProps {
   inventory?: Record<string, number>;
   /** Opens a tool's own screen — the press, the centrifuge. */
   onOpenTool?: (toolId: string) => void;
+  /** So the window can show the actual season and weather. */
+  month?: number;
+  weather?: WeatherState;
 }
 
 /* The room, in SVG units. The bench is a rhombus; the floor sits behind it. */
@@ -74,7 +78,7 @@ const spread = (n: number, from: number, to: number): number[] => {
 const LabView: React.FC<LabViewProps> = ({
   batches, maxSlots, onSelectSlot, onIntervention,
   onQuickHarvest, onQuickKeep, usedSlots, gameSpeed, analyzedRecipeIds,
-  inventory = {}, onOpenTool,
+  inventory = {}, onOpenTool, month = 0, weather,
 }) => {
   const [focused, setFocused] = useState<string | null>(null);
 
@@ -210,6 +214,11 @@ const LabView: React.FC<LabViewProps> = ({
           </defs>
 
           <ellipse cx={MID_X} cy="80" rx="430" ry="200" fill="url(#isoLamp)" />
+
+          {/* The window is the only place the season is a picture rather than a
+              word in the header — and month and weather are what set the ambient
+              temperature and humidity every batch is fighting. */}
+          {weather && <IsoWindow month={month} weather={weather} x={716} y={112} scale={0.94} />}
 
           <g stroke="rgba(243,233,216,0.05)" strokeWidth="1" fill="none">
             <path d={`M30 300 L${MID_X} 132 L870 300 L${MID_X} 468z`} />

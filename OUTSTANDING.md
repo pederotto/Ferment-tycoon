@@ -40,6 +40,25 @@ ingredient market that makes bulk genuinely dearer.
 
 ## Needs doing before anything else
 
+**The Inoculation Bench needs the popup redesign.** Reported as unusable, and the
+diagnosis is that it fails in opposite ways at each end of the range rather than
+one way throughout:
+
+- *Short window* (~720px tall): four stations get 299px each against station
+  04's 373px of content. Cramped. Partly relieved by making the scan dock yield.
+- *Full screen* (1920x1080): the modal is 1440x940 and the four columns are
+  330-409px wide by **711px tall**, holding roughly 300px of content each.
+  Nothing overflows; it is strung out into thin, mostly-empty vertical strips,
+  which is why it reads worse the more room it has.
+
+One layout cannot serve both. The direction the owner asked for is popups: keep
+the chamber and the seal controls as a two-column work area that can use the
+width, and move reagents (01) and vessel (03) into overlays opened on demand.
+The stations are already cleanly delimited `<section className="station">`
+blocks and an `activeTab` mechanism with `.is-hidden` already exists for the
+phone step-through, so the pieces are in place — this is a layout change, not a
+rewrite.
+
 **~~A design decision on bulk.~~ Settled.** Volume is now limited by how hard it
 is to control rather than by cost — see `unevennessRate` and the CLAUDE.md note.
 Alongside it, market absorption was re-tuned: the drop per batch doubled and
