@@ -144,6 +144,14 @@ export interface Vessel {
   description: string;
   idealFor: FermentType[];
   insulationFactor: number; // 0.1 (Tray) to 0.9 (Incubator/Onggi)
+  /**
+   * Whether this vessel can be held at a setpoint at all, and how far it will
+   * go. The Thermal Chamber runs to 70 C, which is what makes the modern
+   * low-salt garum route (heat instead of salt) reachable. A koji muro is a
+   * warm cedar cupboard: it holds body heat and nothing more, so it cannot buy
+   * you out of salting a garum and is not a cheap substitute for the chamber.
+   */
+  heatedTo?: number; // max setpoint in C; absent = unheated
   capacityL: number; // Volume capacity in Liters
 }
 

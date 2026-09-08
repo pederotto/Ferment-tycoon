@@ -892,7 +892,11 @@ export const processBatchTick = (
     * (hasAgitator ? 0.18 : 1);
 
   const isKoji = recipe.type === FermentType.KOJI;
-  const isIncubated = batch.vesselId === 'incubator';
+  // Heated vessels are the ones that SAY they are heated. Hardcoding the id
+  // meant a second heated vessel could not exist without editing the physics —
+  // and the Cedar Muro is the whole answer to koji having no good vessel.
+  const heatCeiling = vessel.heatedTo;
+  const isIncubated = heatCeiling !== undefined;
   const isBreathable = batch.vesselId === 'koji_tray' || batch.vesselId === 'cedar_barrel' || batch.vesselId === 'onggi';
 
   // ENVIRONMENT
@@ -1042,7 +1046,9 @@ export const processBatchTick = (
               // modern method — how much heat you substitute for salt — was made
               // for you. The setpoint is the player's now; null means heating
               // off, and the batch simply sits at room temperature.
-              targetTemp = controls.heat ?? recipe.idealParams.temp;
+              // A muro cannot be driven past body heat, so it cannot be used
+              // to buy your way out of salting a garum.
+              targetTemp = Math.min(heatCeiling!, controls.heat ?? recipe.idealParams.temp);
               // A thermostat drives hardest when it is furthest from setpoint,
               // rather than trickling at a fixed rate. The flat 2.0 took so long
               // to climb that a low-salt batch spoiled somewhere in the twenties
@@ -1051,6 +1057,10 @@ export const processBatchTick = (
               heatingPower = controls.heat === null
                 ? 0
                 : Math.min(9, Math.max(0, (targetTemp - newParams.temp) * 0.85));
+              if (controls.heat !== null && controls.heat > heatCeiling!
+                  && !messages.includes(`This vessel only heats to ${heatCeiling}C`)) {
+                messages.push(`This vessel only heats to ${heatCeiling}C`);
+              }
           } else {
               targetTemp = ambientTemp;
               heatingPower = 0;

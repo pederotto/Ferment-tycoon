@@ -2364,3 +2364,43 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .rancid-line .l { color: var(--text-lo); letter-spacing: 0.08em; text-transform: uppercase; }
 .rancid-line .v.warn { color: var(--amber); }
 .rancid-line .v.bad { color: var(--rust, #b4552f); font-weight: 700; }
+
+/* The maturation scale. Fermentation is 0-100 and it ends; ageing is a second,
+   much longer clock that the five maturing families run on afterwards, and it
+   had no dial — a colatura sat at 100% with no way to tell a month from a
+   decade. Deliberately warmer and quieter than the fermentation ring: this is a
+   thing that happens while you are not watching. */
+.mature-track {
+  margin: 0 0 14px; padding: 11px 13px;
+  border: 1px solid var(--line-strong); border-radius: 4px;
+  background: linear-gradient(180deg, rgba(74,48,24,0.22), rgba(0,0,0,0.18));
+}
+.mature-track .mt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.mature-track .mt-head .l {
+  font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--brass); font-weight: 700;
+}
+.mature-track .mt-head .v { font-size: 10px; color: var(--text-lo); font-variant-numeric: tabular-nums; }
+.mature-track .mt-rail {
+  height: 5px; margin: 8px 0 7px; border-radius: 3px; overflow: hidden;
+  background: rgba(0,0,0,0.4);
+}
+.mature-track .mt-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--oak-lit, #8a6a3a), var(--brass));
+}
+.mature-track p { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--text-hi); }
+
+/* THE PICKER MUST OUTRANK THE SEAL BUTTON.
+   `.inoc-go` carries z-index 6 (the sliders above it create their own stacking
+   contexts and painted over it), and station 04 is `static`, so the sticky Seal
+   button competed directly with the panes at z-index 3 and won — opening the
+   vessel picker put "Seal & Inoculate" straight across its Predicted physics
+   readout. Above 1150px the pane covers the right column, which is exactly
+   where that button lives, so the collision is guaranteed rather than occasional.
+   Stacking order inside the bench, lowest first:
+       stations (auto) < scrim (7) < pane (8) — with .inoc-go at 6 underneath. */
+@media (min-width: 768px) {
+  .pick-scrim { z-index: 7; }
+  .station.pick-pane { z-index: 8; }
+}

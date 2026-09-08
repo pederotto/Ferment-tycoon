@@ -79,10 +79,42 @@ producer (`solidsMass`), and now the deduction.
 `!== undefined`, not truthiness. The truthy version fell back to the full 1 kg
 unit mass whenever a dial hit zero, silently dumping a kilo of salt into a batch.
 
+**A maturing batch must keep ticking past `ready`.** The tick loop gated on
+`status === 'active'`, so a batch froze the instant it reached 100 — which made
+`getMaturity` (progress minus `peakWindowEnd`) permanently zero and the entire
+ageing system dead code that had never once executed. `AGEING_MAX_PROGRESS`, the
+logarithmic maturity curve, `describeMaturity`, the flavour gains past the window
+and the value bonus were all unreachable, and the five families *defined* by age
+were exactly the ones that could not age. A colatura sat at 100% saying "young,
+just past ready" forever. Measured after: progress 110 reads 9% mature, 240 reads
+62%, 500 reads 100%, about 3.3 real minutes of tail at 8x on the bench and six
+times that in the cellar.
+
+Fermentation and ageing are two clocks and the UI needs two scales. The second
+one is `.mature-track`, and it only appears for `matures` types past the window.
+
 **Ferments that mature must not spoil past the window.** `AGEING_BY_TYPE`
 decides: `matures` keeps developing (miso, shoyu, garum, vinegar, blackening),
 `peaks` and `fragile` decline and spoil. A three-year miso is not a miso that
 missed its window.
+
+**Never count the pantry with a hardcoded list of ids.** The HUD strip asked
+for `rice` (the substrate is `glutinous_rice`) and `koji_spores_gen2` (harvested
+spores are custom ingredients with generated ids), so rice and every strain the
+player ever cultured were invisible. It also printed the salt *unit* count with a
+`g` suffix while a unit of salt is 1000 g, so a 10 kg reserve read as "10g", and
+it never counted Trapani salt at all. It reads `IngredientType` off the
+ingredient now, over `INGREDIENTS` plus `customIngredients`, and multiplies by
+`mass`. A list of ids drifts from the data the moment content is added.
+
+**A heated vessel is one that declares `heatedTo`.** `isIncubated` was
+`vesselId === 'incubator'`, so a second heated vessel could not exist without
+editing the physics. The ceiling is also load-bearing balance, not flavour: the
+Cedar Muro stops at 34 °C, which holds a koji bed and cannot reach the 55 °C the
+low-salt garum route needs — so a $420 cupboard never becomes a cut-price
+$1500 chamber. Koji had a tray that cannot hold heat and a chamber that traps the
+bed's own (the critic has always said so); the muro is the missing middle at
+insulation 0.45.
 
 ## Progression and information
 
@@ -369,6 +401,23 @@ needs a vessel; mass does not. Two behaviours written as design and never
 actually working came back with the fix — reagents cap against the largest vessel
 you own before you pick one, and the vessel list greys out anything too small for
 what is already in the chamber.
+
+**A button that names a step must take you to it.** The Seal button read
+"Draw your reagents" or "Choose a vessel" while `disabled` — the primary action
+of the screen was an instruction you could not act on. It opens the picker it
+names. Only a real error (overflow) disables it.
+
+**Controls go above commentary in station 04.** The temperature and moisture
+dials sat under the recipe-card strip and the koji steering readout, so on a koji
+batch — the one that adds the extra block — they fell below the fold of a
+scrolling column with a sticky button across the bottom, and people reported not
+being able to set them at all. This is the third time an addition to station 04
+has pushed something out of reach.
+
+**The pickers must outrank the Seal button.** `.inoc-go` carries `z-index: 6`
+and station 04 is `static`, so the sticky button competed directly with the panes
+at 3 and won — opening the vessel picker printed "Seal & Inoculate" across its
+Predicted physics readout. Scrim 7, pane 8.
 
 **The spectrometer dock must yield before the stations do.** `.scan-dock` was a
 fixed 148px that never shrank, so on a short window it took a fifth of the

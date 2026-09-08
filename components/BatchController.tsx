@@ -515,7 +515,16 @@ const BatchController: React.FC<BatchControllerProps> = ({
       // Everything starts sealed, unmisted and unheated. Deciding otherwise is
       // the player's job now, and the incubator defaults to the recipe's target
       // until they touch it.
-      controls: { vent: 0, mist: 0, heat: vesselId === 'incubator' ? recipe.idealParams.temp : null },
+      controls: (() => {
+        // Any vessel that declares a ceiling starts held at what the recipe
+        // wants, clamped to what the vessel can actually reach.
+        const ceiling = VESSELS.find(v => v.id === vesselId)?.heatedTo;
+        return {
+          vent: 0,
+          mist: 0,
+          heat: ceiling === undefined ? null : Math.min(ceiling, recipe.idealParams.temp),
+        };
+      })(),
       surfaceWater: 0,
     };
 
@@ -1124,36 +1133,18 @@ const BatchController: React.FC<BatchControllerProps> = ({
               )}
             </div>
 
-            {earnedRungs.length > 0 && !isUndiscovered && (
-              <button className="hand-strip" onClick={() => setShowCard(true)}>
-                <span className="hs-l">
-                  <Lightbulb size={12} color="var(--brass)" /> The hand
-                  <b>{handLevel}/5</b>
-                </span>
-                <span className="hs-r">Read the card <ChevronRight size={12} /></span>
-              </button>
-            )}
-
-            {kojiSteer && (
-              <div className="steer">
-                <div className="sh">
-                  <span className="l">This bed will grow</span>
-                  <span className="v">{describeEnzymes({ amylase: kojiSteer.amylaseShare * 100, protease: (1 - kojiSteer.amylaseShare) * 100 }).label}</span>
-                </div>
-                <div className="strack">
-                  <div className="sfill" style={{ width: `${kojiSteer.amylaseShare * 100}%` }} />
-                </div>
-                <div className="sends">
-                  <span>savoury · protease</span>
-                  <span>sweet · amylase</span>
-                </div>
-                <p className="snote">
-                  Warmer and wetter pushes it sweet; cooler and drier pushes it savoury.
-                  The strain you inoculated with decides where the middle sits.
-                </p>
-              </div>
-            )}
-
+            {/* CONTROLS BEFORE COMMENTARY.
+                Temperature and moisture are the two things you actually SET on
+                this screen, and they sat underneath the recipe-card strip and
+                the koji steering readout. On a koji batch — the one that adds
+                the extra block — that pushed them below the fold of a scrolling
+                column with a sticky button pinned across the bottom, and people
+                reported being unable to set them at all. This file has been
+                warned twice that anything added to station 04 pushes the point
+                of the screen out of reach; controls belong above anything that
+                is merely advice.
+                CLAUDE.md: "Re-measure the bench after adding anything to
+                station 04." */}
             <div className="dial-block">
               <div className="dial-ctl">
                 <div className="dh">
@@ -1188,11 +1179,57 @@ const BatchController: React.FC<BatchControllerProps> = ({
               </div>
             </div>
 
-            <button className="btn btn-amber inoc-go" onClick={handleStart} disabled={!canStart}>
+            {earnedRungs.length > 0 && !isUndiscovered && (
+              <button className="hand-strip" onClick={() => setShowCard(true)}>
+                <span className="hs-l">
+                  <Lightbulb size={12} color="var(--brass)" /> The hand
+                  <b>{handLevel}/5</b>
+                </span>
+                <span className="hs-r">Read the card <ChevronRight size={12} /></span>
+              </button>
+            )}
+
+            {kojiSteer && (
+              <div className="steer">
+                <div className="sh">
+                  <span className="l">This bed will grow</span>
+                  <span className="v">{describeEnzymes({ amylase: kojiSteer.amylaseShare * 100, protease: (1 - kojiSteer.amylaseShare) * 100 }).label}</span>
+                </div>
+                <div className="strack">
+                  <div className="sfill" style={{ width: `${kojiSteer.amylaseShare * 100}%` }} />
+                </div>
+                <div className="sends">
+                  <span>savoury · protease</span>
+                  <span>sweet · amylase</span>
+                </div>
+                <p className="snote">
+                  Warmer and wetter pushes it sweet; cooler and drier pushes it savoury.
+                  The strain you inoculated with decides where the middle sits.
+                </p>
+              </div>
+            )}
+
+
+            {/* A BUTTON THAT NAMES A STEP MUST TAKE YOU TO IT.
+                This read "Draw your reagents" or "Choose a vessel" while
+                `disabled`, so the primary action of the screen was an
+                instruction you could not act on — you click it and nothing
+                happens. It opens the picker it is naming instead. Overflow stays
+                disabled, because that is an error to correct rather than a step
+                to go to. */}
+            <button
+              className="btn btn-amber inoc-go"
+              onClick={
+                selectedIngredientIds.length === 0 ? () => { setActiveTab('pantry'); setPicker('pantry'); }
+                : !vesselId ? () => { setActiveTab('vessel'); setPicker('vessel'); }
+                : handleStart
+              }
+              disabled={isOverflowing}
+            >
               {selectedIngredientIds.length === 0
-                ? 'Draw your reagents'
+                ? <>Draw your reagents <ChevronRight size={14} /></>
                 : !vesselId
-                  ? 'Choose a vessel'
+                  ? <>Choose a vessel <ChevronRight size={14} /></>
                   : isOverflowing
                     ? 'Too much for this vessel'
                     : <><Play size={14} style={{ fill: 'currentColor' }} /> Seal &amp; Inoculate</>}

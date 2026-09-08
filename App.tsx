@@ -307,7 +307,23 @@ export default function App() {
         
         // Process Batches
         const updatedBatches = prev.batches.map(batch => {
-          if (batch.status === 'active') {
+          // A MATURING BATCH MUST KEEP TICKING PAST 'ready'.
+          //
+          // This gate read `=== 'active'`, so a batch froze the instant it hit
+          // 100 — which meant `getMaturity` (progress minus peakWindowEnd) was
+          // permanently zero and the whole ageing system was dead code. A
+          // colatura sat at 100% reporting "young, just past ready" forever, and
+          // AGEING_MAX_PROGRESS = 500, the log maturity curve, describeMaturity,
+          // the flavour gains past the window and the value bonus had never once
+          // executed. The ferments that are DEFINED by age were the ones that
+          // could not age.
+          //
+          // Spoiled and analyzed batches still stop, and the types that peak and
+          // decline still stop at 'ready' — they are finished, and holding them
+          // is what the cellar is for.
+          const stillDeveloping = batch.status === 'active'
+            || (batch.status === 'ready' && ageingBehaviour(getRecipeForBatch(batch)) === 'matures');
+          if (stillDeveloping) {
             const recipe = getRecipeForBatch(batch);
             const substrate = [...INGREDIENTS, ...prev.customIngredients].find(i => i.id === batch.substrateId);
             
@@ -1838,22 +1854,52 @@ export default function App() {
           </div>
 
           <div className="pantry-items custom-scrollbar">
-            <div className="pantry-item" title="Salt Reserves (g)">
-              <SaltCrystalIcon size={12} color="var(--text-lo)" /> Salt &nbsp;<span className="n mono">{gameState.inventory['salt'] || 0}g</span>
-            </div>
-            <div className="pantry-item" title="Master Koji Spores">
-              <SporeClusterIcon size={12} color="var(--moss)" /> Spores &nbsp;<span className="n mono">
-                {(gameState.inventory['koji_spores'] || 0) + (gameState.inventory['koji_spores_gen2'] || 0)} pkts
-              </span>
-            </div>
-            <div className="pantry-item" title="Grains & Substrates">
-              <GrainSprigIcon size={12} color="var(--amber)" /> Grains &nbsp;<span className="n mono">
-                {(gameState.inventory['barley'] || 0) + (gameState.inventory['soybeans'] || 0) + (gameState.inventory['rice'] || 0)} units
-              </span>
-            </div>
-            <div className="pantry-item" title="Liquid Volume">
-              <WaterDropIcon size={12} color="var(--teal)" /> Water &nbsp;<span className="n mono">{gameState.inventory['water'] || 0}L</span>
-            </div>
+            {/* COUNTED BY TYPE, NOT BY A HARDCODED LIST OF IDS.
+                Every line here was wrong in its own way. Salt printed the UNIT
+                count with a "g" suffix while a unit of salt is 1000g, so a
+                10 kg reserve read as "10g", and Trapani salt was not counted at
+                all. Grains asked for 'rice', which is not an id — the substrate
+                is 'glutinous_rice' — so rice never appeared. Spores asked for
+                'koji_spores_gen2', also not an id: the spores you harvest are
+                custom ingredients with generated ids, so every strain you ever
+                cultured was invisible here.
+
+                A list of ids drifts from the data the moment content is added.
+                Reading the type off the ingredient cannot. */}
+            {(() => {
+              const all = [...INGREDIENTS, ...gameState.customIngredients];
+              const held = (pred: (i: Ingredient) => boolean) =>
+                Object.entries(gameState.inventory).reduce<number>((acc, [id, n]) => {
+                  const ing = all.find(x => x.id === id);
+                  return ing && pred(ing) ? acc + (Number(n) || 0) * (ing.mass || 0) : acc;
+                }, 0);
+
+              const saltG = held(i => i.type === IngredientType.ADDITIVE && /salt/i.test(i.id));
+              const substrateG = held(i => i.type === IngredientType.SUBSTRATE);
+              const waterMl = held(i => i.id === 'water');
+              const sporePkts = Object.entries(gameState.inventory).reduce<number>((acc, [id, n]) => {
+                const ing = all.find(x => x.id === id);
+                return ing && ing.type === IngredientType.STARTER ? acc + (Number(n) || 0) : acc;
+              }, 0);
+              const kg = (g: number) => g >= 1000 ? `${(g / 1000).toFixed(g >= 10000 ? 0 : 1)}kg` : `${Math.round(g)}g`;
+
+              return (
+                <>
+                  <div className="pantry-item" title="Every salt on the shelf, by weight">
+                    <SaltCrystalIcon size={12} color="var(--text-lo)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
+                  </div>
+                  <div className="pantry-item" title="Every live starter, bought or cultured">
+                    <SporeClusterIcon size={12} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
+                  </div>
+                  <div className="pantry-item" title="Every substrate on the shelf, by weight">
+                    <GrainSprigIcon size={12} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
+                  </div>
+                  <div className="pantry-item" title="Filtered water">
+                    <WaterDropIcon size={12} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
+                  </div>
+                </>
+              );
+            })()}
             <div
               onClick={() => toggleDrawer('marketplace')}
               className="pantry-item"

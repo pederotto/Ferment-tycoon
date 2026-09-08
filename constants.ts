@@ -632,6 +632,31 @@ export const VESSELS: Vessel[] = [
         capacityL: 20
     },
     {
+        /* THE MURO.
+           Koji had two bad options and no good one. A cedar tray is correct in
+           form — wide, shallow, breathable — but it has no heat at all, so a
+           bed in a cold month simply never gets going. The Thermal Chamber has
+           the heat but insulates at 0.9, and the critic has always said so:
+           "Incubators provide too much insulation for Koji. The metabolic heat
+           trapped inside killed the mold." Both true, and between them nothing.
+
+           A real muro is a cedar-lined warm cupboard: gently heated, breathable
+           enough to shed the heat the bed makes itself, and misted by hand.
+           Cheaper than the chamber, a third of the power, and capped at 34 C —
+           it will hold a koji bed and it will not pasteurise a garum, so it does
+           not quietly become a cut-price chamber. */
+        id: 'koji_muro',
+        name: 'Cedar Muro',
+        slotsRequired: 2,
+        powerDraw: 45,
+        cost: 420,
+        description: 'A warm cedar cupboard. Gentle heat to 34°C, breathable, misted by hand.',
+        idealFor: [FermentType.KOJI],
+        insulationFactor: 0.45,
+        capacityL: 8,
+        heatedTo: 34
+    },
+    {
         id: 'incubator',
         name: 'Thermal Chamber',
         slotsRequired: 2,
@@ -640,7 +665,8 @@ export const VESSELS: Vessel[] = [
         description: 'Precise temperature control for sensitive projects.',
         idealFor: [FermentType.GARUM, FermentType.BLACK, FermentType.KOJI],
         insulationFactor: 0.9,
-        capacityL: 10
+        capacityL: 10,
+        heatedTo: 70
     },
     {
         id: 'cedar_barrel',

@@ -5,8 +5,8 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes } from '../services/gameLogic';
-import { INGREDIENTS } from '../constants';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour } from '../services/gameLogic';
+import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS } from '../constants';
 import {
   CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
   LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon
@@ -38,7 +38,11 @@ const ChamberPanel: React.FC<{
   const c = getControls(batch);
   const hasFan = (inventory['portable_fan'] || 0) > 0;
   const hasHumidifier = (inventory['humidifier'] || 0) > 0;
-  const isIncubator = batch.vesselId === 'incubator';
+  // Whether this vessel has a setpoint at all, and how far it goes, is a
+  // property of the vessel rather than of one hardcoded id — otherwise the
+  // Cedar Muro gets heating in the simulation and no dial in the UI.
+  const heatCeiling = VESSELS.find(v => v.id === batch.vesselId)?.heatedTo;
+  const isIncubator = heatCeiling !== undefined;
   const ex = chamberExchange(c, hasFan);
   const live = batch.status === 'active';
 
@@ -118,14 +122,20 @@ const ChamberPanel: React.FC<{
               {c.heat === null ? 'Off' : 'On'}
             </button>
             <input
-              type="range" min={20} max={70} step={1}
-              value={c.heat ?? recipe.idealParams.temp}
+              type="range" min={20} max={heatCeiling ?? 70} step={1}
+              value={Math.min(heatCeiling ?? 70, c.heat ?? recipe.idealParams.temp)}
               disabled={!live || c.heat === null || !onSetControl}
               onChange={e => onSetControl?.({ heat: Number(e.target.value) })}
             />
             <span className="cp-set mono">{c.heat === null ? '—' : `${c.heat}°`}</span>
           </div>
         </div>
+      )}
+      {isIncubator && (heatCeiling ?? 70) < 55 && (
+        <p className="cp-even none">
+          This vessel holds body heat, not process heat — it stops at {heatCeiling}°C.
+          Enough for a koji bed; not enough to preserve by heat instead of salt.
+        </p>
       )}
 
       {/* THE SURFACE. Skim was a button you pressed hopefully — there was no way
@@ -538,7 +548,32 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
               happening, on Harvest it is the post-mortem — and a finished batch
               opens straight onto Harvest, which is where it matters most. */}
           <div style={{ padding: '0 24px' }}>
-            {maturityNote && (
+            {/* THE SECOND SCALE.
+                Fermentation is 0-100 and it ends. For the five families defined
+                by age — miso, shoyu, garum, vinegar, blackening — what happens
+                after that is a different process on a different clock, and it
+                had no dial at all: the batch sat at 100% reading "Mature" with
+                no way to tell a month from a decade. Progress runs to
+                AGEING_MAX_PROGRESS on this one, logarithmically, because a
+                hatcho gains most of its depth in the first year. */}
+            {ageingBehaviour(recipe) === 'matures' && batch.progress >= recipe.peakWindowEnd && (() => {
+              const m = getMaturity(batch, recipe);
+              return (
+                <div className="mature-track">
+                  <div className="mt-head">
+                    <span className="l">Maturation</span>
+                    <span className="v mono">
+                      {(m * 100).toFixed(0)}% · {Math.round(batch.progress)} of {AGEING_MAX_PROGRESS}
+                    </span>
+                  </div>
+                  <div className="mt-rail">
+                    <div className="mt-fill" style={{ width: `${Math.max(1.5, m * 100)}%` }} />
+                  </div>
+                  <p>{maturityNote ?? 'Just finished fermenting. The ageing has not started yet.'}</p>
+                </div>
+              );
+            })()}
+            {maturityNote && ageingBehaviour(recipe) !== 'matures' && (
               <div className="maturity-note">
                 <span className="l">Maturing</span>
                 <span className="v">{maturityNote}</span>
