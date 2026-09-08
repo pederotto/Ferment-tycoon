@@ -40,30 +40,26 @@ ingredient market that makes bulk genuinely dearer.
 
 ## Needs doing before anything else
 
-**~~The Inoculation Bench popup redesign.~~ Built, not yet measured in a
-browser.** The bench failed in opposite ways at each end of the range rather
-than one way throughout:
+**~~The Inoculation Bench popup redesign.~~ Done and measured.** The bench failed
+in opposite ways at each end of the range rather than one way throughout — 299px
+stations against station 04's 373px of content on a short window, and 330-409px
+columns stretched to 711px holding roughly 300px each at 1920x1080. One layout
+could not serve both.
 
-- *Short window* (~720px tall): four stations got 299px each against station
-  04's 373px of content. Cramped.
-- *Full screen* (1920x1080): the modal is 1440x940 and the four columns were
-  330-409px wide by **711px tall**, holding roughly 300px of content each.
-  Nothing overflowed; it was strung out into thin, mostly-empty vertical strips,
-  which is why it read worse the more room it had.
+The chamber (02) and the seal controls (04) are the work surface; reagents (01)
+and vessel (03) are overlays. Measured after, with no overflow anywhere:
 
-One layout could not serve both. The chamber (02) and the seal controls (04) are
-now a two-column work area that keeps the full height, and reagents (01) and
-vessel (03) are overlays opened from a pair of buttons in the chamber — closed
-by the scrim, a Back button, or Escape. The phone keeps its own four-step
-walk through the same four stations, untouched.
+| viewport   | columns   | station | picker           |
+|------------|-----------|---------|------------------|
+| 1920x1080  | 719 x 711 | 719x711 | right half, chamber stays visible |
+| 1366x720   | 655 x 582 | 655x582 | full width |
+| 1100x800   | 527 x 671 | 527x671 | full width |
+| 375x812    | step-through, unchanged | | not applicable |
 
-Verified so far: `tsc` clean, build clean, and the compiled CSS checked for
-source order — the phone override lands after the base `.pick-row` rule and the
-new grid lands after the 768-1150 two-by-two rule, which is the trap this file
-has fallen into before. **Not yet verified: the rendered layout at either
-problem viewport.** The browser pane was declined, and nothing headless is
-installed. Measure `getBoundingClientRect` on `.station` at 1920x1080 and at
-1366x720 before calling this closed.
+Two things measurement caught that reading could not: the scrim was underneath
+the pane at every pixel, so "click outside to go back" had nowhere to click; and
+the chamber read `0.00 / 60 L` beside a row saying `2.00kg` because dynamics
+waited for a vessel. Both fixed.
 
 **~~A design decision on bulk.~~ Settled.** Volume is now limited by how hard it
 is to control rather than by cost — see `unevennessRate` and the CLAUDE.md note.

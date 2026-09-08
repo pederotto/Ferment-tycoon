@@ -304,6 +304,21 @@ const BatchController: React.FC<BatchControllerProps> = ({
 
   // Resolve recipe & dynamics effect
   useEffect(() => {
+    // Mass does not wait for a vessel. Dynamics used to stay zeroed until one was
+    // chosen, so the chamber printed "0.00 / 60 L" and "Vessel fill 0%" directly
+    // beside a row reading "Pearl Barley 2x 2.00kg" — the screen contradicting
+    // itself. Four columns hid that; a two-column bench puts them side by side.
+    //
+    // Two things that were written as design and never actually worked come back
+    // with it: reagents cap against the largest vessel you own before you pick
+    // one (the comment on capacityLimitL says so), and the vessel list greys out
+    // anything too small for what is already in the chamber.
+    setDynamics(
+      selectedIngredientIds.length > 0
+        ? calculateBatchDynamics(selectedIngredients, customQuantities)
+        : { yieldVolume: 0, concentration: 0, speedModifier: 1, totalMass: 0 }
+    );
+
     if (selectedIngredientIds.length > 0 && vesselId) {
       const recipe = resolveRecipeFromMatrix(selectedIngredients, vesselId);
       setResolvedRecipe(recipe);
@@ -327,13 +342,11 @@ const BatchController: React.FC<BatchControllerProps> = ({
       }
       
       setIsBioSludge(recipe.type === FermentType.FAIL);
-      setDynamics(calculateBatchDynamics(selectedIngredients, customQuantities));
     } else {
       setResolvedRecipe(null);
       setProjectedRecipeName('Waiting for Inputs...');
       setIsBioSludge(false);
       setIsUndiscovered(false);
-      setDynamics({ yieldVolume: 0, concentration: 0, speedModifier: 1, totalMass: 0 });
     }
   }, [selectedIngredientIds, vesselId, selectedIngredients, customQuantities, analyzedRecipeIds, unlockedRecipes, ownedBookIds, hydrationTouched]);
 

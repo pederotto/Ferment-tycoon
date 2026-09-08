@@ -2281,7 +2281,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   .pick-scrim {
     display: block;
     position: absolute; inset: 0; z-index: 2;
-    background: rgba(10, 7, 4, 0.5);
+    background: rgba(10, 7, 4, 0.38);
     border: 0; cursor: pointer;
   }
 
@@ -2300,4 +2300,23 @@ input[type="range"].dial-slider::-moz-range-thumb {
     cursor: pointer;
   }
   .pane-back:hover { color: var(--brass); border-color: var(--brass); }
+}
+
+/* Measured at 1920x1080: the pane was inset:0 over a scrim that was also inset:0,
+   so every pixel of "click outside to go back" was underneath the pane. The way
+   out existed only as a button. Worse, a full-width pane hides the chamber, and
+   the chamber's fill against capacity is the number you are drawing reagents
+   AGAINST — the one thing the old four-column layout got right was that you
+   could see it while you worked.
+
+   Above 1150px the pane takes the right column and the chamber stays in view on
+   the left, dimmed but live: the litres climb as you add units, and clicking it
+   puts you back. Below that the bench is too narrow to split, so the pane keeps
+   the full width and Back or Escape is the way out. */
+@media (min-width: 1150px) {
+  .station.pick-pane {
+    left: 50%;
+    border-left: 1px solid var(--line-strong);
+  }
+  .pick-scrim { right: 50%; }
 }

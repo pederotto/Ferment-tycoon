@@ -286,6 +286,22 @@ Two consequences that are not local to the rule that causes them:
   inside the desktop block — an unstyled scrim is a stray button in the middle of
   the phone step-through.
 
+**A picker that covers the bench needs an exposed scrim.** The panes were
+`inset: 0` over a scrim that was also `inset: 0`, so every pixel of "click
+outside to go back" sat underneath the pane and the only way out was a button.
+Above 1150px the pane takes the right column and the scrim the left, which also
+keeps the chamber's fill in view — the one thing four columns got right was that
+you could watch the litres climb while you drew.
+
+**Dynamics must not wait for a vessel.** The resolve effect was gated on
+`selectedIngredientIds.length > 0 && vesselId`, so `dynamics.totalMass` stayed 0
+until a vessel was chosen and the chamber printed `0.00 / 60 L` and `Vessel fill
+0%` beside a row reading `Pearl Barley 2x 2.00kg`. Recipe resolution genuinely
+needs a vessel; mass does not. Two behaviours written as design and never
+actually working came back with the fix — reagents cap against the largest vessel
+you own before you pick one, and the vessel list greys out anything too small for
+what is already in the chamber.
+
 **The spectrometer dock must yield before the stations do.** `.scan-dock` was a
 fixed 148px that never shrank, so on a short window it took a fifth of the
 modal while reading "Spectrometer idle" and left each station 227px against
