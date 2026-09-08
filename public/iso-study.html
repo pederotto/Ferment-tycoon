@@ -186,6 +186,107 @@
   .plate-n { font-family: 'IBM Plex Mono', monospace; font-size: 9px; fill: var(--brass); }
   @media (prefers-reduced-motion: reduce) { .pick .bob, .pick .plate { transition: none; } }
 
+
+  /* ---------- the integrated screen ---------- */
+  .screen {
+    margin-top: 26px;
+    border: 1px solid var(--line-firm);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--void);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .hud {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #241c12, #1a1409);
+    border-bottom: 1px solid var(--line-firm);
+    font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+  }
+  .hud .brand { font-family: 'Zilla Slab', serif; font-size: 14px; color: var(--text-hi); letter-spacing: 0.02em; }
+  .hud .stat { display: flex; align-items: baseline; gap: 5px; }
+  .hud .stat .k { color: var(--text-lo); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; }
+  .hud .stat .v { color: var(--text-hi); }
+  .hud .stat .v.money { color: var(--moss); }
+  .hud .stat .v.warn { color: var(--amber); }
+  .hud .spacer { flex: 1; }
+  .hud .tab {
+    padding: 4px 9px; border: 1px solid var(--line); border-radius: 2px;
+    color: var(--text-mid); letter-spacing: 0.06em;
+  }
+  .hud .tab.on { color: var(--bg, #1a1409); background: var(--brass); border-color: var(--brass); }
+
+  .stage { display: grid; grid-template-columns: 1fr 258px; min-height: 356px; }
+  @media (max-width: 720px) { .stage { grid-template-columns: 1fr; } }
+
+  .stage-scene {
+    position: relative;
+    background:
+      radial-gradient(110% 80% at 46% 6%, rgba(224,138,60,0.09), transparent 60%),
+      linear-gradient(180deg, #1b1409, #0d0906);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .stage-scene svg { display: block; max-width: 100%; height: auto; }
+
+  .dock {
+    background: var(--panel);
+    border-left: 1px solid var(--line-firm);
+    padding: 14px 14px 12px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .dock-head .t { font-family: 'Zilla Slab', serif; font-size: 15px; color: var(--text-hi); display: block; }
+  .dock-head .s { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brass); }
+
+  /* ingredients as icons, per the brief — not a scene, a row of glyphs */
+  .ing-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ing {
+    width: 38px; height: 38px; border-radius: 2px;
+    background: var(--cubby); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .ing svg { display: block; }
+  .ing .n {
+    position: absolute; right: 1px; bottom: 0;
+    font-family: 'IBM Plex Mono', monospace; font-size: 7.5px;
+    color: var(--text-mid); background: rgba(0,0,0,0.72); padding: 0 2px; border-radius: 1px;
+  }
+  .dock-sec { display: flex; flex-direction: column; gap: 5px; }
+  .dock-lbl { font-size: 8.5px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-lo); }
+  .kvline {
+    display: flex; justify-content: space-between; gap: 8px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    padding: 2px 0; border-bottom: 1px dotted rgba(243,233,216,0.07);
+  }
+  .kvline .k { color: var(--text-lo); }
+  .kvline .v { color: var(--text-hi); }
+  .kvline .v.good { color: var(--moss); }
+  .kvline .v.warn { color: var(--amber); }
+  .dock-act { display: flex; gap: 6px; margin-top: auto; }
+  .dock-act button {
+    flex: 1; padding: 7px 6px; font-size: 10px; font-family: 'Work Sans', sans-serif;
+    letter-spacing: 0.06em; border-radius: 2px; cursor: pointer;
+    background: var(--amber); color: #1d1206; border: 0; font-weight: 600;
+  }
+  .dock-act button.ghost { background: transparent; color: var(--text-mid); border: 1px solid var(--line-firm); }
+
+  .tray {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 16px;
+    background: linear-gradient(180deg, #1a1409, #120d07);
+    border-top: 1px solid var(--line-firm);
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  }
+  .tray .slotpip {
+    width: 20px; height: 20px; border-radius: 2px;
+    border: 1px solid var(--line); background: var(--cubby);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-lo); font-size: 8.5px;
+  }
+  .tray .slotpip.full { border-color: var(--brass); color: var(--brass); }
+  .tray .note { color: var(--text-lo); }
+
   /* ---------- the ledger of cost ---------- */
   .cost { margin-top: 26px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
   .cost-row {
@@ -563,133 +664,162 @@
   </section>
 
 
+
   <hr class="rule" style="margin-top:56px">
 
   <section>
-    <span class="eyebrow">Reagents</span>
-    <h2>The larder, instead of a filtered list</h2>
+    <span class="eyebrow">Integration</span>
+    <h2>How the rest of the UI sits around it</h2>
     <p>
-      Stock is a searchable list of rows today. As a shelf it carries three
-      things the list cannot: how much is left, what physical form the
-      ingredient takes, and the fact that a spore packet and a sack of barley
-      are not the same kind of object at all.
+      The scene replaces the bench grid and nothing else. The status strip stays
+      a status strip, the detail panel stays a panel, and the numbers stay
+      numbers — what changes is that the middle of the screen is now a place
+      rather than a table. Ingredients appear as icons in the panel, not as
+      objects in the world.
     </p>
 
-    <div class="surface">
-      <svg width="672" height="200" viewBox="0 0 740 220" role="img" aria-label="An isometric larder shelf holding grain sacks, fish, salt, spore packets and a jar of finished koji">
-        <defs>
-          <linearGradient id="shelfg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#6d4c2b"/><stop offset="100%" stop-color="#4f371d"/>
-          </linearGradient>
-          <linearGradient id="sackg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#b09666"/><stop offset="100%" stop-color="#7d6743"/>
-          </linearGradient>
-        </defs>
+    <div class="screen">
+      <div class="hud">
+        <span class="brand">FERMENTA</span>
+        <span class="stat"><span class="k">Week</span><span class="v">18</span></span>
+        <span class="stat"><span class="k">Funds</span><span class="v money">$9,479</span></span>
+        <span class="stat"><span class="k">Renown</span><span class="v">45</span></span>
+        <span class="stat"><span class="k">Hygiene</span><span class="v">92%</span></span>
+        <span class="stat"><span class="k">Heat</span><span class="v warn">20</span></span>
+        <span class="spacer"></span>
+        <span class="tab on">Bench</span><span class="tab">Supply</span><span class="tab">Crew</span><span class="tab">Orders</span><span class="tab">Codex</span>
+      </div>
 
-        <!-- shelf plank -->
-        <path d="M370 96 L706 150 L370 186 L34 150z" fill="url(#shelfg)"/>
-        <path d="M34 150 L370 186 v16 L34 166z" fill="var(--oak-deep)"/>
-        <path d="M706 150 L370 186 v16 L706 166z" fill="var(--oak-dark)"/>
-        <path d="M370 96 L706 150 L370 186 L34 150z" fill="none" stroke="rgba(243,233,216,0.14)" stroke-width="1.1"/>
-
-        <!-- GRAIN SACK · pearl barley -->
-        <g class="pick" tabindex="0" role="button" aria-label="Pearl barley, 5 units left">
-          <g class="bob">
-            <path d="M96 104 c-16 4 -22 22 -20 34 c2 12 12 18 24 18 c12 0 22 -6 24 -18 c2 -12 -4 -30 -20 -34z" fill="url(#sackg)"/>
-            <path d="M96 104 c-11 3 -17 16 -17 30 c0 12 6 20 17 22 c-6 -16 -6 -38 0 -52z" fill="#c4ab7c" opacity="0.5"/>
-            <path d="M88 104 c4 -6 12 -6 16 0 c-4 4 -12 4 -16 0z" fill="#8a7450"/>
-            <ellipse cx="96" cy="104" rx="9" ry="3.4" fill="#6a5636"/>
-            <g fill="#e3d3a4"><circle cx="93" cy="100" r="1.5"/><circle cx="99" cy="102" r="1.3"/><circle cx="96" cy="98" r="1.2"/></g>
-          </g>
-          <g class="plate" transform="translate(56,168)">
-            <text class="plate-t" x="0" y="0">Pearl Barley</text>
-            <text class="plate-n" x="0" y="12">5 left · 1kg</text>
-          </g>
-        </g>
-
-        <!-- FISH CRATE · anchovies -->
-        <g class="pick" tabindex="0" role="button" aria-label="Fresh anchovies, 71 units left">
-          <g class="bob">
-            <path d="M212 116 L256 132 L212 148 L168 132z" fill="var(--oak)"/>
-            <path d="M168 132 L212 148 v14 L168 146z" fill="var(--oak-deep)"/>
-            <path d="M256 132 L212 148 v14 L256 146z" fill="var(--oak-dark)"/>
-            <path d="M212 119 L250 132 L212 145 L174 132z" fill="#2a2b2e"/>
-            <g fill="#9fb3bd">
-              <ellipse cx="200" cy="130" rx="12" ry="3" transform="rotate(-16 200 130)"/>
-              <ellipse cx="220" cy="134" rx="12" ry="3" transform="rotate(12 220 134)"/>
-              <ellipse cx="212" cy="127" rx="11" ry="2.6" transform="rotate(-4 212 127)"/>
+      <div class="stage">
+        <div class="stage-scene">
+          <svg width="470" height="290" viewBox="0 0 470 290" role="img" aria-label="The bench, with a moromi barrel selected">
+            <defs>
+              <linearGradient id="bt2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#7a5631"/><stop offset="100%" stop-color="#5c3f22"/>
+              </linearGradient>
+              <linearGradient id="steam2" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#f4ead9" stop-opacity="0.26"/>
+                <stop offset="100%" stop-color="#f4ead9" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g stroke="rgba(243,233,216,0.05)" stroke-width="1" fill="none">
+              <path d="M40 196 L235 100 L430 196 L235 292z"/>
             </g>
-            <g fill="#d5e2e8" opacity="0.7">
-              <circle cx="190" cy="128" r="1.1"/><circle cx="230" cy="135" r="1.1"/>
+            <path d="M235 116 L424 202 L235 240 L46 202z" fill="url(#bt2)"/>
+            <path d="M46 202 L235 240 v16 L46 218z" fill="var(--oak-deep)"/>
+            <path d="M424 202 L235 240 v16 L424 218z" fill="var(--oak-dark)"/>
+            <path d="M235 116 L424 202 L235 240 L46 202z" fill="none" stroke="rgba(243,233,216,0.15)" stroke-width="1"/>
+
+            <!-- koji tray, lid propped, steaming -->
+            <g class="slot" tabindex="0" role="button" aria-label="Slot 1, barley koji">
+              <g class="lift">
+                <path d="M110 150 c-5 -10 5 -14 0 -24" stroke="url(#steam2)" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <path d="M126 148 c5 -9 -4 -13 1 -22" stroke="url(#steam2)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+                <path d="M118 160 L156 179 L118 191 L80 179z" fill="var(--oak)"/>
+                <path d="M80 179 L118 191 v8 L80 187z" fill="var(--oak-deep)"/>
+                <path d="M156 179 L118 191 v8 L156 187z" fill="var(--oak-dark)"/>
+                <path d="M118 163 L151 179 L118 189 L85 179z" fill="#cbb37e"/>
+                <path d="M88 166 L128 146 L156 160 L116 180z" fill="var(--oak-lit)" opacity="0.92"/>
+              </g>
             </g>
-          </g>
-          <g class="plate" transform="translate(168,172)">
-            <text class="plate-t" x="0" y="0">Fresh Anchovies</text>
-            <text class="plate-n" x="0" y="12">71 left · 1kg</text>
-          </g>
-        </g>
 
-        <!-- SALT · a heaped bowl, because salt is weighed not counted -->
-        <g class="pick" tabindex="0" role="button" aria-label="Trapani sea salt, 73 units left">
-          <g class="bob">
-            <path d="M330 122 a30 12 0 0 0 60 0 z" fill="#4a4038"/>
-            <ellipse cx="360" cy="122" rx="30" ry="12" fill="#5c5148"/>
-            <path d="M338 122 c6 -14 40 -14 44 0 a26 10 0 0 1 -44 0z" fill="#efe6d4"/>
-            <ellipse cx="360" cy="120" rx="21" ry="7.4" fill="#f7f1e4"/>
-            <g fill="#ffffff" opacity="0.85">
-              <rect x="352" y="114" width="2.4" height="2.4" transform="rotate(20 352 114)"/>
-              <rect x="366" y="117" width="2" height="2" transform="rotate(-14 366 117)"/>
-              <rect x="358" y="111" width="2.2" height="2.2" transform="rotate(38 358 111)"/>
+            <!-- mason jar -->
+            <g class="slot" tabindex="0" role="button" aria-label="Slot 2, brined plums">
+              <g class="lift">
+                <path d="M203 172 v18 a11 4 0 0 0 22 0 v-18z" fill="rgba(243,233,216,0.07)"/>
+                <path d="M203 180 v10 a11 4 0 0 0 22 0 v-10z" fill="var(--brine-lo)"/>
+                <ellipse cx="214" cy="180" rx="11" ry="4" fill="var(--brine-hi)"/>
+                <path d="M203 172 v18 a11 4 0 0 0 22 0 v-18" fill="none" stroke="rgba(243,233,216,0.4)" stroke-width="1"/>
+                <ellipse cx="214" cy="172" rx="11" ry="4" fill="#2a2016" stroke="rgba(243,233,216,0.4)" stroke-width="1"/>
+              </g>
             </g>
-          </g>
-          <g class="plate" transform="translate(316,164)">
-            <text class="plate-t" x="0" y="0">Trapani Sea Salt</text>
-            <text class="plate-n" x="0" y="12">73 left · 1kg</text>
-          </g>
-        </g>
 
-        <!-- SPORE PACKET · tiny, and it should look tiny -->
-        <g class="pick" tabindex="0" role="button" aria-label="A. Oryzae spores, 2 packets left, living culture">
-          <g class="bob">
-            <path d="M486 126 L510 135 L486 144 L462 135z" fill="#8d8577"/>
-            <path d="M462 135 L486 144 v9 L462 144z" fill="#6c6558"/>
-            <path d="M510 135 L486 144 v9 L510 144z" fill="#565043"/>
-            <path d="M486 128 L505 135 L486 142 L467 135z" fill="#cfc7b4"/>
-            <circle cx="486" cy="135" r="4.6" fill="var(--moss)" opacity="0.5"/>
-            <circle cx="486" cy="135" r="4.6" fill="none" stroke="var(--moss)" stroke-width="0.9"/>
-          </g>
-          <g class="plate" transform="translate(450,168)">
-            <text class="plate-t" x="0" y="0">A. Oryzae Spores</text>
-            <text class="plate-n" x="0" y="12" fill="var(--moss)">2 pkts · living</text>
-          </g>
-        </g>
+            <!-- SELECTED: moromi in a cedar barrel -->
+            <g class="slot" tabindex="0" role="button" aria-label="Slot 3, moromi, selected">
+              <g class="lift">
+                <ellipse cx="322" cy="212" rx="46" ry="15" fill="none" stroke="var(--brass)" stroke-width="1.6"/>
+                <path d="M322 122 C302 122 294 142 294 164 C294 186 304 205 322 205 C340 205 350 186 350 164 C350 142 342 122 322 122z" fill="var(--oak)"/>
+                <path d="M322 122 C308 122 298 142 298 164 C298 186 308 205 322 205 C316 186 313 144 322 122z" fill="var(--oak-lit)" opacity="0.4"/>
+                <path d="M322 205 C340 205 350 186 350 164 C348 186 338 202 322 205z" fill="var(--oak-dark)"/>
+                <path d="M295 146 C308 152 336 152 349 146 L349 152 C336 158 308 158 295 152z" fill="var(--hoop)"/>
+                <path d="M295 178 C308 184 336 184 349 178 L349 184 C336 190 308 190 295 184z" fill="var(--hoop)"/>
+                <ellipse cx="322" cy="122" rx="20" ry="6.6" fill="#2c1f12" stroke="rgba(243,233,216,0.3)" stroke-width="1"/>
+                <ellipse cx="322" cy="122" rx="14" ry="4.4" fill="#3a2a18"/>
+                <!-- a paddle resting in it: this one is stirred -->
+                <path d="M330 96 L342 92 L344 98 L332 102z" fill="var(--oak-lit)"/>
+                <path d="M318 124 L332 100" stroke="var(--oak-lit)" stroke-width="2.6" stroke-linecap="round"/>
+              </g>
+            </g>
 
-        <!-- FINISHED KOJI · your own product, back on the shelf as an input -->
-        <g class="pick" tabindex="0" role="button" aria-label="Barley koji you made, generation 3, amylolytic">
-          <g class="bob">
-            <path d="M602 108 v26 a16 6 0 0 0 32 0 v-26z" fill="rgba(243,233,216,0.08)"/>
-            <path d="M602 118 v16 a16 6 0 0 0 32 0 v-16z" fill="#d8c48e"/>
-            <ellipse cx="618" cy="118" rx="16" ry="6" fill="#efe2bd"/>
-            <g fill="#fffaf0" opacity="0.8"><circle cx="612" cy="117" r="1.4"/><circle cx="624" cy="119" r="1.2"/></g>
-            <path d="M602 108 v26 a16 6 0 0 0 32 0 v-26" fill="none" stroke="rgba(243,233,216,0.4)" stroke-width="1.2"/>
-            <ellipse cx="618" cy="108" rx="16" ry="6" fill="#2a2016" stroke="rgba(243,233,216,0.4)" stroke-width="1.2"/>
-            <rect x="606" y="126" width="24" height="9" rx="1" fill="#241b10" stroke="var(--brass)" stroke-width="0.7"/>
-            <text class="plate-n" x="609" y="133" style="font-size:6.5px">GEN 3</text>
-          </g>
-          <g class="plate" transform="translate(580,164)">
-            <text class="plate-t" x="0" y="0">Barley Koji</text>
-            <text class="plate-n" x="0" y="12">yours · amylolytic</text>
-          </g>
-        </g>
+            <!-- empty slot, drawn as a place rather than a card -->
+            <g opacity="0.5">
+              <path d="M392 196 L416 207 L392 218 L368 207z" fill="none" stroke="rgba(243,233,216,0.22)" stroke-width="1" stroke-dasharray="3 3"/>
+            </g>
+          </svg>
+        </div>
 
-      </svg>
+        <aside class="dock">
+          <div class="dock-head">
+            <span class="s">Cedar barrel · slot 3</span>
+            <span class="t">Moromi</span>
+          </div>
+
+          <div class="dock-sec">
+            <span class="dock-lbl">What went in</span>
+            <div class="ing-row">
+              <span class="ing" title="Yellow Soybeans · 8 kg">
+                <svg width="20" height="20" viewBox="0 0 20 20"><ellipse cx="7" cy="11" rx="4" ry="3.2" fill="#c8b273"/><ellipse cx="13" cy="9" rx="4" ry="3.2" fill="#b09a5e"/><ellipse cx="10" cy="14" rx="4" ry="3.2" fill="#d6c288"/></svg>
+                <span class="n">8kg</span>
+              </span>
+              <span class="ing" title="Roasted Wheat · 8 kg">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 3 v14" stroke="#a07b3e" stroke-width="1.4"/><g fill="#c9a05a"><ellipse cx="7" cy="7" rx="2.4" ry="1.5" transform="rotate(-30 7 7)"/><ellipse cx="13" cy="7" rx="2.4" ry="1.5" transform="rotate(30 13 7)"/><ellipse cx="7" cy="11" rx="2.4" ry="1.5" transform="rotate(-30 7 11)"/><ellipse cx="13" cy="11" rx="2.4" ry="1.5" transform="rotate(30 13 11)"/></g></svg>
+                <span class="n">8kg</span>
+              </span>
+              <span class="ing" title="Shoyu Koji-kin · protease strain">
+                <svg width="20" height="20" viewBox="0 0 20 20"><rect x="4" y="5" width="12" height="10" rx="1.5" fill="#cfc7b4"/><circle cx="10" cy="10" r="3.2" fill="#7a9e6a" opacity="0.55"/><circle cx="10" cy="10" r="3.2" fill="none" stroke="#7a9e6a" stroke-width="0.9"/></svg>
+                <span class="n">10g</span>
+              </span>
+              <span class="ing" title="Trapani Sea Salt · 18% of substrate">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M5 13 c2 -6 8 -6 10 0 a7 3 0 0 1 -10 0z" fill="#f2ebda"/><ellipse cx="10" cy="13" rx="5" ry="2.2" fill="#fffaf0"/></svg>
+                <span class="n">2.9kg</span>
+              </span>
+              <span class="ing" title="Filtered water · brine">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 4 c4 5 6 7 6 9.4 a6 6 0 0 1 -12 0 c0 -2.4 2 -4.4 6 -9.4z" fill="#5fa3a8" opacity="0.75"/></svg>
+                <span class="n">21L</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="dock-sec">
+            <span class="dock-lbl">Holding</span>
+            <span class="kvline"><span class="k">Temp</span><span class="v good">25.0° · on target</span></span>
+            <span class="kvline"><span class="k">Salinity</span><span class="v good">18.0%</span></span>
+            <span class="kvline"><span class="k">Stirred</span><span class="v warn">4 days ago</span></span>
+            <span class="kvline"><span class="k">Progress</span><span class="v">61% of 92</span></span>
+          </div>
+
+          <div class="dock-act">
+            <button>Stir</button>
+            <button class="ghost">Inspect</button>
+          </div>
+        </aside>
+      </div>
+
+      <div class="tray">
+        <span class="slotpip full">1</span><span class="slotpip full">2</span>
+        <span class="slotpip full">3</span><span class="slotpip full">4</span>
+        <span class="slotpip">5</span><span class="slotpip">6</span>
+        <span class="slotpip">7</span><span class="slotpip">8</span>
+        <span class="note">4 of 8 slots · $310 upkeep this week</span>
+      </div>
     </div>
+
     <p class="caption">
-      <b>What the list hides</b>
-      <span>A spore packet is 10&nbsp;g and a grain sack is a kilo. On a shelf that is
-      obvious; in a list they are two rows of the same height. The jar on the
-      right is koji you made — your own output coming back as an input, which is
-      the loop the whole game turns on.</span>
+      <b>What moved</b>
+      <span>Only the middle. The HUD, the tabbed panels and the detail dock are the
+      components you already have, restyled at most. Ingredients are five icons
+      in a row rather than five objects on a shelf — cheaper to draw, easier to
+      read, and it keeps the world uncluttered.</span>
     </p>
   </section>
 

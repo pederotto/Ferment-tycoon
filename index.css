@@ -2005,3 +2005,83 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .cw-role { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dotted rgba(243, 233, 216, 0.07); }
 .cw-role .rn { flex: 0 0 96px; font-size: 10.5px; color: var(--text-hi); }
 .cw-role .re { flex: 1; font-size: 10.5px; line-height: 1.5; color: var(--text-lo); }
+
+/* =============================================================================
+   THE ISOMETRIC BENCH
+
+   Replaces the card shelf. Large vessels stand on the floor behind the bench —
+   nobody lifts a 60 L cask onto a workbench — which leaves the table for jars
+   and trays and stops four-slot vessels competing for space.
+   ============================================================================= */
+.iso-room {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background:
+    radial-gradient(110% 80% at 50% 4%, rgba(224, 138, 60, 0.06), transparent 62%),
+    linear-gradient(180deg, #1a1409, var(--bg-cubby));
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.iso-svg { display: block; width: 100%; height: auto; max-height: 100%; }
+
+.iso-slot { cursor: pointer; }
+.iso-slot:focus { outline: none; }
+.iso-lift { transition: transform 170ms cubic-bezier(.2, .7, .3, 1); }
+.iso-slot:hover .iso-lift,
+.iso-slot:focus-visible .iso-lift { transform: translateY(-8px); }
+
+.iso-shadow { fill: rgba(0, 0, 0, 0.42); }
+.iso-ring { opacity: 0; transition: opacity 150ms ease; }
+.iso-slot:hover .iso-ring,
+.iso-slot:focus-visible .iso-ring,
+.iso-slot.open .iso-ring { opacity: 1; }
+
+/* The pip is always visible — the bench has to read without hovering. */
+.iso-pip { opacity: 0.9; }
+.iso-slot:hover .iso-pip, .iso-slot.open .iso-pip { opacity: 0; }
+
+.iso-card { opacity: 0; pointer-events: none; transition: opacity 140ms ease; }
+.iso-slot:hover .iso-card,
+.iso-slot:focus-visible .iso-card,
+.iso-slot.open .iso-card { opacity: 1; }
+.iso-t { font-family: 'Zilla Slab', serif; font-size: 12.5px; fill: var(--text-hi); }
+.iso-s { font-family: 'IBM Plex Mono', monospace; font-size: 9px; }
+
+.iso-steam { stroke: rgba(243, 233, 216, 0.3); }
+
+.iso-empty { cursor: pointer; opacity: 0.6; transition: opacity 150ms ease; }
+.iso-empty:hover, .iso-empty:focus-visible { opacity: 1; }
+.iso-empty:focus { outline: none; }
+
+/* One action bar for whichever vessel has focus, rather than a set per card. */
+/* The action band sits under the scene rather than over it — floated inside the
+   room it covered the front row, which is the row you most want to reach. */
+.iso-bar {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 42px; padding: 6px 10px; flex-shrink: 0;
+}
+.iso-actions {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 6px 10px;
+  background: rgba(20, 15, 9, 0.92);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+}
+.iso-actions .who {
+  font-family: 'Zilla Slab', serif; font-size: 12px; color: var(--text-hi);
+  margin-right: 4px; max-width: 190px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.iso-hint {
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-lo); pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iso-lift, .iso-ring, .iso-card, .iso-pip, .iso-empty { transition: none; }
+}

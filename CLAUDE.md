@@ -204,6 +204,28 @@ calling however clean the bench then was. It is a reduced rate now, and a
 spotless bench actively cools their interest rather than merely not attracting
 it.
 
+## The bench scene
+
+**Big vessels stand on the floor, not on the table.** `isoPlacement` puts
+anything needing four bench slots behind the bench at floor level, two-slot
+vessels on the back of the table and one-slot vessels at the front. That is how
+a workshop is arranged — nobody lifts a 60 L cask onto a workbench — and it is
+also what stops four-slot vessels competing with everything else for table
+space.
+
+**Rows must be drawn floor → back → front.** There is no z-index in SVG; paint
+order is depth order. Drawing the floor row before the bench is what makes those
+vessels read as standing behind it rather than on it.
+
+**Vessel scale is softened, not true.** `isoScaleFor` spreads about 1.9x across
+the range where the honest cube root of volume would give 3.1x, because at true
+scale a 2 L jar is too small to read or click. The rest of the size difference
+is carried by which row the vessel stands in.
+
+**Nothing floats over the front row.** The action bar lives in its own band
+under the scene. Positioned inside the room it covered the front row, which is
+the row the player is most likely to be reaching for.
+
 ## Layout
 
 Stacking order, which three separate bugs came from getting wrong:
