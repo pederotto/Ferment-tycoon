@@ -402,6 +402,32 @@ actually working came back with the fix — reagents cap against the largest ves
 you own before you pick one, and the vessel list greys out anything too small for
 what is already in the chamber.
 
+**Pause is not a speed.** `gameSpeed` carried 0 to mean paused, so pausing
+*erased the speed selection* — every one of the 1x/2x/4x/8x chips went
+unselected and a paused game could not say what it would resume at. The pause
+button and the speed chips were one control wearing two hats, which is why
+changing speed read as the UI glitching. `gameSpeed` is now always 1, 2, 4 or 8
+and `paused` is separate; the selected chip stays lit (dimmed) while the clock is
+stopped, and picking a speed resumes as well as selects.
+
+The control is `components/SpeedControl.tsx` and it renders in the inspector head
+as well as the header. Speeding up to see what a change does and slowing down
+when it gets interesting is the loop of that screen, and the control used to be
+behind the modal.
+
+**A header row must scroll, not shrink.** The HUD carries more than fits below
+about 1300px and flexbox resolved that by crushing whichever child could shrink:
+`.brand` measured **0px** at 1024 while the speed chips inside it printed across
+the gauges — thirteen overlapping pairs at 1100, "FERMENTA" over "0W/100W". Text
+that cannot shrink does not wrap, it overlaps. Every `.hud` child is
+`flex-shrink: 0` now and the row scrolls, with the scroll contained in the header
+rather than on the body. Measured 0 overlaps and 0 body overflow at 900, 1024,
+1100, 1440 and 1600.
+
+Also: the almanac appeared at Tailwind's `lg` (1024px) into a space that could
+not hold it until ~1250. When you gate a header element on a breakpoint, check
+the width it actually needs, not the one that looks about right.
+
 **A button that names a step must take you to it.** The Seal button read
 "Draw your reagents" or "Choose a vessel" while `disabled` — the primary action
 of the screen was an instruction you could not act on. It opens the picker it

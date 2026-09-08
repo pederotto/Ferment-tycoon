@@ -2404,3 +2404,51 @@ input[type="range"].dial-slider::-moz-range-thumb {
   .pick-scrim { z-index: 7; }
   .station.pick-pane { z-index: 8; }
 }
+
+/* A speed chip stays lit while the clock is stopped — the selection is what you
+   will resume at, so hiding it was the thing that made pausing feel like the UI
+   losing its place. Dimmed, not unselected. */
+.hud-speed .chip-tab.held.active { opacity: 0.62; }
+.hud-speed.compact { margin-left: 0; padding: 2px; }
+.hud-speed.compact .chip-tab { padding: 3px 7px; font-size: 9.5px; }
+
+/* THE HEADER MUST SHRINK, NOT COLLIDE.
+   Measured at 1100px: thirteen overlapping pairs — "FERMENTA" printed across
+   "0W/100W", the date across "100%", the weather line across "Hygiene". Fine at
+   900 (things are hidden) and fine at 1600 (there is room), so it was a dead
+   band in between: the almanac appeared at Tailwind's lg (1024px) into a space
+   that could not hold it until about 1250.
+
+   Raising that breakpoint fixes today's collision; these rules stop the next one.
+   Nothing in a flex row shrinks below its content unless you say so, and text
+   that cannot shrink overflows its box onto its neighbour instead of wrapping. */
+/* The header carries more than fits below about 1300px, and flexbox resolved
+   that by crushing whichever child was allowed to shrink — .brand went to 0px
+   at 1024 while the speed chips inside it spilled across the gauges. Text that
+   cannot shrink does not wrap, it overlaps.
+
+   So nothing shrinks, and the row scrolls instead. A header you can nudge
+   sideways on a cramped window is strictly better than one printing "FERMENTA"
+   across "0W/100W", and the scroll is contained here rather than on the body. */
+.hud { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.hud::-webkit-scrollbar { display: none; }
+.hud > * { flex-shrink: 0; }
+/* `overflow: hidden` here was a mistake: .brand collapsed to 0px and the speed
+   control — which lives inside it and must never disappear — spilled straight
+   out onto the gauges. The brand may shrink; its contents may not be clipped. */
+.brand { min-width: 0; }
+/* The clock and the numbers hold their size. Measured at 1024px the header
+   wanted 1051px in 1018px, so something has to give — and it is the nav row,
+   which scrolls, rather than a control being silently squeezed out of reach. */
+.hud .hud-speed { flex-shrink: 0; }
+
+.almanac { min-width: 0; }
+.almanac > div { min-width: 0; }
+.almanac .season,
+.almanac .date { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wordmark { min-width: 0; }
+.wordmark .title,
+.wordmark .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The gauges are the numbers you actually read — they hold their size and the
+   brand gives way first. */
+.gauges { flex: 0 0 auto; }

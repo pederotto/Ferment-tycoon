@@ -5,6 +5,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
+import SpeedControl from './SpeedControl';
 import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour } from '../services/gameLogic';
 import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS } from '../constants';
 import {
@@ -294,6 +295,10 @@ interface BatchInspectorProps {
   gameState?: GameState;
   onClose: () => void;
   onIntervention: (action: string) => void;
+  gameSpeed?: number;
+  paused?: boolean;
+  onSetSpeed?: (n: number) => void;
+  onTogglePause?: () => void;
   onSetControl?: (patch: Partial<ChamberControls>) => void;
   onQuickHarvest: () => void;
   onSell?: (buyer: Buyer, price: number, renownGain: number) => void;
@@ -361,6 +366,10 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   gameState,
   onClose,
   onIntervention,
+  gameSpeed,
+  paused,
+  onSetSpeed,
+  onTogglePause,
   onSetControl,
   onQuickHarvest,
   onSell,
@@ -533,6 +542,19 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* The clock, where you are actually watching the ferment. Speeding
+                up to see what a change does and slowing down when it gets
+                interesting is the whole loop of this screen, and the control for
+                it lived in the header behind the modal. */}
+            {onSetSpeed && onTogglePause && (
+              <SpeedControl
+                gameSpeed={gameSpeed ?? 1}
+                paused={!!paused}
+                onSetSpeed={onSetSpeed}
+                onTogglePause={onTogglePause}
+                compact
+              />
+            )}
             <div className="wood-panel" style={{ display: 'flex', borderRadius: 10, padding: 4, gap: 4 }}>
               <button onClick={() => setActiveTab('telemetry')} className={`chip-tab${activeTab === 'telemetry' ? ' active' : ''}`}>Bioreactor</button>
               <button onClick={() => setActiveTab('harvest')} className={`chip-tab${activeTab === 'harvest' ? ' active' : ''}`}>Harvest{isInPeakWindow && ' •'}</button>

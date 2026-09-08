@@ -10,6 +10,7 @@ import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
+import SpeedControl from './components/SpeedControl';
 import BatchController from './components/BatchController';
 import BatchInspector from './components/BatchInspector';
 import StaffManager from './components/StaffManager';
@@ -90,7 +91,20 @@ export default function App() {
   const [savedRun] = useState(() => getSaveMeta());
 
   // Game Speed State (0 = Paused, 1x, 2x, 4x, 8x)
+  /**
+   * SPEED AND PAUSE ARE TWO THINGS, NOT ONE.
+   *
+   * `gameSpeed` used to carry 0 to mean paused, which meant pausing ERASED the
+   * speed selection: none of the 1x/2x/4x/8x chips was marked, so a paused game
+   * could not tell you what it would resume at, and the pause button and the
+   * speed chips were one control wearing two hats. Fiddling with speed read as
+   * the UI glitching because the selection kept vanishing.
+   *
+   * `gameSpeed` is now always 1, 2, 4 or 8 — the chosen speed, always shown —
+   * and `paused` is separate. The loop reads both.
+   */
   const [gameSpeed, setGameSpeed] = useState<number>(1);
+  const [paused, setPaused] = useState<boolean>(false);
   const lastActiveSpeed = useRef<number>(1);
   // Counts sim ticks, so the cellar can run on a slower cadence than the bench.
   const tickCount = useRef<number>(0);
@@ -123,14 +137,7 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
         e.preventDefault();
-        setGameSpeed(prev => {
-          if (prev === 0) {
-            return lastActiveSpeed.current || 1;
-          } else {
-            lastActiveSpeed.current = prev;
-            return 0;
-          }
-        });
+        setPaused(p => !p);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -293,7 +300,7 @@ export default function App() {
   // --- Game Loop ---
   useEffect(() => {
     if (uiState.inspectorRaid || uiState.showWelcome) return; 
-    if (gameSpeed === 0) return; // Fully paused state
+    if (paused) return; // Fully paused state
     if (gameState.gameOver) return; // Lab is closed — the clock stops
 
     // Adjust rate based on gameSpeed
@@ -605,7 +612,7 @@ export default function App() {
         clearInterval(interval);
         clearInterval(dayInterval);
     };
-  }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, gameState.gameOver]); 
+  }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, paused, gameState.gameOver]); 
 
   const handleGreaseTheFile = () => {
     if (gameState.renown < GREASE_RENOWN_COST) {
@@ -1670,8 +1677,8 @@ export default function App() {
             <span className="title slab">FERMENTA</span>
             <span className="sub">Atelier &amp; Culture House</span>
           </div>
-          <div className="divider-line hidden lg:block" />
-          <div className="almanac hidden lg:flex">
+          <div className="divider-line hidden xl:block" />
+          <div className="almanac hidden xl:flex">
             <AlmanacIcon size={18} />
             <div>
               {/* Week is shown as the week WITHIN the month, so it needs the month
@@ -1685,32 +1692,12 @@ export default function App() {
           </div>
           <div className="divider-line hidden md:block" />
           {/* GAME SPEED & TIME ENGINE */}
-          <div className="hud-speed flex items-center gap-1 rounded-xl p-1 border border-line-strong ml-1 shadow-inner relative z-50" style={{ background: 'rgba(0,0,0,0.25)' }}>
-            <button
-              onClick={() => {
-                if (gameSpeed === 0) {
-                  setGameSpeed(lastActiveSpeed.current || 1);
-                } else {
-                  lastActiveSpeed.current = gameSpeed;
-                  setGameSpeed(0);
-                }
-              }}
-              className={`chip-tab${gameSpeed === 0 ? ' active' : ''}`}
-              title="Toggle Pause / Resume (Spacebar)"
-            >
-              {gameSpeed === 0 ? <PauseCircle className="w-3 h-3 inline mr-1" /> : <Play className="w-3 h-3 inline mr-1" />}
-              {gameSpeed === 0 ? 'PAUSED' : 'RUN'}
-            </button>
-            {[1, 2, 4, 8].map(speed => (
-              <button
-                key={speed}
-                onClick={() => { lastActiveSpeed.current = speed; setGameSpeed(speed); }}
-                className={`chip-tab${gameSpeed === speed ? ' active' : ''}`}
-              >
-                {speed}x
-              </button>
-            ))}
-          </div>
+          <SpeedControl
+            gameSpeed={gameSpeed}
+            paused={paused}
+            onSetSpeed={setGameSpeed}
+            onTogglePause={() => setPaused(p => !p)}
+          />
         </div>
 
         {/* CENTER: GAUGE RINGS */}
@@ -1971,6 +1958,10 @@ export default function App() {
           <BatchInspector 
              batch={activeBatchForTest} 
              recipe={getRecipeForBatch(activeBatchForTest)}
+             gameSpeed={gameSpeed}
+             paused={paused}
+             onSetSpeed={setGameSpeed}
+             onTogglePause={() => setPaused(p => !p)}
              inventory={gameState.inventory}
              activeStaff={gameState.staff}
              playerRenown={gameState.renown}
