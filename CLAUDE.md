@@ -64,6 +64,17 @@ adding the whole aggregate each time. Fifty mackerel dialled to 44.6kg reported
 2,230kg of solids and the dial asked for 412kg of salt. Anything that sums
 `reagentGrams` must do it once per *unique* id.
 
+**And a third layer: the pantry deduction.** `handleStartBatch` iterated
+`usedIngredients` — one entry per unit — while `deductionMap` already held the
+aggregate to remove, so it charged the total once per copy. Ten anchovies
+deducted a hundred, `Math.max(0, ...)` swallowed the overshoot, and the stock
+vanished the moment you used any of it. It charges once per unique id now.
+
+The rule this keeps teaching: **anything that reduces over `selectedIngredients`
+must first decide whether it wants units or ingredients.** Three separate bugs
+have come from getting that wrong — the consumer (`customQuantities`), the
+producer (`solidsMass`), and now the deduction.
+
 **Titrated quantities can legitimately be zero.** `getMass` tests
 `!== undefined`, not truthiness. The truthy version fell back to the full 1 kg
 unit mass whenever a dial hit zero, silently dumping a kilo of salt into a batch.
@@ -144,6 +155,22 @@ buttons fell through to nudging `quality.safety` and were the same weaker
   flips the meaning: the mother drives acidification, and skimming or rousing it
   sets the ferment back. Same quantity, opposite sign — do not split it into
   two, the point is that the player has to know which vessel they are over.
+
+**Fat is what closes the loop on the surface.** Fat floats, so an oily
+substrate skins over about twice as fast (`filmGrowthRate` takes `fatContent`:
+measured, film after 200 ticks goes 41 at fat 0 to 93 at fat 20). And fat held at
+the surface by that skin oxidises there — which is where `rancidity` comes from.
+Rancidity used to be a 1% dice roll above 35 °C that bumped a risk factor and was
+never seen again; it is now the characteristic way a fatty ferment fails, it is
+irreversible, and skimming lifts the turned layer off with the film, which is the
+whole reason to skim rather than simply shut the vessel.
+
+Measured over 400 ticks, oily substrate at 12% salt, 24 °C, open — never skimmed:
+41 rancidity, safety 75. Skimmed five times: 4 and 95. Sealed instead: 6 and 97.
+At 18% salt: 0. Lean substrate: 0 whatever you do. Three strategies, one
+requirement (fat), and the salt divisor is 20 rather than 12 — at /12 the floor
+landed exactly on the 12% the critic quotes, so every salinity at or above it
+behaved identically and the whole mechanic read as noise.
 
 **An owned tool must be offered wherever it can act.** `interventionReach` reads
 the agitator as well as the paddle — the agitator was consulted only by the tick,

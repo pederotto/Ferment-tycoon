@@ -134,6 +134,9 @@ const ChamberPanel: React.FC<{
           the two things a film means in this particular vessel. */}
       {filmsOver(recipe) && (() => {
         const film = batch.surfaceFilm ?? 0;
+        const fatSubstrate = batch.inputIngredientIds
+          .map(i => INGREDIENTS.find(x => x.id === i))
+          .some(i => (i?.hiddenStats.fatContent ?? 0) > 4);
         const mother = filmIsTheCulture(recipe);
         if (film < 3) {
           return (
@@ -157,16 +160,29 @@ const ChamberPanel: React.FC<{
             <div className="etrack">
               <div className={`efill${bad ? ' bad' : warn ? ' warn' : ''}`} style={{ width: `${film}%` }} />
             </div>
+            {/* Rancidity is the reason skimming a fatty ferment matters, so it
+                belongs beside the film rather than in the post-mortem where the
+                player can no longer act on it. */}
+            {(batch.rancidity ?? 0) > 3 && (
+              <div className="rancid-line">
+                <span className="l">Fat turned</span>
+                <span className={`v${(batch.rancidity ?? 0) > 25 ? ' bad' : ' warn'}`}>
+                  {(batch.rancidity ?? 0).toFixed(0)}% · does not come back
+                </span>
+              </div>
+            )}
             <p>
               {mother
                 ? film > 30
                   ? 'A good mother. This is the culture — skimming or rousing it sets the vinegar back.'
                   : 'A mother is forming. Leave it be; it is what turns the alcohol to acid.'
-                : film > 55
-                  ? 'Well covered. It is pulling safety down and throwing the wrong kind of funk. Skim it.'
-                  : film > 25
-                    ? 'A skin has set. It has started to cost you — skim it, or seal the vessel and starve it of air.'
-                    : 'A skin is starting. Nothing lost yet.'}
+                : fatSubstrate && film > 25
+                  ? 'A fatty substrate skins over about twice as fast, and the fat sitting in that skin oxidises. Skim it, seal the vessel, or carry more salt.'
+                  : film > 55
+                    ? 'Well covered. It is pulling safety down and throwing the wrong kind of funk. Skim it.'
+                    : film > 25
+                      ? 'A skin has set. It has started to cost you — skim it, or seal the vessel and starve it of air.'
+                      : 'A skin is starting. Nothing lost yet.'}
             </p>
           </div>
         );

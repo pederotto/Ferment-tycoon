@@ -2353,3 +2353,14 @@ input[type="range"].dial-slider::-moz-range-thumb {
 @media (max-width: 520px) {
   .tnote { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
+
+/* Rancidity beside the film gauge — the player has to be able to act on it while
+   the batch is still running, not read about it in the post-mortem. */
+.rancid-line {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--line);
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+}
+.rancid-line .l { color: var(--text-lo); letter-spacing: 0.08em; text-transform: uppercase; }
+.rancid-line .v.warn { color: var(--amber); }
+.rancid-line .v.bad { color: var(--rust, #b4552f); font-weight: 700; }

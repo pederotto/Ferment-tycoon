@@ -862,12 +862,27 @@ export default function App() {
     setGameState(prev => {
         const newInventory = { ...prev.inventory };
         
-        usedIngredients.forEach(ing => { 
-            if (ing.type !== IngredientType.TOOL && newInventory[ing.id] > 0) {
-                // Use deductionMap if available, else default to 1 unit
-                const amountToDeduct = deductionMap && deductionMap[ing.id] ? deductionMap[ing.id] : 1;
-                newInventory[ing.id] = Math.max(0, newInventory[ing.id] - amountToDeduct);
-            }
+        // ONCE PER UNIQUE ID, NOT ONCE PER UNIT.
+        //
+        // `usedIngredients` holds one entry for every unit drawn, and
+        // `deductionMap` already holds the AGGREGATE to remove — so iterating it
+        // directly charged the total once per copy. Ten anchovies at ten units
+        // deducted a hundred, `Math.max(0, ...)` swallowed the overshoot, and the
+        // whole stock vanished from the pantry the moment you used any of it.
+        //
+        // This is the third layer of the same per-unit trap (see CLAUDE.md on
+        // ingredientQuantities and solidsMass). Anything that reduces over
+        // `selectedIngredients` must ask whether it wants units or ingredients.
+        const charged = new Set<string>();
+        usedIngredients.forEach(ing => {
+            if (ing.type === IngredientType.TOOL || charged.has(ing.id)) return;
+            charged.add(ing.id);
+            const held = newInventory[ing.id] || 0;
+            if (held <= 0) return;
+            const amountToDeduct = deductionMap && deductionMap[ing.id] !== undefined
+                ? deductionMap[ing.id]
+                : 1;
+            newInventory[ing.id] = Math.max(0, held - amountToDeduct);
         });
 
         return {

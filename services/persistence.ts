@@ -151,6 +151,7 @@ export function loadGame(): GameState | null {
       // Batches saved before the surface existed start clear rather than
       // inheriting a skin they never grew.
       surfaceFilm: b.surfaceFilm ?? 0,
+      rancidity: b.rancidity ?? 0,
       lineage: b.lineage ?? {
         generation: b.generation ?? 1,
         vigor: 1 + Math.min(10, (b.generation ?? 1) - 1) * 0.05,

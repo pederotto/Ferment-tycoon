@@ -266,6 +266,21 @@ export interface Batch {
    */
   surfaceFilm?: number; // 0-100
 
+  /**
+   * OXIDISED FAT, 0 = none. Irreversible.
+   *
+   * Rancidity was a 1% dice roll above 35 C that bumped a risk factor and was
+   * never seen again. It is the characteristic way a fatty ferment fails, and
+   * it happens at the air interface: fat rises, sits on top, and oxidises
+   * there — which is precisely where the film is. So a fatty batch skins over
+   * faster, and a skin left on a fatty batch turns it.
+   *
+   * Skimming takes the oxidised layer off with the film, which is the whole
+   * reason you skim a garum rather than just leaving it shut. What has already
+   * gone into the body does not come back.
+   */
+  rancidity?: number; // 0-100
+
   // Free water sitting ON the substrate, as opposed to vapour in the air around
   // it. Misting raises it, airflow drives it off. Chamber humidity and substrate
   // wetness are not the same quantity and conflating them is the classic error:

@@ -345,12 +345,45 @@ export const filmIsTheCulture = (recipe?: Recipe): boolean =>
   !!recipe && (recipe.type === FermentType.VINEGAR || recipe.type === FermentType.KOMBUCHA);
 
 /** Points of film per tick. Zero for anything dry, packed or sealed shut. */
+/**
+ * HOW FAST AN UNSKIMMED FATTY SURFACE TURNS.
+ *
+ * Lipid oxidation happens at the air interface, so it needs three things at
+ * once: fat, exposure, and time. Salt slows it (which is the >12% rule the
+ * critic has always quoted), and the film itself is both the symptom and the
+ * catalyst — it holds the fat at the surface where the air is.
+ */
+export const rancidityRate = (
+  fatContent: number,
+  surfaceFilm: number,
+  salinity: number,
+  temp: number,
+  vent: number
+): number => {
+  if (fatContent <= 4 || surfaceFilm < 15) return 0;
+  const fat = Math.min(2, (fatContent - 4) / 8);
+  // The film is what keeps the fat sitting in the air. Below a quarter cover
+  // there is not enough of it to matter.
+  const held = (surfaceFilm - 15) / 85;
+  // Salt slows oxidation, it does not stop it. Dividing by 12 put the floor
+  // exactly at the 12% the critic has always quoted, so every salinity at or
+  // above it behaved identically and an oily 12% garum left open for a whole
+  // run came out at 6 points of rancidity — not a consequence, noise. At /20,
+  // 12% is partial cover (0.4) and 18% is near-total (0.1), which is the same
+  // thing the rest of the salt model says.
+  const salt = Math.max(0.1, 1 - salinity / 20);
+  const heat = Math.max(0.2, Math.min(1.8, (temp - 4) / 26));
+  const air = vent >= 2 ? 1.3 : vent >= 1 ? 1 : 0.6;
+  return 0.4 * fat * held * salt * heat * air;
+};
+
 export const filmGrowthRate = (
   recipe: Recipe | undefined,
   temp: number,
   salinity: number,
   surfaceWater: number,
-  vent: number
+  vent: number,
+  fatContent = 0
 ): number => {
   if (!filmsOver(recipe)) return 0;
   // A hump, not a ramp. Surface yeasts and moulds run best around blood heat
@@ -366,7 +399,11 @@ export const filmGrowthRate = (
   const wet = 0.35 + (surfaceWater / 100) * 0.9;
   // Air is the other half of it. Sealed, a film still forms, but slowly.
   const air = vent >= 2 ? 1.25 : vent >= 1 ? 1 : 0.45;
-  return 0.9 * warmth * brine * wet * air;
+  // Fat floats. An oily fish gives the surface something to hold, so a mackerel
+  // or a pork belly skins over roughly twice as fast as a lean grain — and the
+  // skin it grows is the one that goes rancid.
+  const oil = 1 + Math.min(1.3, fatContent / 12);
+  return 0.9 * warmth * brine * wet * air * oil;
 };
 
 /**
@@ -414,6 +451,7 @@ export const applyBatchIntervention = (
     let stress = batch.stress ?? 0;
     let evenness = batch.evenness ?? 100;
     let surfaceFilm = batch.surfaceFilm ?? 0;
+    let rancidity = batch.rancidity ?? 0;
 
     // How much of the batch one pass of handling actually reaches. A jar you
     // stir through completely; a 60 L cask you do not — you get the top third
@@ -579,9 +617,21 @@ export const applyBatchIntervention = (
                 // top-up: safety it had dragged down, funk it had pushed up.
                 quality.safety = Math.min(100, quality.safety + Math.min(12, taken * 0.35));
                 quality.funk = Math.max(0, quality.funk - taken * 0.14);
-                messages.push(taken > 22
-                  ? `Skimmed ${taken.toFixed(0)} points of film off. That was well on its way to turning.`
-                  : `Skimmed the surface — ${taken.toFixed(0)} points of film off.`);
+
+                // The oxidised fat is IN the layer you just lifted off, so some of
+                // it leaves with the film. This is the reason to skim a fatty
+                // ferment rather than simply shut it — but only what is still on
+                // top. Whatever has already worked into the body stays there.
+                const onTop = rancidity * (taken / Math.max(1, taken + surfaceFilm)) * 0.5;
+                rancidity = Math.max(0, rancidity - onTop);
+
+                messages.push(
+                  onTop > 2
+                    ? `Skimmed ${taken.toFixed(0)} points of film off, and the turned fat with it. It was going rancid.`
+                    : taken > 22
+                      ? `Skimmed ${taken.toFixed(0)} points of film off. That was well on its way to turning.`
+                      : `Skimmed the surface — ${taken.toFixed(0)} points of film off.`
+                );
             } else {
                 messages.push('Surface is clear. Nothing to take off.');
             }
@@ -606,6 +656,7 @@ export const applyBatchIntervention = (
         enzymes,
         evenness,
         surfaceFilm,
+        rancidity,
         stress, 
         quality: quality,
         flags: flags,
@@ -822,6 +873,7 @@ export const processBatchTick = (
   );
   let surfaceWater = batch.surfaceWater ?? 0;
   let surfaceFilm = batch.surfaceFilm ?? 0;
+  let rancidity = batch.rancidity ?? 0;
 
   // A batch drifts out of uniformity on its own; only handling brings it back.
   // Staff help because this is exactly the work you would hire someone for — a
@@ -1060,9 +1112,27 @@ export const processBatchTick = (
   // both were reading the safety number and nudging it, which is why they felt
   // like the same button twice.
   if (status === 'active' && progress > 3 && filmsOver(recipe)) {
+    const fat = substrate?.hiddenStats.fatContent ?? 0;
     surfaceFilm = Math.min(100, surfaceFilm + filmGrowthRate(
-      recipe, newParams.temp, newParams.salinity, surfaceWater, ex.vent
+      recipe, newParams.temp, newParams.salinity, surfaceWater, ex.vent, fat
     ));
+
+    // Fat held at the surface by the film oxidises there. This is the loop the
+    // player is being asked to close: an oily substrate skins faster, and a skin
+    // left on an oily substrate turns it. Skimming breaks both halves at once.
+    if (!filmIsTheCulture(recipe)) {
+      const turning = rancidityRate(fat, surfaceFilm, newParams.salinity, newParams.temp, ex.vent);
+      if (turning > 0) {
+        rancidity = Math.min(100, rancidity + turning);
+        // Rancid is not funk. It reads as savour lost and safety lost, and it
+        // does not come back when you finally do skim.
+        newQuality.safety = Math.max(0, newQuality.safety - turning * 0.6);
+        newQuality.umami = Math.max(0, newQuality.umami - turning * 0.25);
+        if (rancidity > 30 && !messages.includes('Fat has begun to turn under the film')) {
+          messages.push('Fat has begun to turn under the film');
+        }
+      }
+    }
 
     if (filmIsTheCulture(recipe)) {
       // The mother is the engine. A vinegar with a good pellicle acidifies; one
@@ -1364,6 +1434,7 @@ export const processBatchTick = (
     controls,
     surfaceWater,
     surfaceFilm,
+    rancidity,
     evenness,
     // Kept in step with the vent so the older call sites that ask the simple
     // open/closed question still get a true answer.
@@ -1943,6 +2014,7 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
   const proteinous = (sub?.hiddenStats.proteinContent ?? 0) > 5;
 
   const film = batch.surfaceFilm ?? 0;
+  const rancid = batch.rancidity ?? 0;
   const even = batch.evenness ?? 100;
   const under = batch.progress < recipe.peakWindowStart;
   const over = batch.progress > recipe.peakWindowEnd + 20;
@@ -1982,7 +2054,11 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
   } else if (proteinous && q.umami > 60) {
     aromaParts.push(pickFrom(['deep anchovy underneath', 'a marine, brothy depth', 'cured-meat sweetness behind it'], id + 'a2'));
   }
-  if (film > 55 && !filmIsTheCulture(recipe)) {
+  if (rancid > 30) {
+    aromaParts.push(pickFrom(['and over it all the crayon-and-old-oil note of fat that has turned', 'with rancid fat sitting on top of everything else'], id + 'a3'));
+  } else if (rancid > 10) {
+    aromaParts.push(pickFrom(['with the first hint of oxidised oil', 'and a faint waxiness that was not there a month ago'], id + 'a3'));
+  } else if (film > 55 && !filmIsTheCulture(recipe)) {
     aromaParts.push(pickFrom(['and a flat, yeasty note off the surface that should have been skimmed', 'with a stale top note — that is the film talking'], id + 'a3'));
   }
   if (recipe.type === FermentType.VINEGAR && q.acidity > 80) {
@@ -2046,8 +2122,9 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
   const texture: string[] = [];
   if (batch.isPressed) texture.push('Pressed clear of its solids');
   if (batch.isFiltered) texture.push('Spun bright');
-  if (fatty && batch.params.temp > 30 && batch.params.salinity >= 12) texture.push('rich and viscous where the fat has rendered in');
-  else if (fatty && batch.params.temp > 30) texture.push('with a rancid slick the salt was too low to prevent');
+  if (rancid > 45) texture.push('a rancid slick right through it — the fat turned under the film and stayed');
+  else if (rancid > 15) texture.push('an oily edge where the surface was left too long');
+  else if (fatty && batch.params.temp > 30 && batch.params.salinity >= 12) texture.push('rich and viscous where the fat has rendered in');
   if (recipe.type === FermentType.KOJI) texture.push(batch.surfaceWater && batch.surfaceWater > 70 ? 'the bed sodden and matted' : 'the grain still separate under the bloom');
   if (texture.length) notes.push({ facet: 'Texture', text: sentence(texture) });
 
@@ -2062,6 +2139,8 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
     finish = 'Short. It was pulled before it had finished saying anything.';
   } else if (over) {
     finish = 'Long but tired — the edges have gone soft and the top notes have burned off.';
+  } else if (rancid > 25) {
+    finish = 'It turns oily at the end and stays there. Rancidity does not fade — the fat oxidised and that is permanent.';
   } else if (q.safety < 90) {
     finish = 'A faint off-note on the back of the tongue that will not leave.';
   } else if (umamiRel > 0.85 && q.safety >= 95) {
@@ -2099,8 +2178,11 @@ export const generateCriticFeedback = (batch: Batch, recipe: Recipe): string[] =
         }
         // Fat -> Rancidity
         if (sub.hiddenStats.fatContent > 4) {
-            if (batch.params.temp > 30 && batch.params.salinity < 12) {
-                 feedback.push("SPOILAGE: Fatty acids oxidized (Rancid). High fat ingredients need >12% Salt if heated.");
+            const r = batch.rancidity ?? 0;
+            if (r > 25) {
+                 feedback.push(`SPOILAGE: ${r.toFixed(0)}% of the fat oxidised under an unskimmed surface. A fatty substrate skins over roughly twice as fast — skim it, seal it, or carry more salt.`);
+            } else if (r > 5) {
+                 feedback.push("SPOILAGE: The fat has started to turn at the surface. Skimming takes the oxidised layer off with the film.");
             } else if (batch.params.temp > 30 && batch.params.salinity >= 12) {
                  feedback.push("TEXTURE: High heat and salt rendered fat into rich viscosity.");
             }
