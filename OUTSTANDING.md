@@ -40,24 +40,30 @@ ingredient market that makes bulk genuinely dearer.
 
 ## Needs doing before anything else
 
-**The Inoculation Bench needs the popup redesign.** Reported as unusable, and the
-diagnosis is that it fails in opposite ways at each end of the range rather than
-one way throughout:
+**~~The Inoculation Bench popup redesign.~~ Built, not yet measured in a
+browser.** The bench failed in opposite ways at each end of the range rather
+than one way throughout:
 
-- *Short window* (~720px tall): four stations get 299px each against station
-  04's 373px of content. Cramped. Partly relieved by making the scan dock yield.
-- *Full screen* (1920x1080): the modal is 1440x940 and the four columns are
+- *Short window* (~720px tall): four stations got 299px each against station
+  04's 373px of content. Cramped.
+- *Full screen* (1920x1080): the modal is 1440x940 and the four columns were
   330-409px wide by **711px tall**, holding roughly 300px of content each.
-  Nothing overflows; it is strung out into thin, mostly-empty vertical strips,
-  which is why it reads worse the more room it has.
+  Nothing overflowed; it was strung out into thin, mostly-empty vertical strips,
+  which is why it read worse the more room it had.
 
-One layout cannot serve both. The direction the owner asked for is popups: keep
-the chamber and the seal controls as a two-column work area that can use the
-width, and move reagents (01) and vessel (03) into overlays opened on demand.
-The stations are already cleanly delimited `<section className="station">`
-blocks and an `activeTab` mechanism with `.is-hidden` already exists for the
-phone step-through, so the pieces are in place — this is a layout change, not a
-rewrite.
+One layout could not serve both. The chamber (02) and the seal controls (04) are
+now a two-column work area that keeps the full height, and reagents (01) and
+vessel (03) are overlays opened from a pair of buttons in the chamber — closed
+by the scrim, a Back button, or Escape. The phone keeps its own four-step
+walk through the same four stations, untouched.
+
+Verified so far: `tsc` clean, build clean, and the compiled CSS checked for
+source order — the phone override lands after the base `.pick-row` rule and the
+new grid lands after the 768-1150 two-by-two rule, which is the trap this file
+has fallen into before. **Not yet verified: the rendered layout at either
+problem viewport.** The browser pane was declined, and nothing headless is
+installed. Measure `getBoundingClientRect` on `.station` at 1920x1080 and at
+1366x720 before calling this closed.
 
 **~~A design decision on bulk.~~ Settled.** Volume is now limited by how hard it
 is to control rather than by cost — see `unevennessRate` and the CLAUDE.md note.

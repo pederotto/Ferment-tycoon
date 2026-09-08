@@ -267,10 +267,24 @@ Stacking order, which three separate bugs came from getting wrong:
 scrim (20) < HUD (30) < supply drawer (50) < modals (100)
 ```
 
-The Inoculation Bench is a grid with weighted, min-constrained columns, and
-switches to 2×2 between 768 px and 1150 px. That mid range was a dead zone —
-four columns at ~230 px each, while the phone step-through did not start until
-767 px.
+**The Inoculation Bench is two stations wide above 768 px, not four.** Four
+abreast failed at both ends of the range and for opposite reasons — cramped at
+299 px each on a short window, and strung out into 330×711 px strips holding
+300 px of content at 1920×1080, which is why it read worse the more room it was
+given. The chamber (02) and the seal controls (04) are the work surface and stay
+in flow; reagents (01) and vessel (03) are `position: absolute` overlays over
+the bench, opened from the chamber and closed by scrim, Back button or Escape.
+
+Two consequences that are not local to the rule that causes them:
+
+- **The 768–1150 two-by-two block still sets `grid-template-rows: 1fr 1fr`.**
+  With only two stations in flow that leaves the bench half empty, so the picker
+  block has to reset the rows as well as the columns. Its borders describe the
+  same vanished 2×2 and need resetting too.
+- **The scrim renders on the phone as well.** Everything the overlay owns
+  (`.pick-scrim`, `.pane-back`) is `display: none` at base and switched on
+  inside the desktop block — an unstyled scrim is a stray button in the middle of
+  the phone step-through.
 
 **The spectrometer dock must yield before the stations do.** `.scan-dock` was a
 fixed 148px that never shrank, so on a short window it took a fifth of the

@@ -2206,3 +2206,98 @@ input[type="range"].dial-slider::-moz-range-thumb {
 @media (prefers-reduced-motion: reduce) {
   .iso-canopy, .iso-snow circle, .iso-fall circle, .iso-rain path, .iso-spin-fast { animation: none; }
 }
+
+/* =============================================================================
+   THE BENCH, AS A WORK SURFACE WITH PICKERS
+
+   Four stations abreast failed at both ends of the range and for opposite
+   reasons: at 720px tall each got 299px against station 04's 373px of content,
+   and at 1920x1080 they became 330px columns stretched to 711px holding roughly
+   300px each — strung out rather than cramped, which is why the layout read
+   worse the more room it was given.
+
+   The chamber and the seal controls are the work surface and stay put, sharing
+   the full width. Drawing reagents and picking a vessel are things you do once
+   and close, so they open over the bench and get the whole area while they are
+   there. The phone keeps its own four-step flow underneath, untouched.
+   ============================================================================= */
+
+/* Base first, phone override after — the whole point of putting this block at
+   the end of the file is source order, and it is equally load-bearing inside it. */
+.pick-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.pick-btn {
+  flex: 1 1 auto; min-width: 140px;
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 11px;
+  font-size: 11.5px; color: var(--text-hi);
+  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.pick-btn:hover { border-color: var(--brass); background: rgba(193, 154, 88, 0.09); }
+.pick-btn em {
+  margin-left: auto;
+  font-style: normal; font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px; color: var(--brass);
+}
+
+/* Both of these belong to the overlay, so they stay out of the way until the
+   min-width block turns them on. A scrim with no styling is a stray button. */
+.pick-scrim { display: none; }
+.pane-back { display: none; }
+
+@media (max-width: 767px) {
+  /* The phone steps through all four stations, so it needs neither. */
+  .pick-row { display: none; }
+}
+
+@media (min-width: 768px) {
+  .inoc-body {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* The 768-1150 rule below asked for two rows to hold four stations. Two of
+       them are out of flow now, so without this the bench keeps the second row
+       empty and the work surface only fills the top half. */
+    grid-template-rows: minmax(0, 1fr);
+  }
+  /* Same rule's borders described a 2x2 that no longer exists. */
+  .station { border-right: 1px solid var(--line); border-bottom: none; }
+  .station:last-child { border-right: none; }
+
+  /* The two pickers sit out of flow until asked for. */
+  .station.pick-pane {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: none;
+    background: linear-gradient(180deg, #1d1710, #171109);
+    border-right: none;
+    box-shadow: 0 -12px 50px rgba(0, 0, 0, 0.55);
+  }
+  .station.pick-pane.showing { display: flex; }
+
+  .pick-scrim {
+    display: block;
+    position: absolute; inset: 0; z-index: 2;
+    background: rgba(10, 7, 4, 0.5);
+    border: 0; cursor: pointer;
+  }
+
+  /* A pane covering the bench needs its own way out, and a sentence of advice
+     is not one. Escape works too. */
+  .pane-back {
+    display: inline-flex; align-items: center;
+    margin-left: auto;
+    padding: 4px 9px;
+    font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-lo);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .pane-back:hover { color: var(--brass); border-color: var(--brass); }
+}

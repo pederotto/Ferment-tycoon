@@ -73,6 +73,25 @@ const BatchController: React.FC<BatchControllerProps> = ({
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>([]);
   const [vesselId, setVesselId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<StepTab>('pantry');
+  /**
+   * Which picker is open over the bench, on anything wider than a phone.
+   *
+   * Four stations abreast could not work at either end of the range: at 720px
+   * tall they were 299px against station 04's 373px of content, and at 1920x1080
+   * they became 330px columns stretched to 711px holding about 300px each —
+   * strung out rather than cramped, which is why more screen made it worse.
+   *
+   * The chamber and the seal controls are the work surface and stay put. Drawing
+   * reagents and choosing a vessel are things you do once and close, so they are
+   * overlays now and get the whole width while they are open.
+   */
+  const [picker, setPicker] = useState<'pantry' | 'vessel' | null>(null);
+  useEffect(() => {
+    if (!picker) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPicker(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [picker]);
   const [pantrySearch, setPantrySearch] = useState('');
   const [pantryCategory, setPantryCategory] = useState<string>('all');
   // Large vessels take dozens of units; adding them one click at a time is absurd.
@@ -653,13 +672,26 @@ const BatchController: React.FC<BatchControllerProps> = ({
         </div>
 
         {/* ---------- BENCH ---------- */}
-        <div className="inoc-body">
+        <div className={`inoc-body${picker ? ' picking' : ''}`}>
+          {picker && (
+            <button
+              type="button"
+              className="pick-scrim"
+              aria-label="Close and go back to the chamber"
+              onClick={() => setPicker(null)}
+            />
+          )}
 
           {/* === 01 · REAGENTS === */}
-          <section className={`station ${activeTab === 'pantry' ? '' : 'is-hidden'}`}>
+          <section className={`station pick-pane${picker === 'pantry' ? ' showing' : ''} ${activeTab === 'pantry' ? '' : 'is-hidden'}`}>
             <div className="station-head">
               <span className="lbl"><span className="num">01</span> Reagents</span>
               <span className="tally">{selectedIngredientIds.length} drawn</span>
+              {picker === 'pantry' && (
+                <button type="button" className="pane-back" onClick={() => setPicker(null)}>
+                  Back to the chamber
+                </button>
+              )}
             </div>
 
             <div className="search-box" style={{ width: '100%', marginBottom: 9 }}>
@@ -754,6 +786,21 @@ const BatchController: React.FC<BatchControllerProps> = ({
               <span className={`tally mass ${isOverflowing ? 'over' : isFull ? 'full' : ''}`}>
                 {fillL.toFixed(2)} / {capacityLimitL} L
               </span>
+            </div>
+
+            {/* The two pickers, opened on demand. Hidden on the phone, which
+                keeps its own step-through through the same four stations. */}
+            <div className="pick-row">
+              <button type="button" className="pick-btn" onClick={() => setPicker('pantry')}>
+                <SearchIcon size={12} color="currentColor" />
+                Draw reagents
+                <em>{selectedIngredientIds.length}</em>
+              </button>
+              <button type="button" className="pick-btn" onClick={() => setPicker('vessel')}>
+                <JarLineIcon size={12} color="currentColor" />
+                {vesselId ? (VESSELS.find(v => v.id === vesselId)?.name ?? 'Vessel') : 'Choose a vessel'}
+                {vesselId && <em>{capacityLimitL}L</em>}
+              </button>
             </div>
 
             {selectedIngredientIds.length === 0 ? (
@@ -932,16 +979,21 @@ const BatchController: React.FC<BatchControllerProps> = ({
               </div>
             )}
 
-            <button className="btn btn-ghost step-next" onClick={() => setActiveTab('vessel')}>
+            <button className="btn btn-ghost step-next" onClick={() => { setActiveTab('vessel'); setPicker('vessel'); }}>
               Choose a vessel <ChevronRight size={14} />
             </button>
           </section>
 
           {/* === 03 · VESSEL === */}
-          <section className={`station ${activeTab === 'vessel' ? '' : 'is-hidden'}`}>
+          <section className={`station pick-pane${picker === 'vessel' ? ' showing' : ''} ${activeTab === 'vessel' ? '' : 'is-hidden'}`}>
             <div className="station-head">
               <span className="lbl"><span className="num">03</span> Vessel</span>
               <span className="tally">{availableSlots} slots free</span>
+              {picker === 'vessel' && (
+                <button type="button" className="pane-back" onClick={() => setPicker(null)}>
+                  Back to the chamber
+                </button>
+              )}
             </div>
 
             <div className="station-scroll custom-scrollbar">
@@ -1030,7 +1082,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
               </div>
             )}
 
-            <button className="btn btn-ghost step-next" onClick={() => setActiveTab('run')}>
+            <button className="btn btn-ghost step-next" onClick={() => { setActiveTab('run'); setPicker(null); }}>
               Set the chamber <ChevronRight size={14} />
             </button>
           </section>
