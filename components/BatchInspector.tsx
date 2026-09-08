@@ -5,7 +5,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling } from '../services/gameLogic';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
 import {
   CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
@@ -131,6 +131,17 @@ const ChamberPanel: React.FC<{
       {(() => {
         const even = batch.evenness ?? 100;
         const rate = unevennessRate(batch.totalMass || 1000, 0.7);
+        // A sealed ferment is not a stratification problem you are failing to
+        // manage — it is one you are correct to leave alone. Saying which, and
+        // why, is worth more than a gauge pinned at 100.
+        if (!isAgitatedFerment(recipe)) {
+          const why =
+            recipe.type === FermentType.MISO ? 'A paste is packed, weighted and shut. You mix it when it comes out, not while it works.'
+            : recipe.type === FermentType.LACTO ? 'Sealed and anaerobic. Opening it to stir would be the mistake.'
+            : recipe.type === FermentType.BLACK ? 'It sits closed in the dark for weeks. Nothing to turn.'
+            : 'This one is left alone while it works.';
+          return <p className="cp-even none">{why}</p>;
+        }
         if (rate <= 0.0001 && even > 99) {
           return (
             <p className="cp-even none">
@@ -384,7 +395,8 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   // belongs to. A miso mash is the classic case — it is the stiffest thing in
   // the game and therefore the fastest to separate, and it had no tool for it at
   // all: a paste could go badly stratified with nothing on screen to fix it.
-  const stratifies = unevennessRate(batch.totalMass || 1000, 0.7) > 0.0001;
+  const stratifies = isAgitatedFerment(recipe)
+    && unevennessRate(batch.totalMass || 1000, 0.7) > 0.0001;
   if (stratifies && !tools.some(t => t.key === 'mix' || t.key === 'stir')) {
     tools.push({
       key: 'mix',

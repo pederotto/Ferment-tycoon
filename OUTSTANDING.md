@@ -106,6 +106,12 @@ state-dependent but not strategic. They could carry similar weight.
 
 ## Known dead scaffolding
 
+- `FermentType.SHOYU` is declared, referenced by `AGEING_BY_TYPE` and by
+  `isAgitatedFerment`, and used by **zero recipes** — so there is no soy sauce in
+  a game about fermentation. Adding a moromi would be content work, and it is
+  the one ferment family whose defining technique (kai-ire, regular stirring)
+  the agitation mechanic was built to express.
+
 ~~`Ingredient.lineageBuffs`~~ — replaced by `Ingredient.lineage`, which is read
 by the simulation and drifts with cultivation conditions. Nothing known is dead
 here now.

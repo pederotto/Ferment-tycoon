@@ -1,0 +1,611 @@
+<title>Isometric Bench Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  /* Fermenta Tycoon's own tokens. This study deliberately does not invent a new
+     identity — the question is whether isometric works inside the world that
+     already exists, so it has to be judged in that world's colours. */
+  :root {
+    --void:      #15100b;
+    --panel:     #1e1710;
+    --cubby:     #0f0b07;
+    --line:      rgba(243, 233, 216, 0.10);
+    --line-firm: rgba(243, 233, 216, 0.20);
+
+    --text-hi:   #f4ead9;
+    --text-mid:  #c3b39a;
+    --text-lo:   #8a7c65;
+
+    --brass:     #d9b878;
+    --amber:     #e08a3c;
+    --moss:      #7a9e6a;
+    --brick:     #a65641;
+    --teal:      #5fa3a8;
+
+    /* Lifted from JarVesselArt / TrayVesselArt so the study and the game
+       are drawing with the same box of pencils. */
+    --oak-lit:   #8a6a3a;
+    --oak:       #6b4a29;
+    --oak-deep:  #4a3018;
+    --oak-dark:  #33200f;
+    --hoop:      #6d635a;
+    --brine-hi:  #e7be6b;
+    --brine-lo:  #a9721f;
+    --clay-lit:  #7d5140;
+    --clay:      #5d3b2e;
+    --clay-deep: #40281e;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--void);
+    color: var(--text-mid);
+    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 56px 28px 96px; }
+
+  /* ---------- type ---------- */
+  h1, h2, h3 { font-family: 'Zilla Slab', Georgia, serif; color: var(--text-hi); margin: 0; text-wrap: balance; }
+  h1 { font-size: 38px; font-weight: 600; letter-spacing: -0.01em; }
+  h2 { font-size: 23px; font-weight: 600; margin-bottom: 6px; }
+  h3 { font-size: 15px; font-weight: 600; }
+  p  { margin: 0 0 14px; max-width: 68ch; }
+  .lede { font-size: 17px; color: var(--text-mid); max-width: 66ch; }
+
+  .eyebrow {
+    display: block;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.19em;
+    text-transform: uppercase; color: var(--brass);
+    margin-bottom: 9px;
+  }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  em.q { color: var(--text-hi); font-style: normal; }
+
+  section { margin-top: 62px; }
+  .rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+  /* ---------- the scale strip ---------- */
+    .strip {
+    margin-top: 26px;
+    background: linear-gradient(180deg, #191309, var(--cubby));
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 30px 18px 0;
+    overflow-x: auto;
+  }
+  .strip-floor {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 14px; min-width: 640px;
+    border-bottom: 1px solid var(--line-firm);
+    padding-bottom: 2px;
+  }
+  .vessel { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .vessel svg { display: block; overflow: visible; }
+  .vlabel { padding: 12px 0 20px; text-align: center; min-width: 62px; }
+  .vlabel .cap { display: block; font-size: 14px; font-weight: 600; color: var(--text-hi); }
+  .vlabel .nm  { display: block; font-size: 10.5px; letter-spacing: 0.05em; color: var(--text-lo); text-transform: uppercase; margin-top: 2px; }
+
+  .caption {
+    display: flex; gap: 10px; align-items: baseline;
+    margin-top: 16px; font-size: 13.5px; color: var(--text-lo);
+    max-width: 74ch;
+  }
+  .caption b { color: var(--brass); font-weight: 600; white-space: nowrap; }
+
+  /* ---------- the bench scene ---------- */
+  .scene {
+    position: relative;
+    margin-top: 26px;
+    background:
+      radial-gradient(120% 90% at 50% 12%, rgba(224, 138, 60, 0.07), transparent 62%),
+      linear-gradient(180deg, #1a1409, var(--cubby));
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 18px 0 8px;
+    overflow-x: auto;
+  }
+  .scene svg { display: block; margin: 0 auto; overflow: visible; }
+
+  .slot { cursor: pointer; }
+  .slot .lift { transition: transform 180ms cubic-bezier(.2,.7,.3,1); }
+  .slot:hover .lift, .slot:focus-visible .lift { transform: translateY(-7px); }
+  .slot .ring { opacity: 0; transition: opacity 150ms ease; }
+  .slot:hover .ring, .slot:focus-visible .ring { opacity: 1; }
+  .slot:focus-visible { outline: none; }
+  .slot .tag { opacity: 0; transition: opacity 150ms ease; }
+  .slot:hover .tag, .slot:focus-visible .tag { opacity: 1; }
+  .tag-bg { fill: #241b10; stroke: var(--brass); stroke-width: 1; }
+  .tag-t  { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; fill: var(--text-hi); }
+  .tag-s  { font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; }
+
+  .hint {
+    text-align: center; font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-lo);
+    padding: 4px 0 14px;
+  }
+
+  /* ---------- state comparison ---------- */
+  .pairs { display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 16px; margin-top: 26px; }
+  .pair {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px 16px 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .pair-art {
+    display: flex; align-items: flex-end; justify-content: center; gap: 26px;
+    background: var(--cubby);
+    border-radius: 2px;
+    padding: 18px 10px 12px;
+    min-height: 132px;
+  }
+  .pair-art svg { display: block; overflow: visible; }
+  .pair h3 { margin-bottom: 2px; }
+  .pair p { font-size: 13px; margin: 0; color: var(--text-lo); }
+  .readout {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+  }
+  .chip {
+    padding: 3px 8px; border: 1px solid var(--line); border-radius: 2px;
+    color: var(--text-lo); letter-spacing: 0.04em;
+  }
+  .chip.was { text-decoration: line-through; opacity: 0.62; }
+  .chip.now { color: var(--text-hi); border-color: var(--line-firm); }
+  .chip.bad { color: var(--brick); border-color: rgba(166, 86, 65, 0.45); }
+  .chip.good { color: var(--moss); border-color: rgba(122, 158, 106, 0.45); }
+  .chip.warn { color: var(--amber); border-color: rgba(224, 138, 60, 0.45); }
+
+  /* ---------- the ledger of cost ---------- */
+  .cost { margin-top: 26px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+  .cost-row {
+    display: grid; grid-template-columns: 132px 1fr; gap: 20px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .cost-row:last-child { border-bottom: 0; }
+  .cost-row .k {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--brass); letter-spacing: 0.05em; padding-top: 2px;
+  }
+  .cost-row .v { font-size: 13.5px; color: var(--text-mid); }
+  .cost-row.warn .k { color: var(--brick); }
+
+  .verdict {
+    margin-top: 26px; padding: 18px 20px;
+    border-left: 2px solid var(--amber);
+    background: rgba(224, 138, 60, 0.05);
+  }
+  .verdict p { margin: 0; color: var(--text-mid); }
+  .verdict p + p { margin-top: 10px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slot .lift, .slot .ring, .slot .tag { transition: none; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">Fermenta Tycoon · design spike</span>
+    <h1>Would isometric earn its art budget?</h1>
+    <p class="lede" style="margin-top:14px">
+      One bench, drawn as a scene instead of a grid of cards, in the palette the
+      game already uses. The question is not whether it looks nicer — it is
+      whether it can say things the current layout cannot.
+    </p>
+  </header>
+
+  <section>
+    <span class="eyebrow">The argument</span>
+    <h2>A 60&nbsp;L cask is three times the jar, and nothing on screen says so</h2>
+    <p>
+      Every vessel is currently a card of identical size. The only thing telling
+      you an oak cask is thirty times a mason jar is the text
+      <em class="q" class="mono">60L</em>. Here they are at true relative
+      scale — linear size as the cube root of volume, which is what your eye
+      would actually see on a bench.
+    </p>
+
+    <div class="strip">
+      <div class="strip-floor">
+
+        <!-- MASON JAR · 2L -->
+        <div class="vessel">
+          <svg width="42" height="46" viewBox="0 0 42 46" role="img" aria-label="Mason jar, 2 litres">
+            <ellipse cx="21" cy="40" rx="15" ry="5" fill="rgba(0,0,0,0.42)"/>
+            <path d="M8 15 v20 a13 5 0 0 0 26 0 V15z" fill="rgba(243,233,216,0.07)"/>
+            <path d="M8 26 v9 a13 5 0 0 0 26 0 v-9z" fill="var(--brine-lo)"/>
+            <ellipse cx="21" cy="26" rx="13" ry="5" fill="var(--brine-hi)"/>
+            <path d="M8 15 v20 a13 5 0 0 0 26 0 V15" fill="none" stroke="rgba(243,233,216,0.42)" stroke-width="1.3"/>
+            <ellipse cx="21" cy="15" rx="13" ry="5" fill="#2a2016" stroke="rgba(243,233,216,0.42)" stroke-width="1.3"/>
+            <ellipse cx="21" cy="13" rx="10" ry="3.8" fill="var(--oak-lit)" stroke="var(--oak-dark)" stroke-width="1"/>
+          </svg>
+          <div class="vlabel"><span class="cap mono">2 L</span><span class="nm">Mason jar</span></div>
+        </div>
+
+        <!-- KOJI TRAY · 3L -->
+        <div class="vessel">
+          <svg width="104" height="46" viewBox="0 0 104 46" role="img" aria-label="Cedar koji tray, 3 litres">
+            <ellipse cx="52" cy="39" rx="42" ry="8" fill="rgba(0,0,0,0.42)"/>
+            <path d="M52 12 L94 30 L52 42 L10 30z" fill="var(--oak)"/>
+            <path d="M10 30 L52 42 v6 L10 36z" fill="var(--oak-deep)"/>
+            <path d="M94 30 L52 42 v6 L94 36z" fill="var(--oak-dark)"/>
+            <path d="M52 14.6 L88 30 L52 40 L16 30z" fill="#cbb37e"/>
+            <path d="M52 14.6 L88 30 L52 40 L16 30z" fill="url(#kojifleck)" opacity="0.5"/>
+            <path d="M52 12 L94 30 L52 42 L10 30z" fill="none" stroke="rgba(243,233,216,0.26)" stroke-width="1.1"/>
+            <defs>
+              <pattern id="kojifleck" width="7" height="7" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1.1" fill="#efe2bd"/>
+                <circle cx="5.5" cy="5" r="0.8" fill="#efe2bd"/>
+              </pattern>
+            </defs>
+          </svg>
+          <div class="vlabel"><span class="cap mono">3 L</span><span class="nm">Koji tray</span></div>
+        </div>
+
+        <!-- INCUBATOR · 10L -->
+        <div class="vessel">
+          <svg width="78" height="86" viewBox="0 0 78 86" role="img" aria-label="Thermal chamber, 10 litres">
+            <ellipse cx="39" cy="78" rx="30" ry="7" fill="rgba(0,0,0,0.42)"/>
+            <path d="M39 14 L70 32 L39 50 L8 32z" fill="#3b3630"/>
+            <path d="M8 32 L39 50 v30 L8 62z" fill="#2b2723"/>
+            <path d="M70 32 L39 50 v30 L70 62z" fill="#211d1a"/>
+            <rect x="16" y="46" width="16" height="18" rx="1.5" fill="var(--amber)" opacity="0.24"/>
+            <rect x="16" y="46" width="16" height="18" rx="1.5" fill="none" stroke="var(--amber)" stroke-width="1" opacity="0.6"/>
+            <circle cx="58" cy="58" r="2.6" fill="var(--amber)"/>
+            <path d="M39 14 L70 32 L39 50 L8 32z" fill="none" stroke="rgba(243,233,216,0.22)" stroke-width="1.1"/>
+          </svg>
+          <div class="vlabel"><span class="cap mono">10 L</span><span class="nm">Thermal chamber</span></div>
+        </div>
+
+        <!-- ONGGI · 20L -->
+        <div class="vessel">
+          <svg width="86" height="102" viewBox="0 0 86 102" role="img" aria-label="Earthenware onggi, 20 litres">
+            <ellipse cx="43" cy="94" rx="30" ry="8" fill="rgba(0,0,0,0.42)"/>
+            <path d="M43 20 C14 20 6 44 8 60 C10 78 24 94 43 94 C62 94 76 78 78 60 C80 44 72 20 43 20z" fill="var(--clay)"/>
+            <path d="M43 20 C24 20 12 40 10 60 C8 78 22 94 43 94 C40 78 34 50 43 20z" fill="var(--clay-lit)" opacity="0.55"/>
+            <path d="M43 94 C62 94 76 78 78 60 C74 80 60 92 43 94z" fill="var(--clay-deep)"/>
+            <ellipse cx="43" cy="20" rx="20" ry="7.5" fill="#2b1a13" stroke="rgba(243,233,216,0.3)" stroke-width="1.2"/>
+            <ellipse cx="43" cy="20" rx="14" ry="5" fill="#7a4a20"/>
+          </svg>
+          <div class="vlabel"><span class="cap mono">20 L</span><span class="nm">Onggi</span></div>
+        </div>
+
+        <!-- CEDAR BARREL · 50L -->
+        <div class="vessel">
+          <svg width="98" height="126" viewBox="0 0 98 126" role="img" aria-label="Cedar barrel, 50 litres">
+            <ellipse cx="49" cy="117" rx="34" ry="9" fill="rgba(0,0,0,0.42)"/>
+            <path d="M49 16 C22 16 12 40 12 66 C12 92 24 116 49 116 C74 116 86 92 86 66 C86 40 76 16 49 16z" fill="var(--oak)"/>
+            <path d="M49 16 C30 16 16 40 16 66 C16 92 30 116 49 116 C42 92 38 44 49 16z" fill="var(--oak-lit)" opacity="0.42"/>
+            <path d="M49 116 C74 116 86 92 86 66 C84 92 72 112 49 116z" fill="var(--oak-dark)"/>
+            <g stroke="var(--oak-dark)" stroke-width="1" opacity="0.55" fill="none">
+              <path d="M33 20 C27 50 27 84 33 113"/><path d="M65 20 C71 50 71 84 65 113"/>
+            </g>
+            <path d="M13 44 C30 52 68 52 85 44 L85 51 C68 59 30 59 13 51z" fill="var(--hoop)"/>
+            <path d="M13 82 C30 90 68 90 85 82 L85 89 C68 97 30 97 13 89z" fill="var(--hoop)"/>
+            <ellipse cx="49" cy="16" rx="27" ry="9" fill="#2c1f12" stroke="rgba(243,233,216,0.3)" stroke-width="1.2"/>
+          </svg>
+          <div class="vlabel"><span class="cap mono">50 L</span><span class="nm">Cedar barrel</span></div>
+        </div>
+
+        <!-- OAK CASK · 60L -->
+        <div class="vessel">
+          <svg width="110" height="140" viewBox="0 0 110 140" role="img" aria-label="Oak cask, 60 litres">
+            <ellipse cx="55" cy="130" rx="39" ry="10" fill="rgba(0,0,0,0.42)"/>
+            <path d="M55 14 C24 14 12 42 12 72 C12 102 26 129 55 129 C84 129 98 102 98 72 C98 42 86 14 55 14z" fill="var(--oak)"/>
+            <path d="M55 14 C33 14 17 42 17 72 C17 102 33 129 55 129 C47 102 42 46 55 14z" fill="var(--oak-lit)" opacity="0.42"/>
+            <path d="M55 129 C84 129 98 102 98 72 C96 102 82 124 55 129z" fill="var(--oak-dark)"/>
+            <g stroke="var(--oak-dark)" stroke-width="1.1" opacity="0.55" fill="none">
+              <path d="M36 18 C29 52 29 92 36 126"/><path d="M74 18 C81 52 81 92 74 126"/>
+            </g>
+            <path d="M13 46 C33 56 77 56 97 46 L97 54 C77 64 33 64 13 54z" fill="var(--hoop)"/>
+            <path d="M13 92 C33 102 77 102 97 92 L97 100 C77 110 33 110 13 100z" fill="var(--hoop)"/>
+            <ellipse cx="55" cy="14" rx="31" ry="10" fill="#2c1f12" stroke="rgba(243,233,216,0.3)" stroke-width="1.2"/>
+            <ellipse cx="55" cy="14" rx="24" ry="7.4" fill="#3a2a18"/>
+          </svg>
+          <div class="vlabel"><span class="cap mono">60 L</span><span class="nm">Oak cask</span></div>
+        </div>
+
+      </div>
+    </div>
+    <p class="caption">
+      <b>Why it matters</b>
+      <span>The upkeep bill, the stratification penalty and the fill button are all
+      functions of volume. The player is asked to reason about litres constantly
+      and has never once been shown them.</span>
+    </p>
+  </section>
+
+  <hr class="rule" style="margin-top:56px">
+
+  <section>
+    <span class="eyebrow">The proposal</span>
+    <h2>The bench as a room, not a table</h2>
+    <p>
+      Four occupied slots on a cedar bench. Every vessel is still a DOM element,
+      so hovering, clicking and keyboard focus work exactly as they do now —
+      selecting one would open the inspector you already have, unchanged.
+    </p>
+
+    <div class="scene">
+      <svg width="760" height="316" viewBox="0 0 760 316" role="img" aria-label="Isometric fermentation bench with four occupied slots">
+        <defs>
+          <linearGradient id="benchtop" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#7a5631"/><stop offset="100%" stop-color="#5c3f22"/>
+          </linearGradient>
+          <radialGradient id="lamp" cx="50%" cy="0%" r="70%">
+            <stop offset="0%" stop-color="#e08a3c" stop-opacity="0.20"/>
+            <stop offset="100%" stop-color="#e08a3c" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="steamg" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stop-color="#f4ead9" stop-opacity="0.28"/>
+            <stop offset="100%" stop-color="#f4ead9" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <ellipse cx="380" cy="96" rx="330" ry="140" fill="url(#lamp)"/>
+
+        <!-- floor grid, receding -->
+        <g stroke="rgba(243,233,216,0.06)" stroke-width="1" fill="none">
+          <path d="M60 252 L380 122 L700 252 L380 382z"/>
+          <path d="M140 216 L460 86 M220 260 L540 130 M300 304 L620 174"/>
+          <path d="M620 216 L300 86 M540 260 L220 130 M460 304 L140 174"/>
+        </g>
+
+        <!-- bench slab -->
+        <path d="M380 142 L676 248 L380 304 L84 248z" fill="url(#benchtop)"/>
+        <path d="M84 248 L380 304 v20 L84 268z" fill="var(--oak-deep)"/>
+        <path d="M676 248 L380 304 v20 L676 268z" fill="var(--oak-dark)"/>
+        <path d="M380 142 L676 248 L380 304 L84 248z" fill="none" stroke="rgba(243,233,216,0.16)" stroke-width="1.2"/>
+        <g stroke="rgba(0,0,0,0.22)" stroke-width="1" fill="none">
+          <path d="M232 198 L528 322" opacity="0.45"/><path d="M528 198 L232 322" opacity="0.45"/>
+        </g>
+
+        <!-- ============ SLOT 1 · koji tray, lid propped, running warm ============ -->
+        <g class="slot" tabindex="0" role="button" aria-label="Slot 1, barley koji in a cedar tray, lid propped, 34 degrees">
+          <g class="lift">
+            <ellipse class="ring" cx="196" cy="196" rx="56" ry="20" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+            <!-- steam, because it is running above target -->
+            <g opacity="0.85">
+              <path d="M180 158 c-7 -14 7 -20 0 -34" stroke="url(#steamg)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+              <path d="M203 154 c7 -12 -6 -18 1 -30" stroke="url(#steamg)" stroke-width="3" fill="none" stroke-linecap="round"/>
+            </g>
+            <path d="M196 168 L252 196 L196 214 L140 196z" fill="var(--oak)"/>
+            <path d="M140 196 L196 214 v11 L140 207z" fill="var(--oak-deep)"/>
+            <path d="M252 196 L196 214 v11 L252 207z" fill="var(--oak-dark)"/>
+            <path d="M196 171 L246 196 L196 212 L146 196z" fill="#cbb37e"/>
+            <circle cx="180" cy="192" r="1.4" fill="#efe2bd"/><circle cx="205" cy="197" r="1.2" fill="#efe2bd"/>
+            <circle cx="192" cy="201" r="1.1" fill="#efe2bd"/><circle cx="214" cy="192" r="1.2" fill="#efe2bd"/>
+            <!-- the propped lid: a real state, currently a checkbox -->
+            <path d="M150 176 L206 148 L246 168 L190 196z" fill="var(--oak-lit)" opacity="0.92"/>
+            <path d="M150 176 L206 148 L246 168 L190 196z" fill="none" stroke="rgba(243,233,216,0.3)" stroke-width="1"/>
+            <g class="tag" transform="translate(140,116)">
+              <rect class="tag-bg" width="116" height="34" rx="2"/>
+              <text class="tag-t" x="8" y="14">Barley Koji</text>
+              <text class="tag-s" x="8" y="26" fill="var(--amber)">34° · lid propped</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- ============ SLOT 2 · mason jar, small and tidy ============ -->
+        <g class="slot" tabindex="0" role="button" aria-label="Slot 2, lacto ferment in a mason jar, on target">
+          <g class="lift">
+            <ellipse class="ring" cx="330" cy="228" rx="30" ry="12" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+            <path d="M317 196 v22 a13 5 0 0 0 26 0 v-22z" fill="rgba(243,233,216,0.07)"/>
+            <path d="M317 206 v12 a13 5 0 0 0 26 0 v-12z" fill="var(--brine-lo)"/>
+            <ellipse cx="330" cy="206" rx="13" ry="5" fill="var(--brine-hi)"/>
+            <path d="M317 196 v22 a13 5 0 0 0 26 0 v-22" fill="none" stroke="rgba(243,233,216,0.4)" stroke-width="1.2"/>
+            <ellipse cx="330" cy="196" rx="13" ry="5" fill="#2a2016" stroke="rgba(243,233,216,0.4)" stroke-width="1.2"/>
+            <ellipse cx="330" cy="194" rx="10" ry="3.8" fill="var(--oak-lit)"/>
+            <g class="tag" transform="translate(276,146)">
+              <rect class="tag-bg" width="112" height="34" rx="2"/>
+              <text class="tag-t" x="8" y="14">Brined Plums</text>
+              <text class="tag-s" x="8" y="26" fill="var(--moss)">2 L · on target</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- ============ SLOT 3 · onggi ============ -->
+        <g class="slot" tabindex="0" role="button" aria-label="Slot 3, miso in an onggi, 20 litres">
+          <g class="lift">
+            <ellipse class="ring" cx="438" cy="232" rx="40" ry="15" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+            <path d="M438 172 C418 172 412 190 414 202 C416 216 426 228 438 228 C450 228 460 216 462 202 C464 190 458 172 438 172z" fill="var(--clay)"/>
+            <path d="M438 172 C425 172 416 188 415 202 C414 216 424 228 438 228 C435 216 431 190 438 172z" fill="var(--clay-lit)" opacity="0.5"/>
+            <path d="M438 228 C450 228 460 216 462 202 C459 217 450 226 438 228z" fill="var(--clay-deep)"/>
+            <ellipse cx="438" cy="172" rx="14" ry="5.4" fill="#2b1a13" stroke="rgba(243,233,216,0.28)" stroke-width="1.1"/>
+            <ellipse cx="438" cy="172" rx="10" ry="3.6" fill="#6b4426"/>
+            <g class="tag" transform="translate(384,124)">
+              <rect class="tag-bg" width="116" height="34" rx="2"/>
+              <text class="tag-t" x="8" y="14">Barley Miso</text>
+              <text class="tag-s" x="8" y="26" fill="var(--text-mid)">20 L · week 3 of 9</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- ============ SLOT 4 · oak cask, badly stratified ============ -->
+        <g class="slot" tabindex="0" role="button" aria-label="Slot 4, garum in an oak cask, badly stratified, evenness 47 percent">
+          <g class="lift">
+            <ellipse class="ring" cx="566" cy="250" rx="52" ry="18" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+            <path d="M566 148 C544 148 536 168 536 190 C536 212 546 231 566 231 C586 231 596 212 596 190 C596 168 588 148 566 148z" fill="var(--oak)"/>
+            <path d="M566 148 C550 148 539 168 539 190 C539 212 550 231 566 231 C560 212 557 170 566 148z" fill="var(--oak-lit)" opacity="0.4"/>
+            <path d="M566 231 C586 231 596 212 596 190 C594 212 584 228 566 231z" fill="var(--oak-dark)"/>
+            <!-- stratification bands: what "evenness 47%" looks like -->
+            <g opacity="0.5">
+              <path d="M537 178 C550 183 582 183 595 178 L595 186 C582 191 550 191 537 186z" fill="#b8863f"/>
+              <path d="M537 196 C550 201 582 201 595 196 L595 205 C582 210 550 210 537 205z" fill="#7a4f22"/>
+              <path d="M537 213 C550 218 582 218 595 213 L595 221 C582 226 550 226 537 221z" fill="#4e3116"/>
+            </g>
+            <g stroke="var(--oak-dark)" stroke-width="1" opacity="0.5" fill="none">
+              <path d="M552 151 C547 175 547 205 552 229"/><path d="M580 151 C585 175 585 205 580 229"/>
+            </g>
+            <path d="M536 170 C550 177 582 177 596 170 L596 176 C582 183 550 183 536 176z" fill="var(--hoop)"/>
+            <path d="M536 204 C550 211 582 211 596 204 L596 210 C582 217 550 217 536 210z" fill="var(--hoop)"/>
+            <ellipse cx="566" cy="148" rx="22" ry="7.2" fill="#2c1f12" stroke="rgba(243,233,216,0.28)" stroke-width="1.1"/>
+            <g class="tag" transform="translate(510,98)">
+              <rect class="tag-bg" width="126" height="34" rx="2" stroke="var(--brick)"/>
+              <text class="tag-t" x="8" y="14">Colatura di Alici</text>
+              <text class="tag-s" x="8" y="26" fill="var(--brick)">60 L · stratified 47%</text>
+            </g>
+          </g>
+        </g>
+
+      </svg>
+      <p class="hint">Hover or tab through a vessel</p>
+    </div>
+    <p class="caption">
+      <b>Still DOM</b>
+      <span>Each slot is an SVG group with <span class="mono">tabindex</span> and a
+      role. No hit-testing to build, no canvas event layer, screen readers still
+      work — the things you lose the moment you reach for a game engine.</span>
+    </p>
+  </section>
+
+  <hr class="rule" style="margin-top:56px">
+
+  <section>
+    <span class="eyebrow">The real payoff</span>
+    <h2>State you currently have to read, shown instead</h2>
+    <p>
+      The simulation already tracks all of this. Every one of these is a number
+      in a panel today, and a number is the weakest way to teach someone what a
+      ferment is doing.
+    </p>
+
+    <div class="pairs">
+
+      <div class="pair">
+        <div class="pair-art">
+          <svg width="70" height="98" viewBox="0 0 70 98" role="img" aria-label="An even cask beside a stratified one">
+            <path d="M20 8 C6 8 1 26 1 44 C1 62 8 80 20 80 C32 80 39 62 39 44 C39 26 34 8 20 8z" fill="var(--oak)" transform="translate(-2,8)"/>
+            <g transform="translate(-2,8)" stroke="var(--hoop)" stroke-width="5" fill="none" opacity="0.85">
+              <path d="M2 32 C10 36 30 36 38 32"/><path d="M2 58 C10 62 30 62 38 58"/>
+            </g>
+            <path d="M52 8 C38 8 33 26 33 44 C33 62 40 80 52 80 C64 80 71 62 71 44 C71 26 66 8 52 8z" fill="var(--oak)" transform="translate(-4,8)"/>
+            <g transform="translate(-4,8)" opacity="0.62">
+              <path d="M34 30 C42 34 62 34 70 30 L70 40 C62 44 42 44 34 40z" fill="#b8863f"/>
+              <path d="M34 46 C42 50 62 50 70 46 L70 57 C62 61 42 61 34 57z" fill="#7a4f22"/>
+              <path d="M34 62 C42 66 62 66 70 62 L70 72 C62 76 42 76 34 72z" fill="#4e3116"/>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <h3>Evenness</h3>
+          <p>A cask that has separated shows bands. The one beside it is fermenting as one mass.</p>
+        </div>
+        <div class="readout">
+          <span class="chip was">evenness&nbsp;47%</span>
+          <span class="chip bad">visible layers</span>
+        </div>
+      </div>
+
+      <div class="pair">
+        <div class="pair-art">
+          <svg width="120" height="80" viewBox="0 0 120 80" role="img" aria-label="A sealed tray beside one with its lid propped">
+            <g transform="translate(0,20)">
+              <path d="M28 10 L54 24 L28 32 L2 24z" fill="var(--oak)"/>
+              <path d="M2 24 L28 32 v8 L2 32z" fill="var(--oak-deep)"/>
+              <path d="M54 24 L28 32 v8 L54 32z" fill="var(--oak-dark)"/>
+              <path d="M28 6 L54 20 L28 28 L2 20z" fill="var(--oak-lit)"/>
+            </g>
+            <g transform="translate(62,20)">
+              <path d="M28 10 L54 24 L28 32 L2 24z" fill="var(--oak)"/>
+              <path d="M2 24 L28 32 v8 L2 32z" fill="var(--oak-deep)"/>
+              <path d="M54 24 L28 32 v8 L54 32z" fill="var(--oak-dark)"/>
+              <path d="M28 12 L50 24 L28 31 L6 24z" fill="#cbb37e"/>
+              <path d="M4 6 L32 -8 L54 4 L26 18z" fill="var(--oak-lit)" opacity="0.92"/>
+              <path d="M4 6 L32 -8 L54 4 L26 18z" fill="none" stroke="rgba(243,233,216,0.3)" stroke-width="1"/>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <h3>The vent</h3>
+          <p>Sealed, or propped open. Four positions of a control that is currently a row of buttons in a drawer.</p>
+        </div>
+        <div class="readout">
+          <span class="chip was">vent:&nbsp;open</span>
+          <span class="chip now">you can see it</span>
+        </div>
+      </div>
+
+      <div class="pair">
+        <div class="pair-art">
+          <svg width="120" height="94" viewBox="0 0 120 94" role="img" aria-label="A cool onggi beside one running hot with steam">
+            <g transform="translate(2,26)">
+              <path d="M28 6 C13 6 8 22 9 33 C10 45 18 56 28 56 C38 56 46 45 47 33 C48 22 43 6 28 6z" fill="var(--clay)"/>
+              <ellipse cx="28" cy="6" rx="11" ry="4.4" fill="#2b1a13"/>
+            </g>
+            <g transform="translate(62,26)">
+              <path d="M28 20 c-6 -12 6 -17 0 -29" stroke="url(#steamg)" stroke-width="3.2" fill="none" stroke-linecap="round" transform="translate(0,-14)"/>
+              <path d="M40 16 c6 -10 -5 -15 1 -25" stroke="url(#steamg)" stroke-width="2.6" fill="none" stroke-linecap="round" transform="translate(0,-14)"/>
+              <path d="M28 6 C13 6 8 22 9 33 C10 45 18 56 28 56 C38 56 46 45 47 33 C48 22 43 6 28 6z" fill="var(--clay)"/>
+              <path d="M28 6 C13 6 8 22 9 33 C10 45 18 56 28 56 C38 56 46 45 47 33 C48 22 43 6 28 6z" fill="var(--brick)" opacity="0.34"/>
+              <ellipse cx="28" cy="6" rx="11" ry="4.4" fill="#3a1c12"/>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <h3>Heat stress</h3>
+          <p>A bed cooking itself steams and takes a red cast. Today it is a stress bar you have to open a panel to find.</p>
+        </div>
+        <div class="readout">
+          <span class="chip was">stress&nbsp;62</span>
+          <span class="chip warn">steam · warm cast</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="rule" style="margin-top:56px">
+
+  <section>
+    <span class="eyebrow">What it would cost</span>
+    <h2>An honest ledger</h2>
+
+    <div class="cost">
+      <div class="cost-row">
+        <span class="k">Medium</span>
+        <span class="v">SVG, hand-authored, same as <span class="mono">JarVesselArt</span> today. No new dependency, no asset pipeline, no build change. Everything above is one HTML file.</span>
+      </div>
+      <div class="cost-row warn">
+        <span class="k">The real bill</span>
+        <span class="v">Six vessels redrawn, plus a bench and a floor. That is the whole cost, and it is art rather than engineering — a half-finished isometric bench looks considerably worse than the tidy grid you have now.</span>
+      </div>
+      <div class="cost-row">
+        <span class="k">Scope</span>
+        <span class="v">One component. <span class="mono">LabView</span> becomes a scene; the inspector, order book, codex and titration bench are untouched and stay panels.</span>
+      </div>
+      <div class="cost-row">
+        <span class="k">Stays flat</span>
+        <span class="v">Anything you read or type into. Nobody wants to drag an isometric slider to set salinity to 18.5%.</span>
+      </div>
+      <div class="cost-row">
+        <span class="k">Not needed</span>
+        <span class="v">Pixi, Three, a canvas layer. Eight slots and six vessel types do not justify an engine, and buying one costs you DOM events and keyboard access.</span>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <p>
+        The scale strip is the part to judge first. If seeing a 60&nbsp;L cask
+        next to a 2&nbsp;L jar tells you something the card grid never did, the
+        art is worth commissioning. If it does not, the rest of this is decoration
+        and the current layout is fine.
+      </p>
+      <p>
+        Everything here is one throwaway page. Nothing has been changed in the game.
+      </p>
+    </div>
+  </section>
+
+</div>

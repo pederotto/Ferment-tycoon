@@ -116,7 +116,15 @@ caps the score accordingly. Two things about it are load-bearing —
 - **Below ~3 L the rate is exactly zero.** Not small, zero. A mason jar and a
   koji tray must never stratify, or the mechanic becomes early-game busywork.
   The `Math.cbrt(3)` subtraction is what guarantees that; do not smooth it out.
-- **Unevenness is asymptotic, not a slide to zero.** `evennessEquilibrium` is
+- **Only koji, shoyu and garum are agitated.** `isAgitatedFerment` gates the whole
+evenness mechanic, because "turn it" is only the right answer where turning is
+real practice — te-ire on a koji bed, kai-ire on a shoyu moromi, raking a garum.
+A miso is packed, weighted and shut for months and you mix it when it comes out;
+a lacto pickle is anaerobic and opening it is the fault. Applying stratification
+to everything made the game a chore and taught something false about how these
+ferments are actually made.
+
+**Unevenness is asymptotic, not a slide to zero.** `evennessEquilibrium` is
 where a vessel settles — diffusion balances settling, so a barrel is uneven
 rather than infinitely uneven. Unbounded decay ran a 400-tick Colatura to zero
 around tick 300 and capped it at 55 whatever the player did, which removes the

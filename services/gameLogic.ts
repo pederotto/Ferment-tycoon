@@ -497,6 +497,33 @@ export const applyBatchIntervention = (
  * not add busywork to the early game. It becomes real somewhere around the
  * onggi, and it dominates a cask.
  */
+/**
+ * DOES THIS FERMENT GET AGITATED AT ALL?
+ *
+ * Volume stratifies, but "turn it" is only the right answer for ferments where
+ * turning is actual practice. Applying it to everything made the game a chore
+ * and taught something false:
+ *
+ *   KOJI    is turned — te-ire, two or three times a cycle, to release heat and
+ *           even the bed. This is real and it is the whole craft.
+ *   SHOYU   moromi is stirred and aerated — kai-ire — through the whole ferment.
+ *   GARUM   is raked or stirred periodically while it liquefies.
+ *
+ * Everything else is sealed and left alone, and disturbing it is the mistake
+ * rather than the fix. A miso is packed, weighted and shut for months; you mix
+ * it when it comes out, not while it works. A lacto pickle is anaerobic and
+ * opening it is a fault. Black garlic sits in a closed box for weeks.
+ *
+ * So those ferments do not stratify in any sense the player has to manage, and
+ * are exempt outright rather than merely cheap.
+ */
+export const isAgitatedFerment = (recipe?: Recipe): boolean =>
+  !!recipe && (
+    recipe.type === FermentType.KOJI ||
+    recipe.type === FermentType.SHOYU ||
+    recipe.type === FermentType.GARUM
+  );
+
 export const unevennessRate = (totalMassG: number, concentration: number): number => {
   const litres = Math.max(0.1, totalMassG / 1000);
   const gradient = Math.pow(litres, 1 / 3);        // core-to-edge, ~1.26 at 2L, ~3.9 at 60L
@@ -889,7 +916,7 @@ export const processBatchTick = (
 
   // Uniformity decays while the batch is actually doing something. A dormant lag
   // phase does not stratify, and neither does a finished one.
-  if (status === 'active' && progress > 5) {
+  if (status === 'active' && progress > 5 && isAgitatedFerment(recipe)) {
     // Asymptotic toward the vessel's steady state rather than a straight slide
     // to zero: the further it already is from even, the slower it drifts.
     const floor = evennessEquilibrium(totalMass);
