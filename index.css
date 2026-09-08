@@ -2111,3 +2111,79 @@ input[type="range"].dial-slider::-moz-range-thumb {
    contexts and were painting straight over the button, so the primary action of
    the whole screen appeared to have a temperature row printed across it. */
 .inoc-go { z-index: 6; }
+
+/* --- Hardware standing in the room --------------------------------------- */
+.iso-appliance .iso-shadow { fill: rgba(0, 0, 0, 0.34); }
+.iso-hw.clickable { cursor: pointer; }
+.iso-hw.clickable:focus { outline: none; }
+.iso-hw.clickable .iso-appliance { transition: transform 160ms cubic-bezier(.2, .7, .3, 1); }
+.iso-hw.clickable:hover .iso-appliance,
+.iso-hw.clickable:focus-visible .iso-appliance { transform: translateY(-5px); }
+
+@keyframes iso-fan { to { transform: rotate(360deg); } }
+.iso-fan-spin { animation: iso-fan 0.9s linear infinite; }
+@keyframes iso-agitate { 0%,100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+.iso-agitate { animation: iso-agitate 2.4s ease-in-out infinite; }
+@keyframes iso-plume { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+.iso-mist-plume, .iso-mist { animation: iso-plume 3.2s ease-in-out infinite; }
+
+/* --- The press ------------------------------------------------------------ */
+.pressroom {
+  position: relative;
+  width: min(600px, 94vw); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--line-strong); border-radius: 4px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+/* The press stands behind the working area rather than beside it — hardware as
+   the room the numbers happen in. */
+.pr-scene {
+  position: absolute; right: -18px; top: 8px;
+  width: 300px; height: 220px;
+  opacity: 0.3; pointer-events: none;
+}
+.pr-head {
+  position: relative; z-index: 1;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; padding: 18px 20px 13px; border-bottom: 1px solid var(--line);
+}
+.pr-head .kicker { display: block; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brass); margin-bottom: 3px; }
+.pr-head h2 { font-size: 19px; color: var(--text-hi); margin: 0; }
+.pr-body { position: relative; z-index: 1; overflow-y: auto; padding: 14px 20px 20px; }
+.pr-lede { font-size: 12.5px; line-height: 1.55; color: var(--text-mid); margin: 0 0 16px; max-width: 52ch; }
+.pr-empty { font-size: 12px; color: var(--text-lo); font-style: italic; margin: 0; }
+
+.pr-job {
+  padding: 13px 14px; margin-bottom: 10px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--line); border-radius: 3px;
+}
+.pr-job.dry { opacity: 0.72; }
+.pj-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+.pj-head .n { font-family: 'Zilla Slab', serif; font-size: 14px; color: var(--text-hi); }
+.pj-head .v { font-size: 10.5px; color: var(--text-lo); }
+
+.pj-flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
+.pj-arrow { color: var(--text-lo); flex-shrink: 0; }
+.pj-side {
+  flex: 1; min-width: 92px;
+  padding: 8px 10px; border-radius: 2px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line);
+}
+.pj-side.out { border-color: rgba(122, 158, 106, 0.4); }
+.pj-side.cake { border-color: rgba(138, 106, 58, 0.45); }
+.pj-side .l { display: block; font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-lo); }
+.pj-side .m { display: block; font-size: 16px; color: var(--text-hi); margin: 2px 0 1px; }
+.pj-side.out .m { color: var(--moss); }
+.pj-side.cake .m { color: var(--oak-lit, #8a6a3a); }
+.pj-side .d { display: block; font-size: 10px; color: var(--text-lo); }
+
+.pj-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pj-foot .why { flex: 1; min-width: 200px; font-size: 11px; line-height: 1.5; color: var(--text-lo); }
+
+@media (prefers-reduced-motion: reduce) {
+  .iso-fan-spin, .iso-agitate, .iso-mist-plume, .iso-mist { animation: none; }
+  .iso-hw.clickable .iso-appliance { transition: none; }
+}

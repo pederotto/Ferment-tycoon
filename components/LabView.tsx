@@ -3,6 +3,7 @@ import { Batch, Recipe, FermentType } from '../types';
 import { RECIPES, VESSELS } from '../constants';
 import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
+import IsoAppliance, { ApplianceId } from './IsoAppliance';
 
 /**
  * THE BENCH, AS A ROOM
@@ -34,6 +35,10 @@ interface LabViewProps {
   usedSlots: number;
   gameSpeed: number;
   analyzedRecipeIds: string[]; // For Discovery Fog
+  /** What hardware is owned, so the room shows it. */
+  inventory?: Record<string, number>;
+  /** Opens a tool's own screen — the press, the centrifuge. */
+  onOpenTool?: (toolId: string) => void;
 }
 
 /* The room, in SVG units. The bench is a rhombus; the floor sits behind it. */
@@ -42,6 +47,20 @@ const H = 470;
 const BACK_Y = 250, FRONT_Y = 404, LEFT_X = 62, RIGHT_X = 838, MID_X = W / 2;
 const MID_Y = (BACK_Y + FRONT_Y) / 2;
 const ROW_Y = { floor: 250, back: 322, front: 374 };
+
+/**
+ * Where each piece of hardware stands. Hand-placed rather than laid out, because
+ * a workshop is arranged by habit — the press by the wall, the fan clipped to
+ * the bench edge, the mister on the floor where it can be filled.
+ */
+const HARDWARE: { id: ApplianceId; x: number; y: number; scale: number; label: string; opens?: boolean }[] = [
+  { id: 'wooden_press', x: 786, y: 232, scale: 1,    label: 'Wooden Press', opens: true },
+  { id: 'centrifuge',   x: 122, y: 250, scale: 0.95, label: 'Centrifuge',   opens: true },
+  { id: 'humidifier',   x: 830, y: 330, scale: 0.9,  label: 'Ultrasonic Mister' },
+  { id: 'portable_fan', x: 706, y: 392, scale: 0.85, label: 'Clip-on Fan' },
+  { id: 'agitator',     x: 176, y: 214, scale: 0.9,  label: 'Geared Agitator' },
+  { id: 'mash_paddle',  x: 108, y: 386, scale: 0.9,  label: 'Mash Paddle' },
+];
 
 /** Spread n items across a band, centred, with a sane gap when there are few. */
 const spread = (n: number, from: number, to: number): number[] => {
@@ -55,6 +74,7 @@ const spread = (n: number, from: number, to: number): number[] => {
 const LabView: React.FC<LabViewProps> = ({
   batches, maxSlots, onSelectSlot, onIntervention,
   onQuickHarvest, onQuickKeep, usedSlots, gameSpeed, analyzedRecipeIds,
+  inventory = {}, onOpenTool,
 }) => {
   const [focused, setFocused] = useState<string | null>(null);
 
@@ -92,6 +112,12 @@ const LabView: React.FC<LabViewProps> = ({
   };
 
   const seen = batches.map(read);
+
+  // A tool is "running" when a batch is actually calling on it this tick, so the
+  // fan turns while something is vented and the mister plumes while it mists.
+  const anyVenting = seen.some(v => (v.batch.controls?.vent ?? 0) >= 3);
+  const anyMisting = seen.some(v => (v.batch.controls?.mist ?? 0) > 0);
+  const anyAgitated = seen.some(v => v.agitated);
   const floorRow = seen.filter(v => v.placement === 'floor');
   const backRow = seen.filter(v => v.placement === 'back');
   const frontRow = seen.filter(v => v.placement === 'front');
@@ -135,6 +161,7 @@ const LabView: React.FC<LabViewProps> = ({
               fill: Math.max(0.15, Math.min(1, batch.progress / 100)),
               lidOpen: v.lidOpen, hot: v.hot, spoiled: v.spoiled,
               agitated: v.agitated, heated: v.heated,
+              mist: (batch.controls?.mist ?? 0) as 0 | 1 | 2,
             }}
           />
         </g>
@@ -188,6 +215,32 @@ const LabView: React.FC<LabViewProps> = ({
             <path d={`M30 300 L${MID_X} 132 L870 300 L${MID_X} 468z`} />
             <path d="M180 216 L660 456 M660 216 L180 456" />
           </g>
+
+          {/* HARDWARE — the tools you own, standing where they would stand.
+              Decorative in the strict sense: the simulation reads the inventory,
+              not these. But a tool you can see is a tool you remember you have,
+              and a room with a press and a centrifuge in it is visibly a
+              different operation from one with a clip-on fan. */}
+          {HARDWARE.filter(h => (inventory[h.id] ?? 0) > 0).map(h => (
+            <g key={h.id}
+               className={`iso-hw${h.opens ? ' clickable' : ''}`}
+               transform={`translate(${h.x},${h.y})`}
+               tabIndex={h.opens ? 0 : undefined}
+               role={h.opens ? 'button' : undefined}
+               aria-label={h.opens ? `Open the ${h.label}` : undefined}
+               onClick={h.opens ? () => onOpenTool?.(h.id) : undefined}
+               onKeyDown={h.opens ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenTool?.(h.id); } }) : undefined}>
+              <IsoAppliance
+                id={h.id}
+                scale={h.scale}
+                title={h.label}
+                running={h.id === 'portable_fan' ? anyVenting
+                  : h.id === 'humidifier' ? anyMisting
+                  : h.id === 'agitator' ? anyAgitated
+                  : false}
+              />
+            </g>
+          ))}
 
           {/* FLOOR — drawn first, so the bench overlaps their feet and they
               genuinely read as standing behind it. */}

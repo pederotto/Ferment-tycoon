@@ -204,6 +204,19 @@ calling however clean the bench then was. It is a reduced rate now, and a
 spotless bench actively cools their interest rather than merely not attracting
 it.
 
+## Hardware
+
+**Appliances in the room are decorative; the simulation reads the inventory.**
+`IsoAppliance` draws what you own standing where it would stand, and animates
+when a batch is actually calling on it — the fan turns while something is on
+forced vent, the mister plumes while anything mists. Nothing in `gameLogic`
+consults these; if you make them authoritative, the room and the sim will drift.
+
+**A tool screen must take its batch as an argument.** `handleProcessBatch` reads
+`activeBatchForTest` from state, so opening the press and pressing in the same
+tick would act on the previously selected batch or none at all — React has not
+committed the new id yet. It takes an optional batch for exactly this.
+
 ## The bench scene
 
 **Big vessels stand on the floor, not on the table.** `isoPlacement` puts

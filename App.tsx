@@ -17,6 +17,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import LogbookModal from './components/LogbookModal';
 import HarvestReport from './components/HarvestReport';
 import OrderBook from './components/OrderBook';
+import PressRoom from './components/PressRoom';
 import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
 import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
@@ -951,6 +952,7 @@ export default function App() {
   // what pops up and what the archive keeps are guaranteed to be the same thing.
   const [harvestReport, setHarvestReport] = useState<LogEntry | null>(null);
   const [showOrders, setShowOrders] = useState(false);
+  const [openTool, setOpenTool] = useState<string | null>(null);
 
   const handleStopBatch = (batch: Batch) => {
     setGameState(prev => ({
@@ -1010,8 +1012,12 @@ export default function App() {
   };
 
   // --- PROCESSING LOGIC ---
-  const handleProcessBatch = (action: 'press' | 'filter') => {
-      const batch = activeBatchForTest;
+  const handleProcessBatch = (action: 'press' | 'filter', targetBatch?: Batch) => {
+      // The press screen passes the batch directly. Setting activeBatchId and
+      // then calling this in the same tick would read the OLD id, because React
+      // state has not committed yet — the batch would be the previously
+      // selected one, or none at all.
+      const batch = targetBatch || activeBatchForTest;
       if (!batch) return;
 
       // RESOLVE INGREDIENTS TO CHECK WATER CONTENT
@@ -1772,6 +1778,8 @@ export default function App() {
              maxSlots={gameState.equipmentSlots} 
              onSelectSlot={handleSlotClick} 
              onIntervention={handleIntervention}
+             inventory={gameState.inventory}
+             onOpenTool={setOpenTool}
              onQuickHarvest={handleQuickHarvest}
              onQuickKeep={handleQuickKeep}
              usedSlots={usedSlots}
@@ -1904,6 +1912,15 @@ export default function App() {
 
       {harvestReport && (
         <HarvestReport entry={harvestReport} onClose={() => setHarvestReport(null)} />
+      )}
+
+      {openTool === 'wooden_press' && (
+        <PressRoom
+          batches={gameState.batches}
+          customIngredients={gameState.customIngredients}
+          onClose={() => setOpenTool(null)}
+          onPress={(b) => { setOpenTool(null); handleProcessBatch('press', b); }}
+        />
       )}
 
       {showOrders && (

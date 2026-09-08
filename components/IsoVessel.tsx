@@ -34,6 +34,8 @@ export type IsoVesselState = {
   agitated?: boolean;
   /** Incubator only: the chamber is holding a setpoint. */
   heated?: boolean;
+  /** The mister is running over this one. 0 off, 1 periodic, 2 continuous. */
+  mist?: 0 | 1 | 2;
 };
 
 interface IsoVesselProps {
@@ -68,14 +70,26 @@ const Paddle: React.FC<{ x: number; y: number }> = ({ x, y }) => (
 
 const IsoVessel: React.FC<IsoVesselProps> = ({ vesselId, scale = 1, state }) => {
   const st: IsoVesselState = state ?? {};
-  const { fill = 0.6, lidOpen, hot, spoiled, agitated, heated } = st;
+  const { fill = 0.6, lidOpen, hot, spoiled, agitated, heated, mist = 0 } = st;
   const s = scale;
 
   // Everything drains toward grey when a batch is lost.
   const g = spoiled ? 'grayscale(0.75) brightness(0.7)' : undefined;
 
+  /** A fine spray hanging over the vessel, so the mist setting is visible. */
+  const Mist = mist > 0 ? (
+    <g className="iso-mist" opacity={mist === 2 ? 0.9 : 0.55} aria-hidden="true">
+      <ellipse cx="0" cy="-52" rx="20" ry="7" fill="var(--teal, #5fa3a8)" opacity="0.14" />
+      <g fill="var(--teal, #5fa3a8)" opacity="0.5">
+        <circle cx="-11" cy="-46" r="1.2" /><circle cx="4" cy="-50" r="1" />
+        <circle cx="12" cy="-43" r="1.1" /><circle cx="-4" cy="-41" r="0.9" />
+      </g>
+    </g>
+  ) : null;
+
   const wrap = (children: React.ReactNode) => (
     <g transform={`scale(${s})`} style={{ filter: g }}>
+      {Mist}
       {children}
     </g>
   );
