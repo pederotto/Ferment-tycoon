@@ -52,6 +52,12 @@ function migrate(state: Partial<GameState>): GameState {
       }])
     ),
     ownedBookIds: state.ownedBookIds ?? [],
+    // Vendor relationships postdate most saves. An existing player has clearly
+    // been trading, but we cannot reconstruct with whom, so everyone starts
+    // level and builds standing from here.
+    vendorStanding: state.vendorStanding ?? {},
+    contracts: state.contracts ?? [],
+    unlockedVendorIds: state.unlockedVendorIds ?? [],
     discoveredRecipeIds: state.discoveredRecipeIds ?? [],
     undergroundBusts: state.undergroundBusts ?? 0,
     // An existing save has clearly got past the opening.

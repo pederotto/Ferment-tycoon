@@ -435,7 +435,85 @@ export interface Buyer {
         success: string;
         reject: string;
     }
+
+    /** How this vendor enters the game. Defaults to the reputation gate. */
+    unlock?: VendorUnlock;
+
+    /** Lines keyed by standing tier, so a vendor who knows you talks differently. */
+    warmth?: {
+        cool?: string;
+        known?: string;
+        trusted?: string;
+    };
+
+    /** Roughly how much they can absorb per contract. Shapes the offers made. */
+    appetite?: number;
 }
+
+/* =============================================================================
+   VENDOR RELATIONSHIPS AND CONTRACTS
+
+   Buyers were a price multiplier and a line of dialogue: you sold to whoever
+   paid most that week and nothing accumulated. Two things change that.
+
+   STANDING is what a buyer thinks of you, built by selling them good stock and
+   eroded by neglect and by failed promises. It buys a better price, and it is
+   what makes a vendor offer you work.
+
+   CONTRACTS are that work. A vendor commits to taking a quantity of something
+   at an agreed price by an agreed week; you commit to producing it. This is the
+   piece the economy was missing — spot sales are lumpy and saturate the market,
+   while a contract is guaranteed absorption at a fixed price. It is also the
+   natural home for story: a contract is a person asking you for something.
+   ============================================================================= */
+
+/** 0-100. What one buyer thinks of you. */
+export type VendorStanding = number;
+
+export interface StandingTier {
+  min: number;
+  label: string;
+  priceBonus: number;    // added to the buyer's own multiplier
+  blurb: string;
+}
+
+export interface Contract {
+  id: string;
+  buyerId: string;
+  buyerName: string;
+
+  /** What they want. A named recipe is a harder, better-paid ask than a family. */
+  fermentType?: FermentType;
+  recipeId?: string;
+  minScore: number;
+  unitsRequired: number;
+  unitsDelivered: number;
+
+  /** Agreed price per unit. Fixed at signing — the market cannot touch it. */
+  pricePerUnit: number;
+
+  offeredWeek: number;
+  dueWeek: number;
+  status: 'offered' | 'active' | 'complete' | 'failed' | 'declined';
+
+  /** Consequences, both ways. */
+  standingReward: number;
+  standingPenalty: number;
+  cashPenalty: number;
+
+  /** What the vendor said when they offered it. */
+  pitch: string;
+}
+
+/** How a buyer becomes available at all. */
+export type VendorUnlock =
+  | { kind: 'open' }
+  | { kind: 'reputation'; value: number; label?: string }
+  | { kind: 'renown'; value: number; label?: string }
+  | { kind: 'ingredient'; ingredientId: string; label: string }
+  | { kind: 'mastery'; recipeId: string; level: number; label: string }
+  | { kind: 'recipeCount'; count: number; minScore: number; label: string }
+  | { kind: 'introduction'; byBuyerId: string; standing: number; label: string };
 
 // --- STAFF SYSTEM ---
 export type StaffRoleType = 'cleaner' | 'tech' | 'chef' | 'rd';
@@ -504,6 +582,13 @@ export interface GameState {
   
   // Staff
   staff: Record<StaffRoleType, boolean>;
+
+  /** What each buyer thinks of you, keyed by buyer id. Absent = never dealt with. */
+  vendorStanding: Record<string, VendorStanding>;
+  /** Offered, active and settled contracts. Settled ones are kept as history. */
+  contracts: Contract[];
+  /** Buyers unlocked by something other than a standing stat check. */
+  unlockedVendorIds: string[];
 
   // Weather
   weather: WeatherState;

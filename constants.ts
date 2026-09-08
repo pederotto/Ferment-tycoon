@@ -1625,6 +1625,9 @@ export const BUYERS: Buyer[] = [
         minScore: 10,
         paysIn: 'money',
         priceMultiplier: 1.0,
+        appetite: 4,
+        unlock: { kind: 'open' },
+        warmth: { cool: 'They will take almost anything, and it shows.', known: 'The buyer sets your crates aside from the rest.', trusted: 'They ask you first when something is short.' },
         dialogue: { 
             intro: "We distribute artisan and craft ferments across local restaurant kitchens.", 
             success: "Clean artisan batch accepted! Payment disbursed immediately.", 
@@ -1691,6 +1694,9 @@ export const BUYERS: Buyer[] = [
         minScore: 60,
         paysIn: 'money',
         priceMultiplier: 1.5,
+        appetite: 4,
+        unlock: { kind: 'ingredient', ingredientId: 'black_soybeans', label: 'Buy black soybeans — they only stock what they cannot get elsewhere.' },
+        warmth: { cool: 'They take your crate without looking up.', known: 'The owner asks what you are working on next.', trusted: 'Your name is chalked on the board behind the counter.' },
         dialogue: { intro: "Got anything... alive?", success: "The microbes are singing!", reject: "Too commercial. Pass." }
     },
     {
@@ -1703,6 +1709,9 @@ export const BUYERS: Buyer[] = [
         minScore: 85,
         paysIn: 'renown', 
         priceMultiplier: 2.5,
+        appetite: 2,
+        unlock: { kind: 'introduction', byBuyerId: 'hipster_deli', standing: 45, label: 'Someone has to vouch for you. Get the deli to know you well first.' },
+        warmth: { cool: 'The pass is not the place for conversation.', known: 'The chef de cuisine knows your name.', trusted: 'You are walked through the kitchen, not left at the door.' },
         dialogue: { intro: "Surprise my palate.", success: "Exquisite. I will mention your name.", reject: "Pedestrian garbage." }
     },
     {
@@ -1715,6 +1724,8 @@ export const BUYERS: Buyer[] = [
         minScore: 70,
         paysIn: 'money',
         priceMultiplier: 1.2,
+        appetite: 4,
+        warmth: { cool: 'Handed over at the back door.', known: 'The owner sits you down and feeds you.', trusted: 'You are family, and family gets told the truth about a bad batch.' },
         dialogue: { intro: "Need strong jang for the marinade.", success: "Good depth. More next week.", reject: "Weak flavor." }
     },
     {
@@ -1727,6 +1738,9 @@ export const BUYERS: Buyer[] = [
         minScore: 75,
         paysIn: 'money',
         priceMultiplier: 1.4,
+        appetite: 5,
+        unlock: { kind: 'mastery', recipeId: 'doubanjiang', level: 2, label: 'Cook doubanjiang until you have the hang of it. The chef will not buy a paste from someone who has not.' },
+        warmth: { cool: 'The chef tastes it, says nothing, and pays.', known: 'The chef starts telling you what was wrong with the last one.', trusted: 'You are consulted before the menu changes.' },
         dialogue: { intro: "Is it authentic?", success: "Perfect spice.", reject: "Lacks soul." }
     },
     {
@@ -1739,6 +1753,9 @@ export const BUYERS: Buyer[] = [
         minScore: 80,
         paysIn: 'money',
         priceMultiplier: 2.0,
+        appetite: 6,
+        unlock: { kind: 'renown', value: 40, label: 'Renown 40. They read about you before they call you.' },
+        warmth: { cool: 'A purchase order and nothing else.', known: 'The buyer starts asking technical questions.', trusted: 'They send you their assay results unprompted.' },
         dialogue: { intro: "Purity is paramount.", success: "Bio-availability is high. Proceed.", reject: "Contaminated." }
     },
     {
@@ -1804,6 +1821,9 @@ export const BUYERS: Buyer[] = [
         minScore: 65,
         paysIn: 'money',
         priceMultiplier: 1.8,
+        appetite: 3,
+        unlock: { kind: 'recipeCount', count: 4, minScore: 70, label: 'Bring four different ferments to 70 or better. They want range, not one good trick.' },
+        warmth: { cool: 'A polite nod across the bar.', known: 'They keep a bottle of yours behind the counter.', trusted: 'Two drinks on the list are built around your work.' },
         dialogue: { intro: "I need something to shock the senses.", success: "This will make a phenomenal garnish.", reject: "Flat. Boring." }
     },
     {
@@ -1828,6 +1848,8 @@ export const BUYERS: Buyer[] = [
         minScore: 75,
         paysIn: 'money',
         priceMultiplier: 1.6,
+        appetite: 5,
+        warmth: { cool: 'A courier collects it. You never meet anyone.', known: 'Someone from product finally calls you directly.', trusted: 'They want you on the packaging.' },
         dialogue: { intro: "Is it 100% plant-based and punchy?", success: "Excellent umami profile.", reject: "Contains animal notes." }
     }
 ];

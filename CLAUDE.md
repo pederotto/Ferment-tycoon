@@ -125,6 +125,23 @@ heat-instead-of-salt route unreachable even though the safety model supports it.
 identical for everyone — it is about the craft. `benchAdvice()` is generated from
 the player's own run history — it is about them. Do not merge them.
 
+## Vendors
+
+**Standing is money, not flavour text.** `standingTier` feeds a price bonus
+straight into `calculateOffer`, so a relationship is worth up to 35%. Fences are
+excluded on purpose — the underground does not do loyalty.
+
+**Contracted goods must never glut the market.** `processHarvest` takes an
+`isContracted` flag that zeroes the demand hit. This is the whole mechanical
+point of contracts: spot selling saturates and contracts do not, which is what
+makes them a real alternative rather than a slightly better price.
+
+**An unlock route must gate the sell list, not just the order book.**
+`getInterestedBuyers` takes the GameState so `isVendorUnlocked` can run. Without
+it a vendor shows as locked in the order book while still appearing in the buyer
+list, which is worse than having no routes at all. `unlockedVendorIds` is a
+latch — once met, a condition stays met.
+
 ## Layout
 
 Stacking order, which three separate bugs came from getting wrong:

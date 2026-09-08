@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls } from '../types';
-import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter, Hourglass } from 'lucide-react';
+import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls, Contract, GameState } from '../types';
+import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter, Hourglass, Handshake } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { describeEnzymes, describeLineage } from '../services/koji';
+import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
 import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
@@ -206,6 +207,10 @@ interface BatchInspectorProps {
   playerXp?: number;
   playerReputation?: number;
   marketDemand?: Record<string, number>;
+  vendorStanding?: Record<string, number>;
+  contracts?: Contract[];
+  onDeliver?: (contractId: string) => void;
+  gameState?: GameState;
   onClose: () => void;
   onIntervention: (action: string) => void;
   onSetControl?: (patch: Partial<ChamberControls>) => void;
@@ -269,6 +274,10 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   playerXp = 0,
   playerReputation = 0,
   marketDemand,
+  vendorStanding = {},
+  contracts = [],
+  onDeliver,
+  gameState,
   onClose,
   onIntervention,
   onSetControl,
@@ -324,12 +333,12 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
 
   const canFilter = hasCentrifuge && !batch.isFiltered && (recipe.type === FermentType.GARUM || recipe.type === FermentType.VINEGAR);
 
-  const buyers = getInterestedBuyers(batch, recipe, score, playerRenown, playerXp, playerReputation);
+  const buyers = getInterestedBuyers(batch, recipe, score, playerRenown, playerXp, playerReputation, gameState);
 
   // Quick Harvest calculation for persistent toolbar.
   // REBALANCE: scales with the real score, with only a $5 salvage floor instead
   // of a guaranteed $20 — a genuine failure (score 0) is worth nothing.
-  const offerCtx = { score, activeStaff, marketDemand };
+  const offerCtx = { score, activeStaff, marketDemand, vendorStanding };
   const baseWholesalePrice = calculateWholesale(batch, recipe, offerCtx);
   const demandLevel = getDemandFor(recipe.type, marketDemand);
 
@@ -547,6 +556,37 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   </div>
                 )}
 
+                {/* Contracts come first. A signed order at a fixed price is
+                    almost always the right answer when one fits, and burying it
+                    under the spot buyers would hide the whole system. */}
+                {(() => {
+                  const fits = eligibleContracts(contracts, recipe, score);
+                  if (fits.length === 0) return null;
+                  return (
+                    <div className="ct-deliver">
+                      <span className="cd-lbl"><Handshake size={12} /> Owed to a vendor</span>
+                      {fits.map(c => {
+                        const units = Math.min(unitsFromBatch(batch), c.unitsRequired - c.unitsDelivered);
+                        return (
+                          <button key={c.id} className="cd-row" onClick={() => onDeliver?.(c.id)}>
+                            <span className="w">
+                              <b>{c.buyerName}</b>
+                              <em>{contractProgressLabel(c)} · due week {c.dueWeek}</em>
+                            </span>
+                            <span className="p">
+                              deliver {units}
+                              <em>${(units * c.pricePerUnit).toLocaleString()}</em>
+                            </span>
+                          </button>
+                        );
+                      })}
+                      <p className="cd-note">
+                        Fixed price, and it does not glut the market the way a loose sale does.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 <div className="market">
                   <div className="cta-pair">
                     <button className="harvest-cta" onClick={onQuickHarvest} type="button">
@@ -641,8 +681,32 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   )}
                 </div>
 
-                {/* RIGHT: buyer exchange + alternative destinations */}
+                {/* RIGHT: contracts first, then the open market. A signed order
+                    at a fixed price is usually the right answer when one fits,
+                    and the harvest tab is where the decision is actually made —
+                    the same panel exists on the bioreactor tab for the case
+                    where you are looking at a batch you have not switched over
+                    for yet. */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {(() => {
+                    const fits = eligibleContracts(contracts, recipe, score);
+                    if (fits.length === 0) return null;
+                    return (
+                      <div className="ct-deliver">
+                        <span className="cd-lbl"><Handshake size={12} /> Owed to a vendor</span>
+                        {fits.map(c => {
+                          const units = Math.min(unitsFromBatch(batch), c.unitsRequired - c.unitsDelivered);
+                          return (
+                            <button key={c.id} className="cd-row" onClick={() => onDeliver?.(c.id)}>
+                              <span className="w"><b>{c.buyerName}</b><em>{contractProgressLabel(c)} · due week {c.dueWeek}</em></span>
+                              <span className="p">deliver {units}<em>${(units * c.pricePerUnit).toLocaleString()}</em></span>
+                            </button>
+                          );
+                        })}
+                        <p className="cd-note">Fixed price, and it does not glut the market the way a loose sale does.</p>
+                      </div>
+                    );
+                  })()}
                   <div className="wood-panel" style={{ borderRadius: 10, padding: 14 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                       <span className="section-lbl" style={{ marginBottom: 0 }}>Gastronomic Buyer Exchange</span>

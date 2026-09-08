@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book, Lineage, ChamberControls } from './types';
-import { INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
+import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
   RAID_HEAT_THRESHOLD, RAID_BASE_CHANCE, HEAT_DECAY_PER_TICK, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls } from './services/gameLogic';
@@ -14,13 +14,15 @@ import StaffManager from './components/StaffManager';
 import WelcomeScreen from './components/WelcomeScreen';
 import LogbookModal from './components/LogbookModal';
 import HarvestReport from './components/HarvestReport';
+import OrderBook from './components/OrderBook';
 import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
 import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
+import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, batchFitsContract, unitsFromBatch, makeContractOffer, overdueContracts, newlyUnlockedVendors, canOfferContract } from './services/vendors';
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import DevPanel from './components/DevPanel';
 import FirstCulture from './components/FirstCulture';
-import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench } from 'lucide-react';
+import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon } from './components/icons';
 
 export default function App() {
@@ -62,6 +64,11 @@ export default function App() {
         chef: false,
         rd: false
     },
+    // Vendors remember you now: standing accumulates, contracts are signed
+    // against it, and some of the roster has to be earned rather than reached.
+    vendorStanding: {},
+    contracts: [],
+    unlockedVendorIds: [],
     weather: { type: 'Cloudy', tempModifier: 0, humidityModifier: 0, description: 'Overcast' },
     marketDemand: Object.values(FermentType).reduce((acc, t) => ({ ...acc, [t]: 1 }), {} as Record<string, number>),
     insolvencyStrikes: 0,
@@ -391,6 +398,9 @@ export default function App() {
             let newMarketDemand = prev.marketDemand;
             let newStrikes = prev.insolvencyStrikes;
             let newGameOver = prev.gameOver;
+            let newStanding = prev.vendorStanding ?? {};
+            let newContracts = prev.contracts ?? [];
+            let newUnlockedVendorIds = prev.unlockedVendorIds ?? [];
 
             // Start of a New Week
             if (newDay > 7) {
@@ -448,6 +458,61 @@ export default function App() {
                 // Appetite for every ferment type drifts back toward normal.
                 newMarketDemand = recoverDemand(prev.marketDemand);
 
+                // --- VENDOR RELATIONSHIPS AND CONTRACTS ---
+                // Relationships cool if you stop showing up, promises come due,
+                // and vendors who think well of you offer work.
+                newStanding = decayStanding(prev.vendorStanding ?? {}, []);
+
+                const late = overdueContracts(prev.contracts, newWeek);
+                if (late.length > 0) {
+                    newContracts = newContracts.map(c => {
+                        if (!late.some(l => l.id === c.id)) return c;
+                        newMoney -= c.cashPenalty;
+                        newStanding[c.buyerId] = Math.max(0, (newStanding[c.buyerId] ?? 0) - c.standingPenalty);
+                        return { ...c, status: 'failed' as const };
+                    });
+                    const worst = late[0];
+                    setLabNotification({
+                        id: Date.now() + 3,
+                        text: `Contract failed — ${worst.buyerName} went without. $${worst.cashPenalty} forfeited, and they will not forget.`,
+                        type: 'alert',
+                    });
+                }
+
+                // A vendor whose condition has just been met is latched and
+                // announced, so meeting someone is an event rather than a row
+                // quietly appearing in a list you might never open.
+                const probeUnlock: GameState = { ...prev, week: newWeek, vendorStanding: newStanding, contracts: newContracts };
+                const fresh = newlyUnlockedVendors(probeUnlock);
+                if (fresh.length > 0) {
+                    newUnlockedVendorIds = [...newUnlockedVendorIds, ...fresh.map(b => b.id)];
+                    setLabNotification({
+                        id: Date.now() + 5,
+                        text: `${fresh[0].name} will deal with you now. ${fresh[0].dialogue.intro}`,
+                        type: 'info',
+                    });
+                }
+
+                // One offer at a time, from whichever vendor is most minded to
+                // make one. More than that and the screen becomes a queue.
+                const liveCount = newContracts.filter(c => c.status === 'offered' || c.status === 'active').length;
+                if (liveCount < MAX_ACTIVE_CONTRACTS && newWeek % 2 === 0) {
+                    const probe: GameState = { ...prev, week: newWeek, vendorStanding: newStanding, contracts: newContracts };
+                    const willing = BUYERS.filter(b => canOfferContract(b, probe))
+                        .sort((a, b) => (newStanding[b.id] ?? 0) - (newStanding[a.id] ?? 0));
+                    if (willing.length > 0) {
+                        const offer = makeContractOffer(willing[0], probe, newWeek * 7 + willing.length);
+                        if (offer) {
+                            newContracts = [offer, ...newContracts];
+                            setLabNotification({
+                                id: Date.now() + 4,
+                                text: `${offer.buyerName} has work for you. Check the order book.`,
+                                type: 'info',
+                            });
+                        }
+                    }
+                }
+
                 // --- MONTHLY CYCLE (Every 4 weeks) ---
                 if (newWeek > 1 && (newWeek - 1) % 4 === 0) {
                     newMonth += 1;
@@ -477,7 +542,10 @@ export default function App() {
                 weather: newWeather,
                 marketDemand: newMarketDemand,
                 insolvencyStrikes: newStrikes,
-                gameOver: newGameOver
+                gameOver: newGameOver,
+                vendorStanding: newStanding,
+                contracts: newContracts,
+                unlockedVendorIds: newUnlockedVendorIds,
             };
         });
     }, dayRate);
@@ -812,6 +880,7 @@ export default function App() {
   // The report shown immediately after a harvest. It is the LogEntry itself, so
   // what pops up and what the archive keeps are guaranteed to be the same thing.
   const [harvestReport, setHarvestReport] = useState<LogEntry | null>(null);
+  const [showOrders, setShowOrders] = useState(false);
 
   const handleStopBatch = (batch: Batch) => {
     setGameState(prev => ({
@@ -958,7 +1027,7 @@ export default function App() {
     const { money: bestPrice, renown: bestRenown, buyerName: bestBuyerName } = getBestOffer(
       batch,
       recipe,
-      { score, activeStaff: gameState.staff, marketDemand: gameState.marketDemand },
+      { score, activeStaff: gameState.staff, marketDemand: gameState.marketDemand, vendorStanding: gameState.vendorStanding },
       gameState.renown
     );
 
@@ -981,6 +1050,76 @@ export default function App() {
     handleStore(batch);
   };
 
+  /**
+   * Deliver a finished batch against a signed contract.
+   *
+   * The price was fixed when the contract was signed, so this deliberately does
+   * NOT consult the market — that is the whole reason to sign one. Contracted
+   * goods also do not glut the market, because they were spoken for before they
+   * existed, which is what makes a contract a genuine alternative to spot
+   * selling rather than a slightly better version of it.
+   */
+  const handleDeliver = (contractId: string) => {
+    const batch = activeBatchForTest;
+    if (!batch) return;
+    const contract = gameState.contracts.find(c => c.id === contractId);
+    if (!contract || contract.status !== 'active') return;
+
+    const recipe = getRecipeForBatch(batch);
+    const score = calculateCriticScore(batch, recipe, gameState.staff);
+    if (!batchFitsContract(contract, recipe, score)) {
+      setLabNotification({ id: Date.now(), text: `That batch does not meet the terms.`, type: 'warn' });
+      return;
+    }
+
+    const units = Math.min(unitsFromBatch(batch), contract.unitsRequired - contract.unitsDelivered);
+    const payment = units * contract.pricePerUnit;
+    const delivered = contract.unitsDelivered + units;
+    const finished = delivered >= contract.unitsRequired;
+
+    setGameState(prev => ({
+      ...prev,
+      contracts: prev.contracts.map(c => c.id === contractId
+        ? { ...c, unitsDelivered: delivered, status: finished ? 'complete' : 'active' }
+        : c),
+      vendorStanding: {
+        ...prev.vendorStanding,
+        [contract.buyerId]: Math.min(100,
+          getStanding(prev, contract.buyerId) + (finished ? contract.standingReward : 2)),
+      },
+    }));
+
+    processHarvest(batch, payment, 0, 0, false, `${contract.buyerName} (contract)`, true);
+    setLabNotification({
+      id: Date.now(),
+      text: finished
+        ? `Contract complete — ${contract.buyerName} paid $${payment.toLocaleString()} for the last ${units}. They will remember it.`
+        : `Delivered ${units} to ${contract.buyerName} for $${payment.toLocaleString()}. ${contract.unitsRequired - delivered} still owed.`,
+      type: 'info',
+    });
+  };
+
+  const handleAcceptContract = (id: string) => {
+    setGameState(prev => ({
+      ...prev,
+      contracts: prev.contracts.map(c => c.id === id ? { ...c, status: 'active' } : c),
+    }));
+  };
+
+  const handleDeclineContract = (id: string) => {
+    setGameState(prev => ({
+      ...prev,
+      contracts: prev.contracts.map(c => c.id === id ? { ...c, status: 'declined' } : c),
+      // Turning work down is not free, but it is far cheaper than taking it and
+      // failing — which is the judgement the player is being asked to make.
+      vendorStanding: {
+        ...prev.vendorStanding,
+        [prev.contracts.find(c => c.id === id)?.buyerId ?? '']:
+          Math.max(0, getStanding(prev, prev.contracts.find(c => c.id === id)?.buyerId ?? '') - 2),
+      },
+    }));
+  };
+
   const handleSell = (buyer: Buyer, price: number, renownGain: number) => {
     const batch = activeBatchForTest;
     if (!batch) return;
@@ -991,10 +1130,23 @@ export default function App() {
     }
     
     // Process Harvest for a specific buyer
+    // The sale itself moves the relationship. Good stock is remembered; poor
+    // stock costs you, because a restaurant serves your mistakes to its own
+    // customers under its own name.
+    const soldScore = calculateCriticScore(batch, getRecipeForBatch(batch), gameState.staff);
+    const delta = standingFromSale(soldScore, getStanding(gameState, buyer.id));
+    setGameState(prev => ({
+      ...prev,
+      vendorStanding: {
+        ...prev.vendorStanding,
+        [buyer.id]: Math.max(0, Math.min(100, getStanding(prev, buyer.id) + delta)),
+      },
+    }));
+
     processHarvest(batch, price, renownGain, 0, false, buyer.name);
     setLabNotification({
       id: Date.now(),
-      text: `✨ Transacted: Sold to ${buyer.name} for $${price.toLocaleString()}${renownGain > 0 ? ` & +${renownGain} Renown` : ''}!`,
+      text: `✨ Sold to ${buyer.name} for $${price.toLocaleString()}${renownGain > 0 ? ` & +${renownGain} Renown` : ''}.${delta >= 4 ? ' They were impressed.' : delta < 0 ? ' They were not impressed.' : ''}`,
       type: 'info'
     });
   };
@@ -1023,7 +1175,7 @@ export default function App() {
     });
   };
 
-  const processHarvest = (batch: Batch, moneyGain: number, renownGain: number, sporeAmount: number, isSporulation: boolean, buyerName: string) => {
+  const processHarvest = (batch: Batch, moneyGain: number, renownGain: number, sporeAmount: number, isSporulation: boolean, buyerName: string, isContracted: boolean = false) => {
     const recipe = getRecipeForBatch(batch);
     const substrate = [...INGREDIENTS, ...gameState.customIngredients].find(i => i.id === batch.substrateId);
     const calculatedScore = batch.evaluationScore || calculateCriticScore(batch, recipe, gameState.staff);
@@ -1135,7 +1287,10 @@ export default function App() {
     // Selling floods the market for that ferment type. Bulk floods it harder,
     // so dumping cask after cask of one product stops paying.
     const soldType = recipe?.type;
-    const demandHit = isSporulation ? 0 : getDemandHitForSale(batch);
+    // Contracted goods were sold before they existed, so they do not glut the
+    // open market. This is the mechanical heart of the contract system: it is
+    // the way out of the saturation spiral that spot selling cannot escape.
+    const demandHit = (isSporulation || isContracted) ? 0 : getDemandHitForSale(batch);
 
     // Cooking a recipe is how you learn it. Weighted by the critic score, so a
     // good run teaches disproportionately more and a failure teaches nothing.
@@ -1524,6 +1679,15 @@ export default function App() {
               <BookIcon size={14} />
               <span className="hidden sm:inline">Codex</span>
             </button>
+            <button
+              onClick={() => setShowOrders(true)}
+              className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
+              title="Vendor standing and contracts"
+            >
+              <Handshake size={14} />
+              <span className="hidden sm:inline">Orders</span>
+              {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
+            </button>
           </div>
         </div>
       </header>
@@ -1652,6 +1816,10 @@ export default function App() {
              activeStaff={gameState.staff}
              playerRenown={gameState.renown}
              marketDemand={gameState.marketDemand}
+             vendorStanding={gameState.vendorStanding}
+             contracts={gameState.contracts}
+             onDeliver={handleDeliver}
+             gameState={gameState}
              playerXp={gameState.xp}
              onClose={() => setUiState(prev => ({ ...prev, activeBatchId: null }))}
              onIntervention={(action) => handleIntervention(activeBatchForTest, action)}
@@ -1673,6 +1841,15 @@ export default function App() {
 
       {harvestReport && (
         <HarvestReport entry={harvestReport} onClose={() => setHarvestReport(null)} />
+      )}
+
+      {showOrders && (
+        <OrderBook
+          gameState={gameState}
+          onClose={() => setShowOrders(false)}
+          onAccept={handleAcceptContract}
+          onDecline={handleDeclineContract}
+        />
       )}
 
       {uiState.showStaff && (

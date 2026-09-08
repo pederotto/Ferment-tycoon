@@ -1,6 +1,7 @@
 
-import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage } from '../types';
+import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage, GameState } from '../types';
 import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe } from './koji';
+import { standingTier, isVendorUnlocked } from './vendors';
 import {
   RECIPES, VESSELS, BUYERS, INGREDIENTS, RECIPE_MATRIX, MATRIX_TOKEN_LABELS, BOOKS,
   getUndergroundTierFromXp,
@@ -1267,7 +1268,13 @@ export const getInterestedBuyers = (
     score: number,
     renown: number,
     xp: number = 0,
-    reputation: number = 0
+    reputation: number = 0,
+    /**
+     * The whole state, when available, so the unlock routes are real rather
+     * than decorative. Without it the licensed ladder falls back to the
+     * reputation gate, which is what it did before vendors had unlock routes.
+     */
+    gameState?: GameState
 ): Buyer[] => {
     const tier = getUndergroundTier(xp);
     const matching = BUYERS.filter(b => {
@@ -1284,7 +1291,16 @@ export const getInterestedBuyers = (
         // Reputation was declared on all 13 buyers and never once checked, so the
         // whole licensed ladder was open from day one. Selling safe, good stock is
         // what opens the better restaurants.
-        if (reputation < b.minReputation) return false;
+        //
+        // A vendor with its own unlock route is gated by that instead — buying a
+        // particular ingredient, mastering a recipe, being introduced. Without
+        // this the routes would show as locked in the order book while the buyer
+        // still turned up in the sell list, which is worse than not having them.
+        if (b.unlock && gameState) {
+            if (!isVendorUnlocked(b, gameState)) return false;
+        } else if (reputation < b.minReputation) {
+            return false;
+        }
         if (score < b.minScore - 25) return false;
         return true;
     });
@@ -1479,6 +1495,8 @@ export interface OfferContext {
   score: number;
   activeStaff?: Record<StaffRoleType, boolean>;
   marketDemand?: Record<string, number>;
+  /** What each buyer thinks of you. A relationship is worth money, not just tone. */
+  vendorStanding?: Record<string, number>;
 }
 
 /**
@@ -1499,12 +1517,18 @@ export const calculateOffer = (
   const chefMultiplier = activeStaff?.chef ? 1.15 : 1.0;
   const yieldMult = getYieldMultiplier(batch.yieldVolume || 1);
   const demand = getDemandFor(recipe.type, marketDemand);
+  // A buyer who knows you pays over the odds, and that is the return on the
+  // relationship. Fences are excluded deliberately — the underground does not
+  // do loyalty, which is part of what makes it the underground.
+  const standingBonus = buyer.pricesContraband
+    ? 1
+    : 1 + standingTier(ctx.vendorStanding?.[buyer.id] ?? 0).priceBonus;
 
   if (buyer.paysIn === 'renown') {
     // Reputation buyers care about the piece, not the poundage — volume gives
     // only a gentle bump so bulk cannot buy prestige.
     const renown = Math.floor(
-      (score / 5) * buyer.priceMultiplier * Math.min(1.5, Math.sqrt(yieldMult))
+      (score / 5) * buyer.priceMultiplier * standingBonus * Math.min(1.5, Math.sqrt(yieldMult))
     );
     return { money: 0, renown: Math.max(0, renown) };
   }
@@ -1523,7 +1547,7 @@ export const calculateOffer = (
   const ageMult = 1 + AGEING_VALUE_BONUS * getMaturity(batch, recipe);
 
   const money = Math.floor(
-    50 * recipe.difficulty * (score / 50) * yieldMult * buyer.priceMultiplier * chefMultiplier * demand * ageMult
+    50 * recipe.difficulty * (score / 50) * yieldMult * buyer.priceMultiplier * standingBonus * chefMultiplier * demand * ageMult
   );
   return { money: Math.max(0, money), renown: 0 };
 };
