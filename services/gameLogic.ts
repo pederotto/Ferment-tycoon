@@ -510,6 +510,28 @@ export const unevennessRate = (totalMassG: number, concentration: number): numbe
 };
 
 /**
+ * WHERE UNEVENNESS SETTLES.
+ *
+ * A vessel does not stratify without limit. Diffusion and convection push back
+ * against settling, and the two reach a steady state — which is why a barrel of
+ * anything is uneven rather than infinitely uneven.
+ *
+ * Modelling it as unbounded decay was wrong twice over. Physically, because
+ * nothing behaves that way; and in play, because a long recipe simply ran the
+ * number to zero. A 400-tick Colatura in an oak cask bottomed out around tick
+ * 300 and capped at 55 whatever the player did, which removes the decision the
+ * mechanic exists to create.
+ *
+ * The equilibrium depends only on the geometry, so a small vessel settles at
+ * perfectly even and a 60 L cask settles around half.
+ */
+export const evennessEquilibrium = (totalMassG: number): number => {
+  const litres = Math.max(0.1, totalMassG / 1000);
+  const excess = Math.max(0, Math.pow(litres, 1 / 3) - Math.cbrt(3));
+  return Math.max(25, 100 - excess * 20);
+};
+
+/**
  * What unevenness costs. Deliberately a ceiling rather than a subtraction: an
  * uneven batch is not a ruined batch, it is a batch whose best parts are dragged
  * down by its worst. 100 evenness costs nothing at all.
@@ -868,7 +890,12 @@ export const processBatchTick = (
   // Uniformity decays while the batch is actually doing something. A dormant lag
   // phase does not stratify, and neither does a finished one.
   if (status === 'active' && progress > 5) {
-    evenness = Math.max(0, evenness - evenDecay);
+    // Asymptotic toward the vessel's steady state rather than a straight slide
+    // to zero: the further it already is from even, the slower it drifts.
+    const floor = evennessEquilibrium(totalMass);
+    if (evenness > floor) {
+      evenness = Math.max(floor, evenness - evenDecay * ((evenness - floor) / 45));
+    }
   }
 
   // --- UNIVERSAL SPOILAGE LOGIC (Safety Decay) ---

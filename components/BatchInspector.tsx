@@ -463,7 +463,18 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   <VesselArt vesselId={batch.vesselId} size={112} />
                 </div>
                 <div className="ribbon" style={isSpoiled ? { background: 'var(--brick)', color: '#fbe7df' } : undefined}>
-                  {Math.round(batch.progress)}% &middot; {isSpoiled ? 'Spoiled' : isInPeakWindow ? 'Peak Window' : batch.progress >= 100 ? 'Mature' : 'Approaching Peak'}
+                  {/* "Approaching peak" used to be the catch-all, which meant a
+                      batch at 3% of a window that opens at 90% was described as
+                      approaching it. Early, working and approaching are three
+                      different states and the player needs to tell them apart. */}
+                  {Math.round(batch.progress)}% &middot; {
+                    isSpoiled ? 'Spoiled'
+                    : isInPeakWindow ? 'Peak Window'
+                    : batch.progress >= 100 ? 'Mature'
+                    : batch.progress >= recipe.peakWindowStart * 0.8 ? 'Approaching Peak'
+                    : batch.progress < 15 ? 'Just Started'
+                    : 'Working'
+                  }
                 </div>
                 <div className="progress-num">Peak window opens at <b>{recipe.peakWindowStart}%</b></div>
               </div>
@@ -505,10 +516,21 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                       percent={batch.params.humidity}
                       color={Math.abs(batch.params.humidity - recipe.idealParams.humidity) > 10 ? 'var(--brick)' : Math.abs(batch.params.humidity - recipe.idealParams.humidity) > 5 ? 'var(--amber)' : 'var(--moss)'}
                     />
+                    {/* This was pinned to amber, so salinity read as a warning
+                        even when it was exactly on target — the one dial of the
+                        three that could never come up green. Salt is also a
+                        wider band than temperature: a point either way is
+                        nothing, and the recipes that care are the ones with a
+                        high target where a point is proportionally small. */}
                     <TelemetryDial
                       value={`${batch.params.salinity.toFixed(1)}%`} label="Salinity" target={`${recipe.idealParams.salinity}%`}
                       percent={Math.min(100, batch.params.salinity * 5)}
-                      color="var(--amber)"
+                      color={(() => {
+                        const t = recipe.idealParams.salinity;
+                        const d = Math.abs(batch.params.salinity - t);
+                        const tol = Math.max(1.5, t * 0.15);
+                        return d > tol * 2 ? 'var(--brick)' : d > tol ? 'var(--amber)' : 'var(--moss)';
+                      })()}
                     />
                   </div>
                 </div>
@@ -803,6 +825,18 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
               <span style={{ color: 'var(--moss)', fontWeight: 700, fontSize: 12 }}>${highestOffer}</span>
               {highestRenown > 0 && <span style={{ color: 'var(--plum)', fontWeight: 700, fontSize: 12 }}>+{highestRenown} Renown</span>}
             </div>
+            {/* One star beside a healthy price reads as a bug when it is really
+                an unfinished batch: the score is scaled down by how far short of
+                the window it is, while the price still carries the full mass.
+                Saying so is cheaper than explaining it twice. */}
+            {batch.status === 'active' && batch.progress < recipe.peakWindowStart && (
+              <>
+                <div className="divider-line" style={{ height: 16 }} />
+                <span style={{ color: 'var(--amber)', fontSize: 10.5, letterSpacing: '0.04em' }}>
+                  Unfinished — the score is held down until {recipe.peakWindowStart}%
+                </span>
+              </>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

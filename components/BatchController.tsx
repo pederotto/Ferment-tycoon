@@ -155,22 +155,44 @@ const BatchController: React.FC<BatchControllerProps> = ({
     return solidsMass * (hydration / 100);
   }, [hasWater, solidsMass, hydration]);
 
-  // Quantities map
+  /**
+   * QUANTITIES — PER UNIT, NOT PER INGREDIENT.
+   *
+   * This is keyed by ingredient id, but `selectedIngredients` holds one entry
+   * for every UNIT drawn, and `calculateBatchDynamics` sums `getMass` across all
+   * of them. So whatever goes in here is applied once per copy, and everything
+   * stored here has to be a per-unit figure.
+   *
+   * It was not. The salinity dial computed a total and stored it, so ten units
+   * of salt titrated to 5% put ten lots of that total into the batch and came
+   * out at 25%. The reagent slider stored the aggregate the same way, so
+   * dialling 28 anchovies to 46.85kg built a batch of 1,311kg and overflowed a
+   * 60L cask by twentyfold. Both were invisible until touched, because the
+   * untouched fallback — the ingredient's own unit mass — happened to be the one
+   * correct per-unit value in the function.
+   */
+  const unitCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    selectedIngredientIds.forEach(id => { counts[id] = (counts[id] ?? 0) + 1; });
+    return counts;
+  }, [selectedIngredientIds]);
+
   const customQuantities = useMemo(() => {
     const quantities: Record<string, number> = {};
     selectedIngredients.forEach(i => {
+      const n = Math.max(1, unitCounts[i.id] ?? 1);
       if (i.id === 'salt' || i.id === 'trapani_salt') {
-        quantities[i.id] = requiredSaltMass;
+        quantities[i.id] = requiredSaltMass / n;
       } else if (i.id === 'water') {
-        quantities[i.id] = requiredWaterMass;
+        quantities[i.id] = requiredWaterMass / n;
       } else {
-        // An explicit gram setting wins; otherwise a reagent contributes its own
-        // unit mass, as before.
-        quantities[i.id] = reagentGrams[i.id] ?? i.mass;
+        // An explicit gram setting is an aggregate — what the player sees on the
+        // slider — so it is divided down to what one unit contributes.
+        quantities[i.id] = (reagentGrams[i.id] ?? i.mass * n) / n;
       }
     });
     return quantities;
-  }, [selectedIngredients, requiredSaltMass, requiredWaterMass, reagentGrams]);
+  }, [selectedIngredients, unitCounts, requiredSaltMass, requiredWaterMass, reagentGrams]);
 
   /**
    * SCALE TO THE VESSEL, KEEPING THE RECIPE
@@ -199,7 +221,10 @@ const BatchController: React.FC<BatchControllerProps> = ({
     const next: Record<string, number> = { ...reagentGrams };
     selectedIngredients.forEach(i => {
       if (i.id === 'salt' || i.id === 'trapani_salt' || i.id === 'water') return;
-      const grams = reagentGrams[i.id] ?? i.mass ?? 0;
+      const n = Math.max(1, unitCounts[i.id] ?? 1);
+      // reagentGrams is the aggregate the slider shows, so the untouched
+      // fallback has to be the aggregate as well — unit mass times the count.
+      const grams = reagentGrams[i.id] ?? (i.mass ?? 0) * n;
       next[i.id] = Math.max(1, Math.round(grams * k));
     });
     setReagentGrams(next);

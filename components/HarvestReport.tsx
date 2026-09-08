@@ -136,16 +136,23 @@ export const HarvestReportBody: React.FC<{ entry: LogEntry }> = ({ entry }) => {
         )}
       </div>
 
-      {/* --- what it became --- */}
-      {(enz || r.lineage) && (
-        <>
-          <span className="hr-lbl">What it became</span>
-          {enz && <p className="hr-prose">{enz.label}. {enz.detail}</p>}
-          {r.lineage && r.lineage.generation > 1 && (
-            <p className="hr-prose">{describeLineage(r.lineage)}</p>
-          )}
-        </>
-      )}
+      {/* --- what it became ---
+          The guard and the body disagreed: it opened on `enz || r.lineage` but
+          the lineage line needs generation > 1, so a founder culture with no
+          enzymes recorded printed the heading and nothing under it. Guard on
+          exactly what will render. */}
+      {(() => {
+        const showEnz = !!enz;
+        const showLineage = !!r.lineage && r.lineage.generation > 1;
+        if (!showEnz && !showLineage) return null;
+        return (
+          <>
+            <span className="hr-lbl">What it became</span>
+            {showEnz && <p className="hr-prose">{enz!.label}. {enz!.detail}</p>}
+            {showLineage && <p className="hr-prose">{describeLineage(r.lineage!)}</p>}
+          </>
+        );
+      })()}
 
       {/* --- what went wrong --- */}
       <span className="hr-lbl">{r.spoiled ? 'What killed it' : 'Post-mortem'}</span>

@@ -48,6 +48,16 @@ salt nothing establishes at room temperature (the Roman route); above ~55 °C
 nothing establishes at any salinity (the modern route). Lowering *both* is the
 mistake. Do not "simplify" this back to salt alone.
 
+**`ingredientQuantities` is PER UNIT, not per ingredient.** The map is keyed by
+ingredient id, but `selectedIngredients` holds one entry for every *unit* drawn
+and `calculateBatchDynamics` sums `getMass` across all of them — so anything
+stored there is applied once per copy. Storing a total is the bug that made ten
+salt units titrated to 5% come out at 25%, and a reagent slider dialled to
+46.85 kg build a 1,311 kg batch. Both were invisible until touched, because the
+untouched fallback — the ingredient's own unit mass — is the one correct
+per-unit value in the function. Divide by the unit count when writing; the
+slider and `scaleToVessel` both work in aggregates.
+
 **Titrated quantities can legitimately be zero.** `getMass` tests
 `!== undefined`, not truthiness. The truthy version fell back to the full 1 kg
 unit mass whenever a dial hit zero, silently dumping a kilo of salt into a batch.
@@ -100,6 +110,12 @@ caps the score accordingly. Two things about it are load-bearing —
 - **Below ~3 L the rate is exactly zero.** Not small, zero. A mason jar and a
   koji tray must never stratify, or the mechanic becomes early-game busywork.
   The `Math.cbrt(3)` subtraction is what guarantees that; do not smooth it out.
+- **Unevenness is asymptotic, not a slide to zero.** `evennessEquilibrium` is
+where a vessel settles — diffusion balances settling, so a barrel is uneven
+rather than infinitely uneven. Unbounded decay ran a 400-tick Colatura to zero
+around tick 300 and capped it at 55 whatever the player did, which removes the
+decision the mechanic exists to create.
+
 - **Anything that stratifies needs a turning tool on screen.** Pastes are the
   stiffest and separate fastest, and originally had only "Clean" — a mash could
   go badly stratified with nothing in the UI to fix it. `BatchInspector` adds a
