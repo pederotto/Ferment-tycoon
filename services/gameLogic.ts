@@ -319,7 +319,8 @@ export const applyBatchIntervention = (
     batch: Batch, 
     action: string, 
     ambientTemp: number,
-    recipe?: Recipe
+    recipe?: Recipe,
+    inventory?: Record<string, number>
 ): Batch => {
     const newParams = { ...batch.params };
     const messages = [...batch.messages];
@@ -327,6 +328,19 @@ export const applyBatchIntervention = (
     let quality = { ...batch.quality };
     let enzymes = batch.enzymes ? { ...batch.enzymes } : undefined;
     let stress = batch.stress ?? 0;
+    let evenness = batch.evenness ?? 100;
+
+    // How much of the batch one pass of handling actually reaches. A jar you
+    // stir through completely; a 60 L cask you do not — you get the top third
+    // and the rest keeps doing what it was doing. This is why volume needs more
+    // handling rather than the same handling, and why it can never be fully
+    // undone by hand.
+    const litres = Math.max(0.1, (batch.totalMass || 1000) / 1000);
+    // A long paddle reaches the bottom of a cask; a spoon does not. This is the
+    // cheap answer to volume, and it is deliberately cheap — the expensive
+    // answer is the agitator, which removes the labour rather than easing it.
+    const paddleBonus = (inventory?.['mash_paddle'] || 0) > 0 ? 1.9 : 1;
+    const reach = Math.max(0.25, Math.min(1, (1.35 * paddleBonus) / Math.pow(litres, 0.42)));
 
     // Interventions used to be flat, context-free bumps — Stir always gave +2
     // umami whether or not stirring was what the batch needed, so there was
@@ -350,6 +364,12 @@ export const applyBatchIntervention = (
             newParams.temp -= cooling;
             stress = Math.max(0, stress - 12);
             disturbance = 8;
+
+            // Turning the whole mass is the strongest thing you can do about
+            // stratification — and the one most blunted by volume.
+            const evened = (100 - evenness) * 0.62 * reach;
+            evenness = Math.min(100, evenness + evened);
+            if (evened > 4) messages.push(`Turned through — ${evened.toFixed(0)} points of unevenness worked out.`);
 
             if (enzymes && inLogPhase) {
                 enzymes.amylase = Math.min(100, enzymes.amylase * 1.06);
@@ -391,13 +411,21 @@ export const applyBatchIntervention = (
             // Keeps the surface from setting and the solids from packing down.
             // Only really matters for the ferments that ask for it.
             disturbance = 2;
+            // Stirring is gentler than turning but far cheaper in lost time, and
+            // on anything liquid it is the right tool — a brine actually moves.
+            const stirEvened = (100 - evenness) * (onPoint ? 0.45 : 0.3) * reach;
+            evenness = Math.min(100, evenness + stirEvened);
             if (onPoint) {
                 quality.umami += 2.5;
                 quality.safety = Math.min(100, quality.safety + 2);
-                messages.push('Stirred through. This one wants the movement.');
+                messages.push(stirEvened > 4
+                  ? `Stirred through — it had started to separate.`
+                  : 'Stirred through. This one wants the movement.');
             } else {
                 quality.umami += 0.4;
-                messages.push('Stirred. Little to gain here.');
+                messages.push(stirEvened > 4
+                  ? 'Stirred. It needed evening out, if nothing else.'
+                  : 'Stirred. Little to gain here.');
             }
             break;
         }
@@ -407,6 +435,9 @@ export const applyBatchIntervention = (
             // actually formed on top — i.e. when safety has started to slip.
             disturbance = 2;
             const slipping = quality.safety < 92;
+            // Taking the surface off removes the most divergent layer there is —
+            // the part that has been in contact with air the whole time.
+            evenness = Math.min(100, evenness + (100 - evenness) * 0.22 * reach);
             if (onPoint && slipping) {
                 quality.safety = Math.min(100, quality.safety + 7);
                 quality.funk = Math.max(0, quality.funk - 2);
@@ -436,6 +467,7 @@ export const applyBatchIntervention = (
         ...batch, 
         params: newParams,
         enzymes,
+        evenness,
         stress, 
         quality: quality,
         flags: flags,
@@ -443,6 +475,45 @@ export const applyBatchIntervention = (
         disturbanceTimer: (batch.disturbanceTimer || 0) + disturbance 
     };
 };
+
+/**
+ * HOW FAST A BATCH GOES UNEVEN.
+ *
+ * Two things drive it, and both are physical rather than punitive:
+ *
+ *   VOLUME. Heat is made throughout and lost only at the surface, so the ratio
+ *   that matters is volume over surface area — which grows as the cube root of
+ *   volume. A 60 L cask has roughly three times the core-to-edge gradient of a
+ *   2 L jar for the same activity. That is why the exponent is 1/3 and not
+ *   something invented.
+ *
+ *   CONSISTENCY. A brine convects and largely mixes itself. A stiff paste does
+ *   not move at all, so nothing evens out on its own. Concentration is already
+ *   computed for every batch, so it comes free.
+ *
+ * A mason jar drifts so slowly it can be ignored, which is the point: this must
+ * not add busywork to the early game. It becomes real somewhere around the
+ * onggi, and it dominates a cask.
+ */
+export const unevennessRate = (totalMassG: number, concentration: number): number => {
+  const litres = Math.max(0.1, totalMassG / 1000);
+  const gradient = Math.pow(litres, 1 / 3);        // core-to-edge, ~1.26 at 2L, ~3.9 at 60L
+  // Below roughly three litres, conduction and convection genuinely do even a
+  // vessel out over fermentation timescales, so small batches are exempt rather
+  // than merely cheap. This is what keeps the mechanic out of the early game:
+  // a mason jar and a koji tray never stratify at all and never need turning.
+  const excess = Math.max(0, gradient - Math.cbrt(3));
+  const stiffness = 0.35 + concentration * 0.85;   // a brine self-mixes, a paste cannot
+  return 0.144 * excess * stiffness;
+};
+
+/**
+ * What unevenness costs. Deliberately a ceiling rather than a subtraction: an
+ * uneven batch is not a ruined batch, it is a batch whose best parts are dragged
+ * down by its worst. 100 evenness costs nothing at all.
+ */
+export const evennessCeiling = (evenness: number): number =>
+  100 - (100 - Math.max(0, Math.min(100, evenness))) * 0.45;
 
 /**
  * The chamber settings a batch is running at. Older saves have no `controls`
@@ -553,6 +624,20 @@ export const processBatchTick = (
     hasFan
   );
   let surfaceWater = batch.surfaceWater ?? 0;
+
+  // A batch drifts out of uniformity on its own; only handling brings it back.
+  // Staff help because this is exactly the work you would hire someone for — a
+  // technician watching the benches turns things before they stratify.
+  let evenness = batch.evenness ?? 100;
+  const hasAgitator = (inventory['agitator'] || 0) > 0;
+  const evenDecay = unevennessRate(totalMass, concentration)
+    // A technician walks the benches and turns things before they stratify.
+    // This is the first job in the game that is genuinely worth a wage.
+    * (activeStaff['tech'] ? 0.5 : 1)
+    * (activeStaff['cleaner'] ? 0.85 : 1)
+    // A geared agitator does the work continuously and does not get tired,
+    // which is the whole argument for buying one.
+    * (hasAgitator ? 0.18 : 1);
 
   const isKoji = recipe.type === FermentType.KOJI;
   const isIncubated = batch.vesselId === 'incubator';
@@ -768,6 +853,12 @@ export const processBatchTick = (
       } else if (newParams.temp <= 10 && !messages.includes('Too cold to develop')) {
            messages.push('Too cold to develop');
       }
+  }
+
+  // Uniformity decays while the batch is actually doing something. A dormant lag
+  // phase does not stratify, and neither does a finished one.
+  if (status === 'active' && progress > 5) {
+    evenness = Math.max(0, evenness - evenDecay);
   }
 
   // --- UNIVERSAL SPOILAGE LOGIC (Safety Decay) ---
@@ -1039,6 +1130,7 @@ export const processBatchTick = (
     lineageDamaged: lineageDamaged,
     controls,
     surfaceWater,
+    evenness,
     // Kept in step with the vent so the older call sites that ask the simple
     // open/closed question still get a true answer.
     flags: { ...flags, isLidPropped: ex.vent >= 2 },
@@ -1097,8 +1189,14 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
   // miso made from ordinary beans would hit the terroir cap and the years would
   // count for nothing.
   const qualityCap = 60 + (avgQuality * 0.4) + Math.round(12 * maturity);
-  
-  return Math.floor(Math.min(qualityCap, score));
+
+  // A batch that fermented unevenly cannot score as if it were one good batch,
+  // because it is not: it is the average of a warm core and a cool edge. This is
+  // the cost of working at volume, and the only way to avoid it is to do the
+  // work — turn it, stir it, keep it moving.
+  const evenCap = evennessCeiling(batch.evenness ?? 100);
+
+  return Math.floor(Math.min(qualityCap, evenCap, score));
 };
 
 /**

@@ -120,6 +120,13 @@ export const HarvestReportBody: React.FC<{ entry: LogEntry }> = ({ entry }) => {
         {r.peakTemp !== undefined && r.peakTemp > r.target.temp + 5 && (
           <Row k="Peaked at" tone="var(--brick)">{r.peakTemp.toFixed(0)}°</Row>
         )}
+        {r.evenness !== undefined && r.evenness < 99.5 && (
+          <Row k="Evenness">
+            <span className={r.evenness < 55 ? 'bad' : r.evenness < 80 ? 'warn' : 'ok'}>
+              {r.evenness.toFixed(0)}% — capped the score at {(100 - (100 - r.evenness) * 0.45).toFixed(0)}
+            </span>
+          </Row>
+        )}
         {r.controls && (
           <Row k="Chamber">
             vent {['sealed', 'cracked', 'open', 'forced'][r.controls.vent]}

@@ -494,10 +494,24 @@ export const UTILITY_COST_PER_WATT = 1.10;
 
 // Market saturation. Every sale depresses appetite for that ferment type;
 // appetite recovers each week. Selling one type on repeat stops paying.
-export const DEMAND_FLOOR = 0.35;
+// MARKET ABSORPTION.
+//
+// These decide whether scaling up is a strategy or an exploit, and they were
+// tuned when a batch was a 1 kg jar. Once a batch could be scaled to fill a 60 L
+// cask, the market recovered faster than a full bench could flood it — spread
+// across four ferment types, demand never fell below 0.95 and bulk ran to
+// thirteen times the rent.
+//
+// Doubling the per-batch impact and slowing the recovery makes saturation
+// actually bind. The opening is untouched, because a 2 kg batch barely dents
+// anything and that is the whole point: the market notices tonnage, not effort.
+// Measured over 30 weeks, full bench, four types, cheap substrate: the spread
+// between the best and worst vessel falls from 2.8x to about 1.3x, so which
+// vessel you use goes back to being a question about the ferment.
+export const DEMAND_FLOOR = 0.25;
 export const DEMAND_CEILING = 1.15;
-export const DEMAND_DROP_PER_YIELD = 0.035; // multiplied by the batch's yield multiplier
-export const DEMAND_RECOVERY_PER_WEEK = 0.12;
+export const DEMAND_DROP_PER_YIELD = 0.06;  // multiplied by the batch's yield multiplier
+export const DEMAND_RECOVERY_PER_WEEK = 0.08;
 
 // Insolvency. Ending a week in the red is a strike; three strikes closes the lab.
 export const BANKRUPTCY_STRIKES = 3;
@@ -511,7 +525,7 @@ export const STAFF_ROLES: StaffRole[] = [
         hiringCost: 300,
         weeklyWage: 100,
         icon: 'SprayCan',
-        effectDescription: 'Hygiene never drops below 50%. Contamination risk reduced by 40%.'
+        effectDescription: 'Hygiene never drops below 50%. Contamination risk reduced by 40%. Keeps large vessels a little more even.'
     },
     {
         id: 'tech',
@@ -520,7 +534,7 @@ export const STAFF_ROLES: StaffRole[] = [
         hiringCost: 800,
         weeklyWage: 250,
         icon: 'Thermometer',
-        effectDescription: 'Automatically corrects temperature drift in Incubators. Stabilizes humidity.'
+        effectDescription: 'Corrects temperature drift in incubators, and walks the benches turning large vessels — halves how fast they stratify.'
     },
     {
         id: 'chef',
@@ -1181,6 +1195,41 @@ export const INGREDIENTS: Ingredient[] = [
         tierRequired: 5,
         hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
         mass: 10000,
+        unitDisplay: 'g'
+    },
+    // --- AGITATION ---
+    // Volume ferments unevenly, and evening it out by hand is the price of
+    // working at scale. These are the capital answer to that labour: a paddle
+    // helps you do it, a motor does it for you. Without them a 60 L cask caps
+    // around 75; with the motor it looks after itself.
+    {
+        id: 'mash_paddle',
+        name: 'Mash Paddle',
+        type: IngredientType.TOOL,
+        baseCost: 180,
+        currency: 'money',
+        quality: 100,
+        description: 'A long oak paddle. Reaches the bottom of a cask, so one pass actually turns the whole mass instead of the top third.',
+        idealFor: ['miso', 'shoyu', 'doubanjiang'],
+        supplierId: 'tech',
+        tierRequired: 1,
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        mass: 2000,
+        unitDisplay: 'g'
+    },
+    {
+        id: 'agitator',
+        name: 'Geared Agitator',
+        type: IngredientType.TOOL,
+        baseCost: 2400,
+        currency: 'money',
+        quality: 100,
+        description: 'A motor and a slow paddle on a timer. Keeps a large vessel turning by itself — the difference between a workshop and a works.',
+        idealFor: ['miso', 'shoyu', 'garum'],
+        supplierId: 'tech',
+        tierRequired: 4,
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 0, fatContent: 0, proteinContent: 0 },
+        mass: 24000,
         unitDisplay: 'g'
     }
 ];

@@ -40,38 +40,26 @@ ingredient market that makes bulk genuinely dearer.
 
 ## Needs doing before anything else
 
-**A design decision on bulk.** Scaling a batch to fill the vessel is now one
-click, which is right — but the value curve behind it was tuned for 1 kg jars.
-Measured over 30 weeks with market saturation and ingredient cost included, a
-full bench across four ferment types nets:
+**~~A design decision on bulk.~~ Settled.** Volume is now limited by how hard it
+is to control rather than by cost — see `unevennessRate` and the CLAUDE.md note.
+Alongside it, market absorption was re-tuned: the drop per batch doubled and
+recovery slowed, because with four ferment types the market previously recovered
+faster than a full bench could flood it and demand never fell below 0.95.
 
-| substrate | mason jars | onggi | oak casks |
-|---|---|---|---|
-| barley, $5/kg | $495/wk | $1,472/wk | $1,352/wk |
-| median, $35/kg | $207/wk | $236/wk | **-$448/wk** |
-| scallops, $400/kg | loss | loss | loss |
+Measured over 30 weeks, full bench, four types, cheap substrate: the spread
+between best and worst vessel fell from 2.8x to about 1.3x, the onggi play fell
+from $1,630/wk to roughly $550, and the opening bench was unchanged at +$40/wk
+because a 2 kg batch barely dents the market. Scaling up is still clearly worth
+doing; it is no longer the only thing worth doing.
 
-Against a $120 floor. Two readings, and which is right is a design call, not a
-measurement:
-
-- *Working as intended.* Cheap commodity in bulk is how real fermentation
-  businesses make money, and expensive substrate in a 60 L cask should be
-  ruinous. The curve already punishes the wrong combinations.
-- *Broken.* 12x the floor by week 30 means the mid-game has no pressure left,
-  and the only lever is "buy barley, buy casks".
-
-Volume-based upkeep (below) closes the worst loophole but only moves the spread
-from 3.0x to 2.6x. The remaining levers are the demand floor (0.35 — a glutted
-market still pays a third), how far spreading across ferment types should dodge
-saturation, and whether recipe difficulty should scale with substrate cost.
-
-**Expensive substrates do not pay, and that is structural.** Revenue depends on
-difficulty, score, buyer and mass — never on what the substrate cost. Better
-ingredients lift the score ceiling (terroir cap, roughly 59 to 88 across the
-range) which is about 1.5x revenue, against up to 80x the price. At difficulty 3
-with a x1.5 buyer, scallops lose money at any mass. Either high-cost substrates
-need to gate high-difficulty recipes, or quality needs to pay more directly.
-Pre-existing, not caused by the fill button.
+**Correction to an earlier note here.** This file previously said expensive
+substrates never pay. That was measured at difficulty 3 with a x1.5 buyer, which
+is the wrong case for them. At small scale with a high-difficulty recipe and a
+premium buyer — 1 kg, difficulty 5, score 96, x3.2 — a luxury substrate returns
+about $1,536 against $400 of ingredients, and beats bulk *per bench slot*. The
+real shape is: cheap substrate wins on absolute income and needs machinery,
+luxury wins per slot and needs recipe knowledge and buyer access. Whether that
+reads clearly enough in play is a separate question, and untested.
 
 ## Asked for, not built — the vendor and quest layer
 

@@ -93,6 +93,22 @@ stock and old saves. `bias` drifts toward the conditions the parent bed was held
 at, in the same direction as `kojiDevelopment` — warm and wet selects amylase.
 If you change one, change both, or the game teaches two contradictory rules.
 
+**Volume is limited by control, not by cost.** `unevennessRate` is what stops
+bulk being free money: a big vessel ferments unevenly, and `evennessCeiling`
+caps the score accordingly. Two things about it are load-bearing —
+
+- **Below ~3 L the rate is exactly zero.** Not small, zero. A mason jar and a
+  koji tray must never stratify, or the mechanic becomes early-game busywork.
+  The `Math.cbrt(3)` subtraction is what guarantees that; do not smooth it out.
+- **Anything that stratifies needs a turning tool on screen.** Pastes are the
+  stiffest and separate fastest, and originally had only "Clean" — a mash could
+  go badly stratified with nothing in the UI to fix it. `BatchInspector` adds a
+  Turn button to any batch whose rate is non-zero.
+
+The workload it creates is the point: a 60 L cask needs six turns by hand, two
+with a technician, none with a geared agitator. That ladder is why staff and
+machinery exist. If you re-tune the rate, re-check that ladder.
+
 **Upkeep is charged per litre of bench, not per vessel.** Counting pots was
 written when every batch was a 1 kg jar. Once reagents could be dialled by the
 gram and scaled to capacity, a bench of two 60 L oak casks fell inside the

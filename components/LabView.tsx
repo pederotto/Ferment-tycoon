@@ -183,7 +183,7 @@ const LabView: React.FC<LabViewProps> = ({
                     <button
                       onClick={(e) => { e.stopPropagation(); if (onQuickKeep) { onQuickKeep(batch); } else { onSelectSlot(batch); } }}
                       className="mini-btn keep"
-                      title="Take it off the bench and stock it, without selling"
+                      title="Into the pantry as an ingredient, without selling. To age it instead, open the batch and lay it down."
                     >
                       Keep
                     </button>

@@ -236,6 +236,20 @@ export interface Batch {
   // curve from that moment on.
   controls?: ChamberControls;
 
+  /**
+   * HOW EVENLY THE BATCH IS FERMENTING, 100 = uniform.
+   *
+   * A 2 L jar ferments as one thing. A 60 L cask does not: the core runs warmer
+   * than the edge, salt settles, the surface dries while the bottom stays wet,
+   * and what comes out is an average of several different ferments. That is the
+   * real reason scaling up is hard — not cost — and it is why a miso mash gets
+   * turned and a soy mash gets stirred.
+   *
+   * Falls faster with volume and with how solid the batch is, and is restored by
+   * the interventions that physically move it about.
+   */
+  evenness?: number;
+
   // Free water sitting ON the substrate, as opposed to vapour in the air around
   // it. Misting raises it, airflow drives it off. Chamber humidity and substrate
   // wetness are not the same quantity and conflating them is the classic error:
@@ -304,6 +318,7 @@ export interface LogEntry {
         target: { temp: number; humidity: number; salinity: number };
         peakTemp?: number;
         offTargetPct?: number;      // share of the run outside the band
+        evenness?: number;          // how uniformly it fermented, 100 = one mass
         enzymes?: EnzymeProfile;
         faults: string[];           // human-readable, already labelled
         controls?: ChamberControls;

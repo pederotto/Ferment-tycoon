@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls } from '../types';
-import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter } from 'lucide-react';
+import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter, Hourglass } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { describeEnzymes, describeLineage } from '../services/koji';
 import RunTrace from './RunTrace';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange } from '../services/gameLogic';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling } from '../services/gameLogic';
 import { INGREDIENTS } from '../constants';
 import {
   CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
@@ -126,6 +126,41 @@ const ChamberPanel: React.FC<{
           </div>
         </div>
       )}
+
+      {(() => {
+        const even = batch.evenness ?? 100;
+        const rate = unevennessRate(batch.totalMass || 1000, 0.7);
+        if (rate <= 0.0001 && even > 99) {
+          return (
+            <p className="cp-even none">
+              Small enough to ferment as one thing — it will not stratify, and
+              never needs turning.
+            </p>
+          );
+        }
+        return (
+          <div className="cp-even">
+            <div className="eh">
+              <span className="l">Evenness</span>
+              <span className={`v${even < 55 ? ' bad' : even < 80 ? ' warn' : ''}`}>
+                {even.toFixed(0)}% · ceiling {evennessCeiling(even).toFixed(0)}
+              </span>
+            </div>
+            <div className="etrack">
+              <div className={`efill${even < 55 ? ' bad' : even < 80 ? ' warn' : ''}`} style={{ width: `${even}%` }} />
+            </div>
+            <p>
+              {even > 88
+                ? 'Fermenting as one mass.'
+                : even > 70
+                  ? 'Starting to separate — the core is running ahead of the edge.'
+                  : even > 50
+                    ? 'Stratified. Turn it, or accept an average of several different ferments.'
+                    : 'Badly stratified. What comes out will be dragged down by its worst part.'}
+            </p>
+          </div>
+        );
+      })()}
 
       <p className="cp-read">{reading}</p>
 
@@ -336,6 +371,21 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
     tools.push({ key: 'clean', label: 'Clean', icon: CleanToolIcon, onClick: () => onIntervention('Clean') });
   }
 
+  // Anything big enough to stratify needs a way to be turned, whatever family it
+  // belongs to. A miso mash is the classic case — it is the stiffest thing in
+  // the game and therefore the fastest to separate, and it had no tool for it at
+  // all: a paste could go badly stratified with nothing on screen to fix it.
+  const stratifies = unevennessRate(batch.totalMass || 1000, 0.7) > 0.0001;
+  if (stratifies && !tools.some(t => t.key === 'mix' || t.key === 'stir')) {
+    tools.push({
+      key: 'mix',
+      label: 'Turn',
+      icon: MixToolIcon,
+      onClick: () => onIntervention('Mix'),
+      disabled: isPaused,
+    });
+  }
+
 
   const alertText = isSpoiled
     ? 'Culture has spoiled — salvage via Bio-Reclamation or discard.'
@@ -509,7 +559,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                          not have to be sold and bought back. */
                       <button className="harvest-cta keep" onClick={onStore} type="button">
                         <span className="big">Keep</span>
-                        <span className="small">Stock it instead of selling</span>
+                        <span className="small">Into the pantry, as an ingredient</span>
                       </button>
                     )}
                   </div>
@@ -639,13 +689,13 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                     <div className="section-lbl">Alternative Batch Destinations</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {onCellar && canCellar && (
-                        <button className="btn btn-plum" onClick={onCellar} title="Age this in the cellar — it frees the bench slot">
-                          <Package size={14} /> Lay down to age
+                        <button className="btn btn-plum" onClick={onCellar} title="Age this in the cellar — it keeps developing and frees the bench slot">
+                          <Hourglass size={14} /> Lay down to age
                         </button>
                       )}
                       {onStore && (
-                        <button className="btn btn-ghost" onClick={onStore} title="Store this batch into cellar inventory">
-                          <Package size={14} /> Stock in Cellar
+                        <button className="btn btn-ghost" onClick={onStore} title="Into the pantry as an ingredient — a koji you can inoculate the next batch with, rather than a product you sell">
+                          <Package size={14} /> Keep in Pantry
                         </button>
                       )}
                       {isKoji && isExemplary && onBackSlop && (

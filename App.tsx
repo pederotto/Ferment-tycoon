@@ -785,7 +785,7 @@ export default function App() {
         ...prev,
         batches: prev.batches.map(b => {
             if (b.id !== batch.id) return b;
-            return applyBatchIntervention(b, action, currentAmbient, getRecipeForBatch(b));
+            return applyBatchIntervention(b, action, currentAmbient, getRecipeForBatch(b), gameState.inventory);
         }),
         // Small hygiene hit for interactions
         hygiene: Math.max(0, prev.hygiene - 1) 
@@ -1055,6 +1055,7 @@ export default function App() {
           target: recipe?.idealParams ?? { temp: 0, humidity: 0, salinity: 0 },
           peakTemp: temps.length ? Math.max(...temps) : undefined,
           offTargetPct: hist.length ? Math.round((offBand / hist.length) * 100) : undefined,
+          evenness: batch.evenness,
           enzymes: batch.enzymes,
           faults: recipe ? diagnoseBatch(batch, recipe).map(f => FAULT_LABELS[f] ?? f) : [],
           controls: batch.controls,
