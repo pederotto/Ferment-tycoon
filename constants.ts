@@ -164,6 +164,17 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   { recipeId: 'gochujang',   substrate: { kind: 'is', id: 'glutinous_rice' }, requires: ['koji', 'chili', 'salt'], vesselId: 'onggi' },
   { recipeId: 'cheong',      substrate: { kind: 'is', id: 'pine_needles' },   requires: ['sugar'],                 vesselId: 'mason_jar' },
 
+  // SHOYU BEFORE MISO. Both take a soybean base and the miso entries match any
+  // soybean with spores and salt, so a moromi placed after them would resolve as
+  // a miso and the whole family would stay unreachable — which is exactly how
+  // Shio Koji and Amazake were lost for the game's entire history.
+  //
+  // What separates them is real: shoyu has roasted wheat in it and is a wet
+  // brine mash; a miso is dry-packed and has neither.
+  { recipeId: 'moromi', substrate: { kind: 'includes', token: 'soybean' }, requires: ['wheat', 'spores', 'salt', 'water'], vesselId: 'cedar_barrel' },
+  // Tamari is the wheat-free one — it began as the liquid pooling on a miso.
+  { recipeId: 'tamari', substrate: { kind: 'includes', token: 'soybean' }, requires: ['koji', 'salt', 'water'], forbids: ['wheat'], vesselId: 'onggi' },
+
   { recipeId: 'hatcho_miso', substrate: { kind: 'includes', token: 'soybean' }, requires: ['spores', 'salt'], vesselId: 'cedar_barrel' },
   { recipeId: 'shiro_miso',  substrate: { kind: 'includes', token: 'soybean' }, requires: ['koji', 'salt'],   vesselId: 'mason_jar' },
 
@@ -219,6 +230,7 @@ export const MATRIX_TOKEN_LABELS: Record<string, string> = {
   chili: 'Chili or pepper',
   sugar: 'Sugar',
   water: 'Water',
+  wheat: 'Roasted wheat',
   tears: 'Vial of Tears',
   larvae: 'Cheese fly larvae',
   barley_koji: 'Barley koji',
@@ -1997,6 +2009,57 @@ export const RECIPES: Recipe[] = [
     idealParams: { temp: 20, humidity: 50, salinity: 0 },
     idealFlavorProfile: { umami: 0, acidity: 20, funk: 10, sweetness: 100, safety: 100 },
     difficulty: 1
+  },
+  {
+    /* ------------------------------------------------------------------
+       SHOYU — the ferment the game declared and never made.
+
+       FermentType.SHOYU existed, AGEING_BY_TYPE knew it matured, the
+       hydration target was set to 130 for a wet mash, a dedicated
+       protease starter was in the pantry, "Amino Sauce (Shoyu)" was
+       sitting there as an output, and the wooden press was built to
+       separate a wet mash into liquid and cake. Every part of the
+       apparatus, and no recipe.
+
+       Real process: cooked soybeans and roasted cracked wheat, roughly
+       equal parts, inoculated to make koji; that koji goes into a strong
+       brine to become moromi; the moromi ferments for months to years and
+       is stirred and aerated throughout — kai-ire, which is the one
+       genuinely agitated ferment in the whole catalogue; then it is
+       pressed, and the liquid that runs out is shoyu.
+       ------------------------------------------------------------------ */
+    id: 'moromi',
+    name: 'Moromi',
+    type: FermentType.SHOYU,
+    description: 'Soybean and roasted wheat koji in strong brine. Stirred through months of ferment, then pressed — the liquid that runs out is shoyu.',
+    requiredIngredients: { substrate: true, starter: 'shoyu_spores', additive: 'salt' },
+    outputIngredientId: 'amino_sauce',
+    requiredVesselId: 'cedar_barrel',
+    baseDurationSeconds: 260,
+    peakWindowStart: 92,
+    peakWindowEnd: 100,
+    activeIntervention: 'Stir',
+    // 18% against the substrate, held at cellar temperature. The brine is what
+    // keeps a mash this wet safe for two years without any heat at all.
+    idealParams: { temp: 25, humidity: 60, salinity: 18 },
+    idealFlavorProfile: { umami: 92, acidity: 40, funk: 55, sweetness: 20, safety: 100 },
+    difficulty: 4
+  },
+  {
+    id: 'tamari',
+    name: 'Tamari',
+    type: FermentType.SHOYU,
+    description: 'Shoyu with no wheat in it. Started as the liquid pooling on a miso and became its own thing — thicker, darker, and squarely savoury.',
+    requiredIngredients: { substrate: true, starter: 'koji_spores', additive: 'salt' },
+    outputIngredientId: 'amino_sauce',
+    requiredVesselId: 'onggi',
+    baseDurationSeconds: 230,
+    peakWindowStart: 90,
+    peakWindowEnd: 100,
+    activeIntervention: 'Stir',
+    idealParams: { temp: 25, humidity: 60, salinity: 16 },
+    idealFlavorProfile: { umami: 96, acidity: 28, funk: 58, sweetness: 12, safety: 100 },
+    difficulty: 4
   },
   {
     id: 'hatcho_miso',

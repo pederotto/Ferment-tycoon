@@ -507,7 +507,12 @@ export const applyBatchIntervention = (
  *   KOJI    is turned — te-ire, two or three times a cycle, to release heat and
  *           even the bed. This is real and it is the whole craft.
  *   SHOYU   moromi is stirred and aerated — kai-ire — through the whole ferment.
- *   GARUM   is raked or stirred periodically while it liquefies.
+ *           It is the one ferment here whose defining technique is agitation.
+ *
+ * Garum was in this list and should not have been. Colatura di Cetara is
+ * layered with salt in a terzigno, weighted, and left; the liquid seeps out over
+ * months and is drawn off the bottom. Nothing is stirred, and the modern
+ * incubator method is held at temperature rather than agitated.
  *
  * Everything else is sealed and left alone, and disturbing it is the mistake
  * rather than the fix. A miso is packed, weighted and shut for months; you mix
@@ -520,8 +525,7 @@ export const applyBatchIntervention = (
 export const isAgitatedFerment = (recipe?: Recipe): boolean =>
   !!recipe && (
     recipe.type === FermentType.KOJI ||
-    recipe.type === FermentType.SHOYU ||
-    recipe.type === FermentType.GARUM
+    recipe.type === FermentType.SHOYU
   );
 
 export const unevennessRate = (totalMassG: number, concentration: number): number => {

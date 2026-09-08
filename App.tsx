@@ -1020,6 +1020,7 @@ export default function App() {
       ).filter(Boolean) as Ingredient[];
 
       const { waterRatio, totalMass } = calculateBatchDynamics(batchIngredients, batch.ingredientQuantities);
+      const recipe = getRecipeForBatch(batch);
 
       setGameState(prev => {
           let updatedBatches = prev.batches;
@@ -1029,13 +1030,23 @@ export default function App() {
           if (action === 'press') {
               // LOGIC: If Wet Mash (>50% water), SPLIT into Sauce + Paste
               if (waterRatio > 0.5) {
-                  // Calculate Yields
-                  const liquidMass = totalMass * waterRatio * 0.8; // 80% extraction efficiency
-                  const liquidUnits = Math.floor(liquidMass / 1000); // Convert grams to units (approx) for simple inventory
+                  // Pressing a moromi is not an optional yield tweak, it is the
+                  // last step of making soy sauce: the mash goes into cloth, the
+                  // liquid that runs out is shoyu and what stays behind is cake.
+                  // A press is the only way to get it out, which is why the tool
+                  // exists.
+                  const isMoromi = recipe?.type === FermentType.SHOYU;
+                  // A moromi gives up its liquid more completely than a loose
+                  // mash — it has been breaking down for months.
+                  const efficiency = isMoromi ? 0.92 : 0.8;
+                  const liquidMass = totalMass * waterRatio * efficiency;
+                  const liquidUnits = Math.floor(liquidMass / 1000);
                   
                   if (liquidUnits > 0) {
                       updatedInventory['amino_sauce'] = (updatedInventory['amino_sauce'] || 0) + liquidUnits;
-                      newMessages.push(`Extracted ${liquidUnits}L Amino Sauce`);
+                      newMessages.push(isMoromi
+                        ? `Pressed ${liquidUnits}L of raw shoyu. The cake keeps — it is still food.`
+                        : `Extracted ${liquidUnits}L Amino Sauce`);
                   }
 
                   updatedBatches = prev.batches.map(b => {

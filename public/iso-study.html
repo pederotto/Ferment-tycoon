@@ -165,6 +165,27 @@
   .chip.good { color: var(--moss); border-color: rgba(122, 158, 106, 0.45); }
   .chip.warn { color: var(--amber); border-color: rgba(224, 138, 60, 0.45); }
 
+
+  /* ---------- the larder & the chamber ---------- */
+  .surface {
+    margin-top: 24px;
+    background: linear-gradient(180deg, #1a1409, var(--cubby));
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 22px 0 10px;
+    overflow-x: auto;
+  }
+  .surface svg { display: block; margin: 0 auto; overflow: visible; }
+  .pick { cursor: pointer; }
+  .pick .bob { transition: transform 160ms cubic-bezier(.2,.7,.3,1); }
+  .pick:hover .bob, .pick:focus-visible .bob { transform: translateY(-5px); }
+  .pick:focus-visible { outline: none; }
+  .pick .plate { opacity: 0.55; transition: opacity 150ms ease; }
+  .pick:hover .plate, .pick:focus-visible .plate { opacity: 1; }
+  .plate-t { font-family: 'IBM Plex Mono', monospace; font-size: 9px; fill: var(--text-mid); }
+  .plate-n { font-family: 'IBM Plex Mono', monospace; font-size: 9px; fill: var(--brass); }
+  @media (prefers-reduced-motion: reduce) { .pick .bob, .pick .plate { transition: none; } }
+
   /* ---------- the ledger of cost ---------- */
   .cost { margin-top: 26px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
   .cost-row {
@@ -454,7 +475,7 @@
             <g class="tag" transform="translate(510,98)">
               <rect class="tag-bg" width="126" height="34" rx="2" stroke="var(--brick)"/>
               <text class="tag-t" x="8" y="14">Colatura di Alici</text>
-              <text class="tag-s" x="8" y="26" fill="var(--brick)">60 L · stratified 47%</text>
+              <text class="tag-s" x="8" y="26" fill="var(--brick)">60 L · needs raking</text>
             </g>
           </g>
         </g>
@@ -482,31 +503,6 @@
     </p>
 
     <div class="pairs">
-
-      <div class="pair">
-        <div class="pair-art">
-          <svg width="70" height="98" viewBox="0 0 70 98" role="img" aria-label="An even cask beside a stratified one">
-            <path d="M20 8 C6 8 1 26 1 44 C1 62 8 80 20 80 C32 80 39 62 39 44 C39 26 34 8 20 8z" fill="var(--oak)" transform="translate(-2,8)"/>
-            <g transform="translate(-2,8)" stroke="var(--hoop)" stroke-width="5" fill="none" opacity="0.85">
-              <path d="M2 32 C10 36 30 36 38 32"/><path d="M2 58 C10 62 30 62 38 58"/>
-            </g>
-            <path d="M52 8 C38 8 33 26 33 44 C33 62 40 80 52 80 C64 80 71 62 71 44 C71 26 66 8 52 8z" fill="var(--oak)" transform="translate(-4,8)"/>
-            <g transform="translate(-4,8)" opacity="0.62">
-              <path d="M34 30 C42 34 62 34 70 30 L70 40 C62 44 42 44 34 40z" fill="#b8863f"/>
-              <path d="M34 46 C42 50 62 50 70 46 L70 57 C62 61 42 61 34 57z" fill="#7a4f22"/>
-              <path d="M34 62 C42 66 62 66 70 62 L70 72 C62 76 42 76 34 72z" fill="#4e3116"/>
-            </g>
-          </svg>
-        </div>
-        <div>
-          <h3>Evenness</h3>
-          <p>A cask that has separated shows bands. The one beside it is fermenting as one mass.</p>
-        </div>
-        <div class="readout">
-          <span class="chip was">evenness&nbsp;47%</span>
-          <span class="chip bad">visible layers</span>
-        </div>
-      </div>
 
       <div class="pair">
         <div class="pair-art">
@@ -564,6 +560,228 @@
       </div>
 
     </div>
+  </section>
+
+
+  <hr class="rule" style="margin-top:56px">
+
+  <section>
+    <span class="eyebrow">Reagents</span>
+    <h2>The larder, instead of a filtered list</h2>
+    <p>
+      Stock is a searchable list of rows today. As a shelf it carries three
+      things the list cannot: how much is left, what physical form the
+      ingredient takes, and the fact that a spore packet and a sack of barley
+      are not the same kind of object at all.
+    </p>
+
+    <div class="surface">
+      <svg width="672" height="200" viewBox="0 0 740 220" role="img" aria-label="An isometric larder shelf holding grain sacks, fish, salt, spore packets and a jar of finished koji">
+        <defs>
+          <linearGradient id="shelfg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6d4c2b"/><stop offset="100%" stop-color="#4f371d"/>
+          </linearGradient>
+          <linearGradient id="sackg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#b09666"/><stop offset="100%" stop-color="#7d6743"/>
+          </linearGradient>
+        </defs>
+
+        <!-- shelf plank -->
+        <path d="M370 96 L706 150 L370 186 L34 150z" fill="url(#shelfg)"/>
+        <path d="M34 150 L370 186 v16 L34 166z" fill="var(--oak-deep)"/>
+        <path d="M706 150 L370 186 v16 L706 166z" fill="var(--oak-dark)"/>
+        <path d="M370 96 L706 150 L370 186 L34 150z" fill="none" stroke="rgba(243,233,216,0.14)" stroke-width="1.1"/>
+
+        <!-- GRAIN SACK · pearl barley -->
+        <g class="pick" tabindex="0" role="button" aria-label="Pearl barley, 5 units left">
+          <g class="bob">
+            <path d="M96 104 c-16 4 -22 22 -20 34 c2 12 12 18 24 18 c12 0 22 -6 24 -18 c2 -12 -4 -30 -20 -34z" fill="url(#sackg)"/>
+            <path d="M96 104 c-11 3 -17 16 -17 30 c0 12 6 20 17 22 c-6 -16 -6 -38 0 -52z" fill="#c4ab7c" opacity="0.5"/>
+            <path d="M88 104 c4 -6 12 -6 16 0 c-4 4 -12 4 -16 0z" fill="#8a7450"/>
+            <ellipse cx="96" cy="104" rx="9" ry="3.4" fill="#6a5636"/>
+            <g fill="#e3d3a4"><circle cx="93" cy="100" r="1.5"/><circle cx="99" cy="102" r="1.3"/><circle cx="96" cy="98" r="1.2"/></g>
+          </g>
+          <g class="plate" transform="translate(56,168)">
+            <text class="plate-t" x="0" y="0">Pearl Barley</text>
+            <text class="plate-n" x="0" y="12">5 left · 1kg</text>
+          </g>
+        </g>
+
+        <!-- FISH CRATE · anchovies -->
+        <g class="pick" tabindex="0" role="button" aria-label="Fresh anchovies, 71 units left">
+          <g class="bob">
+            <path d="M212 116 L256 132 L212 148 L168 132z" fill="var(--oak)"/>
+            <path d="M168 132 L212 148 v14 L168 146z" fill="var(--oak-deep)"/>
+            <path d="M256 132 L212 148 v14 L256 146z" fill="var(--oak-dark)"/>
+            <path d="M212 119 L250 132 L212 145 L174 132z" fill="#2a2b2e"/>
+            <g fill="#9fb3bd">
+              <ellipse cx="200" cy="130" rx="12" ry="3" transform="rotate(-16 200 130)"/>
+              <ellipse cx="220" cy="134" rx="12" ry="3" transform="rotate(12 220 134)"/>
+              <ellipse cx="212" cy="127" rx="11" ry="2.6" transform="rotate(-4 212 127)"/>
+            </g>
+            <g fill="#d5e2e8" opacity="0.7">
+              <circle cx="190" cy="128" r="1.1"/><circle cx="230" cy="135" r="1.1"/>
+            </g>
+          </g>
+          <g class="plate" transform="translate(168,172)">
+            <text class="plate-t" x="0" y="0">Fresh Anchovies</text>
+            <text class="plate-n" x="0" y="12">71 left · 1kg</text>
+          </g>
+        </g>
+
+        <!-- SALT · a heaped bowl, because salt is weighed not counted -->
+        <g class="pick" tabindex="0" role="button" aria-label="Trapani sea salt, 73 units left">
+          <g class="bob">
+            <path d="M330 122 a30 12 0 0 0 60 0 z" fill="#4a4038"/>
+            <ellipse cx="360" cy="122" rx="30" ry="12" fill="#5c5148"/>
+            <path d="M338 122 c6 -14 40 -14 44 0 a26 10 0 0 1 -44 0z" fill="#efe6d4"/>
+            <ellipse cx="360" cy="120" rx="21" ry="7.4" fill="#f7f1e4"/>
+            <g fill="#ffffff" opacity="0.85">
+              <rect x="352" y="114" width="2.4" height="2.4" transform="rotate(20 352 114)"/>
+              <rect x="366" y="117" width="2" height="2" transform="rotate(-14 366 117)"/>
+              <rect x="358" y="111" width="2.2" height="2.2" transform="rotate(38 358 111)"/>
+            </g>
+          </g>
+          <g class="plate" transform="translate(316,164)">
+            <text class="plate-t" x="0" y="0">Trapani Sea Salt</text>
+            <text class="plate-n" x="0" y="12">73 left · 1kg</text>
+          </g>
+        </g>
+
+        <!-- SPORE PACKET · tiny, and it should look tiny -->
+        <g class="pick" tabindex="0" role="button" aria-label="A. Oryzae spores, 2 packets left, living culture">
+          <g class="bob">
+            <path d="M486 126 L510 135 L486 144 L462 135z" fill="#8d8577"/>
+            <path d="M462 135 L486 144 v9 L462 144z" fill="#6c6558"/>
+            <path d="M510 135 L486 144 v9 L510 144z" fill="#565043"/>
+            <path d="M486 128 L505 135 L486 142 L467 135z" fill="#cfc7b4"/>
+            <circle cx="486" cy="135" r="4.6" fill="var(--moss)" opacity="0.5"/>
+            <circle cx="486" cy="135" r="4.6" fill="none" stroke="var(--moss)" stroke-width="0.9"/>
+          </g>
+          <g class="plate" transform="translate(450,168)">
+            <text class="plate-t" x="0" y="0">A. Oryzae Spores</text>
+            <text class="plate-n" x="0" y="12" fill="var(--moss)">2 pkts · living</text>
+          </g>
+        </g>
+
+        <!-- FINISHED KOJI · your own product, back on the shelf as an input -->
+        <g class="pick" tabindex="0" role="button" aria-label="Barley koji you made, generation 3, amylolytic">
+          <g class="bob">
+            <path d="M602 108 v26 a16 6 0 0 0 32 0 v-26z" fill="rgba(243,233,216,0.08)"/>
+            <path d="M602 118 v16 a16 6 0 0 0 32 0 v-16z" fill="#d8c48e"/>
+            <ellipse cx="618" cy="118" rx="16" ry="6" fill="#efe2bd"/>
+            <g fill="#fffaf0" opacity="0.8"><circle cx="612" cy="117" r="1.4"/><circle cx="624" cy="119" r="1.2"/></g>
+            <path d="M602 108 v26 a16 6 0 0 0 32 0 v-26" fill="none" stroke="rgba(243,233,216,0.4)" stroke-width="1.2"/>
+            <ellipse cx="618" cy="108" rx="16" ry="6" fill="#2a2016" stroke="rgba(243,233,216,0.4)" stroke-width="1.2"/>
+            <rect x="606" y="126" width="24" height="9" rx="1" fill="#241b10" stroke="var(--brass)" stroke-width="0.7"/>
+            <text class="plate-n" x="609" y="133" style="font-size:6.5px">GEN 3</text>
+          </g>
+          <g class="plate" transform="translate(580,164)">
+            <text class="plate-t" x="0" y="0">Barley Koji</text>
+            <text class="plate-n" x="0" y="12">yours · amylolytic</text>
+          </g>
+        </g>
+
+      </svg>
+    </div>
+    <p class="caption">
+      <b>What the list hides</b>
+      <span>A spore packet is 10&nbsp;g and a grain sack is a kilo. On a shelf that is
+      obvious; in a list they are two rows of the same height. The jar on the
+      right is koji you made — your own output coming back as an input, which is
+      the loop the whole game turns on.</span>
+    </p>
+  </section>
+
+  <hr class="rule" style="margin-top:56px">
+
+  <section>
+    <span class="eyebrow">Hardware</span>
+    <h2>The heating chamber, with its door open</h2>
+    <p>
+      The incubator is the one vessel with a control worth looking at: a setpoint
+      you own, drawing power, holding a temperature the room cannot. Three states
+      of the same box — off, holding a modern garum at 60&nbsp;°C, and pushed past
+      the point where the enzymes give up.
+    </p>
+
+    <div class="surface">
+      <svg width="654" height="215" viewBox="0 0 700 230" role="img" aria-label="A thermal chamber shown off, holding at 60 degrees, and overheated past 65 degrees">
+        <defs>
+          <linearGradient id="chassis" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#454039"/><stop offset="100%" stop-color="#2c2823"/>
+          </linearGradient>
+          <radialGradient id="glowWarm" cx="50%" cy="60%" r="60%">
+            <stop offset="0%" stop-color="#e08a3c" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#e08a3c" stop-opacity="0.05"/>
+          </radialGradient>
+          <radialGradient id="glowHot" cx="50%" cy="60%" r="60%">
+            <stop offset="0%" stop-color="#d8503a" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#a65641" stop-opacity="0.06"/>
+          </radialGradient>
+        </defs>
+
+        <!-- ============ OFF ============ -->
+        <g transform="translate(20,26)">
+          <ellipse cx="100" cy="164" rx="66" ry="14" fill="rgba(0,0,0,0.4)"/>
+          <path d="M100 20 L172 62 L100 104 L28 62z" fill="#3b3630"/>
+          <path d="M28 62 L100 104 v58 L28 120z" fill="url(#chassis)"/>
+          <path d="M172 62 L100 104 v58 L172 120z" fill="#232019"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="#191713"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="none" stroke="rgba(243,233,216,0.14)" stroke-width="1"/>
+          <circle cx="140" cy="104" r="3.4" fill="#4a453d"/>
+          <rect x="118" y="112" width="30" height="4" rx="2" fill="#3a352e" transform="skewY(30)"/>
+          <text class="tag-t" x="62" y="196" fill="var(--text-lo)" text-anchor="middle" style="font-size:10px">HEATING OFF</text>
+          <text class="tag-s" x="62" y="210" fill="var(--text-lo)" text-anchor="middle">sits at room temperature</text>
+        </g>
+
+        <!-- ============ HOLDING 60° ============ -->
+        <g transform="translate(250,26)">
+          <ellipse cx="100" cy="164" rx="66" ry="14" fill="rgba(0,0,0,0.4)"/>
+          <ellipse cx="70" cy="112" rx="72" ry="52" fill="url(#glowWarm)" opacity="0.35"/>
+          <path d="M100 20 L172 62 L100 104 L28 62z" fill="#3b3630"/>
+          <path d="M28 62 L100 104 v58 L28 120z" fill="url(#chassis)"/>
+          <path d="M172 62 L100 104 v58 L172 120z" fill="#232019"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="#2a1a0d"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="url(#glowWarm)"/>
+          <!-- a rack with a tray inside, lit from within -->
+          <path d="M48 100 L86 122 L86 126 L48 104z" fill="#7a5a2f" opacity="0.9"/>
+          <path d="M48 118 L86 140 L86 144 L48 122z" fill="#7a5a2f" opacity="0.7"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="none" stroke="rgba(224,138,60,0.5)" stroke-width="1"/>
+          <circle cx="140" cy="104" r="3.4" fill="var(--amber)"/>
+          <circle cx="140" cy="104" r="6.5" fill="none" stroke="var(--amber)" stroke-width="0.8" opacity="0.5"/>
+          <rect x="118" y="112" width="30" height="4" rx="2" fill="var(--amber)" opacity="0.75" transform="skewY(30)"/>
+          <text class="tag-t" x="62" y="196" fill="var(--amber)" text-anchor="middle" style="font-size:10px">HOLDING 60°</text>
+          <text class="tag-s" x="62" y="210" fill="var(--text-lo)" text-anchor="middle">heat instead of salt · 150W</text>
+        </g>
+
+        <!-- ============ PAST 65° ============ -->
+        <g transform="translate(480,26)">
+          <ellipse cx="100" cy="164" rx="66" ry="14" fill="rgba(0,0,0,0.4)"/>
+          <ellipse cx="70" cy="112" rx="76" ry="56" fill="url(#glowHot)" opacity="0.3"/>
+          <path d="M100 20 L172 62 L100 104 L28 62z" fill="#3b3630"/>
+          <path d="M28 62 L100 104 v58 L28 120z" fill="url(#chassis)"/>
+          <path d="M172 62 L100 104 v58 L172 120z" fill="#232019"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="#2b120d"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="url(#glowHot)"/>
+          <path d="M48 100 L86 122 L86 126 L48 104z" fill="#6b4128" opacity="0.85"/>
+          <path d="M48 118 L86 140 L86 144 L48 122z" fill="#5e3722" opacity="0.7"/>
+          <path d="M40 76 L92 106 v40 L40 116z" fill="none" stroke="rgba(216,80,58,0.6)" stroke-width="1"/>
+          <circle cx="140" cy="104" r="3.4" fill="var(--brick)"/>
+          <rect x="118" y="112" width="30" height="4" rx="2" fill="var(--brick)" transform="skewY(30)"/>
+          <text class="tag-t" x="62" y="196" fill="var(--brick)" text-anchor="middle" style="font-size:10px">70° · DENATURED</text>
+          <text class="tag-s" x="62" y="210" fill="var(--text-lo)" text-anchor="middle">enzymes gone, and not coming back</text>
+        </g>
+
+      </svg>
+    </div>
+    <p class="caption">
+      <b>Why this box in particular</b>
+      <span>It is where the Roman and modern methods actually diverge. A garum at
+      60&nbsp;°C needs half the salt of one left in the sun — and past 65&nbsp;°C
+      the proteases denature and the batch stops developing for good. Three
+      states of one object, and the middle one is a real technique.</span>
+    </p>
   </section>
 
   <hr class="rule" style="margin-top:56px">
