@@ -289,6 +289,30 @@ export const AGEING_BY_TYPE: Record<string, AgeingBehaviour> = {
 // The curve is deliberately logarithmic: the first year does most of the work,
 // the fourth is a refinement, and nothing improves forever.
 export const AGEING_MAX_PROGRESS = 500;
+
+/**
+ * WHERE A KOJI BED GOES TO SPORE.
+ *
+ * Left past its peak, Aspergillus stops being a white felt and fruits: the bed
+ * turns yellow-green with conidia, the enzymes stall, and it goes bitter. That
+ * is a ruined ingredient and the only way to take a strain off it — which is
+ * the trade. You cannot both eat the bed and keep its children.
+ *
+ * Ends at SPOILAGE, where the bed is past use for either.
+ */
+/**
+ * Where a koji run starts, and why it is not a slider.
+ *
+ * The substrate goes into the tray straight off the steamer, so inoculation
+ * temperature is a property of the process rather than a decision. Real beds go
+ * in hotter than this and are allowed to fall; 30 C is the simplification, and
+ * it is the temperature the bed is actually held near.
+ */
+export const KOJI_INOCULATION_TEMP = 30;
+
+export const SPORULATION_START = 110;   // conidia begin to show
+export const SPORULATION_FULL  = 145;   // fully sporulated, maximum yield
+export const SPORULATION_SPOIL = 175;   // over-run, bitter and worthless
 export const AGEING_PEAK_BONUS = 0.28;      // up to +28% score at full maturity
 export const AGEING_VALUE_BONUS = 0.9;      // up to +90% price at full maturity
 export const CELLAR_TICK_DIVISOR = 6;       // the cellar ages slowly and safely
@@ -650,11 +674,11 @@ export const VESSELS: Vessel[] = [
         slotsRequired: 2,
         powerDraw: 45,
         cost: 420,
-        description: 'A warm cedar cupboard. Gentle heat to 34°C, breathable, misted by hand.',
+        description: 'A warm cedar cupboard. Gentle heat to 35°C, breathable, misted by hand.',
         idealFor: [FermentType.KOJI],
         insulationFactor: 0.45,
         capacityL: 8,
-        heatedTo: 34
+        heatedTo: 35
     },
     {
         id: 'incubator',

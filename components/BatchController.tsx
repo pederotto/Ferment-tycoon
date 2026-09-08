@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentType, RecipeMastery } from '../types';
-import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION } from '../constants';
+import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION , KOJI_INOCULATION_TEMP } from '../constants';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
 import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../services/gameLogic';
@@ -593,6 +593,22 @@ const BatchController: React.FC<BatchControllerProps> = ({
     [selectedIngredients, customQuantities]
   );
   const isKojiRun = resolvedRecipe?.type === FermentType.KOJI;
+  /**
+   * A koji run starts where the steamed grain starts, so the temperature dial is
+   * a readout rather than a control.
+   *
+   * Read off the SELECTION, not off `resolvedRecipe` — which only resolves once
+   * a vessel is chosen, so keying on it left the slider live through the whole
+   * of the reagent step and then swapped it out underneath the player. A koji
+   * spore in the bowl is enough to know.
+   */
+  const isKojiStart = isKojiRun || selectedIngredients.some(
+    i => i.type === IngredientType.STARTER && /koji|oryzae|luchuensis|sake|shoyu/i.test(i.id + i.name)
+  );
+  useEffect(() => {
+    if (isKojiStart && temp !== KOJI_INOCULATION_TEMP) setTemp(KOJI_INOCULATION_TEMP);
+  }, [isKojiStart, temp]);
+
   const kojiSteer = useMemo(() => {
     if (!isKojiRun) return null;
     const sub = selectedIngredients.find(i => i.type === IngredientType.SUBSTRATE);
@@ -1146,21 +1162,41 @@ const BatchController: React.FC<BatchControllerProps> = ({
                 CLAUDE.md: "Re-measure the bench after adding anything to
                 station 04." */}
             <div className="dial-block">
-              <div className="dial-ctl">
-                <div className="dh">
-                  <span className="l"><Thermometer size={12} color="var(--brick)" /> Temperature</span>
-                  <span className="v">{temp}°C</span>
+              {/* KOJI IS INOCULATED HOT, AND THAT IS NOT A CHOICE.
+                  The substrate goes in straight off the steamer, so the starting
+                  temperature is a fact of the process rather than a setting —
+                  offering a 10-70C slider invited a decision that does not exist
+                  at inoculation. Where it goes from there IS a choice, and that
+                  belongs to the vessel: a tray follows the room, a muro holds up
+                  to 35C. */}
+              {isKojiStart ? (
+                <div className="dial-ctl fixed">
+                  <div className="dh">
+                    <span className="l"><Thermometer size={12} color="var(--brick)" /> Temperature</span>
+                    <span className="v">{KOJI_INOCULATION_TEMP}°C</span>
+                  </div>
+                  <p className="dial-fixed-note">
+                    Set by the substrate — it goes in warm from the steamer.
+                    Holding it afterwards is what the vessel is for.
+                  </p>
                 </div>
-                <input
-                  type="range"
-                  className="dial-slider"
-                  min="10"
-                  max="70"
-                  value={temp}
-                  onChange={(e) => setTemp(Number(e.target.value))}
-                  aria-label="Inoculation temperature in Celsius"
-                />
-              </div>
+              ) : (
+                <div className="dial-ctl">
+                  <div className="dh">
+                    <span className="l"><Thermometer size={12} color="var(--brick)" /> Temperature</span>
+                    <span className="v">{temp}°C</span>
+                  </div>
+                  <input
+                    type="range"
+                    className="dial-slider"
+                    min="10"
+                    max="70"
+                    value={temp}
+                    onChange={(e) => setTemp(Number(e.target.value))}
+                    aria-label="Inoculation temperature in Celsius"
+                  />
+                </div>
+              )}
 
               <div className="dial-ctl">
                 <div className="dh">

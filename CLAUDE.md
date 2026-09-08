@@ -79,6 +79,35 @@ producer (`solidsMass`), and now the deduction.
 `!== undefined`, not truthiness. The truthy version fell back to the full 1 kg
 unit mass whenever a dial hit zero, silently dumping a kilo of salt into a batch.
 
+**Koji must keep ticking past `ready` too, and for a different reason.** A bed
+left past its peak goes to spore — that is the only way to take a strain off it,
+and it is the entrance to the whole lineage system. Freezing at 100 made
+`SPORULATION_START` unreachable, so the mechanic existed on paper and had no
+door. Koji also has its own end (`SPORULATION_SPOIL`), because the generic
+"+40 past peak is spoiled" rule killed the bed at 140 — inside the window where
+it is still giving spores.
+
+**Sporulation is a phase, not a reward.** The Sporulate button used to be gated
+on `score >= 85 && safety >= 90`, which got it backwards twice: a bed you ran
+well handed you a strain the instant it was ready, at no cost and no wait, and a
+bed you ran adequately could never give you one at all. Progress is the gate now
+and score decides the *quantity*.
+
+**Decay in that window scales with progress, not with ticks.** Per-tick decay
+made the cost depend on `baseDurationSeconds`: koji runs 48 s, so 110 to 145 is
+17 ticks and the bed lost about six points of enzyme for thirteen packets of
+spore — free. Against progress the trade is real. Measured, from a bed at
+umami 62 / amylase 68: at 110 it gives 1 packet and is nearly intact; at 121,
+4 packets and amylase 43; at 142, 12 packets and amylase 1. You cannot both eat
+the bed and keep its children.
+
+**Koji's inoculation temperature is not a setting.** The substrate goes in off
+the steamer, so it is fixed at `KOJI_INOCULATION_TEMP`; where it goes afterwards
+belongs to the vessel (tray follows the room, muro holds to 35 °C, chamber to
+70). Derive "is this koji" from the SELECTION, not from `resolvedRecipe` — that
+only resolves once a vessel is chosen, so keying on it leaves the slider live
+through the whole reagent step and then swaps it out underneath the player.
+
 **A maturing batch must keep ticking past `ready`.** The tick loop gated on
 `status === 'active'`, so a batch froze the instant it reached 100 — which made
 `getMaturity` (progress minus `peakWindowEnd`) permanently zero and the entire

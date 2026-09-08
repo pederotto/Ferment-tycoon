@@ -2452,3 +2452,17 @@ input[type="range"].dial-slider::-moz-range-thumb {
 /* The gauges are the numbers you actually read — they hold their size and the
    brand gives way first. */
 .gauges { flex: 0 0 auto; }
+
+/* The sporulation window reuses the maturation track's shape — both are "what
+   happens after the batch is ready" — but green, because that is the colour the
+   bed actually turns. */
+.mature-track.spore { background: linear-gradient(180deg, rgba(74,90,40,0.22), rgba(0,0,0,0.18)); }
+.mature-track.spore .mt-head .l { color: var(--moss); }
+.mature-track.spore .mt-fill { background: linear-gradient(90deg, #6f8a4a, #9db36a); }
+
+/* A control that is not a control. Koji's inoculation temperature is set by the
+   substrate, so it reads as a value with a reason rather than a dead slider. */
+.dial-ctl.fixed .dh .v { color: var(--brass); }
+.dial-fixed-note {
+  margin: 6px 0 0; font-size: 10px; line-height: 1.5; color: var(--text-lo);
+}

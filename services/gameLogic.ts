@@ -8,7 +8,8 @@ import {
   getUndergroundTierFromXp,
   YIELD_SCALING_EXPONENT, WEEKLY_BENCH_RENT,
   UTILITY_COST_PER_WATT, FREE_UPKEEP_LITRES, WEEKLY_UPKEEP_PER_LITRE, DEMAND_FLOOR, DEMAND_CEILING, DEMAND_DROP_PER_YIELD, DEMAND_RECOVERY_PER_WEEK,
-  AGEING_BY_TYPE, AGEING_MAX_PROGRESS, AGEING_PEAK_BONUS, AGEING_VALUE_BONUS, CELLAR_TICK_DIVISOR
+  AGEING_BY_TYPE, AGEING_MAX_PROGRESS, AGEING_PEAK_BONUS, AGEING_VALUE_BONUS, CELLAR_TICK_DIVISOR,
+  SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
 
 // --- GAMEPLAY CONSTANTS ---
@@ -1340,6 +1341,17 @@ export const processBatchTick = (
   // Status Check
   if (newQuality.safety < 20) {
     status = 'spoiled';
+  } else if (recipe.type === FermentType.KOJI) {
+    // Koji has its own end, at SPORULATION_SPOIL. The generic "+40 past peak is
+    // spoiled" rule would kill the bed at 140 — inside the window where it is
+    // still giving spores.
+    if (progress >= SPORULATION_SPOIL) status = 'spoiled';
+    else if (progress >= 100 && batch.progress < 100) {
+      status = 'ready';
+      if (!messages.includes('Fermentation Complete (Peak Ready)')) {
+        messages.push('Fermentation Complete (Peak Ready)');
+      }
+    }
   } else if (progress >= effectivePeakEnd + 40 && ageingBehaviour(recipe) !== 'matures') {
     status = 'spoiled'; // Over-fermented — but only for the ferments that can be
   } else if (progress >= 100 && batch.progress < 100) {
@@ -1406,9 +1418,31 @@ export const processBatchTick = (
     if (newQuality.acidity > recipe.idealFlavorProfile.acidity) {
       newQuality.acidity -= 0.03;
     }
+  } else if (recipe.type === FermentType.KOJI && progress >= SPORULATION_START) {
+    // Fruiting, not merely fading. The mould stops making enzyme and starts
+    // making spores, so the bed goes bitter and the enzymatic value — the entire
+    // point of a koji — drains away. This is the price of a lineage, and it has
+    // to be a real one or holding the bed is free.
+    //
+    // Scaled by PROGRESS, not by ticks. Per-tick decay made the cost depend on
+    // baseDurationSeconds: koji runs 48s, so the whole window from 110 to 145 is
+    // 17 ticks and the bed lost about six points of enzyme for thirteen packets
+    // of spore. Against progress, the window drains it whatever the clock does.
+    const dp = Math.max(0, progress - batch.progress);
+    newQuality.umami = Math.max(0, newQuality.umami - 1.4 * dp);
+    newQuality.sweetness = Math.max(0, newQuality.sweetness - 1.2 * dp);
+    newQuality.funk = Math.min(100, newQuality.funk + 1.0 * dp);
+    if (enzymes) {
+      enzymes.amylase = Math.max(0, enzymes.amylase - 2.0 * dp);
+      enzymes.protease = Math.max(0, enzymes.protease - 2.0 * dp);
+    }
+    if (progress >= SPORULATION_START + 2 && !messages.includes('Going to spore — green showing on the bed')) {
+      messages.push('Going to spore — green showing on the bed');
+    }
+    if (progress >= SPORULATION_SPOIL) status = 'spoiled';
   } else {
-    // Everything else declines past the window: koji sporulates and turns
-    // bitter, a lacto pickle softens and over-sours.
+    // Everything else declines past the window: a lacto pickle softens and
+    // over-sours, a bottarga dries past use.
     newQuality.umami -= 0.12;
     newQuality.funk += 0.2;
   }
@@ -1641,6 +1675,49 @@ export const getInterestedBuyers = (
    ========================================================================= */
 
 export const ageingBehaviour = (recipe: Recipe) => AGEING_BY_TYPE[recipe.type] ?? 'peaks';
+
+/**
+ * HOW FAR A KOJI BED HAS GONE TO SPORE, 0..1.
+ *
+ * Zero until SPORULATION_START — a bed at its peak is a white felt and there is
+ * nothing to collect. The button for taking a lineage used to be gated on the
+ * critic score instead, which had two problems: a bed you had run beautifully
+ * offered spores the moment it was ready, with no cost and no waiting, and a bed
+ * you had run adequately could never give you a strain at all. Neither is how it
+ * works. Sporulation is a phase, not a reward.
+ */
+export const sporulation = (batch: Batch, recipe: Recipe): number => {
+  if (recipe.type !== FermentType.KOJI) return 0;
+  if (batch.progress < SPORULATION_START) return 0;
+  const span = SPORULATION_FULL - SPORULATION_START;
+  return Math.min(1, (batch.progress - SPORULATION_START) / span);
+};
+
+/** How many packets a bed yields, and whether it can be taken at all. */
+export const sporeYield = (batch: Batch, recipe: Recipe): number => {
+  const s = sporulation(batch, recipe);
+  if (s <= 0 || batch.progress > SPORULATION_SPOIL) return 0;
+  // A healthy bed fruits more heavily than a stressed one. Score is not the gate
+  // any more, but it still decides how much you get.
+  const health = Math.max(0.35, Math.min(1.25, batch.quality.safety / 100));
+  return Math.max(1, Math.round(14 * s * health));
+};
+
+export const describeSporulation = (batch: Batch, recipe: Recipe): string | null => {
+  if (recipe.type !== FermentType.KOJI) return null;
+  const s = sporulation(batch, recipe);
+  if (batch.progress > SPORULATION_SPOIL) return 'Over-run. Bitter, and the spores with it — this bed is finished.';
+  if (batch.progress < SPORULATION_START) {
+    const away = SPORULATION_START - batch.progress;
+    return batch.progress >= 100
+      ? `White and at its best. Hold it ${away.toFixed(0)}% longer and it will begin to fruit — good for spores, ruined for the kitchen.`
+      : null;
+  }
+  if (s <= 0.02) return 'Just turning. Green will show within the hour, and the bed stops being food.';
+  if (s < 0.35) return 'The first green is showing. It is going to spore now, and it will not come back.';
+  if (s < 0.8) return 'Yellow-green across the bed. Take the spores whenever you like; the food is already gone.';
+  return 'Fully sporulated. This is as many spores as it will give.';
+};
 
 /**
  * Maturity as a 0..1 fraction of "as good as age will make it".

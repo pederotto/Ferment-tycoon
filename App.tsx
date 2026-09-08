@@ -5,7 +5,7 @@ import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER
   RAID_HEAT_THRESHOLD, RAID_CHANCE_PER_DAY, HEAT_DECAY_PER_TICK, HEAT_DECAY_AFTER_BUST,
   HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH, HYGIENE_NEGLECT_FLOOR,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
-import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls } from './services/gameLogic';
+import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage } from './services/koji';
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
 import LabView from './components/LabView';
@@ -329,7 +329,14 @@ export default function App() {
           // decline still stop at 'ready' — they are finished, and holding them
           // is what the cellar is for.
           const stillDeveloping = batch.status === 'active'
-            || (batch.status === 'ready' && ageingBehaviour(getRecipeForBatch(batch)) === 'matures');
+            || (batch.status === 'ready' && (() => {
+                 const r = getRecipeForBatch(batch);
+                 // Maturing types keep improving. Koji keeps RUNNING — a bed left
+                 // past its peak goes to spore, which is the only way to take a
+                 // strain off it. Freezing at 100 made SPORULATION_START
+                 // unreachable, so the lineage system had no entrance.
+                 return ageingBehaviour(r) === 'matures' || r.type === FermentType.KOJI;
+               })());
           if (stillDeveloping) {
             const recipe = getRecipeForBatch(batch);
             const substrate = [...INGREDIENTS, ...prev.customIngredients].find(i => i.id === batch.substrateId);
@@ -1288,11 +1295,14 @@ export default function App() {
   const handleSporulate = () => {
     const batch = activeBatchForTest;
     if (!batch) return;
-    // 0 Value, 10 Spores
-    processHarvest(batch, 0, 0, 10, true, "Internal Lab");
+    // What the bed actually fruited, not a flat ten. A bed taken at the first
+    // green gives a handful; one left to run gives a proper harvest.
+    const packets = sporeYield(batch, getRecipeForBatch(batch));
+    if (packets <= 0) return;
+    processHarvest(batch, 0, 0, packets, true, "Internal Lab");
     setLabNotification({
       id: Date.now(),
-      text: `✨ Lineage Advanced: +10x Generation ${batch.generation + 1} Spores cultivated!`,
+      text: `Lineage advanced — ${packets} packets of Generation ${batch.generation + 1} spore taken. The bed is spent.`,
       type: 'info'
     });
   };

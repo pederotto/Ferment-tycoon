@@ -6,8 +6,8 @@ import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
 import SpeedControl from './SpeedControl';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour } from '../services/gameLogic';
-import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS } from '../constants';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour , sporulation, sporeYield, describeSporulation } from '../services/gameLogic';
+import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS , SPORULATION_START } from '../constants';
 import {
   CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
   LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon
@@ -595,6 +595,31 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                 </div>
               );
             })()}
+            {/* THE SPORULATION WINDOW.
+                Koji is the one ferment with a use AFTER its peak, and it was
+                invisible: the bed simply sat at 100% with no sign that holding
+                it any longer did anything. Holding it is the only way to take a
+                lineage, and it costs you the bed. */}
+            {(() => {
+              const s = sporulation(batch, recipe);
+              const note = describeSporulation(batch, recipe);
+              if (!note) return null;
+              const yieldNow = sporeYield(batch, recipe);
+              return (
+                <div className="mature-track spore">
+                  <div className="mt-head">
+                    <span className="l">Sporulation</span>
+                    <span className="v mono">
+                      {s > 0 ? `${(s * 100).toFixed(0)}% · ${yieldNow} packets` : `begins at ${SPORULATION_START}%`}
+                    </span>
+                  </div>
+                  <div className="mt-rail">
+                    <div className="mt-fill" style={{ width: `${Math.max(1.5, s * 100)}%` }} />
+                  </div>
+                  <p>{note}</p>
+                </div>
+              );
+            })()}
             {maturityNote && ageingBehaviour(recipe) !== 'matures' && (
               <div className="maturity-note">
                 <span className="l">Maturing</span>
@@ -973,9 +998,16 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                           <Sprout size={14} color="var(--teal)" /> Back-Slop Inoculant
                         </button>
                       )}
-                      {isKoji && isExemplary && onSporulate && (
+                      {/* Gated on the bed having actually gone to spore, not on
+                          the critic score. Score decided access before, which
+                          meant a bed you ran well handed you a strain the moment
+                          it was ready — no waiting, no cost — and a bed you ran
+                          adequately could never give you one at all. Score now
+                          decides how MUCH you get. */}
+                      {isKoji && onSporulate && sporeYield(batch, recipe) > 0 && (
                         <button className="btn btn-ghost" onClick={onSporulate}>
-                          <Activity size={14} color="var(--amber)" /> Sporulate Lineage
+                          <Activity size={14} color="var(--amber)" />
+                          Take {sporeYield(batch, recipe)} packets of spore
                         </button>
                       )}
                       {onDiscard && (
