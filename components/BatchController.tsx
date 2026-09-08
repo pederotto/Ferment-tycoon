@@ -802,7 +802,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                       aria-label={`Add ${ing.name} — ${remaining} left`}
                     >
                       <span className="left">
-                        <span className="glyph"><IngGlyph size={14} color="currentColor" /></span>
+                        <span className="glyph art"><IngGlyph size={26} color="currentColor" /></span>
                         <span style={{ minWidth: 0 }}>
                           <span className="n">
                             {ing.name}

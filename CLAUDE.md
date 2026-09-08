@@ -442,6 +442,41 @@ is carried by which row the vessel stands in.
 under the scene. Positioned inside the room it covered the front row, which is
 the row the player is most likely to be reaching for.
 
+## The art direction
+
+**The hand-drawn look is a filter, not sixty hand-drawn paths.** `InkDefs`
+mounts `#inkRough` / `#inkRoughFine` once — feTurbulence into feDisplacementMap,
+which pushes every edge a pixel or two along a noise field, exactly what a pen
+does when a person holds it. Everything isometric inherits it: vessels on the
+bench, the same vessels on the cellar shelves, the hardware in the room, the
+window, the door, the press and centrifuge on their own screens, and the
+ingredient art.
+
+Consistency is the whole reason it is a filter. Redrawing every path by hand
+would drift apart the first time content was added; one definition cannot.
+
+- **Filter the drawn group, never the interactive one.** It goes on `.iso-lift`
+  and `.iso-appliance`, not on `.iso-slot` — a displaced edge must not move a
+  click target.
+- **Two strengths, because scale matters.** A jar at 0.8 dissolves under the
+  displacement a cask at 1.4 needs. Small objects get `inkRoughFine`.
+- **Different `seed` per filter**, so two objects side by side do not wobble
+  identically. Identical wobble is the tell that gives away a filter.
+- Measured: 67 filtered ingredient glyphs plus the bench render with **zero long
+  tasks**. Browsers cache filter output per element, so this is cheap — but
+  re-measure if it is ever applied to something that animates.
+
+**Ingredient art is a lookup with a fallback.** `ART` in `IngredientArt.tsx`
+maps id to a drawing and `artFor` returns null for anything missing, which falls
+through to the old generic glyph. Filling in the remaining ingredients is
+additive and nothing looks broken in the meantime. Draw at 32x32, flat fill, no
+gradients — the ink filter supplies the character.
+
+**The grain is generated, not an asset.** `--grain` and `--speckle` are SVG
+turbulence data-URIs, so the printed-board texture costs nothing to download and
+does not tile. Applied via `::after` with `pointer-events: none`, and the scene's
+own SVG is lifted to `z-index: 2` above it.
+
 ## Layout
 
 Stacking order, which three separate bugs came from getting wrong:

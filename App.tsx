@@ -11,6 +11,7 @@ import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } fr
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
 import SpeedControl from './components/SpeedControl';
+import InkDefs from './components/InkDefs';
 import CellarView from './components/CellarView';
 import BatchController from './components/BatchController';
 import BatchInspector from './components/BatchInspector';
@@ -1719,6 +1720,10 @@ export default function App() {
       )}
 
       {/* TYCOON HUD HEADER - Z-INDEX 30 */}
+      {/* Mounted once. Every isometric object in every window inherits the
+          same hand from these. */}
+      <InkDefs />
+
       <header className="hud sticky top-0 z-30">
         {/* BRAND, ALMANAC & TIME ENGINE */}
         <div className="brand" style={{ minWidth: 0 }}>

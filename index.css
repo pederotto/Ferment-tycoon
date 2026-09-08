@@ -2583,3 +2583,40 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 /* The scene's own interactive layer has to stay above the grain. */
 .iso-room .iso-svg { position: relative; z-index: 2; }
+
+/* THE INK, APPLIED.
+   One filter, every isometric object, every window — the vessels on the bench,
+   the same vessels on the cellar shelves, the hardware standing in the room, and
+   the press and centrifuge on their own screens. Consistency comes from it being
+   one definition rather than sixty hand-drawn paths that would drift apart the
+   first time anything was added.
+
+   Applied to the drawn group rather than the interactive one, so hit areas stay
+   exactly where they were — a displaced edge must not move the click target. */
+.iso-lift,
+.iso-appliance,
+.iso-window,
+.iso-empty { filter: url(#inkRough); }
+
+/* Small objects need a lighter hand or they dissolve. */
+.iso-door,
+.pr-scene .iso-appliance { filter: url(#inkRoughFine); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* The wobble is static, so it stays — but drop it on anything that also moves. */
+  .iso-lift { filter: url(#inkRoughFine); }
+}
+
+/* Ingredient art wants room. At 14px every drawing collapsed to a smudge and the
+   pantry read as sixty-three identical rows; the shape of the thing is what makes
+   a list of reagents scannable, so it gets the space to be a shape. */
+.reagent .glyph.art {
+  width: 34px; height: 34px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--line);
+  color: #d8c9a4;
+}
+.reagent:hover .glyph.art { border-color: var(--brass); color: #efe2bd; }
+.reagent .glyph.art svg { filter: url(#inkRoughFine); }
