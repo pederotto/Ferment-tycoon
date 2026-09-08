@@ -2487,3 +2487,38 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .culture-row .cr-price { color: var(--brass); }
 .culture-row .cr-actions { display: flex; gap: 8px; flex: 0 0 auto; }
 .sup-empty { padding: 26px 18px; font-size: 12px; line-height: 1.6; color: var(--text-lo); }
+
+/* ---------- THE CELLAR ----------
+   The opposite room to the workshop, and it should look it: no window, no
+   weather, no hardware, no hygiene. Stone, a lamp, and time. It reuses the
+   bench's isometric classes (.iso-slot, .iso-lift, .iso-shadow, .iso-bar) so a
+   vessel behaves identically in both rooms — the same object in a different
+   place, which is the whole idea. */
+.cellar {
+  position: relative;
+  width: min(96vw, 980px); max-height: 92vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #1c1710, #141009);
+  border: 1px solid var(--line-strong); border-radius: 6px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.cellar-clime {
+  display: flex; gap: 22px; flex-wrap: wrap;
+  padding: 9px 24px; border-bottom: 1px solid var(--line);
+  font-size: 10px; letter-spacing: 0.04em; color: var(--text-lo);
+  background: rgba(0, 0, 0, 0.24);
+}
+.cellar-clime b { color: var(--brass); }
+.cellar-room { flex: 1; min-height: 0; }
+.cellar-note { font-size: 11px; color: var(--text-lo); }
+.iso-hint { margin: 0; padding: 4px 2px; font-size: 11.5px; color: var(--text-lo); }
+
+/* The door in the workshop wall. It lifts slightly on hover the way the
+   vessels do, so it reads as part of the room rather than as chrome. */
+.iso-door { cursor: pointer; }
+.iso-door .iso-door-slate { transition: transform 160ms cubic-bezier(.2, .7, .3, 1); }
+.iso-door:hover .iso-door-slate,
+.iso-door:focus .iso-door-slate { transform: translate(0, -50px); }
+.iso-door:focus { outline: none; }
+.iso-door:focus-visible .iso-door-slate rect { stroke: var(--amber); stroke-width: 2; }

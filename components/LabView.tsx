@@ -5,6 +5,7 @@ import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
 import IsoAppliance, { ApplianceId } from './IsoAppliance';
 import IsoWindow from './IsoWindow';
+import IsoDoor from './IsoDoor';
 
 /**
  * THE BENCH, AS A ROOM
@@ -43,6 +44,10 @@ interface LabViewProps {
   /** So the window can show the actual season and weather. */
   month?: number;
   weather?: WeatherState;
+  /** The door in the back wall, and what is behind it. */
+  cellarUsed?: number;
+  cellarCapacity?: number;
+  onOpenCellar?: () => void;
 }
 
 /* The room, in SVG units. The bench is a rhombus; the floor sits behind it. */
@@ -79,6 +84,7 @@ const LabView: React.FC<LabViewProps> = ({
   batches, maxSlots, onSelectSlot, onIntervention,
   onQuickHarvest, onQuickKeep, usedSlots, gameSpeed, analyzedRecipeIds,
   inventory = {}, onOpenTool, month = 0, weather,
+  cellarUsed = 0, cellarCapacity = 0, onOpenCellar,
 }) => {
   const [focused, setFocused] = useState<string | null>(null);
 
@@ -219,6 +225,15 @@ const LabView: React.FC<LabViewProps> = ({
               word in the header — and month and weather are what set the ambient
               temperature and humidity every batch is fighting. */}
           {weather && <IsoWindow month={month} weather={weather} x={716} y={112} scale={0.94} />}
+
+          {/* The way out of this room. Drawn into the wall opposite the window,
+              before the floor row, so anything standing in front of it overlaps
+              it — there is no z-index in SVG and paint order is depth order. */}
+          {onOpenCellar && (
+            <IsoDoor x={128} y={196} scale={0.92}
+                     occupied={cellarUsed} capacity={cellarCapacity}
+                     onOpen={onOpenCellar} />
+          )}
 
           <g stroke="rgba(243,233,216,0.05)" strokeWidth="1" fill="none">
             <path d={`M30 300 L${MID_X} 132 L870 300 L${MID_X} 468z`} />

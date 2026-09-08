@@ -11,6 +11,7 @@ import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } fr
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
 import SpeedControl from './components/SpeedControl';
+import CellarView from './components/CellarView';
 import BatchController from './components/BatchController';
 import BatchInspector from './components/BatchInspector';
 import StaffManager from './components/StaffManager';
@@ -103,6 +104,7 @@ export default function App() {
    * `gameSpeed` is now always 1, 2, 4 or 8 — the chosen speed, always shown —
    * and `paused` is separate. The loop reads both.
    */
+  const [showCellar, setShowCellar] = useState<boolean>(false);
   const [gameSpeed, setGameSpeed] = useState<number>(1);
   const [paused, setPaused] = useState<boolean>(false);
   const lastActiveSpeed = useRef<number>(1);
@@ -1877,6 +1879,9 @@ export default function App() {
              onQuickKeep={handleQuickKeep}
              usedSlots={usedSlots}
              gameSpeed={gameSpeed}
+             cellarUsed={gameState.batches.filter(b => b.cellared).length}
+             cellarCapacity={CELLAR_CAPACITY}
+             onOpenCellar={() => setShowCellar(true)}
              analyzedRecipeIds={gameState.analyzedRecipeIds} // Pass discovery state
            />
         </div>
@@ -2003,8 +2008,22 @@ export default function App() {
         />
       )}
 
+        {/* THE CELLAR. The mechanics were already here — a cellared batch ticks at a
+            sixth of the rate and is out of reach of bench hygiene — but the batch
+            vanished when you sent it down, so the one room where you deliberately
+            do nothing for a year could not be looked at. */}
+        {showCellar && (
+          <CellarView
+            batches={gameState.batches.filter(b => b.cellared)}
+            onClose={() => setShowCellar(false)}
+            onSelect={b => { setShowCellar(false); setUiState(u => ({ ...u, activeBatchId: b.id })); }}
+            onBringUp={b => handleUncellarBatch(b)}
+          />
+        )}
+
       {/* UNIFIED BIOREACTOR INSPECTOR & HARVEST DECK */}
       {activeBatchForTest && (
+
           <BatchInspector 
              batch={activeBatchForTest} 
              recipe={getRecipeForBatch(activeBatchForTest)}

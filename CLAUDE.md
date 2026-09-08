@@ -413,6 +413,22 @@ a workshop is arranged — nobody lifts a 60 L cask onto a workbench — and it 
 also what stops four-slot vessels competing with everything else for table
 space.
 
+**The cellar is a room, not a flag.** `cellared` already meant something —
+a sixth of the tick rate, out of reach of bench hygiene, slot freed — but a batch
+sent down *vanished*, so the one place in the game where you deliberately do
+nothing for a year could not be looked at. `CellarView` draws it in the same
+isometric language and reuses the bench's classes (`.iso-slot`, `.iso-lift`,
+`.iso-shadow`, `.iso-bar`) so a vessel behaves identically in both rooms — the
+same object in a different place, which is the point.
+
+It is the opposite room in every way that counts: no window, no weather, no
+hardware, no hygiene. Do not add any of those to it; the absence is the design.
+
+**The door is drawn before the floor row.** `IsoDoor` sits in the back wall
+opposite the window, painted early so anything standing in front of it overlaps
+it. Same rule as everything else in that scene — no z-index in SVG, paint order
+is depth order.
+
 **Rows must be drawn floor → back → front.** There is no z-index in SVG; paint
 order is depth order. Drawing the floor row before the bench is what makes those
 vessels read as standing behind it rather than on it.
