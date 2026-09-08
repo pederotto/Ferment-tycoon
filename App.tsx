@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book, Lineage, ChamberControls, CrewMember } from './types';
 import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
-  RAID_HEAT_THRESHOLD, RAID_BASE_CHANCE, HEAT_DECAY_PER_TICK, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
+  RAID_HEAT_THRESHOLD, RAID_CHANCE_PER_DAY, HEAT_DECAY_PER_TICK, HEAT_DECAY_AFTER_BUST,
+  HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage } from './services/koji';
@@ -351,18 +352,16 @@ export default function App() {
 
         // Once you have conceded a raid you are on a list, and heat no longer
         // cools on its own — the only way down is to spend renown greasing it.
-        const decay = prev.undergroundBusts > 0 ? 0 : HEAT_DECAY_PER_TICK;
+        // Being on a list makes heat harder to shed; it used to make it
+        // impossible, so a single bust meant heat could only ever climb and the
+        // inspector kept calling however clean you were afterwards.
+        let decay = prev.undergroundBusts > 0
+            ? HEAT_DECAY_PER_TICK * HEAT_DECAY_AFTER_BUST
+            : HEAT_DECAY_PER_TICK;
+        // A spotless bench actively cools their interest. Good hygiene should
+        // do something, not merely fail to make things worse.
+        if (newHygiene > 85) decay += HEAT_DECAY_FROM_CLEANLINESS;
         const newHeat = Math.min(100, Math.max(0, prev.heat + heatChange - decay));
-
-        // Heat is a risk budget, not a wall: the inspector's odds rise smoothly
-        // with how far over the threshold you are sitting, rather than being a
-        // flat 1% above 80.
-        if (newHeat > RAID_HEAT_THRESHOLD) {
-            const over = (newHeat - RAID_HEAT_THRESHOLD) / (100 - RAID_HEAT_THRESHOLD);
-            if (Math.random() < RAID_BASE_CHANCE * over * over * 8) {
-                setUiState(u => ({ ...u, inspectorRaid: true }));
-            }
-        }
 
         // Re-calculate power internally to avoid dependency loop in useEffect
         const newCurrentPower = updatedBatches.reduce((acc, b) => {
@@ -403,6 +402,19 @@ export default function App() {
             let newMarketDemand = prev.marketDemand;
             let newStrikes = prev.insolvencyStrikes;
             let newGameOver = prev.gameOver;
+
+            // --- THE INSPECTOR ---
+            // Rolled once a day rather than once a tick. Per tick, the odds
+            // scaled with the speed control — at 8x and full heat the inspector
+            // called every four real seconds — and no per-tick number is
+            // possible for a player to reason about. Once a day at full heat is
+            // roughly a visit a fortnight, and it drops away fast as heat does.
+            if (prev.heat > RAID_HEAT_THRESHOLD && !uiState.inspectorRaid) {
+                const over = (prev.heat - RAID_HEAT_THRESHOLD) / (100 - RAID_HEAT_THRESHOLD);
+                if (Math.random() < RAID_CHANCE_PER_DAY * over * over) {
+                    setUiState(u => ({ ...u, inspectorRaid: true }));
+                }
+            }
             let newStanding = prev.vendorStanding ?? {};
             let newContracts = prev.contracts ?? [];
             let newUnlockedVendorIds = prev.unlockedVendorIds ?? [];

@@ -130,12 +130,37 @@ const BatchController: React.FC<BatchControllerProps> = ({
     return sub?.hiddenStats?.nativeSalinity || 0;
   }, [selectedIngredients]);
 
-  // Mass of Solids
+  /** How many units of each id are drawn. Needed by everything below. */
+  const unitCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    selectedIngredientIds.forEach(id => { counts[id] = (counts[id] ?? 0) + 1; });
+    return counts;
+  }, [selectedIngredientIds]);
+
+  /**
+   * MASS OF SOLIDS — the aggregate, summed once per ingredient.
+   *
+   * This reduced over `selectedIngredients`, which holds one entry per unit, and
+   * added the whole of `reagentGrams[id]` each time — and `reagentGrams` is an
+   * aggregate. Fifty mackerel dialled to 44.6kg therefore reported 2,230kg of
+   * solids, and the salinity dial, which takes its basis from here, asked for
+   * 412kg of salt to reach 18.5%.
+   *
+   * Summing per unique id with the aggregate is the whole fix; the per-unit
+   * division happens downstream in `customQuantities`.
+   */
   const solidsMass = useMemo(() => {
-    return selectedIngredients
-      .filter(i => i.type !== IngredientType.ADDITIVE)
-      .reduce((acc, i) => acc + (reagentGrams[i.id] ?? i.mass ?? 0), 0);
-  }, [selectedIngredients, reagentGrams]);
+    const seen = new Set<string>();
+    let total = 0;
+    selectedIngredients.forEach(i => {
+      if (i.type === IngredientType.ADDITIVE) return;
+      if (seen.has(i.id)) return;
+      seen.add(i.id);
+      const n = Math.max(1, unitCounts[i.id] ?? 1);
+      total += reagentGrams[i.id] ?? (i.mass ?? 0) * n;
+    });
+    return total;
+  }, [selectedIngredients, unitCounts, reagentGrams]);
 
   const hasWater = useMemo(() =>
     selectedIngredients.some(i => i.id === 'water'),
@@ -171,12 +196,6 @@ const BatchController: React.FC<BatchControllerProps> = ({
    * untouched fallback — the ingredient's own unit mass — happened to be the one
    * correct per-unit value in the function.
    */
-  const unitCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    selectedIngredientIds.forEach(id => { counts[id] = (counts[id] ?? 0) + 1; });
-    return counts;
-  }, [selectedIngredientIds]);
-
   const customQuantities = useMemo(() => {
     const quantities: Record<string, number> = {};
     selectedIngredients.forEach(i => {
@@ -755,9 +774,12 @@ const BatchController: React.FC<BatchControllerProps> = ({
                       ? `${(requiredWaterMass / 1000).toFixed(2)}L · titrated`
                       : `${requiredWaterMass.toFixed(0)}ml · titrated`;
                   } else {
-                    const totalItemMass = (ing.mass || 0) * count;
+                    // This ignored the dial, so a reagent scaled down still
+                    // announced its undialled mass — the row read "50.00kg"
+                    // above a slider reading 44.60kg. Same source as the slider.
+                    const totalItemMass = reagentGrams[ing.id] ?? (ing.mass || 0) * count;
                     weightDisplay = totalItemMass > 0
-                      ? (totalItemMass >= 1000 ? `${(totalItemMass / 1000).toFixed(2)}kg` : `${totalItemMass}${ing.unitDisplay}`)
+                      ? (totalItemMass >= 1000 ? `${(totalItemMass / 1000).toFixed(2)}kg` : `${Math.round(totalItemMass)}${ing.unitDisplay}`)
                       : `${count} unit${count > 1 ? 's' : ''}`;
                   }
 

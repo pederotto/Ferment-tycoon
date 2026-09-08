@@ -39,7 +39,18 @@ export const HEAT_DECAY_PER_TICK = 0.05;
 export const HEAT_PER_ILLEGAL_BATCH = 0.2;
 export const HEAT_FROM_FILTH = 0.1;
 export const RAID_HEAT_THRESHOLD = 55;      // below this the inspector never calls
-export const RAID_BASE_CHANCE = 0.004;      // scaled by how far over the threshold you are
+// Rolled once per game DAY, not per tick. Per tick meant the odds scaled with
+// the speed control — at 8x and full heat the inspector called every four real
+// seconds — and made the number impossible to reason about. Per day at full
+// heat is roughly one visit a fortnight, and it falls away quickly as heat does.
+export const RAID_CHANCE_PER_DAY = 0.10;
+// Being on a list makes heat harder to shed, not impossible. It used to set
+// decay to exactly zero forever after a single bust, so heat only ever
+// ratcheted up and the inspector kept calling however clean you then were.
+export const HEAT_DECAY_AFTER_BUST = 0.35;
+// A spotless bench actively cools the inspector's interest rather than merely
+// not attracting it. Good hygiene should be worth something.
+export const HEAT_DECAY_FROM_CLEANLINESS = 0.04;
 export const GREASE_RENOWN_COST = 20;       // renown -> minus heat, the only thing renown buys
 export const GREASE_HEAT_RELIEF = 25;
 

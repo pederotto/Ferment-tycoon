@@ -58,6 +58,12 @@ untouched fallback — the ingredient's own unit mass — is the one correct
 per-unit value in the function. Divide by the unit count when writing; the
 slider and `scaleToVessel` both work in aggregates.
 
+**The same per-copy trap exists on the producer side.** `solidsMass` fed the
+salinity dial and reduced over `selectedIngredients` — one entry per unit —
+adding the whole aggregate each time. Fifty mackerel dialled to 44.6kg reported
+2,230kg of solids and the dial asked for 412kg of salt. Anything that sums
+`reagentGrams` must do it once per *unique* id.
+
 **Titrated quantities can legitimately be zero.** `getMass` tests
 `!== undefined`, not truthiness. The truthy version fell back to the full 1 kg
 unit mass whenever a dial hit zero, silently dumping a kilo of salt into a batch.
@@ -174,6 +180,21 @@ fair way to invent names and wages for staff they already paid for.
 **The hiring pool must never be empty on load.** It only rolls every fourth
 week, so `migrate()` seeds one — otherwise a loaded save shows an empty hiring
 screen for up to a month, which reads as broken rather than as quiet.
+
+## The inspector
+
+**Roll the raid once per game day, never per tick.** A per-tick roll scaled the
+odds with the speed control — at 8x and full heat the inspector called every
+four real seconds — and no per-tick probability is something a player can reason
+about. `RAID_CHANCE_PER_DAY` is squared against how far over the threshold you
+sit, giving roughly a visit a fortnight at 100 heat and effectively never below
+60.
+
+**Heat must always be able to fall.** Post-bust decay used to be exactly zero
+forever, so a single bust meant heat only ratcheted up and the inspector kept
+calling however clean the bench then was. It is a reduced rate now, and a
+spotless bench actively cools their interest rather than merely not attracting
+it.
 
 ## Layout
 
