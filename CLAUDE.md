@@ -413,6 +413,31 @@ a workshop is arranged — nobody lifts a 60 L cask onto a workbench — and it 
 also what stops four-slot vessels competing with everything else for table
 space.
 
+**A painted room must be EMPTY where the game puts things.** The first cellar
+plate had painted jars on its shelves and painted barrels on its floor, and the
+result was unreadable — you could not tell which vessels were yours. The plate in
+use now has bare boards and clear flagstones, and everything on them is a real
+batch. Any future room plate has the same requirement: furnish the back wall and
+the corners, leave the surfaces empty.
+
+**Placement is measured off the picture, not computed.** The room is one-point
+perspective, so a shelf board climbs as it recedes and anything further back must
+be drawn smaller or it punches through the wall. `FLOOR_SPOTS` and `SHELF_SPOTS`
+are hand-placed points with a per-depth scale, in the plate's own 1344x800 grid —
+which is also the viewBox, so there is no conversion to get wrong. Fifteen spots
+against a capacity of six means the room is never crowded, and a spot that looks
+wrong is one number.
+
+**The plate has to be warmed into the palette.** The painting is lit cool
+blue-grey stone; the game is warm brown throughout. A multiply pass at `#6b4a29`
+plus a little `#e08a3c` overlay pulls it into the same room as the things
+standing in it — without them a cream jar on a slate shelf reads as two pictures.
+
+**Ship the plate as a data URI, never as a file in `public/`.** The game ships as
+one self-contained page whose CSP blocks external images, so an `<img src="/art/…">`
+works perfectly on the dev server and shows nothing at all once published. That is
+the worst kind of bug: invisible exactly where you would test for it.
+
 **The cellar is a room, not a flag.** `cellared` already meant something —
 a sixth of the tick rate, out of reach of bench hygiene, slot freed — but a batch
 sent down *vanished*, so the one place in the game where you deliberately do

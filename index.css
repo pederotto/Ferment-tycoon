@@ -2510,7 +2510,13 @@ input[type="range"].dial-slider::-moz-range-thumb {
   background: rgba(0, 0, 0, 0.24);
 }
 .cellar-clime b { color: var(--brass); }
-.cellar-room { flex: 1; min-height: 0; }
+/* The plate sets the room's proportions, so the container follows the painting's
+   aspect rather than the other way round — letterboxing a painted background is
+   the one thing that makes it look pasted in. */
+.cellar-room { flex: 1; min-height: 0; background: #14100b; }
+.cellar-room .iso-svg { display: block; width: 100%; height: auto; max-height: 62vh; }
+/* The plate is a painting; the grain overlay on top of it is mud. */
+.cellar::after { opacity: 0.03; }
 .cellar-note { font-size: 11px; color: var(--text-lo); }
 .iso-hint { margin: 0; padding: 4px 2px; font-size: 11.5px; color: var(--text-lo); }
 
