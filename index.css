@@ -2632,3 +2632,10 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .ing-icon { display: block; flex-shrink: 0; }
 .reagent .glyph.art { background: none; border: none; width: 34px; height: 30px; }
 .reagent .glyph.art svg { filter: url(#inkRoughFine); }
+
+/* The painted icons wherever an ingredient is listed — the pantry, the chamber,
+   the shop and the spectrometer. One rule, so a jar of scallops looks the same
+   in all four and the pantry is scannable by shape rather than by reading. */
+.glyph.art { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sup-row .glyph.art,
+.sc-glyph .ing-icon { border-radius: 2px; }

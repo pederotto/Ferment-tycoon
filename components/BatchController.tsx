@@ -873,7 +873,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                     <div key={ing.id} className="charge stacked">
                       <span className="crow">
                       <span className="left">
-                        <span className="glyph"><ChargeGlyph size={13} color="currentColor" /></span>
+                        <span className="glyph art"><IngredientIcon id={ing.id} size={26} fallback={ChargeGlyph} /></span>
                         <span style={{ minWidth: 0 }}>
                           <span className="n">
                             {ing.name}

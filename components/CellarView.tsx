@@ -50,29 +50,33 @@ const H = 800;
  */
 type Spot = { x: number; y: number; s: number };
 
-/* Casks and barrels stand on the flagstones. Front row first, then the band
-   further back, which is smaller because it is further away. */
+/* Casks and barrels stand on the flagstones. Ordered BACK TO FRONT, because
+   that is the order they fill: the first thing you lay down goes deepest and the
+   newest arrival sits nearest the stair, which is how anyone stacks a cellar and
+   means nothing ever has to be moved to get at what is ready. */
 const FLOOR_SPOTS: Spot[] = [
-  { x: 500, y: 596, s: 1.30 },
+  { x: 590, y: 505, s: 1.06 },   // back of the floor, against the barrels
+  { x: 754, y: 505, s: 1.06 },
+  { x: 500, y: 596, s: 1.30 },   // front row, nearest the stair
   { x: 672, y: 612, s: 1.36 },
   { x: 844, y: 596, s: 1.30 },
-  { x: 590, y: 505, s: 1.06 },
-  { x: 754, y: 505, s: 1.06 },
 ];
 
-/* Jars and trays go on the boards, alternating left and right so a half-full
-   cellar looks kept rather than lopsided. Near ends first — they read best. */
+/* Jars and trays go on the boards. Also back to front, and alternating left and
+   right within each depth so a half-full cellar looks kept rather than lopsided.
+   The last spots are the near ends of the bottom boards — the ones you could
+   actually reach without a stool. */
 const SHELF_SPOTS: Spot[] = [
-  { x: 150,  y: 528, s: 1.00 },   // left, bottom board, near
-  { x: 1194, y: 528, s: 1.00 },   // right, bottom board, near
-  { x: 285,  y: 440, s: 0.86 },   // left, bottom board, far
-  { x: 1059, y: 440, s: 0.86 },   // right, bottom board, far
-  { x: 148,  y: 381, s: 0.94 },   // left, middle board, near
-  { x: 1196, y: 381, s: 0.94 },   // right, middle board, near
   { x: 292,  y: 327, s: 0.82 },   // left, middle board, far
   { x: 1052, y: 327, s: 0.82 },   // right, middle board, far
+  { x: 285,  y: 440, s: 0.86 },   // left, bottom board, far
+  { x: 1059, y: 440, s: 0.86 },   // right, bottom board, far
   { x: 145,  y: 245, s: 0.88 },   // left, top board, near
   { x: 1199, y: 245, s: 0.88 },   // right, top board, near
+  { x: 148,  y: 381, s: 0.94 },   // left, middle board, near
+  { x: 1196, y: 381, s: 0.94 },   // right, middle board, near
+  { x: 150,  y: 528, s: 1.00 },   // left, bottom board, near — easiest to reach
+  { x: 1194, y: 528, s: 1.00 },   // right, bottom board, near
 ];
 
 /* A jar drawn at isoScaleFor(2) is ~30 units wide in this grid, and the room is
@@ -99,10 +103,21 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
     };
   };
 
-  const seen = batches.map(read);
-  // Big vessels to the floor, small ones to the boards — the same rule the bench
-  // uses, and the same rule a real cellar uses, because nobody lifts a cask onto
-  // a shelf. Each gets the spot that matches its depth.
+  // ORDERED BY AGE, OLDEST DEEPEST.
+  //
+  // A cellar is stacked by when things went in: the first thing you laid down is
+  // at the back, and what arrived this week is by the stair. Nothing shuffles as
+  // it matures — a jar that has been down there three years does not walk itself
+  // to a better shelf — so sorting on start time is both the truthful rule and
+  // the stable one. Filling in arrival order against back-to-front spots gives
+  // that for free.
+  const seen = batches
+    .map(read)
+    .sort((a, b) => (a.batch.startTime ?? 0) - (b.batch.startTime ?? 0));
+
+  // Big vessels to the flagstones, small ones to the boards — the rule the bench
+  // uses, and the rule a real cellar uses, because nobody lifts a cask onto a
+  // shelf.
   const onFloor = seen.filter(v => v.vessel.capacityL >= 20);
   const onShelf = seen.filter(v => v.vessel.capacityL < 20);
 

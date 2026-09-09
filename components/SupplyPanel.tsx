@@ -7,6 +7,7 @@ import {
 } from './icons';
 import { Lock, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { sporeValue, cultureSalePrice } from '../services/gameLogic';
+import IngredientIcon from './IngredientIcon';
 import { SporeClusterIcon } from './icons';
 
 /**
@@ -316,7 +317,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                   return (
                     <div key={i.id} className={`cat-row${lock ? ' locked' : ''}`}>
                       <span className="c-item">
-                        <span className="glyph"><Glyph size={14} color="currentColor" /></span>
+                        <span className="glyph art"><IngredientIcon id={i.id} size={30} fallback={Glyph} /></span>
                         <span className="txt">
                           <span className="n">
                             {i.name}
