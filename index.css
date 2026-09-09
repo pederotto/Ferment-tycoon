@@ -2889,3 +2889,45 @@ input[type="range"].dial-slider::-moz-range-thumb {
 /* The ingredient panel is opened from inside another modal, so it has to sit
    above the one that launched it. */
 .modal-overlay.ing-overlay { z-index: 130; }
+
+/* ---------- ONE RAIL, AND A WIDER ROOM ----------
+   With the nav and the pantry both on the left there was nothing for a right
+   rail to hold, so it went — and the room got the width back, which is what the
+   painted plate wants. It was never short of height. */
+.lab-grid { grid-template-columns: 246px minmax(0, 1fr); }
+.iso-room .iso-svg { max-height: 76vh; }
+
+/* Standing, renown and funds join the gauges: the six numbers that describe the
+   whole operation, in one place, above whichever pane a phone is showing. */
+.tickets { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.tickets .ticket.hidden { display: flex !important; }
+
+/* The pantry as a widget rather than a strip: one row per thing, the count
+   right-aligned and monospaced so the column of figures actually lines up. */
+.rail .pantry { gap: 4px; }
+.rail .pantry-item {
+  padding: 7px 9px; border-radius: 3px;
+  background: rgba(0, 0, 0, 0.24); border: 1px solid var(--line);
+  font-size: 11.5px; color: var(--text-mid);
+  display: flex; align-items: center; gap: 8px;
+}
+.rail .pantry-item .n {
+  margin-left: auto; font-variant-numeric: tabular-nums; color: var(--text-hi);
+}
+.rail .pantry-item:hover { border-color: var(--line-strong); }
+
+/* Nav rows carry a count on the right the way the pantry does. */
+.rail .tab-btn-hud .dot {
+  margin-left: auto; font-size: 9.5px; color: var(--brass);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1179px) {
+  .lab-grid { grid-template-columns: minmax(0, 1fr) 258px; }
+  .rail.left { grid-column: 2; grid-row: 1; border-right: none; border-left: 1px solid var(--line); }
+  .stage { grid-column: 1; grid-row: 1; }
+}
+@media (max-width: 759px) {
+  /* One rail left, so the Bench/Stock switch has nothing to switch between. */
+  .rail-tabs { display: none !important; }
+}

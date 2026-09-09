@@ -30,7 +30,7 @@ import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, bat
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import DevPanel from './components/DevPanel';
 import FirstCulture from './components/FirstCulture';
-import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake } from 'lucide-react';
+import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine, Boxes, Droplets, Sprout } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon , BagIcon , CloseIcon } from './components/icons';
 
 export default function App() {
@@ -1838,6 +1838,24 @@ export default function App() {
             </button>
           </div>
 
+        {/* Standing, renown and funds sit with the gauges: they are the other
+            three numbers that describe the whole operation, and they were the
+            last things still hunting for a home. */}
+        <div className="tickets">
+          <div className="ticket hidden lg:flex" title="Selling safe, well-made stock opens better restaurants.">
+          <span className="lbl">Standing</span>
+          <span className="num">{Math.max(0, Math.round(gameState.reputation))}</span>
+          </div>
+          <div className="ticket renown hidden sm:flex">
+          <span className="lbl">Renown</span>
+          <span className="num mono">{gameState.renown}</span>
+          </div>
+          <div className="ticket funds">
+          <span className="lbl">Funds</span>
+          <span className="num mono">${gameState.money.toLocaleString()}</span>
+          </div>
+        </div>
+
         {/* On a phone the rails become one pane at a time, so the switch lives
             here where it is always reachable. */}
         <div className="rail-tabs">
@@ -1903,6 +1921,145 @@ export default function App() {
           </section>
 
 
+
+          <section className="rail-sect">
+            <h3>Go to</h3>
+            <div className="tabs-hud">
+            {/* A visible way into the dev tools. The keyboard route alone was not
+            enough: the original binding (Cmd/Ctrl+Shift+D) is claimed by
+            Chrome for "Bookmark all tabs", so the page never saw it. */}
+            <button
+            className="dev-chip"
+            onClick={() => setShowDev(v => !v)}
+            title="Dev tools and god mode — or press the backtick key"
+            >
+            DEV
+            </button>
+            {/* Supply sits with the other places you go rather than being a
+            button of its own — it is one destination among five, and it
+            used to be the only one with a drawer sliding over the room. */}
+            <button
+            onClick={() => toggleDrawer('marketplace')}
+            className={`tab-btn-hud${activeDrawer === 'marketplace' ? ' active' : ''}`}
+            title="Ingredients, vessels, tools and books"
+            >
+            <ShoppingBasket size={14} />
+            <span className="hidden sm:inline">Supply</span>
+            </button>
+            {/* Hardware is what you OWN and whether it is working. Supply is
+            what you can buy. They were the same button for a while, which
+            is why neither question had a clear answer. */}
+            <button
+            onClick={() => setShowHardware(v => !v)}
+            className={`tab-btn-hud${showHardware ? ' active' : ''}`}
+            title="The hardware you own, and what it is doing"
+            >
+            <Wrench size={14} />
+            <span className="hidden sm:inline">Hardware</span>
+            </button>
+            <button
+            onClick={() => setUiState(prev => ({ ...prev, showStaff: !prev.showStaff }))}
+            className={`tab-btn-hud${uiState.showStaff ? ' active' : ''}`}
+            title="Staff Management"
+            >
+            <Users size={14} />
+            <span className="hidden sm:inline">Staff</span>
+            </button>
+            <button
+            onClick={() => setUiState(prev => ({ ...prev, showLogbook: !prev.showLogbook }))}
+            className={`tab-btn-hud${uiState.showLogbook ? ' active' : ''}`}
+            title="Lab Codex & Archives"
+            >
+            <BookOpen size={14} />
+            <span className="hidden sm:inline">Codex</span>
+            </button>
+            {/* The cellar was a drawn door standing against a painted wall and
+                never sat in the room. It is a place you go, so it goes where the
+                other places are. */}
+            <button
+            onClick={() => setShowCellar(true)}
+            className="tab-btn-hud"
+            title="Below the workshop — where things are laid down to age"
+            >
+            <ArrowDownToLine size={14} />
+            <span className="hidden sm:inline">Cellar</span>
+            <span className="dot mono">{gameState.batches.filter(b => b.cellared).length}/{CELLAR_CAPACITY}</span>
+            </button>
+            <button
+            onClick={() => setShowOrders(true)}
+            className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
+            title="Vendor standing and contracts"
+            >
+            <Handshake size={14} />
+            <span className="hidden sm:inline">Orders</span>
+            {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
+            </button>
+            </div>
+          </section>
+
+          <section className="rail-sect">
+            <h3>Pantry</h3>
+            {/* The pantry reads better as a list than as a strip along the bottom. */}
+            <div className="pantry">
+
+            <div className="pantry-items custom-scrollbar">
+            {/* COUNTED BY TYPE, NOT BY A HARDCODED LIST OF IDS.
+            Every line here was wrong in its own way. Salt printed the UNIT
+            count with a "g" suffix while a unit of salt is 1000g, so a
+            10 kg reserve read as "10g", and Trapani salt was not counted at
+            all. Grains asked for 'rice', which is not an id — the substrate
+            is 'glutinous_rice' — so rice never appeared. Spores asked for
+            'koji_spores_gen2', also not an id: the spores you harvest are
+            custom ingredients with generated ids, so every strain you ever
+            cultured was invisible here.
+
+            A list of ids drifts from the data the moment content is added.
+            Reading the type off the ingredient cannot. */}
+            {(() => {
+            const all = [...INGREDIENTS, ...gameState.customIngredients];
+            const held = (pred: (i: Ingredient) => boolean) =>
+            Object.entries(gameState.inventory).reduce<number>((acc, [id, n]) => {
+            const ing = all.find(x => x.id === id);
+            return ing && pred(ing) ? acc + (Number(n) || 0) * (ing.mass || 0) : acc;
+            }, 0);
+
+            const saltG = held(i => i.type === IngredientType.ADDITIVE && /salt/i.test(i.id));
+            const substrateG = held(i => i.type === IngredientType.SUBSTRATE);
+            const waterMl = held(i => i.id === 'water');
+            const sporePkts = Object.entries(gameState.inventory).reduce<number>((acc, [id, n]) => {
+            const ing = all.find(x => x.id === id);
+            return ing && ing.type === IngredientType.STARTER ? acc + (Number(n) || 0) : acc;
+            }, 0);
+            const kg = (g: number) => g >= 1000 ? `${(g / 1000).toFixed(g >= 10000 ? 0 : 1)}kg` : `${Math.round(g)}g`;
+
+            return (
+            <>
+            <div className="pantry-item" title="Every salt on the shelf, by weight">
+            <Sparkles size={13} color="var(--text-mid)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
+            </div>
+            <div className="pantry-item" title="Every live starter, bought or cultured">
+            <Sprout size={13} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
+            </div>
+            <div className="pantry-item" title="Every substrate on the shelf, by weight">
+            <Boxes size={13} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
+            </div>
+            <div className="pantry-item" title="Filtered water">
+            <Droplets size={13} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
+            </div>
+            </>
+            );
+            })()}
+            <div
+            onClick={() => toggleDrawer('marketplace')}
+            className="pantry-item"
+            style={{ cursor: 'pointer' }}
+            title="Click to view & purchase hardware vessels"
+            >
+            <FlaskConical size={13} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
+            </div>
+            </div>
+            </div>
+          </section>
         </aside>
 
         {/* CENTRE — the room, and nothing else. */}
@@ -1921,9 +2078,6 @@ export default function App() {
              onQuickKeep={handleQuickKeep}
              usedSlots={usedSlots}
              gameSpeed={gameSpeed}
-             cellarUsed={gameState.batches.filter(b => b.cellared).length}
-             cellarCapacity={CELLAR_CAPACITY}
-             onOpenCellar={() => setShowCellar(true)}
              analyzedRecipeIds={gameState.analyzedRecipeIds} // Pass discovery state
            />
         </div>
@@ -1931,149 +2085,6 @@ export default function App() {
         </main>
 
         {/* RIGHT RAIL — money, where you go, what you have. */}
-        <aside className="rail right">
-          {/* RIGHT: ASSETS, RENOWN & MODAL LAUNCHERS */}
-          <div className="flex items-center gap-3">
-            <div className="ticket hidden lg:flex" title="Selling safe, well-made stock opens better restaurants.">
-              <span className="lbl">Standing</span>
-              <span className="num">{Math.max(0, Math.round(gameState.reputation))}</span>
-            </div>
-            <div className="ticket renown hidden sm:flex">
-              <span className="lbl">Renown</span>
-              <span className="num mono">{gameState.renown}</span>
-            </div>
-            <div className="ticket funds">
-              <span className="lbl">Funds</span>
-              <span className="num mono">${gameState.money.toLocaleString()}</span>
-            </div>
-            <div className="tabs-hud">
-              {/* A visible way into the dev tools. The keyboard route alone was not
-                  enough: the original binding (Cmd/Ctrl+Shift+D) is claimed by
-                  Chrome for "Bookmark all tabs", so the page never saw it. */}
-              <button
-                className="dev-chip"
-                onClick={() => setShowDev(v => !v)}
-                title="Dev tools and god mode — or press the backtick key"
-              >
-                DEV
-              </button>
-              {/* Supply sits with the other places you go rather than being a
-                  button of its own — it is one destination among five, and it
-                  used to be the only one with a drawer sliding over the room. */}
-              <button
-                onClick={() => toggleDrawer('marketplace')}
-                className={`tab-btn-hud${activeDrawer === 'marketplace' ? ' active' : ''}`}
-                title="Ingredients, vessels, tools and books"
-              >
-                <BagIcon size={14} />
-                <span className="hidden sm:inline">Supply</span>
-              </button>
-              {/* Hardware is what you OWN and whether it is working. Supply is
-                  what you can buy. They were the same button for a while, which
-                  is why neither question had a clear answer. */}
-              <button
-                onClick={() => setShowHardware(v => !v)}
-                className={`tab-btn-hud${showHardware ? ' active' : ''}`}
-                title="The hardware you own, and what it is doing"
-              >
-                <WrenchIcon size={14} />
-                <span className="hidden sm:inline">Hardware</span>
-              </button>
-              <button
-                onClick={() => setUiState(prev => ({ ...prev, showStaff: !prev.showStaff }))}
-                className={`tab-btn-hud${uiState.showStaff ? ' active' : ''}`}
-                title="Staff Management"
-              >
-                <StaffGroupIcon size={14} />
-                <span className="hidden sm:inline">Staff</span>
-              </button>
-              <button
-                onClick={() => setUiState(prev => ({ ...prev, showLogbook: !prev.showLogbook }))}
-                className={`tab-btn-hud${uiState.showLogbook ? ' active' : ''}`}
-                title="Lab Codex & Archives"
-              >
-                <BookIcon size={14} />
-                <span className="hidden sm:inline">Codex</span>
-              </button>
-              <button
-                onClick={() => setShowOrders(true)}
-                className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
-                title="Vendor standing and contracts"
-              >
-                <Handshake size={14} />
-                <span className="hidden sm:inline">Orders</span>
-                {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
-              </button>
-            </div>
-          </div>
-
-        {/* The pantry reads better as a list than as a strip along the bottom. */}
-        <div className="pantry">
-          <div className="pantry-lbl">
-            <span className="dot" style={{ color: 'var(--moss)' }} />
-            Pantry Stock
-          </div>
-
-          <div className="pantry-items custom-scrollbar">
-            {/* COUNTED BY TYPE, NOT BY A HARDCODED LIST OF IDS.
-                Every line here was wrong in its own way. Salt printed the UNIT
-                count with a "g" suffix while a unit of salt is 1000g, so a
-                10 kg reserve read as "10g", and Trapani salt was not counted at
-                all. Grains asked for 'rice', which is not an id — the substrate
-                is 'glutinous_rice' — so rice never appeared. Spores asked for
-                'koji_spores_gen2', also not an id: the spores you harvest are
-                custom ingredients with generated ids, so every strain you ever
-                cultured was invisible here.
-
-                A list of ids drifts from the data the moment content is added.
-                Reading the type off the ingredient cannot. */}
-            {(() => {
-              const all = [...INGREDIENTS, ...gameState.customIngredients];
-              const held = (pred: (i: Ingredient) => boolean) =>
-                Object.entries(gameState.inventory).reduce<number>((acc, [id, n]) => {
-                  const ing = all.find(x => x.id === id);
-                  return ing && pred(ing) ? acc + (Number(n) || 0) * (ing.mass || 0) : acc;
-                }, 0);
-
-              const saltG = held(i => i.type === IngredientType.ADDITIVE && /salt/i.test(i.id));
-              const substrateG = held(i => i.type === IngredientType.SUBSTRATE);
-              const waterMl = held(i => i.id === 'water');
-              const sporePkts = Object.entries(gameState.inventory).reduce<number>((acc, [id, n]) => {
-                const ing = all.find(x => x.id === id);
-                return ing && ing.type === IngredientType.STARTER ? acc + (Number(n) || 0) : acc;
-              }, 0);
-              const kg = (g: number) => g >= 1000 ? `${(g / 1000).toFixed(g >= 10000 ? 0 : 1)}kg` : `${Math.round(g)}g`;
-
-              return (
-                <>
-                  <div className="pantry-item" title="Every salt on the shelf, by weight">
-                    <SaltCrystalIcon size={12} color="var(--text-lo)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
-                  </div>
-                  <div className="pantry-item" title="Every live starter, bought or cultured">
-                    <SporeClusterIcon size={12} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
-                  </div>
-                  <div className="pantry-item" title="Every substrate on the shelf, by weight">
-                    <GrainSprigIcon size={12} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
-                  </div>
-                  <div className="pantry-item" title="Filtered water">
-                    <WaterDropIcon size={12} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
-                  </div>
-                </>
-              );
-            })()}
-            <div
-              onClick={() => toggleDrawer('marketplace')}
-              className="pantry-item"
-              style={{ cursor: 'pointer' }}
-              title="Click to view & purchase hardware vessels"
-            >
-              <VesselLineIcon vesselId={'mason_jar'} size={12} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
-            </div>
-          </div>
-
-
-        </div>
-        </aside>
       </div>
 
       {showHardware && (

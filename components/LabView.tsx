@@ -5,7 +5,6 @@ import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
 import IsoWindow, { seasonOf } from './IsoWindow';
 import { LAB_PLATE } from './labPlate';
-import IsoDoor from './IsoDoor';
 
 /**
  * THE BENCH, AS A ROOM
@@ -44,10 +43,6 @@ interface LabViewProps {
   /** So the window can show the actual season and weather. */
   month?: number;
   weather?: WeatherState;
-  /** The door in the back wall, and what is behind it. */
-  cellarUsed?: number;
-  cellarCapacity?: number;
-  onOpenCellar?: () => void;
 }
 
 /* THE ROOM IS A PAINTING NOW, and the viewBox is its pixel grid — so a spot is
@@ -153,7 +148,6 @@ const LabView: React.FC<LabViewProps> = ({
   batches, maxSlots, onSelectSlot, onIntervention,
   onQuickHarvest, onQuickKeep, usedSlots, gameSpeed, analyzedRecipeIds,
   inventory = {}, onOpenTool, month = 0, weather,
-  cellarUsed = 0, cellarCapacity = 0, onOpenCellar,
 }) => {
   const [focused, setFocused] = useState<string | null>(null);
 
@@ -370,13 +364,6 @@ const LabView: React.FC<LabViewProps> = ({
             </g>
           )}
 
-          {/* The cellar stair. The plate has no door, so it stands against the
-              left wall where one would be. */}
-          {onOpenCellar && (
-            <IsoDoor x={100} y={492} scale={1.12}
-                     occupied={cellarUsed} capacity={cellarCapacity}
-                     onOpen={onOpenCellar} />
-          )}
 
           {/* Floor before table: no z-index in SVG, so paint order is depth. */}
           {onFloor.map((v, i) => FLOOR_SPOTS[i] && <Slot key={v.batch.id} v={v} spot={FLOOR_SPOTS[i]} />)}
