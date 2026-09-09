@@ -653,6 +653,14 @@ up over the very thing you were looking at. `.lab-grid` is three columns: the
 world and what you own on the left, the room in the middle, money and navigation
 and stock on the right.
 
+**Supply is a modal in the nav, not a drawer.** It used to slide up from the
+bottom edge over the room — the thing the player is looking at — and leave a 58px
+bar permanently across the foot of the window whether or not anyone wanted to
+shop. Every other screen in the game is a modal reached from the nav; this was
+the one that was different, and the difference cost the room. Its catalogue is a
+wide table, so it cannot live in a 258px rail: it belongs with Hardware, Staff,
+Codex and Orders as one destination among five.
+
 **Three breakpoints, because "it stacks" is not a mobile design.**
 
 - `>= 1180px` — three columns, both rails open

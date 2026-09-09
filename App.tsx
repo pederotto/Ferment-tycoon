@@ -31,7 +31,7 @@ import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji'
 import DevPanel from './components/DevPanel';
 import FirstCulture from './components/FirstCulture';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake } from 'lucide-react';
-import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon } from './components/icons';
+import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon , BagIcon } from './components/icons';
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -1936,8 +1936,19 @@ export default function App() {
               >
                 DEV
               </button>
+              {/* Supply sits with the other places you go rather than being a
+                  button of its own — it is one destination among five, and it
+                  used to be the only one with a drawer sliding over the room. */}
               <button
                 onClick={() => toggleDrawer('marketplace')}
+                className={`tab-btn-hud${activeDrawer === 'marketplace' ? ' active' : ''}`}
+                title="Ingredients, vessels, tools and books"
+              >
+                <BagIcon size={14} />
+                <span className="hidden sm:inline">Supply</span>
+              </button>
+              <button
+                onClick={() => toggleDrawer('hardware')}
                 className={`tab-btn-hud${activeDrawer === 'hardware' ? ' active' : ''}`}
                 title="Hardware Store & Vessels"
               >
@@ -2036,22 +2047,16 @@ export default function App() {
             </div>
           </div>
 
-          <button
-            onClick={() => toggleDrawer('marketplace')}
-            className="order-btn"
-            style={activeDrawer === 'marketplace' ? { background: 'var(--brick)', color: '#fbe7df' } : undefined}
-          >
-            {activeDrawer === 'marketplace' ? 'Close Supplies ✕' : <>Order Supplies <ArrowRightIcon size={12} color="#1d1206" /></>}
-          </button>
+
         </div>
         </aside>
       </div>
 
-      {/* Sourcing Drawer - Root Level to fix Stacking Context */}
-      {/* SUPPLY — one drawer, one place to spend money */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none px-0 md:px-4 h-0 overflow-visible">
-          <div className="w-full max-w-[1400px] pointer-events-none absolute bottom-0">
-              <SupplyPanel
+      {/* SUPPLY — one place to spend money, and a modal like every other screen.
+          It used to slide up from the bottom edge over the room and keep a 58px
+          bar permanently across the foot of the window whether or not anyone
+          wanted to shop. */}
+      <SupplyPanel
                   isOpen={activeDrawer === 'marketplace'}
                   onToggle={() => toggleDrawer('marketplace')}
                   ingredients={allIngredients}
@@ -2073,8 +2078,6 @@ export default function App() {
                   onBuyBook={handleBuyBook}
                   onUpgradePower={handleUpgradePower}
               />
-          </div>
-      </div>
 
       {/* MODALS - Z-INDEX 100 */}
       {uiState.modalOpen && (

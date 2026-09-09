@@ -449,7 +449,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   border-radius: 20px 20px 0 0; background: linear-gradient(180deg, #241c14, #191309); border: 1px solid var(--line-strong);
   border-bottom: none; box-shadow: 0 -30px 80px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; overflow: hidden;
 }
-.pull-tab { width: 52px; height: 5px; border-radius: 999px; background: var(--line-strong); margin: 10px auto 0; flex-shrink: 0; }
+.pull-tab { display: none;  width: 52px; height: 5px; border-radius: 999px; background: var(--line-strong); margin: 10px auto 0; flex-shrink: 0; }
 
 .shead {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -1309,13 +1309,21 @@ input[type="range"].dial-slider::-moz-range-thumb {
    overlapping goods and fought each other and the HUD for stacking order.
    ========================================================================= */
 
+/* A MODAL, NOT A BOTTOM SHEET.
+   Supply used to slide up from the bottom edge over the room and leave a 58px
+   bar permanently across the foot of the window whether or not anyone wanted to
+   shop. Every other screen in the game is a modal; this was the one that was
+   different, and the difference cost the room. */
 .supply {
-  border-radius: 20px 20px 0 0; background: linear-gradient(180deg, #241c14, #191309);
-  border: 1px solid var(--line-strong); border-bottom: none;
-  box-shadow: 0 -30px 80px rgba(0, 0, 0, 0.6);
-  display: flex; flex-direction: column; overflow: hidden; pointer-events: auto;
-  transition: height 0.35s ease;
+  position: relative;
+  width: min(96vw, 1180px); height: min(86vh, 880px);
+  border-radius: 6px; background: linear-gradient(180deg, #241c14, #191309);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.62);
+  display: flex; flex-direction: column; overflow: hidden;
 }
+.supply .sup-head { cursor: default; }
+.supply .sup-head .right { display: flex; align-items: center; gap: 10px; }
 
 .sup-head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;

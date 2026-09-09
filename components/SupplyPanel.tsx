@@ -130,23 +130,30 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
     return Math.floor(i.baseCost * (1 - discount));
   };
 
-  return (
-    <div className="supply" style={{ height: isOpen ? '72vh' : '58px', maxHeight: isOpen ? '88vh' : '58px' }}>
-      <div className="pull-tab" />
+  /* A MODAL, NOT A BOTTOM SHEET.
+     This slid up from the bottom edge over the room, which is the thing the
+     player is looking at — and it kept a 58px bar permanently across the foot of
+     the screen whether or not anyone wanted to shop. Every other screen in the
+     game (Hardware, Staff, Codex, Orders, the cellar) is a modal; this is the
+     one that was different, and the difference cost the room. */
+  if (!isOpen) return null;
 
-      <div className="sup-head" onClick={onToggle}>
+  return (
+    <div className="modal-overlay" onClick={onToggle}>
+    <div className="supply" onClick={e => e.stopPropagation()}>
+      <div className="sup-head">
         <div className="ttl">
           <div className="ic"><BagIcon size={18} /></div>
           <div>
             <h1 className="slab">Supply</h1>
-            <div className="sub">
-              {isOpen ? 'Click to minimise' : 'Ingredients, vessels, tools, books and the underground'}
-            </div>
+            <div className="sub">Ingredients, vessels, tools, books and the underground</div>
           </div>
         </div>
         <div className="right">
           <span className="ticket funds"><span className="lbl">Funds</span><span className="num">${money.toLocaleString()}</span></span>
-          <ChevronUp size={18} color="var(--text-lo)" style={{ transform: isOpen ? 'none' : 'rotate(180deg)', transition: 'transform 0.35s' }} />
+          <button className="close-stamp" onClick={onToggle} aria-label="Close supply">
+            <ChevronUp size={14} color="currentColor" />
+          </button>
         </div>
       </div>
 
@@ -516,6 +523,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
           )}
         </>
       )}
+    </div>
     </div>
   );
 };
