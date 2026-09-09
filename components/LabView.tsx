@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Batch, Recipe, FermentType, WeatherState } from '../types';
+import { Batch, Recipe, FermentType, WeatherState, WeatherType } from '../types';
 import { RECIPES, VESSELS } from '../constants';
 import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
 import IsoAppliance, { ApplianceId } from './IsoAppliance';
-import IsoWindow from './IsoWindow';
+import IsoWindow, { seasonOf } from './IsoWindow';
 import { LAB_PLATE } from './labPlate';
 import IsoDoor from './IsoDoor';
 
@@ -98,6 +98,43 @@ const WINDOW = { x: 657, y: 308, w: 127, h: 190 };
 /* A jar at isoScaleFor(2) is ~30 units wide in this grid. Measured against the
    painted table, ~60 is what sits on it without looking like a bead. */
 const ROOM_SCALE = 2.1;
+
+/**
+ * THE LIGHT THROUGH THE WINDOW.
+ *
+ * The plate has a hard sunbeam painted across the table and floor, which means
+ * the room is a bright July noon whatever the game says — snow outside, sunshine
+ * inside. It is also the loudest thing in the picture, so it cannot simply be
+ * ignored.
+ *
+ * Two layers fix it. A cool wash MULTIPLIED over the whole room knocks the baked
+ * beam back toward the ambient when the weather is dull, and a beam of our own
+ * is drawn from the window opening on top, at the strength and colour the day
+ * actually has. On a bright summer day the two agree and the painted beam does
+ * the work; on a February afternoon the wash flattens it and almost nothing is
+ * added, which is what a north-facing cellar window in winter looks like.
+ *
+ * This is the same rule as everything else in the room: what changes cannot be
+ * painted.
+ */
+const DAYLIGHT: Record<WeatherType, number> = {
+  Heatwave: 1.00,
+  Sunny:    0.92,
+  Cloudy:   0.40,
+  Snowy:    0.34,   // bright, but flat and shadowless
+  Foggy:    0.26,
+  Rainy:    0.20,
+  Stormy:   0.08,
+};
+
+/* Winter light is blue and low even when the sun is out; high summer is amber.
+   The month moves the colour, the weather moves the amount. */
+const LIGHT_TINT: Record<string, string> = {
+  winter: '#9fb6c4',
+  spring: '#e2d3a8',
+  summer: '#f2c274',
+  autumn: '#e0a154',
+};
 
 const HARDWARE: { id: ApplianceId; x: number; y: number; scale: number; label: string; opens?: boolean }[] = [
   /* On the shelves and along the walls, read off the plate. High and narrow in
@@ -247,6 +284,32 @@ const LabView: React.FC<LabViewProps> = ({
 
           {/* THE PLATE. Everything below is the live room standing in it. */}
           <image href={LAB_PLATE} x="0" y="0" width={W} height={H} preserveAspectRatio="none" />
+          {/* THE LIGHT. Wash first — it pulls the painted beam back toward the
+              ambient — then our own beam at the strength the day actually has. */}
+          {weather && (() => {
+            const lit = DAYLIGHT[weather.type] ?? 0.5;
+            const tint = LIGHT_TINT[seasonOf(month)] ?? '#e2d3a8';
+            const wx = WINDOW.x, wy = WINDOW.y + WINDOW.h / 2;
+            return (
+              <>
+                <rect x="0" y="0" width={W} height={H} fill="#26303a"
+                      style={{ mixBlendMode: 'multiply' }} opacity={0.46 * (1 - lit)} />
+                {lit > 0.12 && (
+                  <>
+                    {/* The shaft, spreading forward and down the way the painted
+                        one does, so they reinforce rather than cross. */}
+                    <path d={`M${wx - WINDOW.w / 2} ${wy} L${wx + WINDOW.w / 2} ${wy} L${wx + 300} ${H} L${wx - 430} ${H}z`}
+                          fill={tint} opacity={0.13 * lit}
+                          style={{ mixBlendMode: 'screen' }} />
+                    {/* And the glow in the reveal itself. */}
+                    <ellipse cx={wx} cy={wy - WINDOW.h / 3} rx={WINDOW.w * 1.5} ry={WINDOW.h * 0.9}
+                             fill={tint} opacity={0.16 * lit}
+                             style={{ mixBlendMode: 'screen' }} />
+                  </>
+                )}
+              </>
+            );
+          })()}
           <rect x="0" y="0" width={W} height={H} fill="url(#labVignette)" />
 
           {/* THE WINDOW, DRAWN OVER THE PAINTED ONE.
