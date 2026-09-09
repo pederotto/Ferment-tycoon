@@ -600,6 +600,14 @@ Also: the almanac appeared at Tailwind's `lg` (1024px) into a space that could
 not hold it until ~1250. When you gate a header element on a breakpoint, check
 the width it actually needs, not the one that looks about right.
 
+**And a button that names a PROBLEM must offer the way out.** Same rule, second
+instance: with the chamber over capacity the Seal button read "Too much for this
+vessel" and sat disabled, while `scaleToVessel` — which fixes it in one click,
+keeping every ratio and only charging the pantry for what actually goes in — was
+a small link buried in station 02's fill readout. The primary action now performs
+the scaling, and says what scaling does, because a player looking at "too much"
+reasonably assumes the fix costs them the reagents they drew.
+
 **A button that names a step must take you to it.** The Seal button read
 "Draw your reagents" or "Choose a vessel" while `disabled` — the primary action
 of the screen was an instruction you could not act on. It opens the picker it

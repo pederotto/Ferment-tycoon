@@ -2639,3 +2639,9 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .glyph.art { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sup-row .glyph.art,
 .sc-glyph .ing-icon { border-radius: 2px; }
+
+/* Why scaling down is safe, said at the moment it is offered. The alternative is
+   a player assuming they are about to lose the reagents they drew. */
+.inoc-overflow-note {
+  margin: 8px 0 0; font-size: 10.5px; line-height: 1.55; color: var(--text-lo);
+}

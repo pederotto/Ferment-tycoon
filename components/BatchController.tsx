@@ -1259,18 +1259,26 @@ const BatchController: React.FC<BatchControllerProps> = ({
               onClick={
                 selectedIngredientIds.length === 0 ? () => { setActiveTab('pantry'); setPicker('pantry'); }
                 : !vesselId ? () => { setActiveTab('vessel'); setPicker('vessel'); }
+                : isOverflowing ? scaleToVessel
                 : handleStart
               }
-              disabled={isOverflowing}
             >
               {selectedIngredientIds.length === 0
                 ? <>Draw your reagents <ChevronRight size={14} /></>
                 : !vesselId
                   ? <>Choose a vessel <ChevronRight size={14} /></>
                   : isOverflowing
-                    ? 'Too much for this vessel'
+                    ? <>Scale it to fit {capacityLimitL}L <ChevronRight size={14} /></>
                     : <><Play size={14} style={{ fill: 'currentColor' }} /> Seal &amp; Inoculate</>}
             </button>
+            {isOverflowing && (
+              <p className="inoc-overflow-note">
+                Every solid drops by the same factor, so the salinity, the hydration
+                and every ratio you set stay exactly where you put them — there is
+                simply less of it. You are only charged for what goes in; the rest
+                stays on the shelf.
+              </p>
+            )}
           </section>
         </div>
 
