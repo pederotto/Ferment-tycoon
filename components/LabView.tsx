@@ -139,31 +139,18 @@ const LIGHT_TINT: Record<string, string> = {
   autumn: '#e0a154',
 };
 
-/* THE SHELF BOARDS, MEASURED.
-   Left upper runs (0,95) to (385,245); left lower (0,275) to (380,367). The
-   right wall mirrors both about the room's centre line. A tool's y is its
-   board's height at its own x — placed by eye instead, they hang in the air,
-   which is exactly what they were doing. */
-const boardY = (side: 'l' | 'r', tier: 'up' | 'lo', x: number) => {
-  const d = side === 'l' ? x : W - x;
-  return tier === 'up' ? 95 + d * (150 / 385) : 275 + d * (92 / 380);
-};
-
-const HARDWARE: {
-  id: ApplianceId; x: number; y: number; scale: number; label: string;
-  opens?: boolean; flip?: boolean;
-}[] = [
-  /* The room recedes to its centre, so the left wall is seen from its right and
-     the right wall from its left. The sheet draws each tool from one angle, so
-     the right-hand pair are mirrored to face into the room rather than out of
-     it — which is most of what made them look wrong. */
-  { id: 'portable_fan', x: 150, y: boardY('l', 'up', 150), scale: 0.85, label: 'Clip-on Fan' },
-  { id: 'centrifuge',   x: 158, y: boardY('l', 'lo', 158), scale: 0.92, label: 'Centrifuge', opens: true },
-  { id: 'agitator',     x: 1194, y: boardY('r', 'up', 1194), scale: 0.88, label: 'Geared Agitator', flip: true },
-  { id: 'humidifier',   x: 1186, y: boardY('r', 'lo', 1186), scale: 0.85, label: 'Ultrasonic Mister', flip: true },
-  /* And two on the floor, where a press and a paddle would actually live. */
-  { id: 'wooden_press', x: 1140, y: 648, scale: 1.55, label: 'Wooden Press', opens: true, flip: true },
-  { id: 'mash_paddle',  x: 178,  y: 676, scale: 1.30, label: 'Mash Paddle' },
+/* What hardware exists, and which of it opens a screen of its own. No
+   coordinates: these are shown in a rack under the room rather than standing in
+   it, because the sheet draws each tool from one angle and the room recedes to a
+   vanishing point — half of them faced out of the room and none of them looked
+   like they were standing on anything. */
+const HARDWARE: { id: ApplianceId; label: string; opens?: boolean }[] = [
+  { id: 'wooden_press', label: 'Wooden Press', opens: true },
+  { id: 'centrifuge',   label: 'Centrifuge',   opens: true },
+  { id: 'humidifier',   label: 'Ultrasonic Mister' },
+  { id: 'portable_fan', label: 'Clip-on Fan' },
+  { id: 'agitator',     label: 'Geared Agitator' },
+  { id: 'mash_paddle',  label: 'Mash Paddle' },
 ];
 
 /** Spread n items across a band, centred, with a sane gap when there are few. */
@@ -275,6 +262,8 @@ const LabView: React.FC<LabViewProps> = ({
     );
   };
 
+  const ownedTools = HARDWARE.filter(h => (inventory[h.id] ?? 0) > 0);
+
   const active = seen.find(v => v.batch.id === focused);
 
   return (
@@ -372,36 +361,18 @@ const LabView: React.FC<LabViewProps> = ({
             <g clipPath="url(#labWindowClip)">
               <rect x={WINDOW.x - WINDOW.w / 2} y={WINDOW.y - WINDOW.h / 2}
                     width={WINDOW.w} height={WINDOW.h} fill="#171109" />
-              {/* Bare: the wall already has a frame and a reveal, and a second
-                  set drawn inside them reads as a sticker over the hole. What
-                  the room wants from this is the sky, the tree and the weather. */}
+              {/* COVER, NOT FIT.
+                  The view is drawn 104x96 and the opening is 134x170, so scaling
+                  it to fit left black bands above and below — letterboxing, the
+                  same as a 16:9 film in a 4:3 frame. Scaling to the LARGER ratio
+                  fills the opening and the clip takes the overflow, which is
+                  what `background-size: cover` does and what the eye expects of
+                  a view through a hole. */}
               <IsoWindow month={month} weather={weather} bare
-                         x={WINDOW.x} y={WINDOW.y + 16} scale={WINDOW.w / 100} />
+                         x={WINDOW.x} y={WINDOW.y + 16}
+                         scale={Math.max(WINDOW.w / 100, WINDOW.h / 92)} />
             </g>
           )}
-
-          {/* HARDWARE — what you own, standing where it would stand. Decorative
-              in the strict sense: the simulation reads the inventory, not these. */}
-          {HARDWARE.filter(h => (inventory[h.id] ?? 0) > 0).map(h => (
-            <g key={h.id}
-               className={`iso-hw${h.opens ? ' clickable' : ''}`}
-               transform={`translate(${h.x},${h.y})${h.flip ? ' scale(-1,1)' : ''}`}
-               tabIndex={h.opens ? 0 : undefined}
-               role={h.opens ? 'button' : undefined}
-               aria-label={h.opens ? `Open the ${h.label}` : undefined}
-               onClick={h.opens ? () => onOpenTool?.(h.id) : undefined}
-               onKeyDown={h.opens ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenTool?.(h.id); } }) : undefined}>
-              <IsoAppliance
-                id={h.id}
-                scale={h.scale}
-                title={h.label}
-                running={h.id === 'portable_fan' ? anyVenting
-                  : h.id === 'humidifier' ? anyMisting
-                  : h.id === 'agitator' ? anyAgitated
-                  : false}
-              />
-            </g>
-          ))}
 
           {/* The cellar stair. The plate has no door, so it stands against the
               left wall where one would be. */}
@@ -440,6 +411,44 @@ const LabView: React.FC<LabViewProps> = ({
       {/* Actions sit in their own band under the scene rather than floating over
           it — positioned inside the room they covered the front row of vessels,
           which is the row you are most likely to be reaching for. */}
+      {/* THE RACK.
+          The tools used to stand in the room, and it never worked: the sheet
+          draws each from one angle while the room recedes to a vanishing point,
+          so half of them faced the wrong way and all of them read as stuck on
+          rather than standing. A rack sidesteps the whole problem — the picture
+          is a picture, shown flat, at a size you can actually see it — and it
+          answers the question the room could not: what do I own, and is any of
+          it working right now.
+
+          Only what you own appears. An empty rack is a true statement. */}
+      {ownedTools.length > 0 && (
+        <div className="tool-rack">
+          {ownedTools.map(h => {
+            const on = h.id === 'portable_fan' ? anyVenting
+              : h.id === 'humidifier' ? anyMisting
+              : h.id === 'agitator' ? anyAgitated
+              : false;
+            const Tag = h.opens ? 'button' : 'div';
+            return (
+              <Tag
+                key={h.id}
+                className={`tool-card${on ? ' running' : ''}${h.opens ? ' opens' : ''}`}
+                {...(h.opens ? { onClick: () => onOpenTool?.(h.id), type: 'button' as const } : {})}
+                title={h.opens ? `Open the ${h.label}` : h.label}
+              >
+                <svg viewBox="-80 -80 160 160" className="tc-art" aria-hidden="true">
+                  <IsoAppliance id={h.id} scale={0.85} running={on} />
+                </svg>
+                <span className="tc-name">{h.label}</span>
+                <span className="tc-state">
+                  {on ? 'running' : h.opens ? 'open it' : 'idle'}
+                </span>
+              </Tag>
+            );
+          })}
+        </div>
+      )}
+
       <div className="iso-bar">
         {active ? (
           <div className="iso-actions"

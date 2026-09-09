@@ -2657,3 +2657,47 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .inoc-overflow-note {
   margin: 8px 0 0; font-size: 10.5px; line-height: 1.55; color: var(--text-lo);
 }
+
+/* ---------- THE TOOL RACK ----------
+   Tools standing in the painted room never worked: the sheet draws each from one
+   angle while the room recedes to a vanishing point, so half faced the wrong way
+   and none looked like they were standing on anything. Flat cards sidestep it —
+   a picture shown as a picture, big enough to read — and answer the question the
+   room could not: what do I own, and is any of it working. */
+.tool-rack {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding: 12px 2px 0;
+}
+.tool-card {
+  flex: 0 0 auto; width: 104px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 6px 9px;
+  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: inherit; font: inherit; text-align: center;
+  transition: border-color 130ms, background 130ms, transform 130ms;
+}
+.tool-card.opens { cursor: pointer; }
+.tool-card.opens:hover { border-color: var(--brass); background: rgba(217,184,113,0.08); }
+.tool-card.opens:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+/* A working tool is lit, not moved — the bench taught that lesson already. */
+.tool-card.running {
+  border-color: rgba(224, 138, 60, 0.55);
+  background: rgba(224, 138, 60, 0.08);
+}
+.tc-art { width: 64px; height: 64px; display: block; }
+.tc-name {
+  font-size: 10px; line-height: 1.3; color: var(--text-hi);
+  font-weight: 600;
+}
+.tc-state {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8.5px; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text-lo);
+}
+.tool-card.running .tc-state { color: var(--amber); }
+
+@media (max-width: 640px) {
+  .tool-card { width: calc(33.333% - 7px); }
+}

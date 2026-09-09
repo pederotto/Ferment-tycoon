@@ -466,6 +466,20 @@ it can be found by thresholding: x593–727, y218–388. The estimate was 15px o
 horizontally and 33 too tall, which is why the view sat off to one side of its
 own hole.
 
+**Cover the opening, do not fit it.** The view is drawn 104x96 and the opening
+is 134x170, so scaling to fit left black bands above and below — letterboxing, a
+16:9 film in a 4:3 frame. Scale to the LARGER ratio and let the clip take the
+overflow, which is what `background-size: cover` does and what the eye expects of
+a view through a hole.
+
+**Tools belong in a rack, not in the room.** They stood in it for a while and it
+never worked: the sheet draws each tool from one angle while the room recedes to
+a vanishing point, so half of them faced out of the room and none read as
+standing on anything. Flat cards under the scene sidestep the whole problem — a
+picture shown as a picture, at a size you can see — and answer the question the
+room could not: what do I own, and is any of it working. An empty rack is a true
+statement, so nothing is drawn for what you have not bought.
+
 **Draw the view bare inside a painted wall.** `IsoWindow` carries a reveal, a
 frame, glazing bars and a sill. The plate has all four, and a second set inside
 them reads as a sticker over the hole — a frame printed across the tree. `bare`
