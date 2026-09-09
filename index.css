@@ -2626,3 +2626,9 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .reagent:hover .glyph.art { border-color: var(--brass); color: #efe2bd; }
 .reagent .glyph.art svg { filter: url(#inkRoughFine); }
+
+/* A sheet cell, sliced by background-position. The ink filter stays off these —
+   they are already painted, and roughening a painted icon just blurs it. */
+.ing-icon { display: block; flex-shrink: 0; }
+.reagent .glyph.art { background: none; border: none; width: 34px; height: 30px; }
+.reagent .glyph.art svg { filter: url(#inkRoughFine); }

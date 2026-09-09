@@ -491,6 +491,22 @@ would drift apart the first time content was added; one definition cannot.
   tasks**. Browsers cache filter output per element, so this is cheap — but
   re-measure if it is ever applied to something that animates.
 
+**The ingredient sheet is sliced by index, and the order is load-bearing.**
+`SHEET_ORDER` in `ingredientSheet.ts` is the source order of the ingredient
+arrays as `constants.ts` concatenates them, and the sheet was drawn to match.
+Adding an ingredient means appending to that list AND adding a cell, in the same
+place — insert one in the middle and every icon after it becomes the wrong
+picture, silently.
+
+- **The grid was measured off the file, not assumed.** Columns every 137px from
+  x=0, rows every 137px from **y=8** — the eight-pixel offset is the kind of thing
+  that makes every icon a few pixels wrong in a way that reads as blur.
+- **The supplied sheet had a printed label under each icon; they are trimmed off
+  at build time**, not hidden with CSS. The game prints the real name beside the
+  icon, and a second baked-in name at 30px is an unreadable smudge.
+- **No ink filter on sheet cells.** They are already painted; roughening a
+  painted icon only blurs it. The filter stays on the drawn fallbacks.
+
 **Ingredient art is a lookup with a fallback.** `ART` in `IngredientArt.tsx`
 maps id to a drawing and `artFor` returns null for anything missing, which falls
 through to the old generic glyph. Filling in the remaining ingredients is

@@ -3,7 +3,7 @@ import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentTyp
 import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION , KOJI_INOCULATION_TEMP } from '../constants';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
-import { artFor } from './IngredientArt';
+import IngredientIcon from './IngredientIcon';
 import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../services/gameLogic';
 import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias } from '../services/koji';
 import RecipeCard from './RecipeCard';
@@ -783,10 +783,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                   const remaining = getRemainingInventory(ing.id);
                   const wouldOverflow = (dynamics.totalMass + (ing.mass || 0)) / 1000 > capacityLimitL;
                   const atCapacity = wouldOverflow || selectedIngredientIds.length >= MAX_REAGENT_UNITS;
-                  // Real art where it exists, the generic glyph where it does
-                  // not — so filling in the remaining ingredients is additive
-                  // and nothing looks broken in the meantime.
-                  const IngGlyph = artFor(ing.id) ?? getIngredientIcon(ing);
+                  const IngGlyph = getIngredientIcon(ing);
                   const weightDisplay = ing.mass > 0
                     ? (ing.mass >= 1000 ? `${ing.mass / 1000}kg` : `${ing.mass}${ing.unitDisplay}`)
                     : '1 unit';
@@ -802,7 +799,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                       aria-label={`Add ${ing.name} — ${remaining} left`}
                     >
                       <span className="left">
-                        <span className="glyph art"><IngGlyph size={26} color="currentColor" /></span>
+                        <span className="glyph art"><IngredientIcon id={ing.id} size={30} fallback={IngGlyph} /></span>
                         <span style={{ minWidth: 0 }}>
                           <span className="n">
                             {ing.name}
