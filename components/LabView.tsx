@@ -3,7 +3,6 @@ import { Batch, Recipe, FermentType, WeatherState, WeatherType } from '../types'
 import { RECIPES, VESSELS } from '../constants';
 import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
-import IsoAppliance, { ApplianceId } from './IsoAppliance';
 import IsoWindow, { seasonOf } from './IsoWindow';
 import { LAB_PLATE } from './labPlate';
 import IsoDoor from './IsoDoor';
@@ -139,19 +138,7 @@ const LIGHT_TINT: Record<string, string> = {
   autumn: '#e0a154',
 };
 
-/* What hardware exists, and which of it opens a screen of its own. No
-   coordinates: these are shown in a rack under the room rather than standing in
-   it, because the sheet draws each tool from one angle and the room recedes to a
-   vanishing point — half of them faced out of the room and none of them looked
-   like they were standing on anything. */
-const HARDWARE: { id: ApplianceId; label: string; opens?: boolean }[] = [
-  { id: 'wooden_press', label: 'Wooden Press', opens: true },
-  { id: 'centrifuge',   label: 'Centrifuge',   opens: true },
-  { id: 'humidifier',   label: 'Ultrasonic Mister' },
-  { id: 'portable_fan', label: 'Clip-on Fan' },
-  { id: 'agitator',     label: 'Geared Agitator' },
-  { id: 'mash_paddle',  label: 'Mash Paddle' },
-];
+
 
 /** Spread n items across a band, centred, with a sane gap when there are few. */
 const spread = (n: number, from: number, to: number): number[] => {
@@ -261,8 +248,6 @@ const LabView: React.FC<LabViewProps> = ({
       </g>
     );
   };
-
-  const ownedTools = HARDWARE.filter(h => (inventory[h.id] ?? 0) > 0);
 
   const active = seen.find(v => v.batch.id === focused);
 
@@ -422,44 +407,6 @@ const LabView: React.FC<LabViewProps> = ({
       {/* Actions sit in their own band under the scene rather than floating over
           it — positioned inside the room they covered the front row of vessels,
           which is the row you are most likely to be reaching for. */}
-      {/* THE RACK.
-          The tools used to stand in the room, and it never worked: the sheet
-          draws each from one angle while the room recedes to a vanishing point,
-          so half of them faced the wrong way and all of them read as stuck on
-          rather than standing. A rack sidesteps the whole problem — the picture
-          is a picture, shown flat, at a size you can actually see it — and it
-          answers the question the room could not: what do I own, and is any of
-          it working right now.
-
-          Only what you own appears. An empty rack is a true statement. */}
-      {ownedTools.length > 0 && (
-        <div className="tool-rack">
-          {ownedTools.map(h => {
-            const on = h.id === 'portable_fan' ? anyVenting
-              : h.id === 'humidifier' ? anyMisting
-              : h.id === 'agitator' ? anyAgitated
-              : false;
-            const Tag = h.opens ? 'button' : 'div';
-            return (
-              <Tag
-                key={h.id}
-                className={`tool-card${on ? ' running' : ''}${h.opens ? ' opens' : ''}`}
-                {...(h.opens ? { onClick: () => onOpenTool?.(h.id), type: 'button' as const } : {})}
-                title={h.opens ? `Open the ${h.label}` : h.label}
-              >
-                <svg viewBox="-80 -80 160 160" className="tc-art" aria-hidden="true">
-                  <IsoAppliance id={h.id} scale={0.85} running={on} />
-                </svg>
-                <span className="tc-name">{h.label}</span>
-                <span className="tc-state">
-                  {on ? 'running' : h.opens ? 'open it' : 'idle'}
-                </span>
-              </Tag>
-            );
-          })}
-        </div>
-      )}
-
       <div className="iso-bar">
         {active ? (
           <div className="iso-actions"

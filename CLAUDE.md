@@ -645,6 +645,34 @@ own SVG is lifted to `z-index: 2` above it.
 
 ## Layout
 
+**The HUD lives in side rails, not along the top.** The room is limited by
+HEIGHT, so on any wide window there was dead space either side of it while the
+status bar fought for a thin strip — three gauge rings the size of thumbnails, an
+almanac with no room to say what the weather meant, and a Supply drawer that slid
+up over the very thing you were looking at. `.lab-grid` is three columns: the
+world and what you own on the left, the room in the middle, money and navigation
+and stock on the right.
+
+**Three breakpoints, because "it stacks" is not a mobile design.**
+
+- `>= 1180px` — three columns, both rails open
+- `760–1179` — two columns, the rails share one scrolling column beside the room
+- `< 760px` — one column, **one rail at a time** behind a switch in the header.
+  Stacking both would put the room on top of two thousand pixels of panels.
+
+**On a phone the room must come first.** DOM order puts the left rail ahead of
+the stage, which is correct for a grid and wrong for a column — it buried the
+room under the almanac, three gauges and the whole tool rack. `.stage` takes
+`order: -1` below the phone breakpoint.
+
+**A component that moves loses the CSS attached to its old class.** The rack was
+`.tool-rack` in the scene and became `.rack` in the rail, which silently dropped
+`display: flex` — the cards stayed block-level at 50% width and stacked in a
+half-wide column instead of pairing up. Check the whole rule, not just the ones
+you are changing.
+
+
+
 Stacking order, which three separate bugs came from getting wrong:
 
 ```

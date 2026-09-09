@@ -2701,3 +2701,126 @@ input[type="range"].dial-slider::-moz-range-thumb {
 @media (max-width: 640px) {
   .tool-card { width: calc(33.333% - 7px); }
 }
+
+/* =============================================================================
+   THE RAILS
+
+   The room is limited by HEIGHT, not width, so on any wide window there was dead
+   space either side of it while the status bar fought for a thin strip along the
+   top — three gauge rings the size of thumbnails, an almanac that could not say
+   what the weather meant, and a Supply drawer that slid up over the very thing
+   you were looking at.
+
+   Three breakpoints, because "it stacks" is not a mobile design:
+     >= 1180px   three columns, both rails open
+     760-1179    two columns, the rails share one scrolling column
+     < 760px     one column, one rail at a time behind a switch in the header
+   ============================================================================= */
+.lab-grid {
+  flex: 1; min-height: 0; z-index: 10;
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr) 258px;
+  gap: 0;
+}
+.rail {
+  min-width: 0; overflow-y: auto; overflow-x: hidden;
+  padding: 14px 13px; display: flex; flex-direction: column; gap: 16px;
+  scrollbar-width: thin;
+}
+.rail.left { border-right: 1px solid var(--line); }
+.rail.right { border-left: 1px solid var(--line); background: rgba(0, 0, 0, 0.14); }
+.stage { min-width: 0; display: flex; flex-direction: column; padding: 12px 14px 14px; }
+
+.rail-sect > h3 {
+  margin: 0 0 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--text-lo); font-weight: 500;
+}
+
+/* The almanac finally has room to say what the weather MEANS, rather than
+   printing two numbers and a word. */
+.alm {
+  padding: 10px 11px; border-radius: 4px;
+  background: rgba(0, 0, 0, 0.24); border: 1px solid var(--line);
+}
+.alm .season { font-size: 13.5px; color: var(--text-hi); }
+.alm .clime { font-size: 10px; color: var(--amber); margin-top: 3px; }
+.alm .wx { font-size: 11px; line-height: 1.45; color: var(--text-lo); margin-top: 5px; }
+
+/* Gauges stack in the rail. In the header they were rings competing with the
+   brand; here each gets a label, a number and a bar. */
+.rail .gauges { display: flex; flex-direction: column; gap: 9px; align-items: stretch; }
+.rail .gauge {
+  width: auto; flex-direction: row; align-items: center; gap: 9px;
+  padding: 7px 9px; border-radius: 4px;
+  background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line);
+  text-align: left;
+}
+.rail .gauge .ring-wrap { flex-shrink: 0; }
+.rail .gauge .lbl { order: -1; flex: 1; font-size: 11px; color: var(--text-mid); }
+.rail .gauge .val { font-size: 10.5px; }
+.rail .gauge-action { cursor: pointer; }
+.rail .gauge-action:hover:not(:disabled) { border-color: var(--brass); }
+
+/* Nav becomes a list, so the labels stop being hidden on narrow screens. */
+.rail .tabs-hud { flex-direction: column; align-items: stretch; gap: 4px; background: none; border: none; padding: 0; }
+.rail .tab-btn-hud { justify-content: flex-start; padding: 8px 10px; border-radius: 3px; background: rgba(0,0,0,0.24); border: 1px solid var(--line); }
+.rail .tab-btn-hud span { display: inline !important; }
+.rail .dev-chip { align-self: flex-start; }
+
+/* Tickets stack; funds is the one that wants weight. */
+.rail .ticket { justify-content: space-between; width: 100%; }
+.rail .ticket.hidden, .rail .ticket.renown.hidden { display: flex !important; }
+.rail .flex.items-center.gap-3 { flex-direction: column; align-items: stretch; gap: 8px; }
+
+.rail .pantry { margin: 0; flex-direction: column; align-items: stretch; gap: 6px; }
+.rail .pantry-items { flex-direction: column; gap: 4px; overflow: visible; }
+.rail .pantry-item { justify-content: space-between; width: 100%; }
+.rail .order-btn { width: 100%; justify-content: center; }
+
+.rack-empty { margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-lo); }
+/* The rack lost its display when it moved out of the scene and became `.rack`
+   rather than `.tool-rack` — the cards were block-level at 50% width, so they
+   stacked in a half-wide column instead of pairing up. */
+.rack { display: flex; flex-direction: column; gap: 5px; }
+.rail .tool-card { width: 100%; flex-direction: row; align-items: center; gap: 9px; text-align: left; padding: 6px 8px; }
+.rail .tc-art { width: 34px; height: 34px; flex-shrink: 0; }
+.rail .tc-state { margin-left: auto; }
+
+/* The phone switch. Hidden wherever both rails are on screen. */
+.rail-tabs { display: none; gap: 4px; margin-left: auto; }
+.rail-tab {
+  padding: 5px 11px; border-radius: 3px; cursor: pointer;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line);
+  color: var(--text-lo); font-family: 'Zilla Slab', serif; font-size: 12px;
+}
+.rail-tab.active { background: rgba(224, 138, 60, 0.15); border-color: var(--amber); color: var(--text-hi); }
+
+@media (max-width: 1179px) {
+  /* Two columns: the rails share one scrolling column beside the room. */
+  .lab-grid { grid-template-columns: minmax(0, 1fr) 268px; }
+  .rail.left { grid-column: 2; grid-row: 1; border-right: none; border-left: 1px solid var(--line); padding-bottom: 0; }
+  .rail.right { grid-column: 2; grid-row: 2; border-left: 1px solid var(--line); }
+  .stage { grid-column: 1; grid-row: 1 / span 2; }
+}
+
+@media (max-width: 759px) {
+  /* One column, one rail at a time. Stacking both would put the room on top of
+     two thousand pixels of scrolling panels, which is the non-answer. */
+  .lab-grid { display: flex; flex-direction: column; }
+  .rail { border: none !important; border-top: 1px solid var(--line) !important; overflow: visible; }
+  .stage { padding: 10px; }
+  .rail-tabs { display: flex; }
+  /* THE ROOM COMES FIRST. DOM order puts the left rail ahead of the stage, which
+     is right for a three-column grid and wrong for a phone — it buried the room
+     under the almanac, three gauges and the whole tool rack. */
+  .stage { order: -1; }
+  .lab-grid.pane-bench .rail.right,
+  .lab-grid.pane-stock .rail.left { display: none; }
+  /* Two up on a phone reads better than one tall column of cards. */
+  .rail .rack { flex-direction: row; flex-wrap: wrap; }
+  .rail .tool-card { width: calc(50% - 3px); }
+  .rail .pantry-items { flex-direction: row; flex-wrap: wrap; }
+  .rail .pantry-item { width: calc(50% - 2px); }
+}

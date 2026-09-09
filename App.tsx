@@ -13,6 +13,7 @@ import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
 import SpeedControl from './components/SpeedControl';
 import InkDefs from './components/InkDefs';
+import ToolRack from './components/ToolRack';
 import CellarView from './components/CellarView';
 import BatchController from './components/BatchController';
 import BatchInspector from './components/BatchInspector';
@@ -107,6 +108,15 @@ export default function App() {
    * and `paused` is separate. The loop reads both.
    */
   const [showCellar, setShowCellar] = useState<boolean>(false);
+  /**
+   * WHICH RAIL A PHONE IS SHOWING.
+   *
+   * On a wide window both rails are visible and this does nothing. Below the
+   * two-column breakpoint they become one pane at a time — stacking them instead
+   * would put the room on top of two thousand pixels of scrolling panels, which
+   * is the "it stacks" non-answer to mobile.
+   */
+  const [railPane, setRailPane] = useState<'bench' | 'stock'>('bench');
   const [gameSpeed, setGameSpeed] = useState<number>(1);
   const [paused, setPaused] = useState<boolean>(false);
   const lastActiveSpeed = useRef<number>(1);
@@ -1760,29 +1770,19 @@ export default function App() {
           same hand from these. */}
       <InkDefs />
 
+      {/* THE STRIP.
+          Identity and the clock only. Everything that used to be crammed along
+          here — the almanac, three gauge rings, the tickets and the whole nav —
+          is in the rails now, where there is room for a label and a number
+          instead of a ring the size of a thumbnail. */}
       <header className="hud sticky top-0 z-30">
-        {/* BRAND, ALMANAC & TIME ENGINE */}
         <div className="brand" style={{ minWidth: 0 }}>
           <div className="seal"><SealGlyphIcon size={22} /></div>
           <div className="wordmark hidden sm:flex">
             <span className="title slab">FERMENTA</span>
             <span className="sub">Atelier &amp; Culture House</span>
           </div>
-          <div className="divider-line hidden xl:block" />
-          <div className="almanac hidden xl:flex">
-            <AlmanacIcon size={18} />
-            <div>
-              {/* Week is shown as the week WITHIN the month, so it needs the month
-                  beside it — otherwise week 5 reads as "Wk 1" and looks like the
-                  run has reset. */}
-              <div className="season slab">{getSeason(gameState.month)} &middot; {getMonthName(gameState.month)} Wk {(gameState.week - 1) % 4 + 1}, Day {gameState.day}</div>
-              <div className="date mono clime">
-                {currentAmbient.ambientTemp.toFixed(0)}&deg;C / {currentAmbient.ambientHumidity.toFixed(0)}% RH &middot; {gameState.weather.type}
-              </div>
-            </div>
-          </div>
           <div className="divider-line hidden md:block" />
-          {/* GAME SPEED & TIME ENGINE */}
           <SpeedControl
             gameSpeed={gameSpeed}
             paused={paused}
@@ -1790,108 +1790,16 @@ export default function App() {
             onTogglePause={() => setPaused(p => !p)}
           />
         </div>
-
-        {/* CENTER: GAUGE RINGS */}
-        <div className="gauges flex">
-          <div className="gauge">
-            <div className="ring-wrap">
-              <GaugeRing percent={(currentPower / gameState.maxPower) * 100} color={currentPower > gameState.maxPower ? 'var(--brick)' : 'var(--amber)'} />
-            </div>
-            <div className="val mono" style={currentPower > gameState.maxPower ? { color: 'var(--brick)' } : undefined}>{currentPower}W/{gameState.maxPower}W</div>
-            <div className="lbl">Power Grid</div>
-          </div>
-          <button
-            type="button"
-            className="gauge gauge-action"
-            onClick={handleDeepClean}
-            title="Deep clean the bench for $50"
-            aria-label={`Hygiene ${Math.round(gameState.hygiene)}%. Deep clean the bench for $50.`}
-          >
-            <div className="ring-wrap">
-              <GaugeRing percent={gameState.hygiene} color={gameState.hygiene < 50 ? 'var(--brick)' : 'var(--moss)'} />
-            </div>
-            <div className="val mono">{gameState.hygiene < 80 ? 'Clean $50' : `${Math.round(gameState.hygiene)}%`}</div>
-            <div className="lbl">Hygiene</div>
-          </button>
-          <button
-            type="button"
-            className="gauge gauge-action"
-            onClick={handleGreaseTheFile}
-            disabled={gameState.renown < GREASE_RENOWN_COST || gameState.heat <= 0}
-            title={`Spend ${GREASE_RENOWN_COST} renown to lose ${GREASE_HEAT_RELIEF} heat`}
-            aria-label={`Inspector heat ${Math.round(gameState.heat)}%. Spend ${GREASE_RENOWN_COST} renown to reduce it.`}
-          >
-            <div className="ring-wrap">
-              <GaugeRing percent={gameState.heat} color={gameState.heat > 50 ? 'var(--brick)' : 'var(--moss)'} />
-            </div>
-            <div className="val mono">
-              {gameState.heat > 0 && gameState.renown >= GREASE_RENOWN_COST
-                ? `Grease ${GREASE_RENOWN_COST}`
-                : `${Math.round(gameState.heat)}%`}
-            </div>
-            <div className="lbl">Inspector Heat</div>
-          </button>
-        </div>
-
-        {/* RIGHT: ASSETS, RENOWN & MODAL LAUNCHERS */}
-        <div className="flex items-center gap-3">
-          <div className="ticket hidden lg:flex" title="Selling safe, well-made stock opens better restaurants.">
-            <span className="lbl">Standing</span>
-            <span className="num">{Math.max(0, Math.round(gameState.reputation))}</span>
-          </div>
-          <div className="ticket renown hidden sm:flex">
-            <span className="lbl">Renown</span>
-            <span className="num mono">{gameState.renown}</span>
-          </div>
-          <div className="ticket funds">
-            <span className="lbl">Funds</span>
-            <span className="num mono">${gameState.money.toLocaleString()}</span>
-          </div>
-          <div className="tabs-hud">
-            {/* A visible way into the dev tools. The keyboard route alone was not
-                enough: the original binding (Cmd/Ctrl+Shift+D) is claimed by
-                Chrome for "Bookmark all tabs", so the page never saw it. */}
-            <button
-              className="dev-chip"
-              onClick={() => setShowDev(v => !v)}
-              title="Dev tools and god mode — or press the backtick key"
-            >
-              DEV
+        {/* On a phone the rails become one pane at a time, so the switch lives
+            here where it is always reachable. */}
+        <div className="rail-tabs">
+          {(['bench', 'stock'] as const).map(t => (
+            <button key={t}
+              className={`rail-tab${railPane === t ? ' active' : ''}`}
+              onClick={() => setRailPane(t)}>
+              {t === 'bench' ? 'Bench' : 'Stock'}
             </button>
-            <button
-              onClick={() => toggleDrawer('marketplace')}
-              className={`tab-btn-hud${activeDrawer === 'hardware' ? ' active' : ''}`}
-              title="Hardware Store & Vessels"
-            >
-              <WrenchIcon size={14} />
-              <span className="hidden sm:inline">Hardware</span>
-            </button>
-            <button
-              onClick={() => setUiState(prev => ({ ...prev, showStaff: !prev.showStaff }))}
-              className={`tab-btn-hud${uiState.showStaff ? ' active' : ''}`}
-              title="Staff Management"
-            >
-              <StaffGroupIcon size={14} />
-              <span className="hidden sm:inline">Staff</span>
-            </button>
-            <button
-              onClick={() => setUiState(prev => ({ ...prev, showLogbook: !prev.showLogbook }))}
-              className={`tab-btn-hud${uiState.showLogbook ? ' active' : ''}`}
-              title="Lab Codex & Archives"
-            >
-              <BookIcon size={14} />
-              <span className="hidden sm:inline">Codex</span>
-            </button>
-            <button
-              onClick={() => setShowOrders(true)}
-              className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
-              title="Vendor standing and contracts"
-            >
-              <Handshake size={14} />
-              <span className="hidden sm:inline">Orders</span>
-              {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
-            </button>
-          </div>
+          ))}
         </div>
       </header>
       
@@ -1904,9 +1812,81 @@ export default function App() {
       )}
 
       {/* Main Layout - Modified to allow Sourcing Popup */}
-      <main className="flex-1 relative overflow-hidden flex flex-col z-10 pb-3 px-3">
-        {/* Lab View takes main stage */}
-        <div className="flex-1 relative h-full flex flex-col min-h-0">
+      <div className={`lab-grid pane-${railPane}`}>
+
+        {/* LEFT RAIL — the world, and what you own. */}
+        <aside className="rail left">
+          <section className="rail-sect">
+            <h3>Almanac</h3>
+            <div className="alm">
+              <div className="season slab">
+                {getSeason(gameState.month)} &middot; {getMonthName(gameState.month)} Wk {(gameState.week - 1) % 4 + 1}
+              </div>
+              <div className="clime mono">
+                {currentAmbient.ambientTemp.toFixed(0)}&deg;C / {currentAmbient.ambientHumidity.toFixed(0)}% RH
+              </div>
+              <div className="wx">{gameState.weather.type} &mdash; {gameState.weather.description}</div>
+            </div>
+          </section>
+
+          <section className="rail-sect">
+            <h3>The bench</h3>
+          <div className="gauges flex">
+            <div className="gauge">
+              <div className="ring-wrap">
+                <GaugeRing percent={(currentPower / gameState.maxPower) * 100} color={currentPower > gameState.maxPower ? 'var(--brick)' : 'var(--amber)'} />
+              </div>
+              <div className="val mono" style={currentPower > gameState.maxPower ? { color: 'var(--brick)' } : undefined}>{currentPower}W/{gameState.maxPower}W</div>
+              <div className="lbl">Power Grid</div>
+            </div>
+            <button
+              type="button"
+              className="gauge gauge-action"
+              onClick={handleDeepClean}
+              title="Deep clean the bench for $50"
+              aria-label={`Hygiene ${Math.round(gameState.hygiene)}%. Deep clean the bench for $50.`}
+            >
+              <div className="ring-wrap">
+                <GaugeRing percent={gameState.hygiene} color={gameState.hygiene < 50 ? 'var(--brick)' : 'var(--moss)'} />
+              </div>
+              <div className="val mono">{gameState.hygiene < 80 ? 'Clean $50' : `${Math.round(gameState.hygiene)}%`}</div>
+              <div className="lbl">Hygiene</div>
+            </button>
+            <button
+              type="button"
+              className="gauge gauge-action"
+              onClick={handleGreaseTheFile}
+              disabled={gameState.renown < GREASE_RENOWN_COST || gameState.heat <= 0}
+              title={`Spend ${GREASE_RENOWN_COST} renown to lose ${GREASE_HEAT_RELIEF} heat`}
+              aria-label={`Inspector heat ${Math.round(gameState.heat)}%. Spend ${GREASE_RENOWN_COST} renown to reduce it.`}
+            >
+              <div className="ring-wrap">
+                <GaugeRing percent={gameState.heat} color={gameState.heat > 50 ? 'var(--brick)' : 'var(--moss)'} />
+              </div>
+              <div className="val mono">
+                {gameState.heat > 0 && gameState.renown >= GREASE_RENOWN_COST
+                  ? `Grease ${GREASE_RENOWN_COST}`
+                  : `${Math.round(gameState.heat)}%`}
+              </div>
+              <div className="lbl">Inspector Heat</div>
+            </button>
+          </div>
+
+          </section>
+
+          <section className="rail-sect">
+            <h3>Hardware</h3>
+            <ToolRack
+              inventory={gameState.inventory}
+              batches={gameState.batches}
+              onOpenTool={setOpenTool}
+            />
+          </section>
+        </aside>
+
+        {/* CENTRE — the room, and nothing else. */}
+        <main className="stage">
+          <div className="flex-1 relative flex flex-col min-h-0">
            <LabView 
              batches={gameState.batches} 
              maxSlots={gameState.equipmentSlots} 
@@ -1927,8 +1907,73 @@ export default function App() {
            />
         </div>
 
-        {/* FLOATING LAB PANTRY QUICK BAR */}
-        <div className="pantry mt-3">
+        </main>
+
+        {/* RIGHT RAIL — money, where you go, what you have. */}
+        <aside className="rail right">
+          {/* RIGHT: ASSETS, RENOWN & MODAL LAUNCHERS */}
+          <div className="flex items-center gap-3">
+            <div className="ticket hidden lg:flex" title="Selling safe, well-made stock opens better restaurants.">
+              <span className="lbl">Standing</span>
+              <span className="num">{Math.max(0, Math.round(gameState.reputation))}</span>
+            </div>
+            <div className="ticket renown hidden sm:flex">
+              <span className="lbl">Renown</span>
+              <span className="num mono">{gameState.renown}</span>
+            </div>
+            <div className="ticket funds">
+              <span className="lbl">Funds</span>
+              <span className="num mono">${gameState.money.toLocaleString()}</span>
+            </div>
+            <div className="tabs-hud">
+              {/* A visible way into the dev tools. The keyboard route alone was not
+                  enough: the original binding (Cmd/Ctrl+Shift+D) is claimed by
+                  Chrome for "Bookmark all tabs", so the page never saw it. */}
+              <button
+                className="dev-chip"
+                onClick={() => setShowDev(v => !v)}
+                title="Dev tools and god mode — or press the backtick key"
+              >
+                DEV
+              </button>
+              <button
+                onClick={() => toggleDrawer('marketplace')}
+                className={`tab-btn-hud${activeDrawer === 'hardware' ? ' active' : ''}`}
+                title="Hardware Store & Vessels"
+              >
+                <WrenchIcon size={14} />
+                <span className="hidden sm:inline">Hardware</span>
+              </button>
+              <button
+                onClick={() => setUiState(prev => ({ ...prev, showStaff: !prev.showStaff }))}
+                className={`tab-btn-hud${uiState.showStaff ? ' active' : ''}`}
+                title="Staff Management"
+              >
+                <StaffGroupIcon size={14} />
+                <span className="hidden sm:inline">Staff</span>
+              </button>
+              <button
+                onClick={() => setUiState(prev => ({ ...prev, showLogbook: !prev.showLogbook }))}
+                className={`tab-btn-hud${uiState.showLogbook ? ' active' : ''}`}
+                title="Lab Codex & Archives"
+              >
+                <BookIcon size={14} />
+                <span className="hidden sm:inline">Codex</span>
+              </button>
+              <button
+                onClick={() => setShowOrders(true)}
+                className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
+                title="Vendor standing and contracts"
+              >
+                <Handshake size={14} />
+                <span className="hidden sm:inline">Orders</span>
+                {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
+              </button>
+            </div>
+          </div>
+
+        {/* The pantry reads better as a list than as a strip along the bottom. */}
+        <div className="pantry">
           <div className="pantry-lbl">
             <span className="dot" style={{ color: 'var(--moss)' }} />
             Pantry Stock
@@ -1999,7 +2044,8 @@ export default function App() {
             {activeDrawer === 'marketplace' ? 'Close Supplies ✕' : <>Order Supplies <ArrowRightIcon size={12} color="#1d1206" /></>}
           </button>
         </div>
-      </main>
+        </aside>
+      </div>
 
       {/* Sourcing Drawer - Root Level to fix Stacking Context */}
       {/* SUPPLY — one drawer, one place to spend money */}
