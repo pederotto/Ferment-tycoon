@@ -93,7 +93,10 @@ const FLOOR_SPOTS: Spot[] = [
 
 /* The window in the back wall. The plate has a painted sky inside it; the game
    draws its own over the top, because that view is the month and the weather. */
-const WINDOW = { x: 675, y: 295, w: 142, h: 203 };
+/* Measured off the plate: the black opening runs x593-727, y218-388. The first
+   guess was 15px out horizontally and 33 too tall, which is why the view sat off
+   to one side of its own hole. */
+const WINDOW = { x: 660, y: 303, w: 134, h: 170 };
 
 /* A jar at isoScaleFor(2) is ~30 units wide in this grid. Measured against the
    painted table, ~60 is what sits on it without looking like a bead. */
@@ -136,19 +139,31 @@ const LIGHT_TINT: Record<string, string> = {
   autumn: '#e0a154',
 };
 
-const HARDWARE: { id: ApplianceId; x: number; y: number; scale: number; label: string; opens?: boolean }[] = [
-  /* Two boards a side, read off the plate: the upper runs from the frame edge at
-     y125 down to y256 at x400, the lower from y302 to y381. A tool stands ON the
-     board, so its y is the board's height at its x. Scale is generous because a
-     sheet cell carries transparent margin — the object fills roughly 60% of it,
-     so the drawn size is not the visible size. */
-  { id: 'centrifuge',   x: 215,  y: 168, scale: 1.15, label: 'Centrifuge', opens: true },
-  { id: 'humidifier',   x: 1130, y: 168, scale: 1.05, label: 'Ultrasonic Mister' },
-  { id: 'portable_fan', x: 205,  y: 314, scale: 1.05, label: 'Clip-on Fan' },
-  { id: 'agitator',     x: 1140, y: 314, scale: 1.10, label: 'Geared Agitator' },
+/* THE SHELF BOARDS, MEASURED.
+   Left upper runs (0,95) to (385,245); left lower (0,275) to (380,367). The
+   right wall mirrors both about the room's centre line. A tool's y is its
+   board's height at its own x — placed by eye instead, they hang in the air,
+   which is exactly what they were doing. */
+const boardY = (side: 'l' | 'r', tier: 'up' | 'lo', x: number) => {
+  const d = side === 'l' ? x : W - x;
+  return tier === 'up' ? 95 + d * (150 / 385) : 275 + d * (92 / 380);
+};
+
+const HARDWARE: {
+  id: ApplianceId; x: number; y: number; scale: number; label: string;
+  opens?: boolean; flip?: boolean;
+}[] = [
+  /* The room recedes to its centre, so the left wall is seen from its right and
+     the right wall from its left. The sheet draws each tool from one angle, so
+     the right-hand pair are mirrored to face into the room rather than out of
+     it — which is most of what made them look wrong. */
+  { id: 'portable_fan', x: 150, y: boardY('l', 'up', 150), scale: 0.85, label: 'Clip-on Fan' },
+  { id: 'centrifuge',   x: 158, y: boardY('l', 'lo', 158), scale: 0.92, label: 'Centrifuge', opens: true },
+  { id: 'agitator',     x: 1194, y: boardY('r', 'up', 1194), scale: 0.88, label: 'Geared Agitator', flip: true },
+  { id: 'humidifier',   x: 1186, y: boardY('r', 'lo', 1186), scale: 0.85, label: 'Ultrasonic Mister', flip: true },
   /* And two on the floor, where a press and a paddle would actually live. */
-  { id: 'wooden_press', x: 1150, y: 640, scale: 1.70, label: 'Wooden Press', opens: true },
-  { id: 'mash_paddle',  x: 175,  y: 672, scale: 1.45, label: 'Mash Paddle' },
+  { id: 'wooden_press', x: 1140, y: 648, scale: 1.55, label: 'Wooden Press', opens: true, flip: true },
+  { id: 'mash_paddle',  x: 178,  y: 676, scale: 1.30, label: 'Mash Paddle' },
 ];
 
 /** Spread n items across a band, centred, with a sane gap when there are few. */
@@ -289,16 +304,21 @@ const LabView: React.FC<LabViewProps> = ({
               <stop offset="100%" stopColor="#fff" stopOpacity="0" />
             </radialGradient>
             <linearGradient id="labShaft" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#fff" stopOpacity="0.85" />
-              <stop offset="55%" stopColor="#fff" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="#fff" stopOpacity="0.9" />
+              <stop offset="28%" stopColor="#fff" stopOpacity="0.62" />
+              <stop offset="70%" stopColor="#fff" stopOpacity="0.22" />
               <stop offset="100%" stopColor="#fff" stopOpacity="0" />
             </linearGradient>
+            {/* The glow is centred on the opening, and the shaft leaves through
+                the WHOLE of it rather than off the sill. Starting the polygon at
+                the bottom edge made a string of light hanging under the window
+                instead of a room lit through a hole in the wall. */}
             <mask id="labGlowMask">
-              <ellipse cx={WINDOW.x} cy={WINDOW.y + WINDOW.h / 6}
-                       rx={WINDOW.w * 1.9} ry={WINDOW.h * 1.15} fill="url(#labGlow)" />
+              <ellipse cx={WINDOW.x} cy={WINDOW.y}
+                       rx={WINDOW.w * 2.1} ry={WINDOW.h * 1.5} fill="url(#labGlow)" />
             </mask>
             <mask id="labShaftMask">
-              <path d={`M${WINDOW.x - WINDOW.w / 2} ${WINDOW.y + WINDOW.h / 2} L${WINDOW.x + WINDOW.w / 2} ${WINDOW.y + WINDOW.h / 2} L${WINDOW.x + 330} ${H} L${WINDOW.x - 460} ${H}z`}
+              <path d={`M${WINDOW.x - WINDOW.w / 2} ${WINDOW.y - WINDOW.h / 2} L${WINDOW.x + WINDOW.w / 2} ${WINDOW.y - WINDOW.h / 2} L${WINDOW.x + 380} ${H} L${WINDOW.x - 470} ${H}z`}
                     fill="url(#labShaft)" />
             </mask>
             <clipPath id="labWindowClip">
@@ -352,13 +372,11 @@ const LabView: React.FC<LabViewProps> = ({
             <g clipPath="url(#labWindowClip)">
               <rect x={WINDOW.x - WINDOW.w / 2} y={WINDOW.y - WINDOW.h / 2}
                     width={WINDOW.w} height={WINDOW.h} fill="#171109" />
-              {/* A REAL OPENING. The previous plate had a sky painted in it,
-                  so this had to be blown up to 1.9x and clipped purely to hide
-                  the painted one — a frame inside a frame. The hole is black
-                  here, so the view sits in it at close to its own size and
-                  IsoWindow's reveal reads as the window it is. */}
-              <IsoWindow month={month} weather={weather}
-                         x={WINDOW.x} y={WINDOW.y + 14} scale={WINDOW.w / 112} />
+              {/* Bare: the wall already has a frame and a reveal, and a second
+                  set drawn inside them reads as a sticker over the hole. What
+                  the room wants from this is the sky, the tree and the weather. */}
+              <IsoWindow month={month} weather={weather} bare
+                         x={WINDOW.x} y={WINDOW.y + 16} scale={WINDOW.w / 100} />
             </g>
           )}
 
@@ -367,7 +385,7 @@ const LabView: React.FC<LabViewProps> = ({
           {HARDWARE.filter(h => (inventory[h.id] ?? 0) > 0).map(h => (
             <g key={h.id}
                className={`iso-hw${h.opens ? ' clickable' : ''}`}
-               transform={`translate(${h.x},${h.y})`}
+               transform={`translate(${h.x},${h.y})${h.flip ? ' scale(-1,1)' : ''}`}
                tabIndex={h.opens ? 0 : undefined}
                role={h.opens ? 'button' : undefined}
                aria-label={h.opens ? `Open the ${h.label}` : undefined}

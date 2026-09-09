@@ -61,10 +61,19 @@ const IsoAppliance: React.FC<IsoApplianceProps> = ({ id, scale = 1, running, tit
   const clip = `toolclip-${id}`;
   const spin = SPIN[id];
 
+  /* THE ORIGIN IS THE OBJECT'S FOOT, NOT THE CELL'S CENTRE.
+     A sheet cell is centred on its subject with transparent margin all round, so
+     drawing it centred on a shelf line puts half the tool through the board.
+     Everything is lifted by the distance from the cell's middle to where the
+     object actually stands — about a third of the cell — which is what turns
+     "hanging in the air near a shelf" into "standing on it". */
+  const FOOT = 0.32;
+
   return (
-    <g className="iso-appliance" aria-hidden={title ? undefined : true}>
+    <g className="iso-appliance" transform={`translate(0,${-h * FOOT})`}
+       aria-hidden={title ? undefined : true}>
       {title ? <title>{title}</title> : null}
-      <ellipse className="iso-shadow" cx="0" cy={h * 0.44} rx={w * 0.34} ry={h * 0.07} />
+      <ellipse className="iso-shadow" cx="0" cy={h * FOOT} rx={w * 0.26} ry={h * 0.045} />
 
       <defs>
         <clipPath id={clip}>

@@ -22,6 +22,15 @@ interface IsoWindowProps {
   x?: number;
   y?: number;
   scale?: number;
+  /**
+   * Draw the VIEW only — no reveal, no frame, no glazing bars, no sill.
+   *
+   * When this is drawn into a painted room the wall already has all of those,
+   * and a second frame inside the painted one reads as a sticker stuck over the
+   * hole. What the room needs from this component is the sky, the tree and the
+   * weather; the architecture belongs to the plate.
+   */
+  bare?: boolean;
 }
 
 type Season = 'winter' | 'spring' | 'summer' | 'autumn';
@@ -47,7 +56,7 @@ const FOLIAGE: Record<Season, string[]> = {
   autumn: ['#a5702f', '#b8823a', '#8f5a26'],
 };
 
-const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, scale = 1 }) => {
+const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, scale = 1, bare }) => {
   const season = seasonOf(month);
   const [skyTop, skyBottom] = SKY[season];
   const leaves = FOLIAGE[season];
@@ -70,9 +79,8 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
         </clipPath>
       </defs>
 
-      {/* reveal */}
-      <rect x="-58" y="-70" width="116" height="108" rx="4" fill="#241b12" />
-      <rect x="-52" y="-64" width="104" height="96" rx="3" fill={`url(#${uid}sky)`} />
+      {!bare && <rect x="-58" y="-70" width="116" height="108" rx="4" fill="#241b12" />}
+      <rect x="-52" y="-64" width="104" height="96" rx={bare ? 0 : 3} fill={`url(#${uid}sky)`} />
 
       <g clipPath={`url(#${uid}clip)`}>
         {bright && <circle cx="26" cy="-44" r="13" fill="#d8b878" opacity="0.32" />}
@@ -119,12 +127,16 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
         )}
       </g>
 
-      {/* glazing bars and frame, over the glass */}
-      <path d="M0 -64 V32 M-52 -16 H52" stroke="#241b12" strokeWidth="4" />
-      <rect x="-52" y="-64" width="104" height="96" rx="3" fill="none" stroke="#3b2d1e" strokeWidth="3" />
-      {/* a little light spilling onto the sill */}
-      <rect x="-58" y="32" width="116" height="7" rx="2" fill="#3b2d1e" />
-      <rect x="-52" y="32" width="104" height="3" fill={bright ? 'rgba(216,184,120,0.22)' : 'rgba(243,233,216,0.06)'} />
+      {!bare && (
+        <>
+          {/* glazing bars and frame, over the glass */}
+          <path d="M0 -64 V32 M-52 -16 H52" stroke="#241b12" strokeWidth="4" />
+          <rect x="-52" y="-64" width="104" height="96" rx="3" fill="none" stroke="#3b2d1e" strokeWidth="3" />
+          {/* a little light spilling onto the sill */}
+          <rect x="-58" y="32" width="116" height="7" rx="2" fill="#3b2d1e" />
+          <rect x="-52" y="32" width="104" height="3" fill={bright ? 'rgba(216,184,120,0.22)' : 'rgba(243,233,216,0.06)'} />
+        </>
+      )}
     </g>
   );
 };

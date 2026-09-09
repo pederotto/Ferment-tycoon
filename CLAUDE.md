@@ -455,6 +455,35 @@ bright day was a dimmed room rather than a lit one. If a room plate is ever
 regenerated, **ask for a black opening and no beam**; everything downstream gets
 simpler.
 
+**Light leaves through the whole opening, not off the sill.** The shaft polygon
+started at the window's bottom edge, which drew a string of light hanging under
+it rather than a room lit through a hole in a wall. It starts at the top edge and
+covers the full height now, and the glow is centred on the opening rather than a
+sixth of the way down it.
+
+**Measure the opening; do not estimate it.** The window is black in the plate, so
+it can be found by thresholding: x593–727, y218–388. The estimate was 15px out
+horizontally and 33 too tall, which is why the view sat off to one side of its
+own hole.
+
+**Draw the view bare inside a painted wall.** `IsoWindow` carries a reveal, a
+frame, glazing bars and a sill. The plate has all four, and a second set inside
+them reads as a sticker over the hole — a frame printed across the tree. `bare`
+draws sky, hill, tree and weather and nothing else.
+
+**A sheet cell's origin is its centre; a tool's origin is its foot.** Cells are
+centred on their subject with transparent margin all round, so placing one on a
+shelf line puts half the tool through the board. `IsoAppliance` lifts by a third
+of the cell height, which is the difference between hanging in the air near a
+shelf and standing on it. Boards are measured too — left upper (0,95) to
+(385,245), left lower (0,275) to (380,367), right mirrored — and a tool's y is
+its board's height at its own x.
+
+**Mirror the tools on the right-hand wall.** The room recedes to its centre, so
+the left wall is seen from its right and the right wall from its left. The sheet
+draws each tool from one angle; unmirrored, the right-hand pair face out of the
+room, which is most of what made them look wrong.
+
 **Light has no edge.** The glow and the shaft are gradient masks, not solid
 shapes with a blend mode. A solid ellipse screened over the room drew a visible
 disc on the wall — the same mistake as the hover ring, one scale up.
