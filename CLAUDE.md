@@ -442,18 +442,26 @@ a workshop is arranged — nobody lifts a 60 L cask onto a workbench — and it 
 also what stops four-slot vessels competing with everything else for table
 space.
 
-**The bench is a painted room too, and the window is the exception.** The lab
-plate has a summer afternoon painted into its window; the game draws its own over
-that rectangle, clipped to the opening, because the view carries the month and
-the weather — a bare tree under snow is telling you why the koji is running cold.
-It is scaled to FILL the opening rather than drawn at its own size: `IsoWindow`
-carries a frame and glazing bars, the plate already has both, and two frames
-inside each other read as a sticker. At its own scale it filled 118 of the
-opening's 190px and sat adrift in the middle of it.
+**The bench is a painted room too, and the window is a hole in it.** The plate's
+window is black and its light is flat and ambient, which is what makes the room
+work: the season view drops into the opening at its own size, and the weather
+lights the room rather than arguing with it.
+
+The first version of this plate had a summer sky painted in the window and a hard
+sunbeam across the floor. Both had to be fought — the view was scaled to 1.9x and
+clipped purely to hide the painted one behind a frame inside a frame, and a
+multiply layer pulled the whole room down before anything could be added, so a
+bright day was a dimmed room rather than a lit one. If a room plate is ever
+regenerated, **ask for a black opening and no beam**; everything downstream gets
+simpler.
+
+**Light has no edge.** The glow and the shaft are gradient masks, not solid
+shapes with a blend mode. A solid ellipse screened over the room drew a visible
+disc on the wall — the same mistake as the hover ring, one scale up.
 
 Small vessels go on the table, big ones on the flagstones either side, and the
-hardware goes on the shelves — those are high and narrow in this projection,
-which suits a silhouette and would not suit a jar.
+hardware goes on the shelves: two boards a side, and a tool's y is the board's
+height at its x, because the boards recede.
 
 **A painted room must be EMPTY where the game puts things.** The first cellar
 plate had painted jars on its shelves and painted barrels on its floor, and the

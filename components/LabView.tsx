@@ -74,26 +74,26 @@ type Spot = { x: number; y: number; s: number };
 /* On the table. Back row first — filling back to front means a new batch lands
    at the front where you can see it, and nothing already there has to move. */
 const TABLE_SPOTS: Spot[] = [
-  { x: 560, y: 470, s: 0.80 },
-  { x: 672, y: 470, s: 0.80 },
-  { x: 784, y: 470, s: 0.80 },
-  { x: 500, y: 540, s: 0.95 },
-  { x: 615, y: 545, s: 0.98 },
-  { x: 730, y: 545, s: 0.98 },
-  { x: 845, y: 540, s: 0.95 },
+  { x: 590, y: 472, s: 0.80 },
+  { x: 675, y: 472, s: 0.80 },
+  { x: 760, y: 472, s: 0.80 },
+  { x: 490, y: 536, s: 0.96 },
+  { x: 615, y: 540, s: 0.99 },
+  { x: 740, y: 540, s: 0.99 },
+  { x: 865, y: 536, s: 0.96 },
 ];
 
 /* On the floor, either side of the table. */
 const FLOOR_SPOTS: Spot[] = [
-  { x: 340, y: 690, s: 0.95 },
-  { x: 1010, y: 690, s: 0.95 },
-  { x: 265, y: 762, s: 1.05 },
-  { x: 1085, y: 762, s: 1.05 },
+  { x: 330, y: 660, s: 0.95 },
+  { x: 1020, y: 660, s: 0.95 },
+  { x: 245, y: 745, s: 1.05 },
+  { x: 1105, y: 745, s: 1.05 },
 ];
 
 /* The window in the back wall. The plate has a painted sky inside it; the game
    draws its own over the top, because that view is the month and the weather. */
-const WINDOW = { x: 657, y: 308, w: 127, h: 190 };
+const WINDOW = { x: 675, y: 295, w: 142, h: 203 };
 
 /* A jar at isoScaleFor(2) is ~30 units wide in this grid. Measured against the
    painted table, ~60 is what sits on it without looking like a bead. */
@@ -137,14 +137,16 @@ const LIGHT_TINT: Record<string, string> = {
 };
 
 const HARDWARE: { id: ApplianceId; x: number; y: number; scale: number; label: string; opens?: boolean }[] = [
-  /* On the shelves and along the walls, read off the plate. High and narrow in
-     this projection, which suits a silhouette and would not suit a jar. */
-  { id: 'wooden_press', x: 1180, y: 690, scale: 1.5,  label: 'Wooden Press', opens: true },
-  { id: 'centrifuge',   x: 205,  y: 262, scale: 1.25, label: 'Centrifuge',   opens: true },
-  { id: 'humidifier',   x: 1130, y: 300, scale: 1.15, label: 'Ultrasonic Mister' },
-  { id: 'portable_fan', x: 300,  y: 372, scale: 1.05, label: 'Clip-on Fan' },
-  { id: 'agitator',     x: 1090, y: 380, scale: 1.1,  label: 'Geared Agitator' },
-  { id: 'mash_paddle',  x: 190,  y: 700, scale: 1.3,  label: 'Mash Paddle' },
+  /* Two boards a side, read off the plate: the upper runs from the frame edge at
+     y125 down to y256 at x400, the lower from y302 to y381. A tool stands ON the
+     board, so its y is the board's height at its x. */
+  { id: 'centrifuge',   x: 210,  y: 194, scale: 1.2,  label: 'Centrifuge', opens: true },
+  { id: 'humidifier',   x: 1134, y: 194, scale: 1.1,  label: 'Ultrasonic Mister' },
+  { id: 'portable_fan', x: 200,  y: 343, scale: 1.0,  label: 'Clip-on Fan' },
+  { id: 'agitator',     x: 1144, y: 343, scale: 1.05, label: 'Geared Agitator' },
+  /* And two on the floor, where a press and a paddle would actually live. */
+  { id: 'wooden_press', x: 1160, y: 700, scale: 1.45, label: 'Wooden Press', opens: true },
+  { id: 'mash_paddle',  x: 185,  y: 715, scale: 1.3,  label: 'Mash Paddle' },
 ];
 
 /** Spread n items across a band, centred, with a sane gap when there are few. */
@@ -276,6 +278,27 @@ const LabView: React.FC<LabViewProps> = ({
               <stop offset="70%" stopColor="#000" stopOpacity="0.05" />
               <stop offset="100%" stopColor="#000" stopOpacity="0.42" />
             </radialGradient>
+            {/* Light has no edge. A solid ellipse screened over the room drew a
+                visible disc on the wall — the same mistake as the hover ring,
+                one scale up. Both the glow and the shaft fade out. */}
+            <radialGradient id="labGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#fff" stopOpacity="1" />
+              <stop offset="45%" stopColor="#fff" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+            </radialGradient>
+            <linearGradient id="labShaft" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fff" stopOpacity="0.85" />
+              <stop offset="55%" stopColor="#fff" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+            </linearGradient>
+            <mask id="labGlowMask">
+              <ellipse cx={WINDOW.x} cy={WINDOW.y + WINDOW.h / 6}
+                       rx={WINDOW.w * 1.9} ry={WINDOW.h * 1.15} fill="url(#labGlow)" />
+            </mask>
+            <mask id="labShaftMask">
+              <path d={`M${WINDOW.x - WINDOW.w / 2} ${WINDOW.y + WINDOW.h / 2} L${WINDOW.x + WINDOW.w / 2} ${WINDOW.y + WINDOW.h / 2} L${WINDOW.x + 330} ${H} L${WINDOW.x - 460} ${H}z`}
+                    fill="url(#labShaft)" />
+            </mask>
             <clipPath id="labWindowClip">
               <rect x={WINDOW.x - WINDOW.w / 2} y={WINDOW.y - WINDOW.h / 2}
                     width={WINDOW.w} height={WINDOW.h} />
@@ -284,8 +307,15 @@ const LabView: React.FC<LabViewProps> = ({
 
           {/* THE PLATE. Everything below is the live room standing in it. */}
           <image href={LAB_PLATE} x="0" y="0" width={W} height={H} preserveAspectRatio="none" />
-          {/* THE LIGHT. Wash first — it pulls the painted beam back toward the
-              ambient — then our own beam at the strength the day actually has. */}
+          {/* THE LIGHT.
+              This plate is lit flat and ambient with NO beam baked into it,
+              which is the whole reason for asking for a second one. The first
+              had a hard July sunbeam painted across the floor, so the code spent
+              a multiply layer arguing the room back down before it could add
+              anything, and a bright day was a dimmed room rather than a lit one.
+              Here the weather simply lights it: warm it on a good day, cool and
+              dim it on a bad one, and lay a shaft from the window only when there
+              is actually sun to cast one. */}
           {weather && (() => {
             const lit = DAYLIGHT[weather.type] ?? 0.5;
             const tint = LIGHT_TINT[seasonOf(month)] ?? '#e2d3a8';
@@ -293,18 +323,17 @@ const LabView: React.FC<LabViewProps> = ({
             return (
               <>
                 <rect x="0" y="0" width={W} height={H} fill="#26303a"
-                      style={{ mixBlendMode: 'multiply' }} opacity={0.46 * (1 - lit)} />
-                {lit > 0.12 && (
+                      style={{ mixBlendMode: 'multiply' }} opacity={0.34 * (1 - lit)} />
+                <rect x="0" y="0" width={W} height={H} fill={tint}
+                      style={{ mixBlendMode: 'soft-light' }} opacity={0.34 * lit} />
+                {lit > 0.15 && (
                   <>
-                    {/* The shaft, spreading forward and down the way the painted
-                        one does, so they reinforce rather than cross. */}
-                    <path d={`M${wx - WINDOW.w / 2} ${wy} L${wx + WINDOW.w / 2} ${wy} L${wx + 300} ${H} L${wx - 430} ${H}z`}
-                          fill={tint} opacity={0.13 * lit}
+                    <rect x="0" y="0" width={W} height={H} fill={tint}
+                          mask="url(#labShaftMask)" opacity={0.20 * lit}
                           style={{ mixBlendMode: 'screen' }} />
-                    {/* And the glow in the reveal itself. */}
-                    <ellipse cx={wx} cy={wy - WINDOW.h / 3} rx={WINDOW.w * 1.5} ry={WINDOW.h * 0.9}
-                             fill={tint} opacity={0.16 * lit}
-                             style={{ mixBlendMode: 'screen' }} />
+                    <rect x="0" y="0" width={W} height={H} fill={tint}
+                          mask="url(#labGlowMask)" opacity={0.26 * lit}
+                          style={{ mixBlendMode: 'screen' }} />
                   </>
                 )}
               </>
@@ -321,13 +350,13 @@ const LabView: React.FC<LabViewProps> = ({
             <g clipPath="url(#labWindowClip)">
               <rect x={WINDOW.x - WINDOW.w / 2} y={WINDOW.y - WINDOW.h / 2}
                     width={WINDOW.w} height={WINDOW.h} fill="#171109" />
-              {/* Scaled to fill the opening and clipped, so what shows is the
-                  VIEW. IsoWindow draws its own frame and glazing bars; the plate
-                  already has both, and two frames inside each other reads as a
-                  sticker. At the component's own scale it filled 118 of the
-                  opening's 190px and sat adrift in the middle of it. */}
+              {/* A REAL OPENING. The previous plate had a sky painted in it,
+                  so this had to be blown up to 1.9x and clipped purely to hide
+                  the painted one — a frame inside a frame. The hole is black
+                  here, so the view sits in it at close to its own size and
+                  IsoWindow's reveal reads as the window it is. */}
               <IsoWindow month={month} weather={weather}
-                         x={WINDOW.x} y={WINDOW.y + 30} scale={1.9} />
+                         x={WINDOW.x} y={WINDOW.y + 14} scale={WINDOW.w / 112} />
             </g>
           )}
 
@@ -357,7 +386,7 @@ const LabView: React.FC<LabViewProps> = ({
           {/* The cellar stair. The plate has no door, so it stands against the
               left wall where one would be. */}
           {onOpenCellar && (
-            <IsoDoor x={96} y={470} scale={1.15}
+            <IsoDoor x={100} y={492} scale={1.12}
                      occupied={cellarUsed} capacity={cellarCapacity}
                      onOpen={onOpenCellar} />
           )}
