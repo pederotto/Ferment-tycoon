@@ -146,10 +146,6 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
           state={{ fill: 0.85, lidOpen: false, hot: false, spoiled: false, agitated: false, heated: false, mist: 0 }}
         />
       </g>
-      {/* How far along, as a ring rather than a number — you are not managing
-          these, you are waiting for them. */}
-      <ellipse cx="0" cy="6" rx={36 * s} ry={13 * s} fill="none"
-               stroke="var(--brass)" strokeWidth="1.4" opacity={0.25 + v.maturity * 0.6} />
       <circle className="iso-pip" cx="0" cy={-74 * s} r="3.2" fill="var(--brass)" opacity={0.4 + v.maturity * 0.6} />
     </g>
     );

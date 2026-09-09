@@ -161,8 +161,7 @@ const LabView: React.FC<LabViewProps> = ({
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSlot(batch); } }}
       >
         <ellipse className="iso-shadow" cx="0" cy="8" rx={30 * s} ry={10 * s} />
-        <ellipse className="iso-ring" cx="0" cy="6" rx={36 * s} ry={13 * s}
-                 fill="none" stroke={tone} strokeWidth="1.6" />
+
         <g className="iso-lift">
           <IsoVessel
             vesselId={batch.vesselId}
@@ -179,18 +178,6 @@ const LabView: React.FC<LabViewProps> = ({
         {/* Always-on pip, so the bench reads at a glance without hovering. */}
         <circle className="iso-pip" cx="0" cy={-74 * s} r="3.4" fill={tone} />
 
-        <g className="iso-card" transform={`translate(-86,${-134 * s})`}>
-          <rect width="172" height="58" rx="3" fill="#241b10" stroke={tone} strokeWidth="1" />
-          <text className="iso-t" x="9" y="17">{v.name}</text>
-          <text className="iso-s" x="9" y="30" fill="var(--text-lo)">
-            {vessel.name} · {vessel.capacityL}L
-          </text>
-          <text className="iso-s" x="9" y="43" fill={tone}>
-            {status} · {batch.params.temp.toFixed(1)}° · safety {Math.round(batch.quality.safety)}
-          </text>
-          <rect x="9" y="48" width="154" height="3" rx="1.5" fill="rgba(0,0,0,0.45)" />
-          <rect x="9" y="48" width={154 * Math.min(1, batch.progress / 100)} height="3" rx="1.5" fill={tone} />
-        </g>
       </g>
     );
   };

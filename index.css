@@ -2033,26 +2033,34 @@ input[type="range"].dial-slider::-moz-range-thumb {
 
 .iso-slot { cursor: pointer; }
 .iso-slot:focus { outline: none; }
-.iso-lift { transition: transform 170ms cubic-bezier(.2, .7, .3, 1); }
+/* NOTHING MOVES UNDER THE CURSOR.
+   This lifted the vessel 8px on hover. In SVG the hit area IS the painted shape,
+   so lifting it took the bottom edge out from under the pointer — which dropped
+   the hover, which dropped the vessel, which caught the pointer again. A flicker
+   loop, and every cycle set React state and re-rasterised the ink filter, so the
+   drawing visibly strobed as well. Both complaints, one cause.
+
+   The hover cue is now the ring and a little brightness: neither changes
+   geometry, so neither can feed back into the pointer. */
+.iso-lift { transition: filter 150ms ease; }
 .iso-slot:hover .iso-lift,
-.iso-slot:focus-visible .iso-lift { transform: translateY(-8px); }
+.iso-slot:focus-visible .iso-lift { filter: url(#inkRough) brightness(1.14); }
 
+/* A soft contact shadow, and nothing else on the floor. The hover cue used to be
+   a hard stroked ellipse fading in under the vessel — a ring appearing around
+   your cursor as you move across the bench, which reads as an error state rather
+   than as a highlight. Brightness does the job without drawing a shape. */
 .iso-shadow { fill: rgba(0, 0, 0, 0.42); }
-.iso-ring { opacity: 0; transition: opacity 150ms ease; }
-.iso-slot:hover .iso-ring,
-.iso-slot:focus-visible .iso-ring,
-.iso-slot.open .iso-ring { opacity: 1; }
 
-/* The pip is always visible — the bench has to read without hovering. */
+/* The pip is always visible — the bench has to read without hovering, and it
+   used to be hidden on hover, which is one more thing changing under the mouse. */
 .iso-pip { opacity: 0.9; }
-.iso-slot:hover .iso-pip, .iso-slot.open .iso-pip { opacity: 0; }
 
-.iso-card { opacity: 0; pointer-events: none; transition: opacity 140ms ease; }
-.iso-slot:hover .iso-card,
-.iso-slot:focus-visible .iso-card,
-.iso-slot.open .iso-card { opacity: 1; }
-.iso-t { font-family: 'Zilla Slab', serif; font-size: 12.5px; fill: var(--text-hi); }
-.iso-s { font-family: 'IBM Plex Mono', monospace; font-size: 9px; }
+/* The hover card is gone. It repeated what the action bar under the scene
+   already says about the focused vessel, it was drawn inside the SVG so it
+   overlapped the neighbours it was supposed to describe, and it was the loudest
+   part of the flicker. The bar is the place for this; it does not obscure the
+   room to do it. */
 
 .iso-steam { stroke: rgba(243, 233, 216, 0.3); }
 

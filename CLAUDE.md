@@ -476,6 +476,20 @@ the range where the honest cube root of volume would give 3.1x, because at true
 scale a 2 L jar is too small to read or click. The rest of the size difference
 is carried by which row the vessel stands in.
 
+**Nothing may move under the cursor.** The vessels lifted 8px on hover. In SVG
+the hit area IS the painted shape, so lifting took the bottom edge out from under
+the pointer, which dropped the hover, which dropped the vessel, which caught the
+pointer again — a flicker loop. Every cycle set React state and re-rasterised the
+ink filter, so the drawing strobed as well: "the jumping of the objects" and "the
+flickering" were one bug. Hover cues must not change geometry. Brightness does.
+
+**No ring on the floor, and no hover card.** The ring was a hard stroked ellipse
+fading in under whatever the pointer crossed, which reads as an error state
+rather than a highlight. The card repeated what the action bar under the scene
+already says, was drawn inside the SVG so it covered the neighbours it described,
+and was the loudest part of the flicker. The bar is where that information goes;
+it does not obscure the room to show it.
+
 **Nothing floats over the front row.** The action bar lives in its own band
 under the scene. Positioned inside the room it covered the front row, which is
 the row the player is most likely to be reaching for.
