@@ -1,4 +1,8 @@
 import React from 'react';
+import {
+  TOOL_SHEET, TOOL_INDEX, TOOL_COLS,
+  TOOL_CELL_W, TOOL_CELL_H, TOOL_SHEET_W, TOOL_SHEET_H,
+} from './toolSheet';
 
 /**
  * THE HARDWARE, IN THE ROOM
@@ -7,12 +11,20 @@ import React from 'react';
  * made a bed cool faster, a humidifier slowed moisture loss, an agitator kept a
  * cask even — and none of them existed anywhere you could look at.
  *
- * Drawn into the workshop they do two things a row cannot: they say what you
- * own at a glance, and they say what the room is FOR. A bench with a press and a
- * centrifuge standing in it is a different operation from one with a clip-on fan.
+ * They were flat silhouettes for a while, which the owner rightly called
+ * terrible. These are painted, sliced from one sheet so the six match each other.
  *
  * Everything here is decorative in the strict sense — the simulation reads the
- * inventory, not these — but a tool you can see is a tool you remember you have.
+ * inventory, not these — but a tool you can see is a tool you remember you have,
+ * and a room with a press and a centrifuge standing in it is visibly a different
+ * operation from one with a clip-on fan.
+ *
+ * WHAT RUNNING LOOKS LIKE. The sheet is one flat picture per tool, so the moving
+ * parts cannot be animated separately. What a working tool gets instead is drawn
+ * over the top: a plume above the mister, a spun streak across the fan and the
+ * centrifuge rotor, a warm cast on all of them. That is enough to answer "is it
+ * doing anything", which is the only question the room needs to answer — the
+ * numbers live in the inspector.
  */
 
 export type ApplianceId =
@@ -22,110 +34,85 @@ export type ApplianceId =
 interface IsoApplianceProps {
   id: ApplianceId;
   scale?: number;
-  /** Drawn lit when it is actually doing something this tick. */
+  /** Drawn working when a batch is actually calling on it this tick. */
   running?: boolean;
   title?: string;
 }
 
+/* One cell drawn at about 150 units, which is the size a tool reads at against
+   a 1344-wide room without swamping the shelf it stands on. */
+const DRAWN = 150;
+
+/* Where the moving part sits inside each cell, as a fraction of it — so the
+   overlay follows the drawing rather than being placed by eye at one scale. */
+const SPIN: Partial<Record<ApplianceId, { cx: number; cy: number; r: number }>> = {
+  portable_fan: { cx: 0.46, cy: 0.46, r: 0.19 },
+  centrifuge:   { cx: 0.43, cy: 0.36, r: 0.17 },
+};
+
 const IsoAppliance: React.FC<IsoApplianceProps> = ({ id, scale = 1, running, title }) => {
-  const lit = !!running;
+  const i = TOOL_INDEX[id] ?? 0;
+  const col = i % TOOL_COLS;
+  const row = Math.floor(i / TOOL_COLS);
 
-  /* Flat silhouettes rather than little isometric boxes. The pseudo-3D versions
-     had three shaded faces each and read as clutter beside the vessels, which
-     are simple rounded forms — the eye kept being pulled to the wrong objects.
-     These are side elevations with one accent apiece, so they sit in the room
-     as furniture instead of competing with the work. */
-  const body = (() => {
-    switch (id) {
-      case 'portable_fan':
-        return (
-          <>
-            <rect x="-2" y="10" width="4" height="18" rx="1" fill="#4a453d" />
-            <rect x="-8" y="27" width="16" height="4" rx="2" fill="#3a352e" />
-            <circle cx="0" cy="0" r="12" fill="#22201c" stroke="#5f584e" strokeWidth="2" />
-            <g className={lit ? 'iso-fan-spin' : undefined} style={{ transformOrigin: '0px 0px' }}>
-              <path d="M0 0 L-8 -6 A10 10 0 0 1 2 -10z" fill={lit ? '#9b9384' : '#6d675c'} />
-              <path d="M0 0 L10 -2 A10 10 0 0 1 4 8z" fill={lit ? '#9b9384' : '#6d675c'} />
-              <path d="M0 0 L-2 10 A10 10 0 0 1 -10 2z" fill={lit ? '#9b9384' : '#6d675c'} />
-            </g>
-            <circle cx="0" cy="0" r="2.2" fill="#a8a094" />
-          </>
-        );
-
-      case 'humidifier':
-        return (
-          <>
-            {lit && (
-              <g className="iso-mist-plume">
-                <ellipse cx="0" cy="-26" rx="9" ry="4" fill="var(--teal, #5fa3a8)" opacity="0.18" />
-                <ellipse cx="2" cy="-33" rx="6" ry="3" fill="var(--teal, #5fa3a8)" opacity="0.12" />
-              </g>
-            )}
-            <rect x="-10" y="-16" width="20" height="32" rx="4" fill="#3d4749" />
-            <rect x="-6" y="-9" width="12" height="17" rx="2"
-                  fill={lit ? 'rgba(95,163,168,0.45)' : 'rgba(95,163,168,0.16)'} />
-            <rect x="-3.5" y="-20" width="7" height="5" rx="1.5" fill="#2b3335" />
-            <circle cx="0" cy="12" r="1.8" fill={lit ? 'var(--teal, #5fa3a8)' : '#333b3c'} />
-          </>
-        );
-
-      case 'wooden_press':
-        return (
-          <>
-            <rect x="-22" y="24" width="44" height="7" rx="1.5" fill="var(--oak-deep, #4a3018)" />
-            <rect x="-18" y="-34" width="6" height="58" fill="var(--oak, #6b4a29)" />
-            <rect x="12" y="-34" width="6" height="58" fill="var(--oak, #6b4a29)" />
-            <rect x="-22" y="-40" width="44" height="8" rx="1.5" fill="var(--oak-lit, #8a6a3a)" />
-            <rect x="-2.5" y="-32" width="5" height="20" fill="#8d8577" />
-            <rect x="-9" y="-36" width="18" height="4" rx="2" fill="#a39a8b" />
-            <rect x="-15" y="-12" width="30" height="6" rx="1.5" fill="#6d635a" />
-            <rect x="-14" y="-5" width="28" height="12" rx="1.5" fill="#c9ad72" opacity="0.9" />
-          </>
-        );
-
-      case 'centrifuge':
-        return (
-          <>
-            <rect x="-17" y="-6" width="34" height="24" rx="4" fill="#3d3831" />
-            <path d="M-17 -4 a17 12 0 0 1 34 0z" fill="#4f4941" />
-            <ellipse cx="0" cy="-4" rx="11" ry="4.5" fill="#1c1a16" />
-            <g className={lit ? 'iso-spin-fast' : undefined} style={{ transformOrigin: '0px -4px' }}>
-              <ellipse cx="0" cy="-4" rx="8" ry="3" fill="#6d675c" opacity="0.8" />
-            </g>
-            <rect x="-11" y="9" width="22" height="4" rx="2" fill="#2b2723" />
-            <circle cx="12" cy="11" r="2" fill={lit ? 'var(--moss, #7a9e6a)' : '#332f2a'} />
-          </>
-        );
-
-      case 'agitator':
-        return (
-          <>
-            <rect x="-2" y="-6" width="4" height="40" fill="#4a453d" />
-            <rect x="-11" y="-20" width="22" height="15" rx="3" fill="#514b43" />
-            <circle cx="0" cy="-12.5" r="3" fill={lit ? 'var(--amber, #e08a3c)' : '#6d675c'} />
-            <g className={lit ? 'iso-agitate' : undefined} style={{ transformOrigin: '0px -6px' }}>
-              <rect x="-1.5" y="-6" width="3" height="34" rx="1.5" fill="#8d8577" />
-              <path d="M-7 26 L7 26 L5 33 L-5 33z" fill="var(--oak-lit, #8a6a3a)" />
-            </g>
-          </>
-        );
-
-      case 'mash_paddle':
-      default:
-        return (
-          <>
-            <path d="M4 -34 L13 -37 L17 -24 L8 -21z" fill="var(--oak-lit, #8a6a3a)" />
-            <path d="M-5 8 L7 -24" stroke="var(--oak, #6b4a29)" strokeWidth="3.4" strokeLinecap="round" />
-          </>
-        );
-    }
-  })();
+  const k = (DRAWN / TOOL_CELL_W) * scale;
+  const w = TOOL_CELL_W * k;
+  const h = TOOL_CELL_H * k;
+  const clip = `toolclip-${id}`;
+  const spin = SPIN[id];
 
   return (
-    <g className="iso-appliance" transform={`scale(${scale})`}>
+    <g className="iso-appliance" aria-hidden={title ? undefined : true}>
       {title ? <title>{title}</title> : null}
-      <ellipse className="iso-shadow" cx="0" cy={id === 'wooden_press' ? 32 : 20} rx="17" ry="5" />
-      {body}
+      <ellipse className="iso-shadow" cx="0" cy={h * 0.44} rx={w * 0.34} ry={h * 0.07} />
+
+      <defs>
+        <clipPath id={clip}>
+          <rect x={-w / 2} y={-h / 2} width={w} height={h} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${clip})`}>
+        <image
+          href={TOOL_SHEET}
+          x={-w / 2 - col * w}
+          y={-h / 2 - row * h}
+          width={TOOL_SHEET_W * k}
+          height={TOOL_SHEET_H * k}
+          preserveAspectRatio="none"
+        />
+      </g>
+
+      {running && (
+        <>
+          {/* A warm cast, so a working tool reads as working from across the room. */}
+          <ellipse cx="0" cy="0" rx={w * 0.5} ry={h * 0.5}
+                   fill="var(--amber, #e08a3c)" opacity="0.10" />
+          {spin && (
+            <g className="iso-spin-fast"
+               style={{ transformOrigin: `${(spin.cx - 0.5) * w}px ${(spin.cy - 0.5) * h}px` }}>
+              <ellipse cx={(spin.cx - 0.5) * w} cy={(spin.cy - 0.5) * h}
+                       rx={w * spin.r} ry={h * spin.r * 0.92}
+                       fill="none" stroke="rgba(243,233,216,0.5)" strokeWidth={w * 0.035}
+                       strokeDasharray={`${w * 0.12} ${w * 0.3}`} />
+            </g>
+          )}
+          {id === 'humidifier' && (
+            <g className="iso-mist-plume">
+              <ellipse cx={w * 0.02} cy={-h * 0.42} rx={w * 0.13} ry={h * 0.05}
+                       fill="var(--teal, #5fa3a8)" opacity="0.22" />
+              <ellipse cx={w * 0.07} cy={-h * 0.52} rx={w * 0.09} ry={h * 0.04}
+                       fill="var(--teal, #5fa3a8)" opacity="0.15" />
+            </g>
+          )}
+          {id === 'agitator' && (
+            <g className="iso-agitate"
+               style={{ transformOrigin: `0px ${-h * 0.1}px` }}>
+              <path d={`M${-w * 0.1} ${h * 0.3} L${w * 0.1} ${h * 0.3}`}
+                    stroke="rgba(243,233,216,0.35)" strokeWidth={w * 0.03} strokeLinecap="round" />
+            </g>
+          )}
+        </>
+      )}
     </g>
   );
 };

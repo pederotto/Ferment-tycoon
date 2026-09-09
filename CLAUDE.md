@@ -571,6 +571,24 @@ picture, silently.
 - **No ink filter on sheet cells.** They are already painted; roughening a
   painted icon only blurs it. The filter stays on the drawn fallbacks.
 
+**A supplied sheet on a light ground has to be keyed at build time.** The tool
+sheet arrived cream with a printed border round each cell, which would have
+pasted six pale squares into a dark room. `art/tools.png` is produced by flooding
+the ground from each cell's edges after painting over the border, plus an
+explicit seed inside the press frame — the one region enclosed on all sides that
+a flood cannot reach from outside. Keying works here only because these are drawn
+with hard contour lines; it would destroy a soft-edged painting.
+
+**A sheet cell is not the size of the thing in it.** The object fills roughly 60%
+of its cell and the rest is transparent margin, so a tool drawn at 150 units
+reads at about 90. The hardware scales look large for that reason; they are not.
+
+**Painted tools cannot animate their own parts.** The sheet is one flat picture
+per tool, so "running" is drawn over the top: a plume above the mister, a spun
+streak across the fan and the centrifuge rotor, a warm cast on all of them. That
+answers "is it doing anything", which is the only question the room needs to
+answer — the numbers live in the inspector.
+
 **Ingredient art is a lookup with a fallback.** `ART` in `IngredientArt.tsx`
 maps id to a drawing and `artFor` returns null for anything missing, which falls
 through to the old generic glyph. Filling in the remaining ingredients is

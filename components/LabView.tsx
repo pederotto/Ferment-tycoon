@@ -139,14 +139,16 @@ const LIGHT_TINT: Record<string, string> = {
 const HARDWARE: { id: ApplianceId; x: number; y: number; scale: number; label: string; opens?: boolean }[] = [
   /* Two boards a side, read off the plate: the upper runs from the frame edge at
      y125 down to y256 at x400, the lower from y302 to y381. A tool stands ON the
-     board, so its y is the board's height at its x. */
-  { id: 'centrifuge',   x: 210,  y: 194, scale: 1.2,  label: 'Centrifuge', opens: true },
-  { id: 'humidifier',   x: 1134, y: 194, scale: 1.1,  label: 'Ultrasonic Mister' },
-  { id: 'portable_fan', x: 200,  y: 343, scale: 1.0,  label: 'Clip-on Fan' },
-  { id: 'agitator',     x: 1144, y: 343, scale: 1.05, label: 'Geared Agitator' },
+     board, so its y is the board's height at its x. Scale is generous because a
+     sheet cell carries transparent margin — the object fills roughly 60% of it,
+     so the drawn size is not the visible size. */
+  { id: 'centrifuge',   x: 215,  y: 168, scale: 1.15, label: 'Centrifuge', opens: true },
+  { id: 'humidifier',   x: 1130, y: 168, scale: 1.05, label: 'Ultrasonic Mister' },
+  { id: 'portable_fan', x: 205,  y: 314, scale: 1.05, label: 'Clip-on Fan' },
+  { id: 'agitator',     x: 1140, y: 314, scale: 1.10, label: 'Geared Agitator' },
   /* And two on the floor, where a press and a paddle would actually live. */
-  { id: 'wooden_press', x: 1160, y: 700, scale: 1.45, label: 'Wooden Press', opens: true },
-  { id: 'mash_paddle',  x: 185,  y: 715, scale: 1.3,  label: 'Mash Paddle' },
+  { id: 'wooden_press', x: 1150, y: 640, scale: 1.70, label: 'Wooden Press', opens: true },
+  { id: 'mash_paddle',  x: 175,  y: 672, scale: 1.45, label: 'Mash Paddle' },
 ];
 
 /** Spread n items across a band, centred, with a sane gap when there are few. */
