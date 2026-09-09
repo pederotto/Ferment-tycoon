@@ -2522,6 +2522,10 @@ input[type="range"].dial-slider::-moz-range-thumb {
    aspect rather than the other way round — letterboxing a painted background is
    the one thing that makes it look pasted in. */
 .cellar-room { flex: 1; min-height: 0; background: #14100b; }
+/* The lab plate sets the room's proportions too, so the scene follows the
+   painting's aspect rather than being letterboxed into a fixed box. */
+.iso-room { background: #14100b; }
+.iso-room .iso-svg { display: block; width: 100%; height: auto; max-height: 64vh; }
 .cellar-room .iso-svg { display: block; width: 100%; height: auto; max-height: 62vh; }
 /* The plate is a painting; the grain overlay on top of it is mud. */
 .cellar::after { opacity: 0.03; }

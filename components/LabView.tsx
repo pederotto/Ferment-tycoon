@@ -5,6 +5,7 @@ import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
 import IsoAppliance, { ApplianceId } from './IsoAppliance';
 import IsoWindow from './IsoWindow';
+import { LAB_PLATE } from './labPlate';
 import IsoDoor from './IsoDoor';
 
 /**
@@ -50,25 +51,63 @@ interface LabViewProps {
   onOpenCellar?: () => void;
 }
 
-/* The room, in SVG units. The bench is a rhombus; the floor sits behind it. */
-const W = 900;
-const H = 470;
-const BACK_Y = 250, FRONT_Y = 404, LEFT_X = 62, RIGHT_X = 838, MID_X = W / 2;
-const MID_Y = (BACK_Y + FRONT_Y) / 2;
-const ROW_Y = { floor: 250, back: 322, front: 374 };
+/* THE ROOM IS A PAINTING NOW, and the viewBox is its pixel grid — so a spot is
+   placed by looking at the picture rather than by converting between two
+   coordinate systems and being a few percent out. */
+const W = 1344;
+const H = 800;
 
 /**
- * Where each piece of hardware stands. Hand-placed rather than laid out, because
- * a workshop is arranged by habit — the press by the wall, the fan clipped to
- * the bench edge, the mister on the floor where it can be filled.
+ * WHERE THINGS STAND, READ OFF THE PLATE.
+ *
+ * The table is the bench and it is generous, so the small vessels live on it —
+ * two rows, the back one drawn smaller because it is further away. Casks and
+ * barrels stand on the flagstones either side, which is where they would stand
+ * and which keeps them from swamping the table.
+ *
+ * The shelves carry the hardware. They are high and narrow in this projection,
+ * so a jar on them would be too small to read or click; a press or a fan is a
+ * silhouette and survives the distance.
  */
+type Spot = { x: number; y: number; s: number };
+
+/* On the table. Back row first — filling back to front means a new batch lands
+   at the front where you can see it, and nothing already there has to move. */
+const TABLE_SPOTS: Spot[] = [
+  { x: 560, y: 470, s: 0.80 },
+  { x: 672, y: 470, s: 0.80 },
+  { x: 784, y: 470, s: 0.80 },
+  { x: 500, y: 540, s: 0.95 },
+  { x: 615, y: 545, s: 0.98 },
+  { x: 730, y: 545, s: 0.98 },
+  { x: 845, y: 540, s: 0.95 },
+];
+
+/* On the floor, either side of the table. */
+const FLOOR_SPOTS: Spot[] = [
+  { x: 340, y: 690, s: 0.95 },
+  { x: 1010, y: 690, s: 0.95 },
+  { x: 265, y: 762, s: 1.05 },
+  { x: 1085, y: 762, s: 1.05 },
+];
+
+/* The window in the back wall. The plate has a painted sky inside it; the game
+   draws its own over the top, because that view is the month and the weather. */
+const WINDOW = { x: 657, y: 308, w: 127, h: 190 };
+
+/* A jar at isoScaleFor(2) is ~30 units wide in this grid. Measured against the
+   painted table, ~60 is what sits on it without looking like a bead. */
+const ROOM_SCALE = 2.1;
+
 const HARDWARE: { id: ApplianceId; x: number; y: number; scale: number; label: string; opens?: boolean }[] = [
-  { id: 'wooden_press', x: 786, y: 232, scale: 1,    label: 'Wooden Press', opens: true },
-  { id: 'centrifuge',   x: 122, y: 250, scale: 0.95, label: 'Centrifuge',   opens: true },
-  { id: 'humidifier',   x: 830, y: 330, scale: 0.9,  label: 'Ultrasonic Mister' },
-  { id: 'portable_fan', x: 706, y: 392, scale: 0.85, label: 'Clip-on Fan' },
-  { id: 'agitator',     x: 176, y: 214, scale: 0.9,  label: 'Geared Agitator' },
-  { id: 'mash_paddle',  x: 108, y: 386, scale: 0.9,  label: 'Mash Paddle' },
+  /* On the shelves and along the walls, read off the plate. High and narrow in
+     this projection, which suits a silhouette and would not suit a jar. */
+  { id: 'wooden_press', x: 1180, y: 690, scale: 1.5,  label: 'Wooden Press', opens: true },
+  { id: 'centrifuge',   x: 205,  y: 262, scale: 1.25, label: 'Centrifuge',   opens: true },
+  { id: 'humidifier',   x: 1130, y: 300, scale: 1.15, label: 'Ultrasonic Mister' },
+  { id: 'portable_fan', x: 300,  y: 372, scale: 1.05, label: 'Clip-on Fan' },
+  { id: 'agitator',     x: 1090, y: 380, scale: 1.1,  label: 'Geared Agitator' },
+  { id: 'mash_paddle',  x: 190,  y: 700, scale: 1.3,  label: 'Mash Paddle' },
 ];
 
 /** Spread n items across a band, centred, with a sane gap when there are few. */
@@ -128,29 +167,30 @@ const LabView: React.FC<LabViewProps> = ({
   const anyVenting = seen.some(v => (v.batch.controls?.vent ?? 0) >= 3);
   const anyMisting = seen.some(v => (v.batch.controls?.mist ?? 0) > 0);
   const anyAgitated = seen.some(v => v.agitated);
-  const floorRow = seen.filter(v => v.placement === 'floor');
-  const backRow = seen.filter(v => v.placement === 'back');
-  const frontRow = seen.filter(v => v.placement === 'front');
+  // Big vessels to the flagstones, small ones to the table — the rule the cellar
+  // uses too, and the reason nobody stands a 60L cask on a workbench. Filling
+  // back to front means a new batch lands where you can see it and nothing
+  // already there has to move.
+  const onFloor = seen.filter(v => v.vessel.capacityL >= 20);
+  const onTable = seen.filter(v => v.vessel.capacityL < 20);
+  const emptyCount = Math.max(0, Math.min(TABLE_SPOTS.length - onTable.length, maxSlots - usedSlots));
 
-  const floorX = spread(floorRow.length, 200, 700);
-  const backX = spread(backRow.length, 255, 645);
-  const frontX = spread(frontRow.length, 200, 700);
-
-  const emptyCount = Math.max(0, maxSlots - usedSlots);
-  const emptyX = spread(Math.min(emptyCount, 4), 320, 600);
-
-  const Slot: React.FC<{ v: ReturnType<typeof read>; x: number; y: number }> = ({ v, x, y }) => {
-    const { batch, recipe, vessel, s } = v;
+  /* One vessel, standing on a spot. The spot carries its own scale, because the
+     back of the table is further away than the front and a row drawn at one size
+     reads as a sticker sheet rather than as a room. */
+  const Slot: React.FC<{ v: ReturnType<typeof read>; spot: Spot }> = ({ v, spot }) => {
+    const { batch, vessel } = v;
     const tone = v.spoiled ? 'var(--brick)' : (v.peak || v.warn) ? 'var(--amber)' : 'var(--moss)';
     const status = v.spoiled ? 'Spoiled'
       : v.peak ? 'Peak'
       : v.warn ? (v.needsAir ? 'Overheat' : 'Stress')
       : `${Math.round(batch.progress)}%`;
+    const s = v.s * ROOM_SCALE * spot.s;
 
     return (
       <g
         className={`iso-slot${focused === batch.id ? ' open' : ''}`}
-        transform={`translate(${x},${y})`}
+        transform={`translate(${spot.x},${spot.y})`}
         tabIndex={0}
         role="button"
         aria-label={`${v.name} in a ${vessel.name}, ${vessel.capacityL} litres, ${status}. Open the ledger.`}
@@ -161,7 +201,6 @@ const LabView: React.FC<LabViewProps> = ({
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSlot(batch); } }}
       >
         <ellipse className="iso-shadow" cx="0" cy="8" rx={30 * s} ry={10 * s} />
-
         <g className="iso-lift">
           <IsoVessel
             vesselId={batch.vesselId}
@@ -174,10 +213,8 @@ const LabView: React.FC<LabViewProps> = ({
             }}
           />
         </g>
-
-        {/* Always-on pip, so the bench reads at a glance without hovering. */}
-        <circle className="iso-pip" cx="0" cy={-74 * s} r="3.4" fill={tone} />
-
+        {/* Always on, so the bench reads at a glance without hovering. */}
+        <circle className="iso-pip" cx="0" cy={-74 * s} r={3.4 * Math.max(0.8, spot.s)} fill={tone} />
       </g>
     );
   };
@@ -197,41 +234,42 @@ const LabView: React.FC<LabViewProps> = ({
       <div className="iso-room">
         <svg viewBox={`0 0 ${W} ${H}`} className="iso-svg" role="group" aria-label="The fermentation bench">
           <defs>
-            <linearGradient id="isoBenchTop" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#7a5631" /><stop offset="100%" stopColor="#5c3f22" />
-            </linearGradient>
-            <radialGradient id="isoLamp" cx="50%" cy="0%" r="72%">
-              <stop offset="0%" stopColor="#e08a3c" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#e08a3c" stopOpacity="0" />
+            <radialGradient id="labVignette" cx="50%" cy="44%" r="74%">
+              <stop offset="0%" stopColor="#000" stopOpacity="0" />
+              <stop offset="70%" stopColor="#000" stopOpacity="0.05" />
+              <stop offset="100%" stopColor="#000" stopOpacity="0.42" />
             </radialGradient>
+            <clipPath id="labWindowClip">
+              <rect x={WINDOW.x - WINDOW.w / 2} y={WINDOW.y - WINDOW.h / 2}
+                    width={WINDOW.w} height={WINDOW.h} />
+            </clipPath>
           </defs>
 
-          <ellipse cx={MID_X} cy="80" rx="430" ry="200" fill="url(#isoLamp)" />
+          {/* THE PLATE. Everything below is the live room standing in it. */}
+          <image href={LAB_PLATE} x="0" y="0" width={W} height={H} preserveAspectRatio="none" />
+          <rect x="0" y="0" width={W} height={H} fill="url(#labVignette)" />
 
-          {/* The window is the only place the season is a picture rather than a
-              word in the header — and month and weather are what set the ambient
-              temperature and humidity every batch is fighting. */}
-          {weather && <IsoWindow month={month} weather={weather} x={716} y={112} scale={0.94} />}
-
-          {/* The way out of this room. Drawn into the wall opposite the window,
-              before the floor row, so anything standing in front of it overlaps
-              it — there is no z-index in SVG and paint order is depth order. */}
-          {onOpenCellar && (
-            <IsoDoor x={128} y={196} scale={0.92}
-                     occupied={cellarUsed} capacity={cellarCapacity}
-                     onOpen={onOpenCellar} />
+          {/* THE WINDOW, DRAWN OVER THE PAINTED ONE.
+              The plate has a summer afternoon in it. This view is the actual
+              month and the actual weather — a bare tree under snow is telling
+              you why the koji is running cold — so it cannot be scenery. Clipped
+              to the painted opening so it sits in the wall rather than on it. */}
+          {weather && (
+            <g clipPath="url(#labWindowClip)">
+              <rect x={WINDOW.x - WINDOW.w / 2} y={WINDOW.y - WINDOW.h / 2}
+                    width={WINDOW.w} height={WINDOW.h} fill="#171109" />
+              {/* Scaled to fill the opening and clipped, so what shows is the
+                  VIEW. IsoWindow draws its own frame and glazing bars; the plate
+                  already has both, and two frames inside each other reads as a
+                  sticker. At the component's own scale it filled 118 of the
+                  opening's 190px and sat adrift in the middle of it. */}
+              <IsoWindow month={month} weather={weather}
+                         x={WINDOW.x} y={WINDOW.y + 30} scale={1.9} />
+            </g>
           )}
 
-          <g stroke="rgba(243,233,216,0.05)" strokeWidth="1" fill="none">
-            <path d={`M30 300 L${MID_X} 132 L870 300 L${MID_X} 468z`} />
-            <path d="M180 216 L660 456 M660 216 L180 456" />
-          </g>
-
-          {/* HARDWARE — the tools you own, standing where they would stand.
-              Decorative in the strict sense: the simulation reads the inventory,
-              not these. But a tool you can see is a tool you remember you have,
-              and a room with a press and a centrifuge in it is visibly a
-              different operation from one with a clip-on fan. */}
+          {/* HARDWARE — what you own, standing where it would stand. Decorative
+              in the strict sense: the simulation reads the inventory, not these. */}
           {HARDWARE.filter(h => (inventory[h.id] ?? 0) > 0).map(h => (
             <g key={h.id}
                className={`iso-hw${h.opens ? ' clickable' : ''}`}
@@ -253,34 +291,36 @@ const LabView: React.FC<LabViewProps> = ({
             </g>
           ))}
 
-          {/* FLOOR — drawn first, so the bench overlaps their feet and they
-              genuinely read as standing behind it. */}
-          {floorRow.map((v, i) => <Slot key={v.batch.id} v={v} x={floorX[i]} y={ROW_Y.floor} />)}
+          {/* The cellar stair. The plate has no door, so it stands against the
+              left wall where one would be. */}
+          {onOpenCellar && (
+            <IsoDoor x={96} y={470} scale={1.15}
+                     occupied={cellarUsed} capacity={cellarCapacity}
+                     onOpen={onOpenCellar} />
+          )}
 
-          {/* THE BENCH */}
-          <path d={`M${MID_X} ${BACK_Y} L${RIGHT_X} ${MID_Y} L${MID_X} ${FRONT_Y} L${LEFT_X} ${MID_Y}z`} fill="url(#isoBenchTop)" />
-          <path d={`M${LEFT_X} ${MID_Y} L${MID_X} ${FRONT_Y} v22 L${LEFT_X} ${MID_Y + 22}z`} fill="var(--oak-deep, #4a3018)" />
-          <path d={`M${RIGHT_X} ${MID_Y} L${MID_X} ${FRONT_Y} v22 L${RIGHT_X} ${MID_Y + 22}z`} fill="var(--oak-dark, #33200f)" />
-          <path d={`M${MID_X} ${BACK_Y} L${RIGHT_X} ${MID_Y} L${MID_X} ${FRONT_Y} L${LEFT_X} ${MID_Y}z`}
-                fill="none" stroke="rgba(243,233,216,0.16)" strokeWidth="1.2" />
+          {/* Floor before table: no z-index in SVG, so paint order is depth. */}
+          {onFloor.map((v, i) => FLOOR_SPOTS[i] && <Slot key={v.batch.id} v={v} spot={FLOOR_SPOTS[i]} />)}
 
-          {backRow.map((v, i) => <Slot key={v.batch.id} v={v} x={backX[i]} y={ROW_Y.back} />)}
+          {/* An open place is a footprint on the table, not an empty card. */}
+          {Array.from({ length: emptyCount }).map((_, i) => {
+            const spot = TABLE_SPOTS[onTable.length + i];
+            if (!spot) return null;
+            return (
+              <g key={`empty-${i}`} className="iso-empty"
+                 transform={`translate(${spot.x},${spot.y}) scale(${spot.s})`}
+                 tabIndex={0} role="button"
+                 aria-label={`Open bench slot ${usedSlots + i + 1}. Inoculate a culture.`}
+                 onClick={() => onSelectSlot(null)}
+                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSlot(null); } }}>
+                <path d="M0 -17 L40 3 L0 23 L-40 3z" fill="rgba(243,233,216,0.07)"
+                      stroke="rgba(243,233,216,0.42)" strokeWidth="1.8" strokeDasharray="6 5" />
+                <path d="M-9 3 h18 M0 -6 v18" stroke="rgba(243,233,216,0.62)" strokeWidth="2.2" strokeLinecap="round" />
+              </g>
+            );
+          })}
 
-          {/* An open place is a footprint on the bench, not an empty card. */}
-          {emptyX.map((x, i) => (
-            <g key={`empty-${i}`} className="iso-empty" transform={`translate(${x},${ROW_Y.front - 4})`}
-               tabIndex={0} role="button"
-               aria-label={`Open bench slot ${usedSlots + i + 1}. Inoculate a culture.`}
-               onClick={() => onSelectSlot(null)}
-               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSlot(null); } }}>
-              <path d="M0 -12 L28 2 L0 16 L-28 2z" fill="rgba(243,233,216,0.03)"
-                    stroke="rgba(243,233,216,0.22)" strokeWidth="1" strokeDasharray="4 4" />
-              <path d="M-6 2 h12 M0 -4 v12" stroke="rgba(243,233,216,0.42)" strokeWidth="1.5" strokeLinecap="round" />
-            </g>
-          ))}
-
-          {/* FRONT ROW — nearest the viewer, so drawn last. */}
-          {frontRow.map((v, i) => <Slot key={v.batch.id} v={v} x={frontX[i]} y={ROW_Y.front} />)}
+          {onTable.map((v, i) => TABLE_SPOTS[i] && <Slot key={v.batch.id} v={v} spot={TABLE_SPOTS[i]} />)}
         </svg>
 
       </div>

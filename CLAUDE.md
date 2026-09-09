@@ -442,6 +442,19 @@ a workshop is arranged — nobody lifts a 60 L cask onto a workbench — and it 
 also what stops four-slot vessels competing with everything else for table
 space.
 
+**The bench is a painted room too, and the window is the exception.** The lab
+plate has a summer afternoon painted into its window; the game draws its own over
+that rectangle, clipped to the opening, because the view carries the month and
+the weather — a bare tree under snow is telling you why the koji is running cold.
+It is scaled to FILL the opening rather than drawn at its own size: `IsoWindow`
+carries a frame and glazing bars, the plate already has both, and two frames
+inside each other read as a sticker. At its own scale it filled 118 of the
+opening's 190px and sat adrift in the middle of it.
+
+Small vessels go on the table, big ones on the flagstones either side, and the
+hardware goes on the shelves — those are high and narrow in this projection,
+which suits a silhouette and would not suit a jar.
+
 **A painted room must be EMPTY where the game puts things.** The first cellar
 plate had painted jars on its shelves and painted barrels on its floor, and the
 result was unreadable — you could not tell which vessels were yours. The plate in
