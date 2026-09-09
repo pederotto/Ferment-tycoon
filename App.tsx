@@ -6,7 +6,7 @@ import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER
   HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH, HYGIENE_NEGLECT_FLOOR,
   HYGIENE_IDLE_RECOVERY,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
-import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY } from './services/gameLogic';
+import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY, isContrabandBatch } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage , sporePotency } from './services/koji';
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
 import LabView from './components/LabView';
@@ -754,11 +754,26 @@ export default function App() {
               setUiState(u => ({ ...u, inspectorRaid: false }));
           }
       } else {
-          // Confiscate illegal batches + fine
-          const legalBatches = gameState.batches.filter(b => {
-               const sub = INGREDIENTS.find(i => i.id === b.substrateId);
-               return sub?.currency !== 'renown';
-          });
+          // THIS TOOK NOTHING.
+          //
+          // It kept every batch whose substrate was not bought with renown —
+          // the ORIGINAL contraband test, which stopped meaning anything the
+          // moment the underground started charging money. CLAUDE.md records
+          // that the heat tick was moved onto `batch.contraband` for exactly
+          // this reason; the confiscation was missed. So "let them take the
+          // illegal stock" politely took nothing, paid a fine, and left you on
+          // a list. It also only searched INGREDIENTS, so a batch built on a
+          // cultured spore was invisible to it either way.
+          //
+          // A health inspector condemns what has actually gone off as well as
+          // what is illegal, and the button says "let them take it" — so they
+          // take it.
+          const seized = gameState.batches.filter(
+            b => isContrabandBatch(b) || b.status === 'spoiled'
+          );
+          const legalBatches = gameState.batches.filter(
+            b => !isContrabandBatch(b) && b.status !== 'spoiled'
+          );
           // Conceding puts you on a list: the fine scales with priors and heat
           // stops cooling on its own from here.
           setGameState(prev => ({
@@ -769,6 +784,13 @@ export default function App() {
             money: prev.money - (200 + prev.undergroundBusts * 250),
           }));
           setUiState(u => ({ ...u, inspectorRaid: false }));
+          setLabNotification({
+            id: Date.now(),
+            text: seized.length
+              ? `They took ${seized.length} ${seized.length === 1 ? 'vessel' : 'vessels'} off the bench.`
+              : 'They found nothing to take, and fined you anyway.',
+            type: seized.length ? 'warn' : 'info',
+          });
       }
   };
 

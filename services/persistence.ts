@@ -131,6 +131,24 @@ export function loadGame(): GameState | null {
     // Timestamps are wall-clock; a batch resumed hours later must not think it
     // sat unattended the whole time. Re-anchor every running batch to now.
     const now = Date.now();
+    // HEAL HEAT LEFT PINNED BY THE IDLE-BENCH BUG.
+    //
+    // Hygiene decayed on a bench with nothing on it, down to a floor that sits
+    // below the level where filth starts making heat — so an idle room generated
+    // heat forever and, after a bust, ratcheted to 100 and stayed. That is fixed
+    // in the tick, but a save made while it was broken carries the damage, and
+    // post-bust decay is deliberately slow enough that it would take in-game
+    // years to drain.
+    //
+    // Only healed when there is nothing on the bench actually earning it. Heat
+    // from contraband you are still holding is heat you deserve.
+    const stillDirty = (migrated.batches ?? []).some(
+      b => b.contraband || b.status === 'spoiled'
+    );
+    if (!stillDirty && (migrated.heat ?? 0) > 55) {
+      migrated.heat = 30;
+    }
+
     migrated.batches = migrated.batches.map(b => ({
       ...b,
       lastTick: now,

@@ -358,6 +358,22 @@ screen for up to a month, which reads as broken rather than as quiet.
 
 ## The inspector
 
+**Confiscation must use `isContrabandBatch`, like everything else.** "Let them
+take the illegal stock" filtered on `substrate.currency !== 'renown'` — the
+ORIGINAL contraband test, which stopped meaning anything the moment the
+underground started charging money. The heat tick was moved onto
+`batch.contraband` for exactly that reason and the confiscation was missed, so
+conceding a raid took **nothing**, paid a fine, and put you on a list. It also
+searched only `INGREDIENTS`, so a batch built on a cultured spore was invisible
+to it regardless. Measured on a mixed bench of five: the old rule kept all five;
+it now seizes the contraband and the spoiled and keeps the rest.
+
+**A save can carry damage a fixed tick will not heal.** Heat pinned near 100 by
+the idle-bench bug drains at the post-bust rate, which is slow enough to take
+in-game years — so the fix alone left existing runs broken. `migrate()` pulls
+heat down when nothing on the bench is still earning it. Contraband you are
+holding keeps its heat.
+
 **Roll the raid once per game day, never per tick.** A per-tick roll scaled the
 odds with the speed control — at 8x and full heat the inspector called every
 four real seconds — and no per-tick probability is something a player can reason
