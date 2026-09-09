@@ -368,9 +368,20 @@ const LabView: React.FC<LabViewProps> = ({
                   fills the opening and the clip takes the overflow, which is
                   what `background-size: cover` does and what the eye expects of
                   a view through a hole. */}
-              <IsoWindow month={month} weather={weather} bare
-                         x={WINDOW.x} y={WINDOW.y + 16}
-                         scale={Math.max(WINDOW.w / 100, WINDOW.h / 92)} />
+              {(() => {
+                /* The sky spans local y -64..+32, so its centre sits at -16 and
+                   the group has to be pushed down by that much to centre the
+                   VIEW on the opening rather than the component's origin. The
+                   offset is in local units, so it scales with everything else —
+                   applying a flat +16 under-corrected by 13 units at a cover
+                   scale of 1.85, which is precisely the band that was left along
+                   the bottom. */
+                const k = Math.max(WINDOW.w / 100, WINDOW.h / 92);
+                return (
+                  <IsoWindow month={month} weather={weather} bare
+                             x={WINDOW.x} y={WINDOW.y + 16 * k} scale={k} />
+                );
+              })()}
             </g>
           )}
 
