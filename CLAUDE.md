@@ -373,13 +373,26 @@ it.
 
 ## React correctness
 
-**Hygiene must have a floor, and filth must scale.** Hygiene decays with bench
-load and had none without a cleaner, so any busy bench parked at zero — and
-because filth added 0.1 heat a tick against 0.05 shed, heat ratcheted to 100 and
-stayed. The inspector was not random; he was permanent on any bench that was
-actually being used. Filth now scales with how filthy (a bench at 39 is not one
-at 5) and neglect floors at `HYGIENE_NEGLECT_FLOOR`. Measured: a full bench with
-clean sourcing settles at 0 heat, one contraband batch still reaches 100.
+**An empty bench must not get dirty — it must air out.** Three inspector fixes
+in and this was still the bug. Hygiene decay was `1 + count * 0.18`, so a bench
+with NOTHING on it lost hygiene at the full base rate down to
+`HYGIENE_NEGLECT_FLOOR`. That floor is 25, and filth starts at 40 — so the floor
+did not prevent filth heat, it **guaranteed** it: 0.0375 a tick forever on an
+empty room, against a post-bust decay of 0.0175. One bust and heat ratcheted to
+100 and the inspector called on a bench with no batches at all.
+
+Decay is driven from zero by load now, and an idle bench recovers at
+`HYGIENE_IDLE_RECOVERY`. That bounds neglect: you can always stop, let the room
+settle, and the heat drains. **The only thing that can hold heat up indefinitely
+is contraband** — something you are actively doing — which is the shape this
+mechanic always wanted.
+
+Measured to equilibrium: empty bench with a past bust and starting at heat 80
+recovers to hygiene 100 and heat 0. Eight clean batches sit at heat 0; the same
+eight after a bust settle at 68, about a raid every 118 days, and a cleaner takes
+that to 0. One contraband batch pins at 100, a raid every 10 days. If you retune
+any of the heat constants, re-run that spread — the empty-bench row is the
+regression test.
 
 **Never put a side effect inside a state updater.** This app runs StrictMode, so
 React double-invokes every `setGameState(prev => ...)` callback. The inspector

@@ -44,6 +44,10 @@ export const HEAT_FROM_FILTH = 0.1;
 // bench sits here: bad for your batches, but not an automatic raid. Smuggling
 // still is one, which is the risk that ought to summon him.
 export const HYGIENE_NEGLECT_FLOOR = 25;
+// An empty bench airs out. Without this, hygiene only ever fell — so a room with
+// nothing in it still slid to the neglect floor, and because that floor sits
+// below the 40 where filth starts, an idle room generated heat forever.
+export const HYGIENE_IDLE_RECOVERY = 0.10;
 export const RAID_HEAT_THRESHOLD = 55;      // below this the inspector never calls
 // Rolled once per game DAY, not per tick. Per tick meant the odds scaled with
 // the speed control — at 8x and full heat the inspector called every four real

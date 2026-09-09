@@ -4,6 +4,7 @@ import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRol
 import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
   RAID_HEAT_THRESHOLD, RAID_CHANCE_PER_DAY, HEAT_DECAY_PER_TICK, HEAT_DECAY_AFTER_BUST,
   HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH, HYGIENE_NEGLECT_FLOOR,
+  HYGIENE_IDLE_RECOVERY,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage , sporePotency } from './services/koji';
@@ -371,14 +372,27 @@ export default function App() {
         // one jar — previously the decay rate was flat no matter how much load
         // you carried, so scaling up had no real management cost.
         const activeBatchCount = prev.batches.filter(b => b.status === 'active').length;
-        const loadMultiplier = 1 + activeBatchCount * 0.18;
-        const hygieneDecay = (prev.staff['cleaner'] ? 0.03 : 0.06) * loadMultiplier;
-        // A working bench gets dirty; it does not become derelict on its own.
-        // With no floor, hygiene parked at zero on any busy bench, and since
-        // filth added more heat than heat shed, the inspector became permanent —
-        // which is what "he turns up as soon as anything is brewing" was.
+
+        // AN EMPTY BENCH DOES NOT GET DIRTY. IT AIRS OUT.
+        //
+        // The decay was `1 + count * 0.18`, so a bench with NOTHING on it still
+        // lost hygiene at the full base rate, all the way down to the neglect
+        // floor of 25. And 25 is below the 40 that filth starts at — so the floor
+        // did not prevent filth heat, it GUARANTEED it: 0.0375 a tick, forever,
+        // on an empty room. Under the reduced post-bust decay of 0.0175 that is a
+        // net climb, so one bust and the heat ratcheted to 100 and the inspector
+        // called on a bench with no batches at all. Which is exactly what was
+        // reported, three fixes running.
+        //
+        // Load drives it from zero now, and an idle bench recovers. That bounds
+        // neglect: you can always stop, let the room settle, and the heat drains.
+        // The only thing that can hold heat up indefinitely is contraband, which
+        // is something you are actively doing.
         const hygieneFloor = prev.staff['cleaner'] ? 50 : HYGIENE_NEGLECT_FLOOR;
-        const newHygiene = Math.max(hygieneFloor, prev.hygiene - hygieneDecay);
+        const hygieneDelta = activeBatchCount === 0
+            ? HYGIENE_IDLE_RECOVERY
+            : -(prev.staff['cleaner'] ? 0.03 : 0.06) * (activeBatchCount * 0.18 + 0.55);
+        const newHygiene = Math.min(100, Math.max(hygieneFloor, prev.hygiene + hygieneDelta));
         
         let heatChange = 0;
         // Scaled by how filthy, not a cliff at 40. A bench at 39 is not the same
