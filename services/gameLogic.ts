@@ -1871,6 +1871,50 @@ export const buyerWillTake = (
  * Three states, not two. You can know a formula without ever having run it
  * (a book), and you cannot have run it without knowing it (cooking writes both).
  */
+/**
+ * WHAT THIS INGREDIENT IS FOR.
+ *
+ * Reads the matrix rather than the recipe's own `requiredIngredients`, for the
+ * same reason everything else does: that field says `{substrate: true, additive:
+ * 'salt'}` for Colatura and never names anchovies. The matrix is where the
+ * actual combinations live, so it is where "what can I make with this" has to
+ * come from — and it cannot drift from what the resolver will actually do.
+ *
+ * Returns every recipe the ingredient can take part in, as substrate or as a
+ * required component. The caller decides how much of each to show; a player who
+ * has not met a recipe should not learn it from a shopping list.
+ */
+export const recipesUsing = (ingredient: Ingredient): { recipe: Recipe; role: 'substrate' | 'component' }[] => {
+  const out: { recipe: Recipe; role: 'substrate' | 'component' }[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of RECIPE_MATRIX) {
+    const recipe = RECIPES.find(r => r.id === entry.recipeId);
+    if (!recipe || seen.has(recipe.id)) continue;
+
+    let role: 'substrate' | 'component' | null = null;
+    const sub = entry.substrate;
+    if (sub) {
+      if (sub.kind === 'is' && sub.id === ingredient.id) role = 'substrate';
+      else if (sub.kind === 'includes' && ingredient.id.includes(sub.token)) role = 'substrate';
+      else if (sub.kind === 'kojiBase' && /koji/.test(ingredient.id)) role = 'substrate';
+      else if (sub.kind === 'any' && ingredient.type === IngredientType.SUBSTRATE) role = 'substrate';
+    }
+    if (!role && entry.requires) {
+      // The tokens are families ('salt', 'koji', 'spores'), not ids.
+      const tok = (t: string) =>
+        t === 'salt' ? /salt/.test(ingredient.id)
+        : t === 'koji' ? /koji/.test(ingredient.id)
+        : t === 'spores' ? ingredient.type === IngredientType.STARTER
+        : t === 'water' ? ingredient.id === 'water'
+        : ingredient.id.includes(t);
+      if (entry.requires.some(tok)) role = 'component';
+    }
+    if (role) { seen.add(recipe.id); out.push({ recipe, role }); }
+  }
+  return out;
+};
+
 export const getRecipeKnowledge = (
   recipeId: string,
   unlockedRecipes: string[],

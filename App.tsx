@@ -31,7 +31,7 @@ import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji'
 import DevPanel from './components/DevPanel';
 import FirstCulture from './components/FirstCulture';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake } from 'lucide-react';
-import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon , BagIcon } from './components/icons';
+import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon , BagIcon , CloseIcon } from './components/icons';
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -117,6 +117,9 @@ export default function App() {
    * is the "it stacks" non-answer to mobile.
    */
   const [railPane, setRailPane] = useState<'bench' | 'stock'>('bench');
+  const [showHardware, setShowHardware] = useState<boolean>(false);
+  /** An ingredient opened deliberately, as opposed to one merely hovered. */
+  const [openIngredient, setOpenIngredient] = useState<Ingredient | null>(null);
   const [gameSpeed, setGameSpeed] = useState<number>(1);
   const [paused, setPaused] = useState<boolean>(false);
   const lastActiveSpeed = useRef<number>(1);
@@ -1790,48 +1793,11 @@ export default function App() {
             onTogglePause={() => setPaused(p => !p)}
           />
         </div>
-        {/* On a phone the rails become one pane at a time, so the switch lives
-            here where it is always reachable. */}
-        <div className="rail-tabs">
-          {(['bench', 'stock'] as const).map(t => (
-            <button key={t}
-              className={`rail-tab${railPane === t ? ' active' : ''}`}
-              onClick={() => setRailPane(t)}>
-              {t === 'bench' ? 'Bench' : 'Stock'}
-            </button>
-          ))}
-        </div>
-      </header>
-      
-      {/* MOLECULAR SCAN (GLOBAL) */}
-      {uiState.hoveredInventoryItem && (
-          <MolecularScan 
-             target={{ type: 'ingredient', data: uiState.hoveredInventoryItem }} 
-             className="bottom-24 left-1/2 -translate-x-1/2" 
-          />
-      )}
-
-      {/* Main Layout - Modified to allow Sourcing Popup */}
-      <div className={`lab-grid pane-${railPane}`}>
-
-        {/* LEFT RAIL — the world, and what you own. */}
-        <aside className="rail left">
-          <section className="rail-sect">
-            <h3>Almanac</h3>
-            <div className="alm">
-              <div className="season slab">
-                {getSeason(gameState.month)} &middot; {getMonthName(gameState.month)} Wk {(gameState.week - 1) % 4 + 1}
-              </div>
-              <div className="clime mono">
-                {currentAmbient.ambientTemp.toFixed(0)}&deg;C / {currentAmbient.ambientHumidity.toFixed(0)}% RH
-              </div>
-              <div className="wx">{gameState.weather.type} &mdash; {gameState.weather.description}</div>
-            </div>
-          </section>
-
-          <section className="rail-sect">
-            <h3>The bench</h3>
-          <div className="gauges flex">
+        {/* THE BENCH, ALONG THE TOP.
+            Power, hygiene and inspector heat belong here rather than in a rail:
+            they describe the whole operation and you want them in the same place
+            whichever pane a phone happens to be showing. */}
+        <div className="gauges flex">
             <div className="gauge">
               <div className="ring-wrap">
                 <GaugeRing percent={(currentPower / gameState.maxPower) * 100} color={currentPower > gameState.maxPower ? 'var(--brick)' : 'var(--amber)'} />
@@ -1872,16 +1838,71 @@ export default function App() {
             </button>
           </div>
 
+        {/* On a phone the rails become one pane at a time, so the switch lives
+            here where it is always reachable. */}
+        <div className="rail-tabs">
+          {(['bench', 'stock'] as const).map(t => (
+            <button key={t}
+              className={`rail-tab${railPane === t ? ' active' : ''}`}
+              onClick={() => setRailPane(t)}>
+              {t === 'bench' ? 'Bench' : 'Stock'}
+            </button>
+          ))}
+        </div>
+      </header>
+      
+      {/* THE SPECTROMETER, HOVERED — small and fast, answering "what is this". */}
+      {uiState.hoveredInventoryItem && !openIngredient && (
+          <MolecularScan 
+             target={{ type: 'ingredient', data: uiState.hoveredInventoryItem }} 
+             className="bottom-24 left-1/2 -translate-x-1/2" 
+          />
+      )}
+
+      {/* AND OPENED — big enough to look at, and answering "what do I make with
+          it", which a hover panel has no business teaching. */}
+      {/* .ing-overlay sits above the other modals: this is opened FROM one — the
+          Supply catalogue — so it has to be on top of the screen that launched
+          it, or it renders behind and looks like nothing happened. */}
+      {openIngredient && (
+        <div className="modal-overlay ing-overlay" onClick={() => setOpenIngredient(null)}>
+          <div className="ing-modal" onClick={e => e.stopPropagation()}>
+            <button className="close-stamp ing-close" onClick={() => setOpenIngredient(null)} aria-label="Close">
+              <CloseIcon size={13} />
+            </button>
+            <MolecularScan
+              embedded
+              full
+              target={{ type: 'ingredient', data: openIngredient }}
+              knowledge={{
+                unlockedRecipes: gameState.unlockedRecipes,
+                analyzedRecipeIds: gameState.analyzedRecipeIds,
+                ownedBookIds: gameState.ownedBookIds,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main Layout - Modified to allow Sourcing Popup */}
+      <div className={`lab-grid pane-${railPane}`}>
+
+        {/* LEFT RAIL — the world, and what you own. */}
+        <aside className="rail left">
+          <section className="rail-sect">
+            <h3>Almanac</h3>
+            <div className="alm">
+              <div className="season slab">
+                {getSeason(gameState.month)} &middot; {getMonthName(gameState.month)} Wk {(gameState.week - 1) % 4 + 1}
+              </div>
+              <div className="clime mono">
+                {currentAmbient.ambientTemp.toFixed(0)}&deg;C / {currentAmbient.ambientHumidity.toFixed(0)}% RH
+              </div>
+              <div className="wx">{gameState.weather.type} &mdash; {gameState.weather.description}</div>
+            </div>
           </section>
 
-          <section className="rail-sect">
-            <h3>Hardware</h3>
-            <ToolRack
-              inventory={gameState.inventory}
-              batches={gameState.batches}
-              onOpenTool={setOpenTool}
-            />
-          </section>
+
         </aside>
 
         {/* CENTRE — the room, and nothing else. */}
@@ -1947,10 +1968,13 @@ export default function App() {
                 <BagIcon size={14} />
                 <span className="hidden sm:inline">Supply</span>
               </button>
+              {/* Hardware is what you OWN and whether it is working. Supply is
+                  what you can buy. They were the same button for a while, which
+                  is why neither question had a clear answer. */}
               <button
-                onClick={() => toggleDrawer('hardware')}
-                className={`tab-btn-hud${activeDrawer === 'hardware' ? ' active' : ''}`}
-                title="Hardware Store & Vessels"
+                onClick={() => setShowHardware(v => !v)}
+                className={`tab-btn-hud${showHardware ? ' active' : ''}`}
+                title="The hardware you own, and what it is doing"
               >
                 <WrenchIcon size={14} />
                 <span className="hidden sm:inline">Hardware</span>
@@ -2052,6 +2076,35 @@ export default function App() {
         </aside>
       </div>
 
+      {showHardware && (
+        <div className="modal-overlay" onClick={() => setShowHardware(false)}>
+          <div className="hw-modal" onClick={e => e.stopPropagation()}>
+            <span className="corner c-tl" />
+            <span className="corner c-br" />
+            <div className="pr-head">
+              <div>
+                <span className="kicker">What you own</span>
+                <h2>Hardware</h2>
+              </div>
+              <button className="close-stamp" onClick={() => setShowHardware(false)} aria-label="Close">
+                <CloseIcon size={13} />
+              </button>
+            </div>
+            <p className="hw-lede">
+              A tool changes a coefficient somewhere whether or not you remember
+              owning it. This is the list, and which of it is working right now.
+            </p>
+            <div className="hw-body custom-scrollbar">
+              <ToolRack
+                inventory={gameState.inventory}
+                batches={gameState.batches}
+                onOpenTool={id => { setShowHardware(false); setOpenTool(id as any); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SUPPLY — one place to spend money, and a modal like every other screen.
           It used to slide up from the bottom edge over the room and keep a 58px
           bar permanently across the foot of the window whether or not anyone
@@ -2072,6 +2125,7 @@ export default function App() {
                   usedSlots={usedSlots}
                   onBuy={handleBuyIngredient}
                   onSellCulture={handleSellCulture}
+                  onInspect={setOpenIngredient}
                   marketDemand={gameState.marketDemand}
                   onBuyVessel={handleBuyVessel}
                   onBuyTool={handleBuyIngredient}

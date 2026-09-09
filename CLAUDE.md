@@ -653,6 +653,29 @@ up over the very thing you were looking at. `.lab-grid` is three columns: the
 world and what you own on the left, the room in the middle, money and navigation
 and stock on the right.
 
+**The bench gauges belong along the top.** Power, hygiene and inspector heat
+describe the whole operation, so they want to be in the same place whichever pane
+a phone happens to be showing — a rail would hide them behind a tab.
+
+**Hardware and Supply are different questions.** Supply is what you can BUY;
+Hardware is what you OWN and whether it is working. They were the same button for
+a while, which is why neither had a clear answer. Both are modals in the nav now.
+
+**Hovering answers "what is this"; opening answers "what do I make with it".**
+`MolecularScan` takes `full` for the opened form — a bigger picture and a "what it
+goes into" section built from `recipesUsing`, which reads `RECIPE_MATRIX` for the
+same reason everything else does: `requiredIngredients` says
+`{substrate: true, additive: 'salt'}` for Colatura and never names anchovies.
+
+- **A shopping list must not teach the recipe book.** A recipe the player has met
+  is named; one they have not is a count — "4 more ferments use this, still
+  unread". That is a lead, not an answer, and it is what mastery and the Codex
+  are selling.
+- **A modal opened from inside a modal needs to outrank it.** The ingredient panel
+  is opened from the Supply catalogue, so it renders earlier in the DOM and
+  painted behind it — it looked like the click did nothing. `.ing-overlay` sits
+  above.
+
 **Supply is a modal in the nav, not a drawer.** It used to slide up from the
 bottom edge over the room — the thing the player is looking at — and leave a 58px
 bar permanently across the foot of the window whether or not anyone wanted to

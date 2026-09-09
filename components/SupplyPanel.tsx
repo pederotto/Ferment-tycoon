@@ -45,6 +45,8 @@ interface SupplyPanelProps {
   onBuy: (ingredient: Ingredient, quantity?: number) => void;
   marketDemand?: Record<string, number>;
   onSellCulture?: (ingredient: Ingredient, quantity: number) => void;
+  /** Clicking a row opens the ingredient rather than only hovering it. */
+  onInspect?: (ingredient: Ingredient) => void;
   onBuyVessel: (vessel: Vessel) => void;
   onBuyTool: (tool: Ingredient) => void;
   onBuyBook: (book: Book) => void;
@@ -69,7 +71,7 @@ const Bar: React.FC<{ v: number; tone: string; title: string }> = ({ v, tone, ti
 const SupplyPanel: React.FC<SupplyPanelProps> = ({
   isOpen, onToggle, ingredients, inventory, money, playerXp, undergroundTier,
   relationships, ownedVessels, ownedBookIds, currentPower, maxPower, usedSlots,
-  onBuy, onSellCulture, marketDemand, onBuyVessel, onBuyTool, onBuyBook, onUpgradePower,
+  onBuy, onSellCulture, onInspect, marketDemand, onBuyVessel, onBuyTool, onBuyBook, onUpgradePower,
 }) => {
   const [tab, setTab] = useState<Tab>('ingredients');
   const [search, setSearch] = useState('');
@@ -323,7 +325,19 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
 
                   return (
                     <div key={i.id} className={`cat-row${lock ? ' locked' : ''}`}>
-                      <span className="c-item">
+                      {/* The name and picture open the ingredient. The Buy button
+                          sits outside this, so shopping never opens a panel by
+                          accident. */}
+                      <span
+                        className={`c-item${onInspect ? ' inspectable' : ''}`}
+                        role={onInspect ? 'button' : undefined}
+                        tabIndex={onInspect ? 0 : undefined}
+                        onClick={onInspect ? () => onInspect(i) : undefined}
+                        onKeyDown={onInspect ? (e => {
+                          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onInspect(i); }
+                        }) : undefined}
+                        title={onInspect ? `What ${i.name} is for` : undefined}
+                      >
                         <span className="glyph art"><IngredientIcon id={i.id} size={30} fallback={Glyph} /></span>
                         <span className="txt">
                           <span className="n">

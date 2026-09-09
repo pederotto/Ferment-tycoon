@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ingredient, Vessel, Recipe, IngredientType } from '../types';
 import { masteryReveal } from '../services/mastery';
+import { recipesUsing, getRecipeKnowledge } from '../services/gameLogic';
 import { describeEnzymes, suggestPairing } from '../services/koji';
 import { Pin, PinOff } from 'lucide-react';
 import { SearchIcon, getIngredientIcon, VesselLineIcon } from './icons';
@@ -17,6 +18,19 @@ interface MolecularScanProps {
   embedded?: boolean;
   pinned?: boolean;
   onTogglePin?: () => void;
+  /**
+   * Draw large, with the uses section — the click-to-open form rather than the
+   * hover readout. Hovering wants to be small and fast; opening one deliberately
+   * wants the picture big enough to look at and the question "what do I make
+   * with this" answered.
+   */
+  full?: boolean;
+  /** What the player has actually met, so uses can be revealed rather than told. */
+  knowledge?: {
+    unlockedRecipes: string[];
+    analyzedRecipeIds: string[];
+    ownedBookIds: string[];
+  };
 }
 
 /**
@@ -74,7 +88,7 @@ function readIngredient(i: Ingredient): string {
 }
 
 const MolecularScan: React.FC<MolecularScanProps> = ({
-  target, className = '', embedded = false, pinned = false, onTogglePin,
+  target, className = '', embedded = false, pinned = false, onTogglePin, full, knowledge,
 }) => {
   const { type, data } = target;
 
@@ -87,7 +101,7 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
             {type === 'vessel'
               ? <VesselLineIcon vesselId={(data as Vessel).id} size={16} color="currentColor" />
               : Glyph
-                ? <IngredientIcon id={(data as Ingredient).id} size={30} fallback={Glyph} />
+                ? <IngredientIcon id={(data as Ingredient).id} size={full ? 84 : 30} fallback={Glyph} />
                 : <SearchIcon size={14} color="currentColor" />}
           </span>
           <div style={{ minWidth: 0 }}>
@@ -199,10 +213,59 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
     }
   };
 
+  /**
+   * WHAT YOU MAKE WITH IT.
+   *
+   * Only in the opened form. A hover readout answering "what is this" should not
+   * also be teaching the recipe book — and a player who has not met a ferment
+   * should not learn its name from a shopping list. So a recipe you know is
+   * named; one you have not met is a shape: its family, and that it wants this
+   * ingredient. That is enough to be a lead without being an answer.
+   */
+  const Uses = () => {
+    if (!full || type !== 'ingredient') return null;
+    const uses = recipesUsing(data as Ingredient);
+    if (uses.length === 0) return null;
+
+    const k = knowledge;
+    const rows = uses.map(u => ({
+      ...u,
+      known: k
+        ? getRecipeKnowledge(u.recipe.id, k.unlockedRecipes, k.analyzedRecipeIds, k.ownedBookIds) !== 'unknown'
+        : false,
+    }));
+    const named = rows.filter(r => r.known);
+    const hidden = rows.length - named.length;
+
+    return (
+      <div className="sc-uses">
+        <div className="sc-uses-h">What it goes into</div>
+        {named.length === 0 && (
+          <p className="sc-uses-none">
+            Nothing you have met yet. Run a batch with it, or read a book, and
+            what it belongs in will show up here.
+          </p>
+        )}
+        {named.map(r => (
+          <div key={r.recipe.id} className="sc-use">
+            <span className="n">{r.recipe.name}</span>
+            <span className="r">{r.role === 'substrate' ? 'as the substrate' : 'as a component'}</span>
+          </div>
+        ))}
+        {hidden > 0 && (
+          <p className="sc-uses-more">
+            {hidden} more {hidden === 1 ? 'ferment uses' : 'ferments use'} this, still
+            unread. Mastery and the Codex open them.
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className={`scan${embedded ? ' embedded' : ' floating'} ${className}`}>
+    <div className={`scan${embedded ? ' embedded' : ' floating'}${full ? ' full' : ''} ${className}`}>
       <Head />
-      <div className="sc-body">{body()}</div>
+      <div className="sc-body">{body()}<Uses /></div>
     </div>
   );
 };

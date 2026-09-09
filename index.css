@@ -2832,3 +2832,60 @@ input[type="range"].dial-slider::-moz-range-thumb {
   .rail .pantry-items { flex-direction: row; flex-wrap: wrap; }
   .rail .pantry-item { width: calc(50% - 2px); }
 }
+
+/* The hardware you own, as a screen rather than a rail section. Supply answers
+   "what can I buy"; this answers "what do I have, and is it working" — they were
+   the same button for a while, which is why neither question had a clear answer. */
+.hw-modal {
+  position: relative;
+  width: min(94vw, 680px); max-height: 86vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #241c14, #191309);
+  border: 1px solid var(--line-strong); border-radius: 6px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.62);
+  overflow: hidden;
+}
+.hw-lede { margin: 0; padding: 0 24px 14px; font-size: 12px; line-height: 1.6; color: var(--text-lo); }
+.hw-body { padding: 0 24px 22px; overflow-y: auto; }
+.hw-body .rack { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+.hw-body .tool-card { width: calc(50% - 4px); flex-direction: row; align-items: center; gap: 11px; text-align: left; padding: 10px; }
+.hw-body .tc-art { width: 46px; height: 46px; flex-shrink: 0; }
+.hw-body .tc-name { font-size: 12px; }
+.hw-body .tc-state { margin-left: auto; }
+@media (max-width: 560px) { .hw-body .tool-card { width: 100%; } }
+
+/* An ingredient opened deliberately: big enough to look at, and carrying the
+   uses section that a hover readout has no business teaching. */
+.ing-modal {
+  position: relative;
+  width: min(94vw, 560px); max-height: 88vh; overflow-y: auto;
+  background: linear-gradient(180deg, #241c14, #191309);
+  border: 1px solid var(--line-strong); border-radius: 6px;
+  box-shadow: 0 30px 90px rgba(0,0,0,0.62);
+}
+.ing-close { position: absolute; top: 12px; right: 12px; z-index: 2; }
+.scan.full .sc-glyph { width: 96px; height: 96px; }
+.scan.full .sc-head { padding-right: 46px; }
+
+.sc-uses { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.sc-uses-h {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--brass); margin-bottom: 9px;
+}
+.sc-use {
+  display: flex; align-items: baseline; gap: 9px;
+  padding: 6px 0; border-bottom: 1px solid rgba(243,233,216,0.05);
+}
+.sc-use .n { font-size: 12.5px; color: var(--text-hi); }
+.sc-use .r { margin-left: auto; font-size: 10px; color: var(--text-lo); }
+.sc-uses-none, .sc-uses-more {
+  margin: 8px 0 0; font-size: 11px; line-height: 1.55; color: var(--text-lo);
+}
+.c-item.inspectable { cursor: pointer; border-radius: 3px; }
+.c-item.inspectable:hover .n { color: var(--brass); }
+.c-item.inspectable:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* The ingredient panel is opened from inside another modal, so it has to sit
+   above the one that launched it. */
+.modal-overlay.ing-overlay { z-index: 130; }
