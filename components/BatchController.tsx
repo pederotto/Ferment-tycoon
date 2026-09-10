@@ -791,7 +791,15 @@ const BatchController: React.FC<BatchControllerProps> = ({
                   return (
                     <button
                       key={ing.id}
-                      className="reagent"
+                      /* THE SAME OBJECT IN A DIFFERENT PLACE. A jar of pearl
+                         barley is a labelled thing whether you are buying it or
+                         drawing it, so the pantry list takes the same spine the
+                         Supply catalogue does — including the type stripe. */
+                      className={`reagent ${
+                        ing.contraband ? 'illicit'
+                          : ing.type === IngredientType.STARTER ? 'kind-starter'
+                            : ing.type === IngredientType.ADDITIVE ? 'kind-additive'
+                              : 'kind-substrate'}`}
                       onClick={() => addIngredient(ing.id, addStep)}
                       onMouseEnter={() => setHoveredItem({ type: 'ingredient', data: ing })}
                       onMouseLeave={() => setHoveredItem(null)}

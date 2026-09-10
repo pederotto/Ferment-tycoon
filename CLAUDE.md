@@ -643,7 +643,72 @@ turbulence data-URIs, so the printed-board texture costs nothing to download and
 does not tile. Applied via `::after` with `pointer-events: none`, and the scene's
 own SVG is lifted to `z-index: 2` above it.
 
+## The label
+
+**Five faces, five jobs, and the monospace is not one of them.** `IBM Plex Mono`
+was on 55 rules — prices, wages, supplier tags, section headings, tasting-note
+labels — and that single fact is what made the game read as a spreadsheet. The
+faces are tokens in `:root`, never literals:
+
+- `--f-name` (Playfair Display) — names of things
+- `--f-desc` (Cormorant Garamond italic) — what a thing is FOR
+- `--f-spec` (Barlow Condensed) — specs, prices, small print, stamps
+- `--f-body` (Work Sans) — the game talking
+- `--f-instr` (IBM Plex Mono) — an actual instrument reading, and nothing else
+
+Ten rules kept the monospace: the dial values, the bench telemetry, the evenness
+readout, the spectrometer's bar figures, the run trace and the dev panel. If you
+reach for it anywhere else, the thing you are setting is probably small print.
+
+- **Barlow Condensed ships PROPORTIONAL figures.** Every rule that swapped off
+  the monospace needs `font-variant-numeric: tabular-nums` or the numbers jitter
+  down a column — prices in the catalogue, wages in the payroll.
+- **It also runs spindly below 11px**, so the swap came with +1px on the small
+  print. It is still narrower than the monospace it replaced, so nothing can
+  overflow that did not overflow before.
+
+**The stock is `#e3d6b8`, not white.** A bright card in a dark room is a lamp; an
+aged one is a lit object on a bench, which is what a label is. Marks printed ON
+it take the ink tones (`--ink-moss`, `--ink-amber`, …) — the room's amber on
+cream is mud.
+
+- **An inline `style` beats any override.** `MolecularScan` hands its bars a
+  `tone` prop, so the paper form picks its palette in the component (`T`), not
+  in CSS. Anything else drawn on stock has the same constraint.
+- **The painted sheet's own ground is `#1a130b`.** Give an icon plate that exact
+  background and the cell reads as an engraved illustration block; give it
+  anything else and it reads as a square pasted on.
+
+**A label has two forms, and the second one is what makes long lists work.**
+Turned edge-on it is a spine — type stripe, name, small print, price — and
+sixty spines is a shelf. Sixty full cards is a wall. The catalogue and the
+reagent picker are spines; the ingredient panel, the culture bank and the
+inspector head are full labels.
+
+**Never drop a column to make a list fit a phone.** The catalogue's narrow form
+used to hide composition, enzymes and quality — three columns, two of which are
+what decides a purchase. A spine STACKS instead: name and price on one line, the
+readings and the button beneath.
+
+**State happens to the paper.** Spoiled is a stain and an overstamp, contraband
+is cheaper stock with no printed supplier, sold is overstamped. `.label-plate`
+carries these and none of them needs a legend. One catch: a stamp lands ON the
+label, so `.stamped` has to reserve the padding — without it the name runs under
+the stamp, which is a smudge rather than a stamp.
+
+**Sorting is a control, not a column head.** Five sort buttons were dropped into
+the catalogue's six-track grid, which already held three labels — eight children,
+six tracks — so they wrapped onto a second row and printed NAME, PRICE and
+PROTEIN under column positions they had nothing to do with. They live in
+`.sort-rail` now and `.cat-head` is six plain labels that line up with the row.
+
 ## Layout
+
+**Anything `position: fixed` to a screen edge is dated the moment the chrome
+moves.** `.guide-recall` was pinned at `left: 18px; bottom: 76px` — clear of the
+Supply drawer's 58px bar, which is the layout this game had two rewrites ago.
+With the HUD in side rails that put it straight over the pantry. It is offset to
+the stage at each of the three breakpoints now.
 
 **The HUD lives in side rails, not along the top.** The room is limited by
 HEIGHT, so on any wide window there was dead space either side of it while the

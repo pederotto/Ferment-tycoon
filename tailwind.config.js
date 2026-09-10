@@ -9,8 +9,13 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        // THE LABEL — five faces, five jobs. Names are set, what a thing is FOR
+        // is written, specs are printed small, the body is the game talking,
+        // and the monospace is reserved for an actual instrument reading.
         sans: ['Work Sans', 'sans-serif'],
-        display: ['Zilla Slab', 'serif'],
+        display: ['Playfair Display', 'Georgia', 'serif'],
+        desc: ['Cormorant Garamond', 'Georgia', 'serif'],
+        spec: ['Barlow Condensed', 'Work Sans', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
       },
       colors: {

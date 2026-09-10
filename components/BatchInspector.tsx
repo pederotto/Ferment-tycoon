@@ -529,7 +529,15 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
         <div className="corner c-tl" /><div className="corner c-tr" /><div className="corner c-bl" /><div className="corner c-br" />
 
         <div className="lhead">
-          <div>
+          {/* STATE HAPPENS TO THE PAPER. A spoiled batch is not a red number —
+              its label is water-stained and overstamped, and everybody already
+              knows what that means without being told. */}
+          <div className={`label-plate${isSpoiled || isInPeakWindow ? ' stamped' : ''}${isSpoiled ? ' spoiled' : ''}${batch.contraband ? ' illicit' : ''}`}>
+            {isSpoiled
+              ? <span className="overstamp">Spoiled</span>
+              : isInPeakWindow
+                ? <span className="overstamp good">Ready</span>
+                : null}
             <span className="type-tag">{recipe.type} &middot; {batch.vesselId} #{batch.id.slice(-4)}</span>
             <h1 className="slab">{recipe.name}</h1>
             <div className="gen mono">

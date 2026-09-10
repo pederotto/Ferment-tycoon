@@ -294,6 +294,27 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                 </div>
               )}
 
+              {/* SORTING IS A CONTROL, NOT A COLUMN HEAD.
+                  Five sort buttons were dropped into a six-column grid that
+                  already held three labels — eight children, six tracks — so
+                  they wrapped onto a second row and printed NAME, PRICE and
+                  PROTEIN under column positions they had nothing to do with.
+                  A shelf has a rail label; the sorting sits with the other
+                  controls. */}
+              <div className="sort-rail">
+                <span className="sr-l">Sort</span>
+                {SORTS.map(sk => (
+                  <button
+                    key={sk.id}
+                    className={`sr-btn${sort === sk.id ? ' active' : ''}`}
+                    onClick={() => { if (sort === sk.id) setAsc(!asc); else { setSort(sk.id); setAsc(sk.id === 'name'); } }}
+                  >
+                    {sk.label}{sort === sk.id && <ArrowUpDown size={9} />}
+                  </button>
+                ))}
+                <span className="sr-count">{rows.length} on the shelf</span>
+              </div>
+
               <div className="cat-head">
                 <span className="c-item">Item</span>
                 <span className="c-comp">
@@ -301,15 +322,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                   <em>protein · starch</em>
                 </span>
                 <span className="c-enz">Enzymes</span>
-                {SORTS.map(sk => (
-                  <button
-                    key={sk.id}
-                    className={`c-sort${sort === sk.id ? ' active' : ''}`}
-                    onClick={() => { if (sort === sk.id) setAsc(!asc); else { setSort(sk.id); setAsc(sk.id === 'name'); } }}
-                  >
-                    {sk.label}{sort === sk.id && <ArrowUpDown size={9} />}
-                  </button>
-                ))}
+                <span className="c-qual">Quality</span>
+                <span className="c-price">Price</span>
+                <span />
               </div>
 
               <div className="catalogue custom-scrollbar">
@@ -323,8 +338,17 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                   const supplier = SUPPLIERS.find(s => s.id === i.supplierId);
                   const h = i.hiddenStats;
 
+                  /* THE SPINE — a label seen edge-on. The left edge carries
+                     what KIND of thing this is, which is the one fact a
+                     six-column table never managed to say at a glance. */
+                  const kind = i.contraband
+                    ? 'illicit'
+                    : i.type === IngredientType.STARTER ? 'kind-starter'
+                      : i.type === IngredientType.ADDITIVE ? 'kind-additive'
+                        : 'kind-substrate';
+
                   return (
-                    <div key={i.id} className={`cat-row${lock ? ' locked' : ''}`}>
+                    <div key={i.id} className={`cat-row ${kind}${lock ? ' locked' : ''}`}>
                       {/* The name and picture open the ingredient. The Buy button
                           sits outside this, so shopping never opens a panel by
                           accident. */}
@@ -353,8 +377,8 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       </span>
 
                       <span className="c-comp">
-                        <Bar v={h.proteinContent} tone="var(--moss)" title={`protein ${h.proteinContent}/10`} />
-                        <Bar v={h.starchContent} tone="var(--amber)" title={`starch ${h.starchContent}/10`} />
+                        <Bar v={h.proteinContent} tone="var(--ink-moss)" title={`protein ${h.proteinContent}/10`} />
+                        <Bar v={h.starchContent} tone="var(--ink-amber)" title={`starch ${h.starchContent}/10`} />
                       </span>
 
                       <span className="c-enz">

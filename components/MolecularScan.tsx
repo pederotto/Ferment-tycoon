@@ -92,6 +92,21 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
 }) => {
   const { type, data } = target;
 
+  /* MARKS PRINTED ON PAPER, NOT GLOWING IN A DARK ROOM.
+     The opened form is a label on light stock; the hover readout is a panel in
+     a dark room. The room's amber on cream is mud, so the full form takes the
+     same hues darkened to print. The tone reaches the bar as an inline style,
+     so this cannot be a CSS override. */
+  const T = full
+    ? {
+        moss: 'var(--ink-moss)', amber: 'var(--ink-amber)', brass: '#8a6a1f',
+        brick: '#9c4429', teal: 'var(--ink-teal)', plum: 'var(--ink-plum)',
+      }
+    : {
+        moss: 'var(--moss)', amber: 'var(--amber)', brass: 'var(--brass)',
+        brick: 'var(--brick)', teal: 'var(--teal)', plum: 'var(--plum)',
+      };
+
   const Head = () => {
     const Glyph = type === 'ingredient' ? getIngredientIcon(data as Ingredient) : null;
     return (
@@ -131,12 +146,12 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
           <>
             <p className="sc-read">{readIngredient(i)}</p>
             <div className="sc-bars">
-              <Bar label="Protein" value={h.proteinContent} tone="var(--moss)" hint="Protease converts this into glutamate — umami." />
-              <Bar label="Starch" value={h.starchContent} tone="var(--amber)" hint="Amylase converts this into sugar." />
-              <Bar label="Sugar" value={h.sugarContent} tone="var(--brass)" hint="Free sugar, already sweet and already fermentable." />
-              <Bar label="Fat" value={h.fatContent} tone="var(--brick)" hint="Above 4, heat without salt turns this rancid." />
-              <Bar label="Salt" value={h.nativeSalinity} max={100} tone="var(--teal)" hint="Salinity the ingredient brings by itself." />
-              <Bar label="Wild" value={h.microbialDiversity} tone="var(--plum)" hint="Native microbial life. Funk, and unpredictability." />
+              <Bar label="Protein" value={h.proteinContent} tone={T.moss} hint="Protease converts this into glutamate — umami." />
+              <Bar label="Starch" value={h.starchContent} tone={T.amber} hint="Amylase converts this into sugar." />
+              <Bar label="Sugar" value={h.sugarContent} tone={T.brass} hint="Free sugar, already sweet and already fermentable." />
+              <Bar label="Fat" value={h.fatContent} tone={T.brick} hint="Above 4, heat without salt turns this rancid." />
+              <Bar label="Salt" value={h.nativeSalinity} max={100} tone={T.teal} hint="Salinity the ingredient brings by itself." />
+              <Bar label="Wild" value={h.microbialDiversity} tone={T.plum} hint="Native microbial life. Funk, and unpredictability." />
             </div>
             {(() => {
               const pair = suggestPairing(i);
@@ -180,7 +195,7 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
                   : 'Moderately insulated. Forgiving for pastes and brines.'}
             </p>
             <div className="sc-bars">
-              <Bar label="Insulation" value={insul * 10} tone="var(--teal)" hint="How strongly it resists the room's temperature." />
+              <Bar label="Insulation" value={insul * 10} tone={T.teal} hint="How strongly it resists the room's temperature." />
             </div>
             <div className="sc-facts">
               <span className="f hi">{v.capacityL}L capacity</span>

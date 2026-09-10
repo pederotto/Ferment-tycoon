@@ -33,6 +33,40 @@
   /* Header height — the hardware drawer's closed peek is offset by this so it
      tucks under the HUD instead of covering the gauge rings. */
   --hud-h: 72px;
+
+  /* -------------------------------------------------------------------------
+     THE LABEL — five faces, five jobs.
+
+     Everything the player owns or covets is a labelled thing, and a label uses
+     more than one face because each part of it is doing a different job. Names
+     are set; what a thing is FOR is written; specs are printed small; the body
+     is the game talking. The monospace is demoted to what it was always for —
+     an instrument reading. It was on 55 rules and that is what made the game
+     read as a spreadsheet.
+     ------------------------------------------------------------------------- */
+  --f-name:  'Playfair Display', Georgia, 'Times New Roman', serif;
+  --f-desc:  'Cormorant Garamond', Georgia, serif;
+  --f-spec:  'Barlow Condensed', 'Work Sans', -apple-system, sans-serif;
+  --f-body:  'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --f-instr: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* THE STOCK. Not white — aged, and a step darker than instinct says, because
+     a bright card in a dark room is a lamp rather than a label. */
+  --stock: #e3d6b8;
+  --stock-deep: #d3c39f;
+  --stock-dim: #d8cbb0;      /* contraband: no printer, cheaper paper */
+  --ink: #2a2015;
+  --ink-soft: #6a563c;
+  --ink-faint: #8a7454;
+  --ink-line: rgba(42, 32, 21, 0.34);
+  --ink-line-soft: rgba(42, 32, 21, 0.18);
+  --ink-moss: #5f7d3f;
+  --ink-amber: #a8702a;
+  --ink-plum: #6b4a7a;
+  --ink-teal: #3d6168;
+  --stamp-bad: #9c4429;
+  --stamp-good: #4a6b34;
+  --grain-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }
@@ -43,7 +77,7 @@ html, body {
 }
 
 body {
-  font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--f-body);
   overflow-x: hidden;
   background:
     radial-gradient(ellipse 900px 500px at 20% -10%, rgba(217, 164, 65, 0.05), transparent 60%),
@@ -62,9 +96,12 @@ a:hover { color: var(--brass); }
 }
 
 /* ---------- Typography ---------- */
-.font-display, .slab { font-family: 'Zilla Slab', serif; }
-.font-mono, .mono { font-family: 'IBM Plex Mono', monospace; }
-.font-sans { font-family: 'Work Sans', sans-serif; }
+.font-display, .slab { font-family: var(--f-name); }
+.desc { font-family: var(--f-desc); font-style: italic; }
+.spec { font-family: var(--f-spec); font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
+.font-mono, .instr { font-family: var(--f-instr); font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--f-spec); font-variant-numeric: tabular-nums; letter-spacing: 0.03em; }
+.font-sans { font-family: var(--f-body); }
 
 /* ---------- Text / surface tokens (for components using utility-style classes) --- */
 .text-hi { color: var(--text-hi); }
@@ -123,7 +160,7 @@ a:hover { color: var(--brass); }
   display: flex; flex-direction: column; gap: 1px; background: rgba(0, 0, 0, 0.18);
 }
 .ticket .lbl { font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-lo); }
-.ticket .num { font-size: 14px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+.ticket .num { font-size: 14px; font-weight: 600; font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .ticket.renown .num { color: var(--plum); }
 .ticket.funds .num { color: var(--amber); }
 
@@ -302,13 +339,13 @@ input[type="range"].dial-slider::-moz-range-thumb {
   border-top: 1px solid rgba(243, 233, 216, 0.08);
 }
 .label-block { text-align: center; margin-top: 2px; }
-.label-block .name { font-family: 'Zilla Slab', serif; font-size: 14px; font-weight: 600; line-height: 1.25; }
+.label-block .name { font-family: var(--f-name); font-size: 14px; font-weight: 600; line-height: 1.25; }
 .label-block .name.fog { font-style: italic; color: var(--text-mid); font-weight: 500; }
 .label-block .type { font-size: 9px; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px; }
 
 .mini-dials { display: flex; justify-content: space-between; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .mini-dial { flex: 1; text-align: center; }
-.mini-dial .v { font-size: 12px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+.mini-dial .v { font-size: 12px; font-weight: 600; font-family: var(--f-instr); }
 .mini-dial .v.hot { color: var(--brick); }
 .mini-dial .v.warn { color: var(--amber); }
 .mini-dial .l { font-size: 8px; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
@@ -338,7 +375,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   width: 38px; height: 38px; border-radius: 999px; border: 1.5px dashed var(--line-strong);
   display: flex; align-items: center; justify-content: center;
 }
-.empty-cubby .lbl { font-family: 'Zilla Slab', serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.empty-cubby .lbl { font-family: var(--f-name); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
 .empty-cubby .sub { font-size: 9.5px; }
 
 .pantry {
@@ -351,7 +388,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 6px;
   background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); font-size: 10.5px; white-space: nowrap;
 }
-.pantry-item .n { font-weight: 600; color: var(--text-hi); font-family: 'IBM Plex Mono', monospace; }
+.pantry-item .n { font-weight: 600; color: var(--text-hi); font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 
 /* =========================================================================
    LEDGER MODALS (Batch Inspector / Staff / shared modal chrome)
@@ -399,7 +436,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .dial-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .dial { flex: 1; min-width: 90px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .dial svg { display: block; }
-.dial .v { font-size: 15px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+.dial .v { font-size: 15px; font-weight: 600; font-family: var(--f-instr); }
 .dial .l { font-size: 8.5px; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.1em; }
 .dial .t { font-size: 8.5px; color: var(--text-lo); }
 
@@ -432,12 +469,12 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #1d1206;
   box-shadow: 0 8px 18px rgba(217, 164, 65, 0.25); cursor: pointer; border: none; padding: 10px;
 }
-.harvest-cta .big { font-family: 'Zilla Slab', serif; font-weight: 700; font-size: 13.5px; }
+.harvest-cta .big { font-family: var(--f-name); font-weight: 700; font-size: 13.5px; }
 .harvest-cta .small { font-size: 9.5px; opacity: 0.75; }
 .buyer-list { flex: 1; display: flex; gap: 10px; flex-wrap: wrap; min-width: 200px; }
 .buyer { flex: 1; min-width: 130px; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: rgba(0, 0, 0, 0.18); display: flex; flex-direction: column; gap: 6px; }
 .buyer .n { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.buyer .p { font-size: 13px; font-weight: 700; color: var(--amber); font-family: 'IBM Plex Mono', monospace; }
+.buyer .p { font-size: 13px; font-weight: 700; color: var(--amber); font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .buyer .p.plum { color: var(--plum); }
 .buyer .reject { font-size: 9px; color: var(--text-lo); }
 
@@ -497,7 +534,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .awning::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(0, 0, 0, 0.25); }
 .stall-head { padding: 13px 15px 11px; border-bottom: 1px solid var(--line); }
 .stall-head .row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.stall-head h3 { font-size: 13px; margin: 0; font-weight: 600; font-family: 'Zilla Slab', serif; }
+.stall-head h3 { font-size: 13px; margin: 0; font-weight: 600; font-family: var(--f-name); }
 .stall-head .d { font-size: 9.5px; color: var(--text-lo); margin-top: 2px; }
 .lvl-badge { font-size: 8.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--ac); color: var(--ac); white-space: nowrap; }
 .lvl-badge.illegal { border-color: var(--brick); color: var(--brick); }
@@ -520,7 +557,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .item .meta { font-size: 9px; color: var(--text-lo); margin-top: 2px; }
 .item .meta b { color: var(--moss); }
 .item .right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.price { font-size: 11px; font-weight: 700; color: var(--amber); text-align: right; font-family: 'IBM Plex Mono', monospace; }
+.price { font-size: 11px; font-weight: 700; color: var(--amber); text-align: right; font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .price.plum { color: var(--plum); }
 .buy-btn { font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 5px 10px; border-radius: 6px; background: rgba(138, 154, 107, 0.15); color: var(--moss); border: 1px solid rgba(138, 154, 107, 0.35); cursor: pointer; }
 .buy-btn:hover:not(:disabled) { background: rgba(138, 154, 107, 0.28); }
@@ -535,7 +572,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 
 .grid-ticket { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 10px; border: 1px dashed var(--line-strong); background: rgba(0, 0, 0, 0.2); }
 .grid-ticket .g-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-lo); }
-.grid-ticket .g-val { font-size: 12px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+.grid-ticket .g-val { font-size: 12px; font-weight: 700; font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 
 .cols { flex: 1; padding: 18px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; overflow-y: auto; }
 .col-head { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); margin-bottom: 12px; }
@@ -545,7 +582,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .eq-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .eq-left { display: flex; gap: 10px; align-items: center; }
 .eq-ic { width: 32px; height: 32px; border-radius: 9px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--amber); }
-.eq-name { font-size: 12px; font-weight: 600; font-family: 'Zilla Slab', serif; }
+.eq-name { font-size: 12px; font-weight: 600; font-family: var(--f-name); }
 .eq-meta { font-size: 9px; color: var(--text-lo); margin-top: 2px; }
 .eq-meta .watt { color: var(--amber); }
 .eq-btn {
@@ -572,7 +609,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 
 .payroll { text-align: right; }
 .payroll .l { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-lo); }
-.payroll .v { font-size: 15px; font-weight: 700; color: var(--brick); font-family: 'IBM Plex Mono', monospace; }
+.payroll .v { font-size: 15px; font-weight: 700; color: var(--brick); font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 
 .roster { flex: 1; padding: 22px 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; overflow-y: auto; }
 .role-card { border-radius: 13px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.16); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -580,9 +617,9 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .role-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .role-left { display: flex; gap: 12px; align-items: center; }
 .role-ic { width: 42px; height: 42px; border-radius: 11px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.role-name { font-size: 14px; font-weight: 600; font-family: 'Zilla Slab', serif; }
+.role-name { font-size: 14px; font-weight: 600; font-family: var(--f-name); }
 .role-wage { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
-.wage-tag { font-size: 10px; font-weight: 700; color: var(--moss); background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); padding: 2px 7px; border-radius: 5px; font-family: 'IBM Plex Mono', monospace; }
+.wage-tag { font-size: 11px; font-weight: 700; color: var(--moss); background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); padding: 2px 7px; border-radius: 5px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .onboard-tag { font-size: 9px; color: var(--text-lo); }
 .role-status-pill { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 9px; border-radius: 999px; }
 .role-status-pill.active { background: var(--amber); color: #1d1206; }
@@ -613,7 +650,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .ledger-line { display: flex; align-items: center; gap: 14px; padding: 13px 4px; border-bottom: 1px solid var(--line); text-align: left; }
 .ledger-line:last-child { border-bottom: none; }
 .ledger-line .ic { width: 30px; height: 30px; border-radius: 8px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.ledger-line .t { font-family: 'Zilla Slab', serif; font-size: 13px; font-weight: 600; }
+.ledger-line .t { font-family: var(--f-name); font-size: 13px; font-weight: 600; }
 .ledger-line .d { font-size: 11px; color: var(--text-lo); }
 .welcome-cta {
   /* Buttons shrink-wrap by default even as block-level flex containers, so the
@@ -623,7 +660,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   font-size: 15px; letter-spacing: 0.03em; box-shadow: 0 10px 26px rgba(217, 164, 65, 0.28); cursor: pointer; border: none;
 }
 .save-line {
-  margin-top: 10px; font-size: 10.5px; color: var(--text-mid); font-family: 'IBM Plex Mono', monospace; text-align: center;
+  margin-top: 10px; font-size: 11.5px; color: var(--text-mid); font-family: var(--f-spec); font-variant-numeric: tabular-nums; text-align: center;
 }
 .welcome-alt {
   margin-top: 14px; width: 100%; padding: 9px; font-size: 10.5px; font-weight: 600;
@@ -712,7 +749,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   width: 38px; height: 38px; border-radius: 10px; background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.inoc-head h1 { font-family: 'Zilla Slab', serif; font-size: 18px; margin: 0; font-weight: 600; letter-spacing: 0.01em; }
+.inoc-head h1 { font-family: var(--f-name); font-size: 18px; margin: 0; font-weight: 600; letter-spacing: 0.01em; }
 .inoc-head .sub { font-size: 10.5px; color: var(--text-lo); margin-top: 3px; }
 .inoc-head .acts { display: flex; align-items: center; gap: 10px; }
 
@@ -818,7 +855,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .station-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; flex-shrink: 0; }
 .station-head .lbl { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
 .station-head .lbl .num { color: var(--brass); }
-.station-head .tally { font-size: 9.5px; color: var(--text-lo); font-family: 'IBM Plex Mono', monospace; }
+.station-head .tally { font-size: 10.5px; color: var(--text-lo); font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .station-head .tally.mass {
   color: var(--moss); font-weight: 700; padding: 3px 9px; border-radius: 999px;
   background: rgba(138, 154, 107, 0.12); border: 1px solid rgba(138, 154, 107, 0.3);
@@ -840,7 +877,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--amber);
 }
 .reagent .n { font-size: 11px; font-weight: 600; color: var(--text-hi); display: flex; align-items: center; gap: 6px; }
-.reagent .meta { font-size: 9px; color: var(--text-lo); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+.reagent .meta { font-size: 10px; color: var(--text-lo); margin-top: 2px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .reagent .meta b { color: var(--moss); font-weight: 600; }
 .reagent .add { color: var(--text-lo); flex-shrink: 0; transition: color 0.15s; }
 .reagent:hover:not(:disabled) .add { color: var(--amber); }
@@ -854,7 +891,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .step-row .l { font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; padding-right: 3px; }
 .step-row .q {
-  flex: 1; font-size: 9.5px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+  flex: 1; font-size: 10.5px; font-weight: 700; font-family: var(--f-spec); font-variant-numeric: tabular-nums;
   padding: 4px 0; border-radius: 5px; color: var(--text-lo); background: none; border: none; cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
@@ -881,7 +918,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--moss);
 }
 .charge .n { font-size: 11px; font-weight: 600; color: var(--text-hi); display: flex; align-items: center; gap: 6px; }
-.charge .w { font-size: 9.5px; color: var(--text-lo); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+.charge .w { font-size: 10.5px; color: var(--text-lo); font-family: var(--f-spec); font-variant-numeric: tabular-nums; margin-top: 2px; }
 .charge .xn { font-size: 8px; font-weight: 700; padding: 1.5px 5px; border-radius: 4px; background: rgba(157, 139, 176, 0.2); color: var(--plum); }
 .charge .drop {
   padding: 5px; border-radius: 6px; color: var(--text-lo); background: none; border: none; cursor: pointer;
@@ -896,12 +933,12 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .bench-block .bh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 .bench-block .bh .l { display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
-.bench-block .bh .v { font-size: 11.5px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--teal); }
+.bench-block .bh .v { font-size: 11.5px; font-weight: 700; font-family: var(--f-instr); color: var(--teal); }
 .bench-block .bh .v.off { color: var(--text-lo); }
 .bench-block .note { font-size: 9.5px; color: var(--text-lo); font-style: italic; }
 .bench-block .kv { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10px; margin-top: 7px; }
 .bench-block .kv .k { color: var(--text-lo); }
-.bench-block .kv .n { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--text-hi); }
+.bench-block .kv .n { font-family: var(--f-instr); font-weight: 700; color: var(--text-hi); }
 .bench-block .kv .n.moss { color: var(--moss); }
 .bench-block .kv .n.plum { color: var(--plum); }
 
@@ -945,7 +982,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .vessel-pick .n { font-size: 11px; font-weight: 600; color: var(--text-hi); display: flex; align-items: center; gap: 5px; }
 .vessel-pick .specs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .vessel-pick .spec {
-  font-size: 8.5px; font-family: 'IBM Plex Mono', monospace; padding: 2px 6px; border-radius: 4px;
+  font-size: 9.5px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; padding: 2px 6px; border-radius: 4px;
   background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); color: var(--text-lo);
 }
 .vessel-pick .spec.pw { color: var(--brass); }
@@ -960,7 +997,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .compound.sludge { background: rgba(179, 69, 47, 0.12); border-color: rgba(179, 69, 47, 0.45); }
 .compound .ch { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
 .compound .ch .l { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
-.compound .nm { font-family: 'Zilla Slab', serif; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 7px; color: var(--moss); line-height: 1.25; }
+.compound .nm { font-family: var(--f-name); font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 7px; color: var(--moss); line-height: 1.25; }
 .compound.unknown .nm { color: var(--plum); }
 .compound.sludge .nm { color: #e0a58f; }
 .compound .flag { display: block; margin-top: 6px; font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--plum); font-weight: 700; }
@@ -1019,7 +1056,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .ladder .lh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 .ladder .lh .l { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
-.ladder .lh .lv { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--brass); }
+.ladder .lh .lv { font-size: 11px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--brass); }
 .ladder .lh .runs { color: var(--text-lo); font-weight: 400; }
 .ladder .rung { padding: 8px 0; border-top: 1px solid var(--line); }
 .ladder .rung:first-of-type { border-top: none; padding-top: 0; }
@@ -1034,12 +1071,12 @@ input[type="range"].dial-slider::-moz-range-thumb {
   background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line);
 }
 .ladder .rrow .k { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-lo); }
-.ladder .rrow .n { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--text-hi); }
+.ladder .rrow .n { font-size: 11px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text-hi); }
 
 .dial-block { padding: 13px; border-radius: 10px; margin-bottom: 11px; flex-shrink: 0; background: rgba(0, 0, 0, 0.24); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 13px; }
 .dial-ctl .dh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
 .dial-ctl .dh .l { display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
-.dial-ctl .dh .v { font-size: 12px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text-hi); }
+.dial-ctl .dh .v { font-size: 12px; font-weight: 700; font-family: var(--f-instr); color: var(--text-hi); }
 
 .inoc-go { margin-top: auto; width: 100%; padding: 14px; font-size: 11.5px; flex-shrink: 0; }
 
@@ -1140,7 +1177,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   background: radial-gradient(circle at 35% 30%, rgba(179, 69, 47, 0.35), rgba(60, 20, 12, 0.6));
   border: 1.5px solid rgba(179, 69, 47, 0.7);
 }
-.raid-card h2 { font-family: 'Zilla Slab', serif; font-size: 25px; margin: 0 0 10px; font-weight: 700; letter-spacing: 0.01em; }
+.raid-card h2 { font-family: var(--f-name); font-size: 25px; margin: 0 0 10px; font-weight: 700; letter-spacing: 0.01em; }
 .raid-card .quote { font-size: 12.5px; line-height: 1.6; color: var(--text-mid); font-style: italic; margin: 0 0 24px; }
 .raid-opts { display: flex; flex-direction: column; gap: 9px; }
 .raid-opt {
@@ -1151,7 +1188,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .raid-opt:hover:not(:disabled) { border-color: var(--brass); background: rgba(217, 164, 65, 0.08); }
 .raid-opt:disabled { opacity: 0.4; cursor: not-allowed; }
-.raid-opt .cost { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--brick); }
+.raid-opt .cost { font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--brick); }
 .raid-opt.favor { border-color: rgba(157, 139, 176, 0.4); color: var(--plum); }
 .raid-opt.favor:hover:not(:disabled) { background: rgba(157, 139, 176, 0.14); border-color: var(--plum); }
 .raid-opt.favor .cost { color: var(--plum); }
@@ -1166,7 +1203,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   position: fixed; top: 12px; right: 12px; z-index: 200; width: min(340px, calc(100vw - 24px));
   max-height: calc(100vh - 24px); overflow-y: auto; border-radius: 12px;
   background: linear-gradient(180deg, #1d2430, #141a23); border: 1px solid rgba(140, 170, 210, 0.35);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7); font-family: 'IBM Plex Mono', monospace;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7); font-family: var(--f-instr);
 }
 .dev-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
@@ -1190,7 +1227,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .dev-btn {
   font-size: 9.5px; font-weight: 700; padding: 4px 8px; border-radius: 5px; cursor: pointer;
   background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(140, 170, 210, 0.3); color: #cfe2f5;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--f-instr);
 }
 .dev-btn:hover { background: rgba(157, 195, 230, 0.2); border-color: #9dc3e6; }
 
@@ -1216,7 +1253,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   padding: 22px 24px 16px; border-bottom: 1px solid var(--line); flex-shrink: 0;
 }
 .rc-head .type { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--moss); font-weight: 700; }
-.rc-head h2 { font-family: 'Zilla Slab', serif; font-size: 21px; margin: 5px 0 0; font-weight: 600; }
+.rc-head h2 { font-family: var(--f-name); font-size: 21px; margin: 5px 0 0; font-weight: 600; }
 .rc-head .sub { font-size: 11.5px; color: var(--text-lo); margin: 6px 0 0; line-height: 1.5; max-width: 46ch; }
 
 .rc-body { padding: 18px 24px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
@@ -1247,7 +1284,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line);
 }
 .rc-scores .l { font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); }
-.rc-scores .n { font-size: 17px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text-hi); }
+.rc-scores .n { font-size: 17px; font-weight: 700; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--text-hi); }
 .rc-scores .n.good { color: var(--moss); }
 .rc-scores .n.bad { color: var(--brick); }
 
@@ -1260,7 +1297,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .rc-recent .runs { display: flex; gap: 5px; }
 .rc-recent .run {
   min-width: 30px; text-align: center; padding: 4px 7px; border-radius: 6px; cursor: help;
-  font-size: 11px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-weight: 700; font-family: var(--f-spec); font-variant-numeric: tabular-nums;
   background: rgba(0, 0, 0, 0.28); border: 1px solid var(--line); color: var(--text-mid);
 }
 .rc-recent .run.good { color: var(--moss); border-color: rgba(138, 154, 107, 0.4); }
@@ -1282,7 +1319,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .shelf-row .cnt {
   display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px;
-  font-size: 9px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-family: var(--f-spec); font-variant-numeric: tabular-nums;
   background: rgba(0, 0, 0, 0.3); color: inherit; opacity: 0.75;
 }
 .shelf-row .chip-tab.active .cnt { background: rgba(0, 0, 0, 0.2); }
@@ -1300,7 +1337,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: flex; align-items: center; gap: 7px; font-size: 9px; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--text-lo); font-weight: 700;
 }
-.hand-strip .hs-l b { color: var(--brass); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0; }
+.hand-strip .hs-l b { color: var(--brass); font-family: var(--f-spec); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .hand-strip .hs-r { display: flex; align-items: center; gap: 3px; font-size: 10px; color: var(--amber); }
 
 /* =========================================================================
@@ -1366,7 +1403,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .sup-supplier:hover { border-color: var(--brass); }
 .sup-supplier.active { border-color: var(--amber); color: var(--text-hi); background: rgba(217, 164, 65, 0.1); }
-.sup-supplier b { font-family: 'IBM Plex Mono', monospace; color: var(--brass); font-size: 9px; }
+.sup-supplier b { font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--brass); font-size: 10px; }
 .sup-supplier .dot { width: 6px; height: 6px; border-radius: 999px; }
 .sup-supplier .ltrack { width: 26px; height: 3px; border-radius: 999px; background: #0a0705; overflow: hidden; }
 .sup-supplier .lfill { display: block; height: 100%; background: var(--moss); }
@@ -1375,24 +1412,40 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .cat-head, .cat-row {
   display: grid;
   grid-template-columns: minmax(190px, 2.2fr) 96px 108px 58px 66px 128px;
-  align-items: center; gap: 12px; padding: 7px 22px;
+  align-items: center; gap: 12px;
 }
 .cat-head {
   flex-shrink: 0; border-bottom: 1px solid var(--line); background: rgba(0, 0, 0, 0.2);
+  padding: 9px 30px 9px 33px;
   font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-lo); font-weight: 700;
 }
 .cat-head .c-comp em { display: block; font-style: normal; letter-spacing: 0.04em; opacity: 0.6; text-transform: none; font-size: 8px; }
-.cat-head .c-sort {
-  display: flex; align-items: center; gap: 3px; justify-content: flex-end; background: none; border: none;
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--text-lo); cursor: pointer; padding: 0;
-}
-.cat-head .c-sort:hover { color: var(--text-hi); }
-.cat-head .c-sort.active { color: var(--amber); }
+.cat-head .c-qual, .cat-head .c-price { color: var(--text-lo); font: inherit; letter-spacing: inherit; }
 
-.catalogue { flex: 1; overflow-y: auto; min-height: 0; }
-.cat-row { border-bottom: 1px solid var(--line); transition: background 0.12s; }
-.cat-row:hover { background: rgba(217, 164, 65, 0.05); }
-.cat-row.locked { opacity: 0.42; }
+/* The rail the shelf is labelled from. */
+.sort-rail {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  padding: 8px 22px 9px; flex-shrink: 0;
+}
+.sort-rail .sr-l {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-lo); font-weight: 600; margin-right: 2px;
+}
+.sort-rail .sr-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 12px; letter-spacing: 0.07em;
+  padding: 3px 10px; border-radius: 3px; cursor: pointer;
+  background: rgba(0, 0, 0, 0.24); border: 1px solid var(--line); color: var(--text-lo);
+}
+.sort-rail .sr-btn:hover { color: var(--text-hi); border-color: var(--brass); }
+.sort-rail .sr-btn.active { color: var(--amber); border-color: rgba(217, 164, 65, 0.45); background: rgba(217, 164, 65, 0.1); }
+.sort-rail .sr-count {
+  margin-left: auto; font-family: var(--f-desc); font-style: italic;
+  font-size: 13px; color: var(--text-lo);
+}
+
+.catalogue { flex: 1; overflow-y: auto; min-height: 0; padding: 8px 0 16px; }
+.cat-row { padding: 7px 12px 7px 15px; margin: 0 18px 3px; }
 
 .cat-row .c-item { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .cat-row .glyph {
@@ -1410,12 +1463,12 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .cbar { display: block; height: 5px; border-radius: 999px; background: #0a0705; border: 1px solid var(--line); overflow: hidden; }
 .cbar .cfill { display: block; height: 100%; }
 
-.c-enz { font-size: 9.5px; font-family: 'IBM Plex Mono', monospace; }
+.c-enz { font-size: 10.5px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .c-enz .enz { color: var(--moss); }
 .c-enz .enz.strain { color: var(--plum); font-size: 8.5px; font-family: 'Work Sans', sans-serif; }
 .c-enz .enz.none { color: var(--text-lo); opacity: 0.5; }
-.c-qual { font-size: 10.5px; font-family: 'IBM Plex Mono', monospace; color: var(--text-mid); text-align: right; }
-.c-price { font-size: 11.5px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--amber); text-align: right; }
+.c-qual { font-size: 11.5px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--text-mid); text-align: right; }
+.c-price { font-size: 11.5px; font-weight: 700; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--amber); text-align: right; }
 .c-buy { display: flex; justify-content: flex-end; }
 .c-buy .buy-btn { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 .cat-empty { padding: 40px; text-align: center; font-size: 11.5px; color: var(--text-lo); font-style: italic; }
@@ -1425,7 +1478,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .sup-meta {
   display: flex; gap: 16px; flex-wrap: wrap; padding: 9px 13px; border-radius: 9px; margin-bottom: 4px;
   background: rgba(0, 0, 0, 0.22); border: 1px dashed var(--line-strong);
-  font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--text-mid);
+  font-size: 11px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--text-mid);
 }
 .sup-meta span { display: flex; align-items: center; gap: 5px; }
 .sup-lbl { font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; margin-top: 6px; }
@@ -1433,9 +1486,9 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 11px; }
 
 @media (max-width: 900px) {
-  .cat-head { display: none; }
-  .cat-row { grid-template-columns: 1fr auto; gap: 8px; padding: 10px 16px; }
-  .cat-row .c-comp, .cat-row .c-enz, .cat-row .c-qual { display: none; }
+  /* The narrow catalogue used to drop composition, enzymes and quality — three
+     columns, two of which are what actually decides a purchase. The stacked
+     spine at the end of this file keeps all of them; see THE SHELF ON A PHONE. */
   .sup-controls, .loyalty-strip, .sup-head, .sup-tabs { padding-left: 14px; padding-right: 14px; }
 }
 
@@ -1453,7 +1506,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .tr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
 .tr-head .l { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); font-weight: 700; }
-.tr-head .k { font-size: 9.5px; font-family: 'IBM Plex Mono', monospace; color: var(--text-mid); }
+.tr-head .k { font-size: 9.5px; font-family: var(--f-instr); color: var(--text-mid); }
 
 .tr-svg { width: 100%; height: 64px; display: block; overflow: visible; }
 .tr-band { fill: rgba(138, 154, 107, 0.14); }
@@ -1500,7 +1553,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: flex; align-items: center; justify-content: center;
 }
 .sc-kicker { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--plum); font-weight: 700; }
-.sc-head h2 { font-family: 'Zilla Slab', serif; font-size: 14px; margin: 3px 0 0; font-weight: 600; line-height: 1.25; }
+.sc-head h2 { font-family: var(--f-name); font-size: 14px; margin: 3px 0 0; font-weight: 600; line-height: 1.25; }
 .sc-pin {
   flex-shrink: 0; width: 24px; height: 24px; border-radius: 6px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; color: var(--text-lo);
@@ -1518,11 +1571,11 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .sc-lab { font-size: 8.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-lo); }
 .sc-track { height: 5px; border-radius: 999px; background: var(--bg-cubby); border: 1px solid var(--line); overflow: hidden; }
 .sc-fill { display: block; height: 100%; }
-.sc-val { font-size: 9px; font-family: 'IBM Plex Mono', monospace; text-align: right; }
+.sc-val { font-size: 9px; font-family: var(--f-instr); text-align: right; }
 
 .sc-facts { display: flex; flex-wrap: wrap; gap: 5px; }
 .sc-facts .f {
-  font-size: 8.5px; font-family: 'IBM Plex Mono', monospace; padding: 3px 7px; border-radius: 5px;
+  font-size: 9.5px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; padding: 3px 7px; border-radius: 5px;
   background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); color: var(--text-lo);
 }
 .sc-facts .f.hi { color: var(--moss); border-color: rgba(138, 154, 107, 0.35); }
@@ -1550,7 +1603,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .fr-pip { flex: 1; height: 3px; border-radius: 999px; background: rgba(243, 233, 216, 0.12); }
 .fr-pip.done { background: var(--moss); }
 .fr-pip.now { background: var(--amber); }
-.firstrun h4 { margin: 0 0 5px; font-family: 'Zilla Slab', serif; font-size: 13.5px; font-weight: 600; color: var(--text-hi); }
+.firstrun h4 { margin: 0 0 5px; font-family: var(--f-name); font-size: 13.5px; font-weight: 600; color: var(--text-hi); }
 .firstrun p { margin: 0; font-size: 11px; line-height: 1.55; color: var(--text-mid); }
 .fr-last {
   display: flex; align-items: center; gap: 5px; margin-top: 9px; padding-top: 8px;
@@ -1563,7 +1616,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
    to strip testing tools entirely. */
 .dev-chip {
   padding: 6px 9px; border-radius: 6px; cursor: pointer;
-  font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
   color: #7f93a8; background: rgba(157, 195, 230, 0.08); border: 1px solid rgba(140, 170, 210, 0.3);
 }
 .dev-chip:hover { color: #cfe2f5; border-color: #9dc3e6; }
@@ -1586,7 +1639,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 /* How many of a vessel you own — it used to be a yes/no */
 .own-count {
   display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
-  font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 10px; font-weight: 700;
   background: rgba(138, 154, 107, 0.18); color: var(--moss);
 }
 
@@ -1597,8 +1650,8 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .charge-amt { display: flex; align-items: center; gap: 9px; }
 .charge-amt input[type="range"] { flex: 1; }
 .charge-amt .amt {
-  min-width: 52px; text-align: right; font-size: 10px; font-weight: 700;
-  font-family: 'IBM Plex Mono', monospace; color: var(--text-hi);
+  min-width: 52px; text-align: right; font-size: 11px; font-weight: 700;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--text-hi);
 }
 
 /* Pairing suggestions — the scan said what a thing IS but never what to do with it */
@@ -1609,7 +1662,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .sc-pair .ph { font-size: 10.5px; font-weight: 600; color: var(--moss); margin-bottom: 2px; }
 .sc-pair .pr { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2px 10px; align-items: baseline; }
 .sc-pair .pr .w { font-size: 10px; color: var(--text-hi); }
-.sc-pair .pr .r { font-size: 9.5px; font-family: 'IBM Plex Mono', monospace; color: var(--brass); text-align: right; }
+.sc-pair .pr .r { font-size: 10.5px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--brass); text-align: right; }
 .sc-pair .pr .y { grid-column: 1 / -1; font-size: 9px; color: var(--text-lo); font-style: italic; }
 
 /* =============================================================================
@@ -1751,7 +1804,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .hr-verdict .sc, .hr-verdict .paid { display: flex; flex-direction: column; gap: 2px; }
 .hr-verdict .paid { text-align: right; }
-.hr-verdict .n { font-size: 21px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text-hi); }
+.hr-verdict .n { font-size: 21px; font-weight: 700; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--text-hi); }
 .hr-verdict .n.good { color: var(--moss); }
 .hr-verdict .n.bad { color: var(--brick); }
 .hr-verdict .l { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); }
@@ -1769,7 +1822,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   font-size: 11.5px;
 }
 .hr-row .k { color: var(--text-lo); white-space: nowrap; }
-.hr-row .v { color: var(--text-hi); text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+.hr-row .v { color: var(--text-hi); text-align: right; font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 11px; }
 .hr-row .ok { color: var(--moss); }
 .hr-row .warn { color: var(--amber); }
 .hr-row .bad { color: var(--brick); }
@@ -1810,9 +1863,14 @@ input[type="range"].dial-slider::-moz-range-thumb {
 /* Recall tab for the dismissed guide. Sits where the guide itself sits, so the
    panel appears to fold out of the same corner it folded into. */
 .guide-recall {
-  position: fixed; left: 18px; bottom: 76px; z-index: 44;
-  padding: 6px 12px;
-  font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+  /* It was pinned at left:18 / bottom:76 — clear of the Supply drawer's 58px
+     bar, which is the layout this game had two rewrites ago. With the HUD in
+     side rails that puts it straight over the pantry. It docks to the STAGE
+     now, which means it moves with the rails at each breakpoint. */
+  position: fixed; left: 254px; bottom: 18px; z-index: 44;
+  padding: 5px 13px;
+  font-family: var(--f-spec);
+  font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
   color: var(--brass);
   background: linear-gradient(180deg, #241c14, #1a140d);
   border: 1px solid rgba(217, 164, 65, 0.3);
@@ -1823,6 +1881,10 @@ input[type="range"].dial-slider::-moz-range-thumb {
   transition: opacity 0.15s, border-color 0.15s;
 }
 .guide-recall:hover { opacity: 1; border-color: var(--brass); }
+/* Two columns: the rails moved to the right, so the stage starts at the edge. */
+@media (max-width: 1179px) { .guide-recall { left: 18px; } }
+/* One column: nothing to sit beside, so it takes the corner. */
+@media (max-width: 759px) { .guide-recall { left: auto; right: 12px; bottom: 12px; } }
 
 /* Evenness. Only shown on vessels big enough to actually stratify — a mason jar
    gets a single reassuring line instead, because a gauge pinned at 100 forever
@@ -1834,7 +1896,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .cp-even .eh { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
 .cp-even .eh .l { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); }
-.cp-even .eh .v { font-size: 10.5px; font-family: 'IBM Plex Mono', monospace; color: var(--moss); }
+.cp-even .eh .v { font-size: 10.5px; font-family: var(--f-instr); color: var(--moss); }
 .cp-even .eh .v.warn { color: var(--amber); }
 .cp-even .eh .v.bad { color: var(--brick); }
 .cp-even .etrack { height: 4px; border-radius: 999px; background: rgba(0, 0, 0, 0.35); overflow: hidden; }
@@ -1879,7 +1941,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px;
 }
 .oh .who { font-size: 12.5px; font-weight: 600; color: var(--text-hi); }
-.oh .pay { font-size: 13px; font-family: 'IBM Plex Mono', monospace; color: var(--moss); }
+.oh .pay { font-size: 13px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--moss); }
 .oh .pay em, .oh .due, .oh .mult { font-size: 10px; font-style: normal; color: var(--text-lo); }
 .oh .due.bad { color: var(--brick); }
 .ob-offer .pitch {
@@ -1938,7 +2000,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .cd-row .p { text-align: right; }
 .cd-row b { font-size: 11.5px; color: var(--text-hi); font-weight: 600; }
 .cd-row em { font-size: 9.5px; font-style: normal; color: var(--text-lo); }
-.cd-row .p { font-size: 11px; color: var(--moss); font-family: 'IBM Plex Mono', monospace; }
+.cd-row .p { font-size: 11px; color: var(--moss); font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
 .cd-row .p em { color: var(--moss); font-size: 12px; }
 .cd-note { font-size: 10px; color: var(--text-lo); margin: 4px 0 0; font-style: italic; }
 
@@ -1974,7 +2036,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   background: rgba(0, 0, 0, 0.18);
 }
 .cw-payroll .l { display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-lo); }
-.cw-payroll .v { font-size: 14px; font-family: 'IBM Plex Mono', monospace; color: var(--moss); text-align: right; }
+.cw-payroll .v { font-size: 14px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--moss); text-align: right; }
 .cw-payroll .v.warn { color: var(--amber); }
 .cw-payroll .v.bad { color: var(--brick); }
 .cw-payroll .n { grid-column: 1 / -1; font-size: 10.5px; line-height: 1.5; color: var(--text-mid); font-style: italic; }
@@ -1996,7 +2058,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .mh .nm { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-hi); }
 .mh .rl { display: block; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brass); margin-top: 2px; }
 .mh .rt { text-align: right; }
-.mh .wg { display: block; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--moss); margin-top: 3px; }
+.mh .wg { display: block; font-size: 11px; font-family: var(--f-spec); font-variant-numeric: tabular-nums; color: var(--moss); margin-top: 3px; }
 
 .cw-pips { display: inline-flex; gap: 3px; }
 .cw-pips .pip { width: 6px; height: 6px; border-radius: 999px; background: rgba(243, 233, 216, 0.15); }
@@ -2091,7 +2153,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   border-radius: 3px;
 }
 .iso-actions .who {
-  font-family: 'Zilla Slab', serif; font-size: 12px; color: var(--text-hi);
+  font-family: var(--f-name); font-size: 12px; color: var(--text-hi);
   margin-right: 4px; max-width: 190px; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap;
 }
@@ -2178,7 +2240,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .pr-job.dry { opacity: 0.72; }
 .pj-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
-.pj-head .n { font-family: 'Zilla Slab', serif; font-size: 14px; color: var(--text-hi); }
+.pj-head .n { font-family: var(--f-name); font-size: 14px; color: var(--text-hi); }
 .pj-head .v { font-size: 10.5px; color: var(--text-lo); }
 
 .pj-flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
@@ -2255,8 +2317,8 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .pick-btn:hover { border-color: var(--brass); background: rgba(193, 154, 88, 0.09); }
 .pick-btn em {
   margin-left: auto;
-  font-style: normal; font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px; color: var(--brass);
+  font-style: normal; font-family: var(--f-spec); font-variant-numeric: tabular-nums;
+  font-size: 11.5px; color: var(--brass);
 }
 
 /* Both of these belong to the overlay, so they stay out of the way until the
@@ -2343,10 +2405,10 @@ input[type="range"].dial-slider::-moz-range-thumb {
    nothing about themselves at the moment they were used. */
 .tool-reach {
   margin: 8px 0 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
   color: var(--text-lo);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums;
 }
 .tool-reach b { color: var(--brass); font-weight: 600; }
 
@@ -2356,8 +2418,8 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .tnotes { margin: 4px 0 0; display: flex; flex-direction: column; gap: 9px; }
 .tnote { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 10px; align-items: baseline; }
 .tnote dt {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--brass); font-weight: 600;
 }
 .tnote dd {
@@ -2375,7 +2437,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .rancid-line {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
   margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--line);
-  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-family: var(--f-spec); font-variant-numeric: tabular-nums;
 }
 .rancid-line .l { color: var(--text-lo); letter-spacing: 0.08em; text-transform: uppercase; }
 .rancid-line .v.warn { color: var(--amber); }
@@ -2491,6 +2553,11 @@ input[type="range"].dial-slider::-moz-range-thumb {
   padding: 12px 14px; border-bottom: 1px solid var(--line);
 }
 .culture-row .cr-main { flex: 1 1 220px; min-width: 0; }
+.culture-row::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
 .culture-row .cr-name { display: block; font-size: 12.5px; color: var(--text-hi); font-weight: 600; }
 .culture-row .cr-desc { display: block; font-size: 10.5px; line-height: 1.45; color: var(--text-lo); margin-top: 2px; }
 .culture-row .cr-stats {
@@ -2585,7 +2652,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .paper-tab {
   display: inline-block;
   padding: 4px 13px 5px;
-  font-family: 'Zilla Slab', Georgia, serif;
+  font-family: var(--f-name);
   font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
   color: #241b12;
   background: #c9ad72;
@@ -2700,8 +2767,8 @@ input[type="range"].dial-slider::-moz-range-thumb {
   font-weight: 600;
 }
 .tc-state {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 8.5px; letter-spacing: 0.09em; text-transform: uppercase;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums;
+  font-size: 9.5px; letter-spacing: 0.09em; text-transform: uppercase;
   color: var(--text-lo);
 }
 .tool-card.running .tc-state { color: var(--amber); }
@@ -2741,8 +2808,8 @@ input[type="range"].dial-slider::-moz-range-thumb {
 
 .rail-sect > h3 {
   margin: 0 0 8px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
   color: var(--text-lo); font-weight: 500;
 }
 
@@ -2801,7 +2868,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .rail-tab {
   padding: 5px 11px; border-radius: 3px; cursor: pointer;
   background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line);
-  color: var(--text-lo); font-family: 'Zilla Slab', serif; font-size: 12px;
+  color: var(--text-lo); font-family: var(--f-name); font-size: 12px;
 }
 .rail-tab.active { background: rgba(224, 138, 60, 0.15); border-color: var(--amber); color: var(--text-hi); }
 
@@ -2869,8 +2936,8 @@ input[type="range"].dial-slider::-moz-range-thumb {
 
 .sc-uses { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .sc-uses-h {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
   color: var(--brass); margin-bottom: 9px;
 }
 .sc-use {
@@ -2930,4 +2997,395 @@ input[type="range"].dial-slider::-moz-range-thumb {
 @media (max-width: 759px) {
   /* One rail left, so the Bench/Stock switch has nothing to switch between. */
   .rail-tabs { display: none !important; }
+}
+
+/* =============================================================================
+   THE LABEL
+
+   Everything the player owns or covets is a labelled thing. That is the whole
+   idea: it gives state a physical vocabulary — paper stains, gets overstamped,
+   gets written on — and it answers the density problem, because a label has a
+   second form. Turned edge-on it is a SPINE, and sixty spines is a shelf, which
+   is a thing that exists. A wall of sixty cards is not.
+
+   Two rules hold the direction together:
+
+   - The stock is #e3d6b8, not white. A bright card in a dark room is a lamp; an
+     aged one is a lit object on a bench, which is what a label actually is.
+   - Marks printed ON the stock use the ink tones (--ink-moss and friends), never
+     the room's palette. Amber on cream is mud; the same hue darkened is print.
+
+   Everything below is an override of a rule declared earlier in this file, so
+   it lives at the end on purpose — same specificity, source order decides.
+   ============================================================================= */
+
+/* --------------------------------------------------------------------------
+   THE SPINE — the Supply catalogue, which was the most spreadsheet-like screen
+   in the game: six columns, a rule between each row, and nothing to tell you
+   what KIND of thing you were looking at without reading it.
+   -------------------------------------------------------------------------- */
+.cat-row {
+  position: relative;
+  border-radius: 2px;
+  background: linear-gradient(92deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.34);
+  transition: filter 0.12s;
+}
+/* The left edge is the type. Substrate, starter, additive — and the underground
+   gets no printed supplier at all, so its stock is cheaper and its edge is red. */
+.cat-row::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: 2px 0 0 2px; background: var(--ink-faint);
+}
+.cat-row::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
+.cat-row.kind-substrate::before { background: #7a6a3a; }
+.cat-row.kind-starter::before   { background: var(--stamp-good); }
+.cat-row.kind-additive::before  { background: var(--ink-teal); }
+.cat-row.illicit { background: linear-gradient(92deg, var(--stock-dim), #c6b696); }
+.cat-row.illicit::before { background: var(--stamp-bad); }
+/* Brightness, never geometry — the bench taught that lesson with the hover ring. */
+.cat-row:hover { filter: brightness(1.05); }
+
+/* The sheet's own ground is #1a130b, so the plate matches it and the painted
+   cell reads as an engraved illustration block rather than a pasted square. */
+.cat-row .glyph {
+  background: #1a130b; border: 1px solid var(--ink-line); border-radius: 2px;
+  color: var(--brass);
+}
+.cat-row .n {
+  font-family: var(--f-name); font-size: 14px; font-weight: 600;
+  color: var(--ink); letter-spacing: -0.004em;
+}
+.cat-row .m {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 11px; letter-spacing: 0.045em;
+  color: var(--ink-faint); margin-top: 1px;
+}
+.cat-row .m .heat { color: var(--stamp-bad); font-weight: 700; }
+.cat-row .living-tag {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 9px; letter-spacing: 0.11em;
+  background: rgba(74, 107, 52, 0.15); color: #3e5a2b; border: 1px solid rgba(74, 107, 52, 0.32);
+}
+.cat-row .living-tag.illicit {
+  background: rgba(156, 68, 41, 0.13); color: var(--stamp-bad); border-color: rgba(156, 68, 41, 0.34);
+}
+.cat-row .cbar { background: rgba(42, 32, 21, 0.1); border: 1px solid var(--ink-line-soft); }
+.cat-row .c-enz .enz { color: var(--stamp-good); }
+.cat-row .c-enz .enz.strain { color: var(--ink-plum); font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 10.5px; }
+.cat-row .c-enz .enz.none { color: var(--ink-faint); opacity: 0.7; }
+.cat-row .c-qual { color: #54432c; font-variant-numeric: tabular-nums; }
+.cat-row .c-price {
+  color: var(--ink); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.cat-row .buy-btn {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 11px; letter-spacing: 0.13em;
+  background: rgba(74, 107, 52, 0.14); color: #3e5a2b; border: 1px solid rgba(74, 107, 52, 0.42);
+}
+.cat-row .buy-btn:hover:not(:disabled) { background: rgba(74, 107, 52, 0.26); }
+.cat-row .buy-btn:disabled, .cat-row .buy-btn.locked {
+  background: rgba(42, 32, 21, 0.05); color: var(--ink-faint); border-color: var(--ink-line-soft);
+}
+/* Opening one is picking it up. An underline is what a label does; a colour
+   change is what a hyperlink does. */
+.cat-row .c-item.inspectable:hover .n {
+  color: var(--ink);
+  text-decoration: underline; text-decoration-thickness: 1px;
+  text-decoration-color: rgba(42, 32, 21, 0.4); text-underline-offset: 3px;
+}
+
+/* A locked line is UNPRINTED STOCK. You can see there is something on the shelf
+   without being told what — which is more legible than the same row at 42%
+   opacity, and it keeps every fact the row was already showing. */
+.cat-row.locked {
+  opacity: 1;
+  background: linear-gradient(92deg, #3a3227, #2e281f);
+  box-shadow: none; color: var(--text-lo);
+}
+.cat-row.locked::before { background: #4a4034 !important; }
+.cat-row.locked::after { display: none; }
+.cat-row.locked .n { color: var(--text-mid); }
+.cat-row.locked .m, .cat-row.locked .c-qual, .cat-row.locked .c-price { color: var(--text-lo); }
+.cat-row.locked .glyph { border-color: var(--line); }
+.cat-row.locked .cbar { background: rgba(0, 0, 0, 0.4); border-color: var(--line); }
+.cat-row.locked .c-enz .enz { color: var(--text-lo); }
+.cat-row.locked .buy-btn.locked {
+  background: rgba(0, 0, 0, 0.25); color: var(--text-lo); border-color: var(--line);
+}
+
+/* --------------------------------------------------------------------------
+   THE FULL LABEL — what you get when you pick a spine up. Six parts, always in
+   the same order: kind, name, what it is FOR in italic, the numbers as small
+   print, and provenance at the foot.
+   -------------------------------------------------------------------------- */
+.ing-modal {
+  padding: 5px;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  border: none; color: var(--ink);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+/* The opened panel is rendered `embedded`, which lays the scan out as two
+   columns with the head pinned to 190px — fine for the bench readout it was
+   written for, and wrong for a label: an 84px illustration left the NAME about
+   ninety pixels to wrap in, so "A. Oryzae Spores" came out on three lines. A
+   label is illustration and name across the top, everything else beneath. */
+.ing-modal .scan.full {
+  border: 1px solid var(--ink-line); border-radius: 1px;
+  padding: 17px 20px 20px; gap: 13px;
+  flex-direction: column;
+}
+.ing-modal .scan.full .sc-head {
+  width: auto; flex-shrink: 1; padding-right: 46px; border-right: none;
+  align-items: center;
+}
+.ing-modal .scan.full .sc-id { align-items: center; gap: 14px; }
+.ing-modal .scan.full .sc-glyph { width: 92px; height: 92px; }
+.ing-modal .scan.full .sc-body { width: 100%; }
+.ing-modal .sc-kicker {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.2em; color: var(--ink-soft);
+}
+.ing-modal .sc-head h2 {
+  font-family: var(--f-name); font-size: 25px; font-weight: 600;
+  color: var(--ink); line-height: 1.06; margin: 4px 0 0;
+}
+.ing-modal .sc-glyph { background: #1a130b; border: 1px solid var(--ink-line); border-radius: 2px; }
+/* What it is FOR, written rather than printed. This line already existed and was
+   the strongest sentence on the panel; it was set in the same grey as the rest. */
+.ing-modal .sc-read {
+  font-family: var(--f-desc); font-style: italic; font-size: 16px; line-height: 1.4;
+  color: var(--ink-soft);
+  padding-top: 11px; border-top: 1px solid var(--ink-line-soft);
+}
+.ing-modal .sc-lab { font-family: var(--f-spec); font-variant-numeric: tabular-nums; letter-spacing: 0.1em; color: var(--ink-soft); }
+.ing-modal .sc-track { background: rgba(42, 32, 21, 0.1); border: 1px solid var(--ink-line-soft); }
+.ing-modal .sc-val { font-family: var(--f-instr); font-variant-numeric: tabular-nums; }
+.ing-modal .sc-facts .f {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 12px; letter-spacing: 0.06em;
+  background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line-soft); color: #4a3a26;
+}
+.ing-modal .sc-facts .f.hi { color: var(--ink); border-color: var(--ink-line); font-weight: 600; }
+.ing-modal .sc-facts .f.bad { color: var(--stamp-bad); border-color: rgba(156, 68, 41, 0.34); }
+.ing-modal .sc-pair {
+  background: rgba(42, 32, 21, 0.05); border: 1px solid var(--ink-line-soft); color: var(--ink-soft);
+}
+.ing-modal .sc-pair .ph { color: var(--ink); font-family: var(--f-spec); font-variant-numeric: tabular-nums; letter-spacing: 0.12em; }
+.ing-modal .sc-pair .pr .w { color: var(--ink); }
+.ing-modal .sc-pair .pr .r { color: #6b5320; font-family: var(--f-spec); font-variant-numeric: tabular-nums; }
+.ing-modal .sc-pair .pr .y { color: var(--ink-faint); font-family: var(--f-desc); font-style: italic; font-size: 13px; }
+.ing-modal .sc-uses { border-top: 1px solid var(--ink-line-soft); }
+.ing-modal .sc-uses-h {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 11.5px; letter-spacing: 0.2em; color: var(--ink-soft);
+}
+.ing-modal .sc-use { border-bottom: 1px solid var(--ink-line-soft); }
+.ing-modal .sc-use .n { font-family: var(--f-name); font-size: 14px; color: var(--ink); }
+.ing-modal .sc-use .r { font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 12px; letter-spacing: 0.05em; color: var(--ink-faint); }
+.ing-modal .sc-uses-none, .ing-modal .sc-uses-more {
+  font-family: var(--f-desc); font-style: italic; font-size: 14px; line-height: 1.45; color: var(--ink-soft);
+}
+.ing-modal .sc-gated { color: var(--ink-faint); font-family: var(--f-desc); font-size: 13px; }
+.ing-modal .ing-close {
+  background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line); color: var(--ink-soft);
+}
+.ing-modal .ing-close:hover { background: rgba(42, 32, 21, 0.14); color: var(--ink); }
+
+/* --------------------------------------------------------------------------
+   THE CULTURE LABEL — a strain is the one thing in the game the player MADE, so
+   it gets the full label rather than a spine.
+   -------------------------------------------------------------------------- */
+.culture-row {
+  position: relative; border-radius: 2px; margin: 0 18px 4px;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  border: none; color: var(--ink);
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.4);
+}
+.culture-row .cr-name { font-family: var(--f-name); font-size: 17px; font-weight: 600; color: var(--ink); }
+.culture-row .cr-desc {
+  font-family: var(--f-desc); font-style: italic; font-size: 14px; line-height: 1.35; color: var(--ink-soft);
+}
+.culture-row .cr-stats {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 12.5px; letter-spacing: 0.05em; color: #54432c;
+  padding-top: 8px; border-top: 1px solid var(--ink-line-soft);
+}
+.culture-row .cr-stats b { color: var(--ink); font-weight: 700; }
+.culture-row .cr-stats b.good { color: var(--stamp-good); }
+.culture-row .cr-stats b.poor { color: var(--stamp-bad); }
+.culture-row .cr-price { color: #6b5320; }
+.culture-row .btn {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; letter-spacing: 0.12em;
+  background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line); color: var(--ink-soft);
+}
+.culture-row .btn:hover:not(:disabled) { background: rgba(42, 32, 21, 0.13); color: var(--ink); }
+.culture-row .btn.btn-amber {
+  background: rgba(74, 107, 52, 0.16); border-color: rgba(74, 107, 52, 0.45); color: #3e5a2b;
+}
+.culture-row .btn.btn-amber:hover:not(:disabled) { background: rgba(74, 107, 52, 0.28); }
+
+/* --------------------------------------------------------------------------
+   STATE HAPPENS TO THE PAPER
+
+   This is what the direction buys that a table cannot. A spoiled batch is not a
+   red number — its label is water-stained and overstamped. Nothing has to be
+   explained, because everyone already knows what a stained, stamped label means.
+   -------------------------------------------------------------------------- */
+.label-plate {
+  position: relative; min-width: 0;
+  padding: 13px 17px 12px; border-radius: 2px;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+.label-plate::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.11; mix-blend-mode: multiply;
+}
+.lhead .label-plate .type-tag {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.2em; color: var(--ink-soft); margin-bottom: 3px;
+}
+.lhead .label-plate h1 {
+  font-family: var(--f-name); font-size: 26px; font-weight: 600;
+  line-height: 1.05; color: var(--ink); margin: 0;
+}
+.lhead .label-plate .gen {
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 12.5px; letter-spacing: 0.07em;
+  color: var(--ink-faint); margin-top: 5px;
+}
+
+/* Water damage. Two soft blooms rather than one, because a stain that is a
+   single centred ellipse reads as a vignette. */
+.label-plate.spoiled { filter: saturate(0.62); }
+.label-plate.spoiled::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px; z-index: 1;
+  background:
+    radial-gradient(ellipse 68% 52% at 22% 78%, rgba(90, 60, 25, 0.42), transparent 70%),
+    radial-gradient(ellipse 38% 30% at 76% 26%, rgba(70, 45, 18, 0.34), transparent 70%);
+  mix-blend-mode: multiply;
+}
+/* No printer, so the supplier line is inked by hand and the stock is cheaper. */
+.label-plate.illicit { background: linear-gradient(178deg, var(--stock-dim), #c6b696); }
+.label-plate.illicit .type-tag { color: #7a3d28; }
+
+/* A stamp lands ON the label, so the label has to leave room for it — without
+   this the name runs under it, which is a smudge rather than a stamp. */
+.label-plate.stamped { padding-right: 84px; }
+
+.overstamp {
+  position: absolute; right: -7px; top: 16px; z-index: 3;
+  font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 3px 12px; border-radius: 2px;
+  border: 2px solid var(--stamp-bad); color: var(--stamp-bad);
+  background: rgba(227, 214, 184, 0.5);
+  transform: rotate(-6deg);
+}
+.overstamp.good { border-color: var(--stamp-good); color: var(--stamp-good); }
+/* Written on, not printed. */
+.handwrit {
+  font-family: var(--f-desc); font-style: italic; font-size: 15px;
+  color: #5d4a2e; display: inline-block; transform: rotate(-1.1deg);
+}
+
+@media (max-width: 640px) {
+  .cat-row, .culture-row { margin-left: 10px; margin-right: 10px; }
+  .cat-head { padding-left: 25px; padding-right: 22px; }
+  .catalogue { padding-bottom: 10px; }
+  .overstamp { right: -4px; top: 10px; font-size: 11px; padding: 2px 9px; }
+  .label-plate.stamped { padding-right: 68px; }
+}
+
+/* --------------------------------------------------------------------------
+   THE PANTRY SPINE — the same object in a different place. A jar of pearl
+   barley is a labelled thing whether you are buying it or drawing it, so the
+   reagent list takes the same treatment the Supply catalogue does. Six of them
+   at a time is a shelf; it is the 49-row catalogue that needed the spine, and
+   this one gets it for consistency rather than for density.
+   -------------------------------------------------------------------------- */
+.reagent {
+  position: relative;
+  border-radius: 2px; border: none;
+  padding: 8px 10px 8px 13px;
+  background: linear-gradient(92deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.34);
+  transition: filter 0.12s;
+}
+.reagent::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: 2px 0 0 2px; background: var(--ink-faint);
+}
+.reagent::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
+.reagent.kind-substrate::before { background: #7a6a3a; }
+.reagent.kind-starter::before   { background: var(--stamp-good); }
+.reagent.kind-additive::before  { background: var(--ink-teal); }
+.reagent.illicit { background: linear-gradient(92deg, var(--stock-dim), #c6b696); }
+.reagent.illicit::before { background: var(--stamp-bad); }
+.reagent:hover:not(:disabled) { filter: brightness(1.05); background: linear-gradient(92deg, var(--stock), var(--stock-deep)); }
+.reagent:disabled { opacity: 0.42; }
+.reagent .glyph {
+  background: #1a130b; border: 1px solid var(--ink-line); border-radius: 2px; color: var(--brass);
+}
+.reagent .n { font-family: var(--f-name); font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.reagent .meta { color: var(--ink-faint); font-size: 11px; letter-spacing: 0.045em; }
+.reagent .meta b { color: var(--stamp-good); font-weight: 700; }
+.reagent .living-tag {
+  font-family: var(--f-spec); font-size: 9px; letter-spacing: 0.11em;
+  background: rgba(74, 107, 52, 0.15); color: #3e5a2b; border: 1px solid rgba(74, 107, 52, 0.32);
+}
+.reagent .add { color: var(--ink-soft); }
+.reagent:hover:not(:disabled) .add { color: var(--ink); }
+
+/* --------------------------------------------------------------------------
+   THE SHELF ON A PHONE
+
+   The catalogue's six fixed tracks need 646px and there was never a rule for
+   what happens below that — at 375px the row collapsed and the Buy button fell
+   out from under its own row. A spine stacks: name and price on the first line,
+   the readings and the button on the second. Nothing is dropped, because the
+   columns you would drop (enzymes, quality) are two of the three things that
+   decide a purchase.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  /* Column heads describe columns. Stacked, they describe nothing. */
+  .cat-head { display: none; }
+
+  .cat-row {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-rows: auto auto;
+    gap: 7px 9px;
+    padding: 9px 11px 9px 14px;
+  }
+  .cat-row .c-item  { grid-column: 1 / 5; grid-row: 1; }
+  .cat-row .c-price { grid-column: 4; grid-row: 2; text-align: right; }
+  .cat-row .c-comp  { grid-column: 1; grid-row: 2; align-self: center; }
+  .cat-row .c-enz   { grid-column: 2; grid-row: 2; }
+  .cat-row .c-qual  { grid-column: 3; grid-row: 2; }
+  .cat-row .c-buy   { grid-column: 1 / 5; grid-row: 3; }
+  .cat-row .c-buy .buy-btn { width: 100%; justify-content: center; padding: 7px 10px; }
+
+  /* The search box was a fixed 210px against a flexible chip row, so at this
+     width the chips got 109px and went one per line — five lines of controls
+     above a list. Each control takes a line of its own instead. */
+  .sup-controls { gap: 8px; padding: 10px 14px; }
+  .search-box { width: 100%; }
+  .sup-controls .chips { width: 100%; flex: 0 0 auto; }
+  .bulk-buy { width: 100%; justify-content: space-between; }
+
+  /* Five tabs never fitted; wrapping them cost three rows of header. */
+  .sup-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 10px 14px 0; }
+  .sup-tabs::-webkit-scrollbar { display: none; }
+  .sup-tab { flex: 0 0 auto; }
+
+  .sort-rail { padding: 8px 14px; }
+  .sort-rail .sr-count { width: 100%; margin-left: 0; text-align: right; }
+  .loyalty-strip { padding: 9px 14px; }
+  .catalogue { padding-top: 6px; }
 }
