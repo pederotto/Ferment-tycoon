@@ -203,19 +203,21 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                 const vessel = VESSELS.find(v => v.id === recipe.requiredVesselId);
 
                 return (
+                  /* THE CODEX IS A BOOK OF PRINTED RECIPE LABELS, and one you
+                     have not met yet is unprinted stock — which is the same
+                     rule the Supply shelf uses for a locked line. */
                   <div
                     key={recipe.id}
-                    className="wood-panel"
+                    className={`codex-card${isDiscovered ? '' : ' unknown'}`}
                     onClick={() => setOpenCard(recipe.id)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenCard(recipe.id); } }}
                     title="Open the recipe card"
-                    style={{ borderRadius: 12, padding: 16, opacity: isDiscovered ? 1 : 0.7, display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer' }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <div className="cc-head">
+                      <div className="cc-id">
+                        <div className="cc-tags">
                           <span className="vessel-badge">{recipe.type}</span>
                           {(() => { const era = eraForRecipe(recipe.id); return era ? (
                             <span className="era-tag" title={`${era.title} · ${era.years}`}>{era.title}</span>
@@ -238,16 +240,14 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                             </span>
                           )}
                         </div>
-                        <h3 className="slab" style={{ fontSize: 15, fontWeight: 600 }}>
+                        <h3 className="cc-name">
                           {isDiscovered ? recipe.name : 'Unknown Experimental Protocol'}
                         </h3>
                       </div>
-                      <span className="ticket" style={{ padding: '4px 8px' }}>
-                        <span className="num mono" style={{ fontSize: 11 }}>{recipe.difficulty}&#9733;</span>
-                      </span>
+                      <span className="cc-diff">{recipe.difficulty}&#9733;</span>
                     </div>
 
-                    <p style={{ fontSize: 11, color: 'var(--text-mid)', lineHeight: 1.5 }}>
+                    <p className="cc-desc">
                       {isDiscovered ? recipe.description : 'Buy the formula in a book, or stumble onto the combination yourself.'}
                     </p>
 
@@ -265,25 +265,27 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                       </div>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--line)', borderRadius: 9, padding: 10, textAlign: 'center' }} className="mono">
+                    {/* The held conditions ARE instrument readings, so they keep
+                        the monospace even on paper — a figure copied off a gauge. */}
+                    <div className="cc-params">
                       <div>
-                        <div className="section-lbl" style={{ marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}><Thermometer size={10} color="var(--brick)" /> Temp</div>
-                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? reveal.temp : '??°'}</div>
+                        <div className="l"><Thermometer size={10} color="currentColor" /> Temp</div>
+                        <div className="v">{isDiscovered ? reveal.temp : '??°'}</div>
                       </div>
-                      <div style={{ borderLeft: '1px solid var(--line)' }}>
-                        <div className="section-lbl" style={{ marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}><Droplets size={10} color="var(--teal)" /> Humid</div>
-                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? reveal.humidity : '??%'}</div>
+                      <div>
+                        <div className="l"><Droplets size={10} color="currentColor" /> Humid</div>
+                        <div className="v">{isDiscovered ? reveal.humidity : '??%'}</div>
                       </div>
-                      <div style={{ borderLeft: '1px solid var(--line)' }}>
-                        <div className="section-lbl" style={{ marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}><Clock size={10} color="var(--amber)" /> Time</div>
-                        <div style={{ fontWeight: 700, fontSize: 12 }}>{isDiscovered ? reveal.duration : '??s'}</div>
+                      <div>
+                        <div className="l"><Clock size={10} color="currentColor" /> Time</div>
+                        <div className="v">{isDiscovered ? reveal.duration : '??s'}</div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-lo)', paddingTop: 8, borderTop: '1px solid var(--line)' }} className="mono">
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Box size={11} color="var(--plum)" /> {vessel?.name || 'Any Vessel'}</span>
+                    <div className="cc-foot">
+                      <span><Box size={11} color="currentColor" /> {vessel?.name || 'Any Vessel'}</span>
                       {hand.cooks > 0 && (
-                        <span style={{ color: 'var(--brass)' }} title={`${hand.xp} xp on this recipe`}>
+                        <span className="hand" title={`${hand.xp} xp on this recipe`}>
                           Hand {hand.level}/5 · {hand.cooks} run{hand.cooks === 1 ? '' : 's'}
                         </span>
                       )}

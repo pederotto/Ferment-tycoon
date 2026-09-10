@@ -56,16 +56,16 @@
   --stock-deep: #d3c39f;
   --stock-dim: #d8cbb0;      /* contraband: no printer, cheaper paper */
   --ink: #2a2015;
-  --ink-soft: #6a563c;
-  --ink-faint: #8a7454;
+  --ink-soft: #5a4830;   /* 5.6:1 on stock */
+  --ink-faint: #66522f;  /* 4.7:1 — small print you still have to read */
   --ink-line: rgba(42, 32, 21, 0.34);
   --ink-line-soft: rgba(42, 32, 21, 0.18);
   --ink-moss: #5f7d3f;
-  --ink-amber: #a8702a;
+  --ink-amber: #8f5e1c;
   --ink-plum: #6b4a7a;
   --ink-teal: #3d6168;
   --stamp-bad: #9c4429;
-  --stamp-good: #4a6b34;
+  --stamp-good: #415c2d;
   --grain-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
 }
 
@@ -3389,3 +3389,353 @@ input[type="range"].dial-slider::-moz-range-thumb {
   .loyalty-strip { padding: 9px 14px; }
   .catalogue { padding-top: 6px; }
 }
+
+/* =============================================================================
+   THE LABEL, EVERYWHERE ELSE
+
+   One line decides which side a surface falls on: anything that would exist as
+   a piece of PAPER or a labelled object in the workshop is printed stock — a
+   recipe in the codex, a vessel or a book you are buying, a hired hand's
+   engagement, a contract, a harvest docket. Anything that is the ROOM or an
+   INSTRUMENT stays dark — the rails, the gauges, the dials, the telemetry, the
+   scene itself. That is why the tool rack in the rail is dark (it answers "is it
+   running") while the same tools in the Hardware screen are paper (they answer
+   "what do I own").
+   ============================================================================= */
+
+/* Shared stock. Every paper surface in the game is this, so a change here is a
+   change of paper stock everywhere rather than a hunt through six screens. */
+.codex-card, .paper-card {
+  position: relative;
+  border-radius: 2px; border: none;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+.codex-card::after, .paper-card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
+
+/* ---- THE CODEX: a book of printed recipe labels -------------------------- */
+.codex-card {
+  padding: 15px 16px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+.codex-card:hover { filter: brightness(1.05); }
+.codex-card:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+.cc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.cc-id { min-width: 0; }
+.cc-tags { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; flex-wrap: wrap; }
+.cc-name {
+  font-family: var(--f-name); font-size: 19px; font-weight: 600;
+  line-height: 1.1; color: var(--ink); margin: 0;
+}
+.cc-desc {
+  font-family: var(--f-desc); font-style: italic; font-size: 15px; line-height: 1.35;
+  color: var(--ink-soft); margin: 0;
+}
+.cc-diff {
+  flex-shrink: 0; font-family: var(--f-spec); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.06em; color: #6b5320;
+  border: 1px dashed var(--ink-line); border-radius: 2px; padding: 3px 8px;
+}
+/* Held conditions are figures copied off a gauge, so they keep the monospace
+   even on paper — the one place the instrument face belongs on stock. */
+.cc-params {
+  display: grid; grid-template-columns: repeat(3, 1fr); text-align: center;
+  border-top: 1px solid var(--ink-line-soft); border-bottom: 1px solid var(--ink-line-soft);
+  padding: 8px 0;
+}
+.cc-params > div + div { border-left: 1px solid var(--ink-line-soft); }
+.cc-params .l {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-family: var(--f-spec); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 3px;
+}
+.cc-params .v {
+  font-family: var(--f-instr); font-variant-numeric: tabular-nums;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+}
+.cc-foot {
+  display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.05em; color: var(--ink-faint);
+}
+.cc-foot span { display: flex; align-items: center; gap: 4px; }
+.cc-foot .hand { color: #6b5320; font-weight: 600; }
+
+/* Tags printed on the stock rather than glowing on a dark panel. */
+.codex-card .vessel-badge {
+  font-family: var(--f-spec); font-size: 10.5px; letter-spacing: 0.14em;
+  color: var(--ink-soft); border-color: var(--ink-line); border-radius: 2px;
+}
+.codex-card .era-tag { color: var(--ink-plum); border-color: rgba(107, 74, 122, 0.4); background: rgba(107, 74, 122, 0.08); }
+.codex-card .status-chip { font-family: var(--f-spec); font-size: 10.5px; letter-spacing: 0.1em; }
+.codex-card .status-chip.ready { background: rgba(74, 107, 52, 0.16) !important; color: var(--stamp-good) !important; }
+.codex-card .formula-card {
+  background: rgba(42, 32, 21, 0.05); border: 1px solid var(--ink-line-soft); border-radius: 2px;
+}
+.codex-card .formula-card .fl {
+  font-family: var(--f-spec); font-size: 11px; letter-spacing: 0.2em; color: var(--ink-faint);
+}
+.codex-card .formula-card .frow .k {
+  font-family: var(--f-spec); font-size: 11px; letter-spacing: 0.12em; color: var(--ink-faint);
+}
+.codex-card .formula-card .frow .n { font-size: 12px; color: var(--ink); font-weight: 500; }
+.codex-card .formula-card .frow .n.brick { color: var(--stamp-bad); }
+
+/* Unprinted stock: you can see there is a page for it, and nothing on it. */
+.codex-card.unknown {
+  background: linear-gradient(178deg, #3a3227, #2e281f);
+  color: var(--text-lo); box-shadow: none;
+}
+.codex-card.unknown::after { display: none; }
+.codex-card.unknown .cc-name { color: var(--text-mid); }
+.codex-card.unknown .cc-desc, .codex-card.unknown .cc-foot { color: var(--text-lo); }
+.codex-card.unknown .cc-diff { color: var(--text-lo); border-color: var(--line-strong); }
+.codex-card.unknown .cc-params { border-color: var(--line); }
+.codex-card.unknown .cc-params > div + div { border-color: var(--line); }
+.codex-card.unknown .cc-params .l, .codex-card.unknown .cc-params .v { color: var(--text-lo); }
+.codex-card.unknown .vessel-badge { color: var(--text-lo); border-color: var(--line-strong); }
+
+/* ---- WHAT YOU BUY AND WHAT YOU OWN --------------------------------------
+   Vessels, tools, books and breakers in Supply, and the same tools in the
+   Hardware screen. Every one of them is a thing with a label on it. */
+.eq-card {
+  position: relative;
+  border-radius: 2px; border: none;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+  padding: 13px 14px;
+}
+.eq-card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
+/* Owned is a stamp on the corner, not a green border. Same rule as the batch
+   label: a stamp lands ON the card, so the card has to leave room for it —
+   this is the second time that has bitten, and both times it printed the stamp
+   across the name. */
+.eq-card.owned { padding-right: 78px; }
+.eq-card.owned::before {
+  content: "Owned"; position: absolute; right: 7px; top: 11px; z-index: 2;
+  font-family: var(--f-spec); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 2px 9px; border-radius: 2px;
+  border: 2px solid var(--stamp-good); color: var(--stamp-good);
+  background: rgba(227, 214, 184, 0.5); transform: rotate(-5deg);
+}
+/* On a label the name sits BESIDE its illustration; `space-between` shoved it
+   to the far edge with a lake of stock in the middle. */
+.eq-card .eq-top { justify-content: flex-start; gap: 11px; }
+.eq-card .eq-top > span:last-child { flex: 1; min-width: 0; }
+.eq-card .eq-ic { background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line); border-radius: 2px; color: var(--ink-soft); }
+.eq-card .eq-top b, .eq-card .eq-name {
+  font-family: var(--f-name); font-size: 16px; font-weight: 600; color: var(--ink);
+}
+.eq-card .eq-top em, .eq-card .eq-meta {
+  display: block; font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.05em;
+  font-style: normal; color: var(--ink-faint); margin-top: 2px;
+}
+.eq-card .eq-meta .watt { color: #6b5320; }
+.eq-card .own-count { font-family: var(--f-spec); color: var(--stamp-good); margin-left: 5px; }
+.eq-card p {
+  font-family: var(--f-desc); font-style: italic; font-size: 14.5px; line-height: 1.35;
+  color: var(--ink-soft); margin: 0;
+}
+.eq-card .eq-btn {
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.14em; border-radius: 2px;
+  background: rgba(74, 107, 52, 0.14); color: #3e5a2b; border: 1px solid rgba(74, 107, 52, 0.42);
+}
+.eq-card .eq-btn:hover:not(:disabled) { background: rgba(74, 107, 52, 0.26); }
+.eq-card .eq-btn:disabled, .eq-card .eq-btn.disabled {
+  background: rgba(42, 32, 21, 0.05); color: var(--ink-faint); border-color: var(--ink-line-soft);
+}
+.eq-card .eq-btn.owned-tag { background: rgba(74, 107, 52, 0.1); color: var(--stamp-good); border-color: rgba(74, 107, 52, 0.32); }
+
+/* ---- THE CREW: an engagement is a signed card ---------------------------- */
+.role-card {
+  position: relative;
+  border-radius: 2px; border: none;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+.role-card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
+.role-card.active { background: linear-gradient(178deg, var(--stock), var(--stock-deep)); }
+.role-card .role-ic { background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line); border-radius: 2px; color: var(--ink-soft); }
+.role-card .role-name { font-family: var(--f-name); font-size: 18px; color: var(--ink); }
+.role-card .wage-tag {
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.05em;
+  background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line-soft); color: #3e5a2b;
+}
+.role-card .onboard-tag { font-family: var(--f-spec); font-size: 12px; color: var(--ink-faint); }
+.role-card .role-desc {
+  font-family: var(--f-desc); font-style: italic; font-size: 15px; line-height: 1.4;
+  background: rgba(42, 32, 21, 0.05); border: 1px solid var(--ink-line-soft);
+  border-radius: 2px; color: var(--ink-soft);
+}
+.role-card .role-status-pill { font-family: var(--f-spec); font-size: 11px; letter-spacing: 0.14em; border-radius: 2px; }
+.role-card .role-status-pill.active { background: var(--stamp-good); color: #eae4d2; }
+.role-card .role-status-pill.vacant { background: rgba(42, 32, 21, 0.06); color: var(--ink-faint); border: 1px solid var(--ink-line-soft); }
+.role-card .role-action { font-family: var(--f-spec); font-size: 12.5px; letter-spacing: 0.14em; border-radius: 2px; }
+.role-card .role-action.hire { background: rgba(74, 107, 52, 0.15); color: #3e5a2b; border-color: rgba(74, 107, 52, 0.42); }
+.role-card .role-action.hire:hover:not(:disabled) { background: rgba(74, 107, 52, 0.27); }
+.role-card .role-action.dismiss { background: rgba(156, 68, 41, 0.11); color: var(--stamp-bad); border-color: rgba(156, 68, 41, 0.36); }
+.role-card .role-action.dismiss:hover { background: rgba(156, 68, 41, 0.2); }
+
+/* ---- ILLUSTRATION PLATES ------------------------------------------------
+   The painted sheet's ground is #1a130b, so a plate set to exactly that makes
+   the cell read as an engraved block rather than a square pasted on. The cells
+   are square now, so the plate must be too or the icon overhangs it. */
+.cat-row .glyph, .reagent .glyph { width: 32px; height: 32px; }
+.charge .glyph { background: #1a130b; border-color: var(--line-strong); }
+
+/* ---- A HIRE IS A REFERENCE, AND A CONTRACT IS A DOCKET ------------------- */
+.cw-member, .cw-candidate {
+  position: relative;
+  border-radius: 2px; border: none;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+.cw-member::after, .cw-candidate::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
+/* Not yet on the books: the card is unsigned, so the stock is plainer. */
+.cw-candidate { background: linear-gradient(178deg, var(--stock-dim), #c9b998); }
+.cw-candidate.poor { opacity: 0.62; }
+.cw-member .mh .nm, .cw-candidate .mh .nm {
+  font-family: var(--f-name); font-size: 17px; font-weight: 600; color: var(--ink);
+}
+.cw-member .mh .rl, .cw-candidate .mh .rl {
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.18em; color: var(--ink-soft);
+}
+.cw-member .mh .wg, .cw-candidate .mh .wg { color: #3e5a2b; font-size: 13px; }
+.cw-member .dsc, .cw-candidate .dsc {
+  font-family: var(--f-desc); font-style: italic; font-size: 14.5px; line-height: 1.4; color: var(--ink-soft);
+}
+/* What they said when you met them — written, not printed. */
+.cw-candidate .quote {
+  font-family: var(--f-desc); font-style: italic; font-size: 15px; line-height: 1.45;
+  color: #5d4a2e; border-left: 2px solid var(--ink-line); padding-left: 10px;
+}
+.cw-pips .pip { background: rgba(42, 32, 21, 0.16); }
+.cw-pips .pip.on { background: #6b5320; }
+.cw-member .mf .srv, .cw-candidate .mf .srv {
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.05em; color: var(--ink-faint);
+}
+.cw-member .mf .srv em, .cw-candidate .mf .srv em { color: var(--stamp-good); }
+.cw-member .btn, .cw-candidate .btn {
+  font-family: var(--f-spec); letter-spacing: 0.13em; border-radius: 2px;
+  background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line); color: var(--ink-soft);
+}
+.cw-member .btn:hover:not(:disabled), .cw-candidate .btn:hover:not(:disabled) {
+  background: rgba(42, 32, 21, 0.14); color: var(--ink);
+}
+.cw-candidate .btn.btn-amber {
+  background: rgba(74, 107, 52, 0.16); border-color: rgba(74, 107, 52, 0.45); color: #3e5a2b;
+}
+.cw-candidate .btn.btn-amber:hover:not(:disabled) { background: rgba(74, 107, 52, 0.28); }
+.cw-member .btn.btn-brick { background: rgba(156, 68, 41, 0.11); border-color: rgba(156, 68, 41, 0.36); color: var(--stamp-bad); }
+.cw-role .rn { font-family: var(--f-name); }
+
+.ob-offer, .ob-active, .ob-vendor {
+  position: relative;
+  border-radius: 2px; border: none;
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  color: var(--ink);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+.ob-offer::after, .ob-active::after, .ob-vendor::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px;
+  opacity: 0.1; mix-blend-mode: multiply;
+}
+.ob-offer .oh .who, .ob-active .oh .who, .ob-vendor .oh .who {
+  font-family: var(--f-name); font-size: 16px; color: var(--ink);
+}
+.ob-offer .oh .pay, .ob-active .oh .pay, .ob-vendor .oh .pay { color: #3e5a2b; font-size: 15px; }
+.ob-offer .blurb, .ob-active .blurb, .ob-vendor .blurb,
+.ob-offer .how, .ob-active .how, .ob-vendor .how {
+  font-family: var(--f-desc); font-style: italic; font-size: 14.5px; line-height: 1.4; color: var(--ink-soft);
+}
+.ob-offer .mult, .ob-active .mult, .ob-vendor .mult {
+  font-family: var(--f-spec); letter-spacing: 0.06em; color: #6b5320;
+}
+.ob-offer .btn, .ob-active .btn, .ob-vendor .btn {
+  font-family: var(--f-spec); letter-spacing: 0.13em; border-radius: 2px;
+}
+.ob-offer .btn.btn-amber, .ob-active .btn.btn-amber, .ob-vendor .btn.btn-amber {
+  background: rgba(74, 107, 52, 0.16); border: 1px solid rgba(74, 107, 52, 0.45); color: #3e5a2b;
+  box-shadow: none;
+}
+.ob-offer .btn.btn-ghost, .ob-active .btn.btn-ghost, .ob-vendor .btn.btn-ghost {
+  background: rgba(42, 32, 21, 0.06); border-color: var(--ink-line); color: var(--ink-soft);
+}
+.ob-locked { font-family: var(--f-desc); font-style: italic; color: var(--ink-faint); }
+
+/* ---- THE HARVEST DOCKET -------------------------------------------------
+   The standalone report only. The `inline` form is embedded in the batch
+   inspector's dark column and stays transparent — it is already sitting on the
+   batch's own label. */
+.hreport:not(.inline) {
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  border: none; color: var(--ink);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+.hreport:not(.inline) .hr-head { border-bottom: 1px solid var(--ink-line-soft); }
+.hreport:not(.inline) .hr-head .kicker {
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.2em; color: var(--ink-soft);
+}
+.hreport:not(.inline) .hr-head h2 { font-family: var(--f-name); font-size: 24px; color: var(--ink); }
+.hreport:not(.inline) .hr-verdict {
+  background: rgba(42, 32, 21, 0.05); border: 1px solid var(--ink-line-soft); border-radius: 2px;
+}
+.hreport:not(.inline) .hr-verdict .n { color: var(--ink); }
+.hreport:not(.inline) .hr-verdict .n.good { color: var(--stamp-good); }
+.hreport:not(.inline) .hr-verdict .n.bad { color: var(--stamp-bad); }
+.hreport:not(.inline) .hr-verdict .l,
+.hreport:not(.inline) .hr-lbl { font-family: var(--f-spec); letter-spacing: 0.18em; color: var(--ink-faint); }
+.hreport:not(.inline) .hr-row { border-bottom: 1px dotted rgba(42, 32, 21, 0.18); }
+.hreport:not(.inline) .hr-row .k { font-family: var(--f-spec); letter-spacing: 0.05em; color: var(--ink-faint); }
+.hreport:not(.inline) .hr-row .v { color: var(--ink); }
+.hreport:not(.inline) .hr-row .ok { color: var(--stamp-good); }
+.hreport:not(.inline) .hr-row .bad { color: var(--stamp-bad); }
+.hreport:not(.inline) .hr-row .warn { color: #9a6a1c; }
+.hreport:not(.inline) .hr-prose,
+.hreport:not(.inline) .hr-thin {
+  font-family: var(--f-desc); font-style: italic; font-size: 15px; line-height: 1.45; color: var(--ink-soft);
+}
+.hreport:not(.inline) .hr-prose.ok { color: var(--stamp-good); font-style: normal; font-family: var(--f-body); font-size: 12px; }
+.hreport:not(.inline) .hr-faults li { color: var(--stamp-bad); font-size: 13px; }
+.hreport:not(.inline) .hr-foot { border-top: 1px solid var(--ink-line-soft); }
+.hreport:not(.inline) .close-stamp { border-color: var(--ink-line); color: var(--ink-soft); }
+.hreport:not(.inline) .close-stamp:hover { color: var(--ink); border-color: var(--ink-soft); }
+.hreport:not(.inline) .corner { border-color: var(--ink-faint); opacity: 0.4; }
+
+/* A gauge printed on paper is a ruled bar with ink in it, not a glowing track. */
+.ob-vendor .sb-track, .ob-offer .sb-track, .ob-active .sb-track {
+  background: rgba(42, 32, 21, 0.12); border: 1px solid var(--ink-line-soft);
+}
+.ob-vendor .sb-fill, .ob-offer .sb-fill, .ob-active .sb-fill {
+  background: linear-gradient(90deg, var(--ink-teal), #6b5320);
+}
+.ob-vendor .sb-notch, .ob-offer .sb-notch, .ob-active .sb-notch { background: rgba(42, 32, 21, 0.3); }
+.ob-vendor .sb-lab, .ob-offer .sb-lab, .ob-active .sb-lab {
+  font-family: var(--f-spec); font-size: 11.5px; letter-spacing: 0.16em; color: var(--ink-soft);
+}
+.ob-vendor .sb-lab em, .ob-offer .sb-lab em, .ob-active .sb-lab em { color: var(--stamp-good); }
+.ob-vendor .ob-settled, .ob-offer .ob-settled { color: var(--ink-faint); }
+.ob-vendor .oh .pay { white-space: nowrap; }

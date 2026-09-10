@@ -598,6 +598,30 @@ would drift apart the first time content was added; one definition cannot.
   tasks**. Browsers cache filter output per element, so this is cheap — but
   re-measure if it is ever applied to something that animates.
 
+**The supplied sheet is a RULED sheet, and the rules are the grid.** The first
+slicer assumed a uniform pitch (137 across, 111 down from y=8). The columns are
+a true 137; the ROWS are not — measured off the drawn rules they are
+145, 143, 142, 142, 142, 139, 137, 114, because the sheet is hand composed. A
+fixed slice therefore drifted: by the third row it was printing that row's own
+caption inside the icon and clipping the subject at the bottom. The cream 2px
+rules were also being caught by every bounding box, which is what pushed several
+subjects off-centre.
+
+`art/ingredients.jpg` is now built by *detecting* rather than assuming:
+
+- read the rules (`>85%` neutral-light down a whole column or across a row) and
+  mask them, so they cannot inflate a box;
+- every cell is exactly **two blocks** of occupied rows — the artwork, then the
+  printed caption at 14-18px (32px where the name runs to two lines). So peel
+  the last block, and peel once more if what remains is a second text line
+  (SCOBY / Kombucha mother). Measured across all 49 before relying on it;
+- crop each subject to its own box and centre it in a **square** cell, so an
+  icon drops into a square plate already centred and the caller never has to
+  reason about the sheet's aspect. Max bbox-centre error is now 1px in 138.
+
+If the sheet is ever redrawn, ask for **no captions and a uniform grid** and all
+of the above collapses to a slice.
+
 **The ingredient sheet is sliced by index, and the order is load-bearing.**
 `SHEET_ORDER` in `ingredientSheet.ts` is the source order of the ingredient
 arrays as `constants.ts` concatenates them, and the sheet was drawn to match.
@@ -621,6 +645,12 @@ the ground from each cell's edges after painting over the border, plus an
 explicit seed inside the press frame — the one region enclosed on all sides that
 a flood cannot reach from outside. Keying works here only because these are drawn
 with hard contour lines; it would destroy a soft-edged painting.
+
+**The sheet's ground is `#1a130b`, and an icon plate should be set to exactly
+that.** The cell is opaque, so on light label stock it reads as an engraved
+illustration block rather than a square pasted on — but only if the plate behind
+it matches. The plate must also be square now that the cells are, or the icon
+overhangs it.
 
 **A sheet cell is not the size of the thing in it.** The object fills roughly 60%
 of its cell and the rest is transparent margin, so a tool drawn at 150 units
@@ -695,6 +725,26 @@ is cheaper stock with no printed supplier, sold is overstamped. `.label-plate`
 carries these and none of them needs a legend. One catch: a stamp lands ON the
 label, so `.stamped` has to reserve the padding — without it the name runs under
 the stamp, which is a smudge rather than a stamp.
+
+**One line decides which side of the game a surface falls on.** Anything that
+would exist as a piece of PAPER or a labelled object in the workshop is printed
+stock — a recipe in the Codex, a vessel or book you are buying, a hired hand's
+reference, a contract, a harvest docket, an ingredient anywhere. Anything that is
+the ROOM or an INSTRUMENT stays dark — the rails, the gauges, the dials, the
+telemetry, the scene. That is why the tool rack in the rail is dark (it answers
+"is it running") and the same tools in the Hardware screen are paper (they answer
+"what do I own"). Apply the rule, do not restyle by screen.
+
+**A stamp lands ON the card, so the card must reserve room for it.** This has
+now bitten twice — the batch label and the Owned stamp on a vessel — and both
+times it printed the stamp across the name. `.stamped` / `.eq-card.owned` carry
+the padding.
+
+**Measure the ink against the stock.** `--ink-faint` started at `#8a7454`, which
+is **2.83:1** on the mid-stock — below AA for text you actually read while
+shopping ("99 in store"). The three ink levels are 10.1 / 5.6 / 4.7 now, and the
+hierarchy is carried by weight and size as much as tone, which is what a printed
+label does anyway. Anything new drawn on stock gets checked the same way.
 
 **Sorting is a control, not a column head.** Five sort buttons were dropped into
 the catalogue's six-track grid, which already held three labels — eight children,
