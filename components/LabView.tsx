@@ -3,6 +3,7 @@ import { Batch, Recipe, FermentType, WeatherState, WeatherType } from '../types'
 import { RECIPES, VESSELS } from '../constants';
 import { isAgitatedFerment } from '../services/gameLogic';
 import IsoVessel, { isoScaleFor, isoPlacement } from './IsoVessel';
+import { VESSEL_ART } from './vesselSheet';
 import IsoWindow, { seasonOf } from './IsoWindow';
 import { LAB_PLATE } from './labPlate';
 
@@ -225,7 +226,7 @@ const LabView: React.FC<LabViewProps> = ({
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSlot(batch); } }}
       >
         <ellipse className="iso-shadow" cx="0" cy="8" rx={30 * s} ry={10 * s} />
-        <g className="iso-lift">
+        <g className={`iso-lift${VESSEL_ART[batch.vesselId] ? ' painted' : ''}`}>
           <IsoVessel
             vesselId={batch.vesselId}
             scale={s}

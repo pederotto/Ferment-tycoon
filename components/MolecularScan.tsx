@@ -4,8 +4,9 @@ import { masteryReveal } from '../services/mastery';
 import { recipesUsing, getRecipeKnowledge } from '../services/gameLogic';
 import { describeEnzymes, suggestPairing } from '../services/koji';
 import { Pin, PinOff } from 'lucide-react';
-import { SearchIcon, getIngredientIcon, VesselLineIcon } from './icons';
+import { SearchIcon, getIngredientIcon } from './icons';
 import IngredientIcon from './IngredientIcon';
+import VesselArt from './VesselArt';
 
 export type ScanTarget =
   | { type: 'ingredient'; data: Ingredient }
@@ -114,7 +115,7 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
         <div className="sc-id">
           <span className="sc-glyph">
             {type === 'vessel'
-              ? <VesselLineIcon vesselId={(data as Vessel).id} size={16} color="currentColor" />
+              ? <VesselArt vesselId={(data as Vessel).id} height={full ? 84 : 30} />
               : Glyph
                 ? <IngredientIcon id={(data as Ingredient).id} size={full ? 84 : 30} fallback={Glyph} />
                 : <SearchIcon size={14} color="currentColor" />}

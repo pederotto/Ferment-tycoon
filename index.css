@@ -2700,6 +2700,12 @@ input[type="range"].dial-slider::-moz-range-thumb {
   .iso-lift { filter: url(#inkRoughFine); }
 }
 
+/* A PAINTED vessel is already painted — roughening it only blurs it, the same
+   rule as the sheet cells. It keeps the hover brightness and loses the wobble. */
+.iso-lift.painted { filter: none; }
+.iso-slot:hover .iso-lift.painted,
+.iso-slot:focus-visible .iso-lift.painted { filter: brightness(1.12); }
+
 /* Ingredient art wants room. At 14px every drawing collapsed to a smudge and the
    pantry read as sixty-three identical rows; the shape of the thing is what makes
    a list of reagents scannable, so it gets the space to be a shape. */
@@ -3267,15 +3273,14 @@ input[type="range"].dial-slider::-moz-range-thumb {
   color: var(--ink-faint); margin-top: 5px;
 }
 
-/* Water damage. Two soft blooms rather than one, because a stain that is a
-   single centred ellipse reads as a vignette. */
+/* Spilled on. A real splash, lifted off a photographed docket — it replaced two
+   radial blooms, which read as a stain only because they were told to. It is a
+   multiply map (white is no change), so it needs no alpha to sit on the stock. */
 .label-plate.spoiled { filter: saturate(0.62); }
 .label-plate.spoiled::before {
   content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px; z-index: 1;
-  background:
-    radial-gradient(ellipse 68% 52% at 22% 78%, rgba(90, 60, 25, 0.42), transparent 70%),
-    radial-gradient(ellipse 38% 30% at 76% 26%, rgba(70, 45, 18, 0.34), transparent 70%);
-  mix-blend-mode: multiply;
+  background: var(--decal-splash, none) no-repeat 6% 90% / auto 120%;
+  mix-blend-mode: multiply; opacity: 0.92;
 }
 /* No printer, so the supplier line is inked by hand and the stock is cheaper. */
 .label-plate.illicit { background: linear-gradient(178deg, var(--stock-dim), #c6b696); }
@@ -3546,6 +3551,14 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .eq-card .eq-top { justify-content: flex-start; gap: 11px; }
 .eq-card .eq-top > span:last-child { flex: 1; min-width: 0; }
 .eq-card .eq-ic { background: rgba(42, 32, 21, 0.06); border: 1px solid var(--ink-line); border-radius: 2px; color: var(--ink-soft); }
+/* A vessel's label carries its picture, keyed so it stands on the stock itself
+   rather than on a dark plate — which is what a transparent cut-out is for. */
+.eq-card .eq-art {
+  flex: none; width: 64px; height: 66px;
+  display: flex; align-items: flex-end; justify-content: center;
+  color: var(--ink-soft);
+}
+.eq-card .eq-art .vessel-art { filter: drop-shadow(0 3px 3px rgba(42, 32, 21, 0.28)); }
 .eq-card .eq-top b, .eq-card .eq-name {
   font-family: var(--f-name); font-size: 16px; font-weight: 600; color: var(--ink);
 }
@@ -3701,8 +3714,15 @@ input[type="range"].dial-slider::-moz-range-thumb {
    The standalone report only. The `inline` form is embedded in the batch
    inspector's dark column and stays transparent — it is already sitting on the
    batch's own label. */
+/* The docket has been on the bench: a coffee ring in the corner, lifted off a
+   photographed docket. A multiply map layered over the stock with
+   background-blend-mode, falling back to nothing — so a missing variable costs
+   the flourish, never the paper. */
 .hreport:not(.inline) {
-  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  background:
+    var(--decal-ring, none) no-repeat right -34px top -26px / 188px auto,
+    linear-gradient(178deg, var(--stock), var(--stock-deep));
+  background-blend-mode: multiply, normal;
   border: none; color: var(--ink);
   box-shadow: 0 26px 70px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.16) inset;
 }

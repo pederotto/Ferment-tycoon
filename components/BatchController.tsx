@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentType, RecipeMastery } from '../types';
 import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION , KOJI_INOCULATION_TEMP } from '../constants';
+import VesselArt from './VesselArt';
 import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTerroir, calculateBatchDynamics, getYieldMultiplier } from '../services/gameLogic';
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
 import IngredientIcon from './IngredientIcon';
@@ -1062,7 +1063,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                     aria-label={`${v.name}${notOwned ? ' — not owned' : ''}`}
                   >
                     <span className="art">
-                      {notOwned ? <Lock size={14} /> : <VesselLineIcon vesselId={v.id} size={17} color="currentColor" />}
+                      {notOwned ? <Lock size={14} /> : <VesselArt vesselId={v.id} height={30} />}
                     </span>
                     <span className="body">
                       <span className="row1">

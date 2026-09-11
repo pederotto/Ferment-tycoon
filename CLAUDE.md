@@ -733,6 +733,33 @@ turbulence data-URIs, so the printed-board texture costs nothing to download and
 does not tile. Applied via `::after` with `pointer-events: none`, and the scene's
 own SVG is lifted to `z-index: 2` above it.
 
+**Six of the seven vessels are paintings; the Cedar Tray is still drawn.** They
+live in `vesselSheet.ts`, keyed off a cream sheet at build time: the ground
+flooded in from each cell's edges, and the anti-aliased rim un-mixed from the
+cream, without which every vessel wears a pale halo on the dark room.
+`IsoVessel` stands each one on the foot of the drawing it replaced
+(`PAINTED_FOOT`), so shadows, pips and hit areas did not move, and the group
+takes `.iso-lift.painted`, which drops the ink filter (a painting is already
+painted) and keeps the hover brightness. A painting cannot show its own brine
+level, so `fill` now reaches only the drawn tray; the pip carries progress.
+
+- **Never name two modules apart only by case.** macOS is case-insensitive:
+  `vesselArt.ts` beside `VesselArt.tsx` made `./VesselArt` resolve to the data
+  file and the app mounted nothing. Data modules are `*Sheet.ts` / `*Plate.ts`.
+  Vite caches the bad resolution too — after a rename, touch the importers.
+- **Round vessels survive a single-angle painting; boxes may not.** The tool
+  lesson (a one-angle picture in a receding room faces out of it) bites the muro
+  and the chamber, not crocks and casks, which look the same from every side.
+
+**Stains are multiply maps, not cut-outs.** `paperArt.ts` holds a coffee ring
+and a splash lifted off a photographed docket: each pixel is the stain divided
+by the paper beneath it, so white means "no change" and they lie on any stock
+without an alpha channel. Key on the stain's actual hue — coffee is
+orange-brown, red well above green — because "warm" alone took the yellow legal
+pad with it, and "not grey" is what drops the type. The same photo's torn edge
+lies over a ruled pad in its own colours and could not be traced cleanly; ask
+for any future tear on a contrasting ground.
+
 ## The label
 
 **Five faces, five jobs, and the monospace is not one of them.** `IBM Plex Mono`

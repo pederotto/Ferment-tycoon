@@ -4,6 +4,7 @@ import { VESSELS } from '../constants';
 import { getRecipeForBatch, getMaturity, describeMaturity } from '../services/gameLogic';
 import { AGEING_MAX_PROGRESS, CELLAR_TICK_DIVISOR, CELLAR_CAPACITY } from '../constants';
 import IsoVessel, { isoScaleFor } from './IsoVessel';
+import { VESSEL_ART } from './vesselSheet';
 import { CloseIcon } from './icons';
 import { CELLAR_PLATE } from './cellarPlate';
 
@@ -139,7 +140,7 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(v.batch); } }}
     >
       <ellipse className="iso-shadow" cx="0" cy="8" rx={30 * s} ry={10 * s} />
-      <g className="iso-lift">
+      <g className={`iso-lift${VESSEL_ART[v.batch.vesselId] ? ' painted' : ''}`}>
         <IsoVessel
           vesselId={v.batch.vesselId}
           scale={s}

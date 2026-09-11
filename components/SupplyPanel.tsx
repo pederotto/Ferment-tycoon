@@ -2,12 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { Ingredient, IngredientType, Vessel, Book, Supplier } from '../types';
 import { VESSELS, BOOKS, SUPPLIERS, UNDERGROUND_TIER_XP, MAX_EQUIPMENT_SLOTS } from '../constants';
 import {
-  BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, VesselLineIcon,
+  BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon,
   JarOutlineIcon, WrenchIcon, BookIcon, BoltIcon,
 } from './icons';
 import { Lock, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
+import VesselArt from './VesselArt';
 import { SporeClusterIcon } from './icons';
 import { inSeason, nextInSeason, seasonLabel, MONTH_NAMES } from '../constants.forage';
 
@@ -457,7 +458,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                   return (
                     <div key={v.id} className={`eq-card${ownedCount > 0 ? ' owned' : ''}`}>
                       <div className="eq-top">
-                        <span className="eq-ic"><VesselLineIcon vesselId={v.id} size={15} color="currentColor" /></span>
+                        <span className="eq-art"><VesselArt vesselId={v.id} height={62} /></span>
                         <span>
                           <b>{v.name}{ownedCount > 0 && <span className="own-count">×{ownedCount}</span>}</b>
                           <em>Cap {v.capacityL}L · {v.slotsRequired} slot{v.slotsRequired > 1 ? 's' : ''}{v.powerDraw ? ` · ${v.powerDraw}W` : ''}</em>

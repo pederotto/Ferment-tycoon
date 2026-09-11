@@ -1,4 +1,5 @@
 import React from 'react';
+import { VESSEL_ART } from './vesselSheet';
 
 /**
  * ISOMETRIC VESSELS
@@ -53,6 +54,20 @@ export const isoScaleFor = (capacityL: number): number =>
 export const isoPlacement = (slotsRequired: number): 'floor' | 'back' | 'front' =>
   slotsRequired >= 4 ? 'floor' : slotsRequired >= 2 ? 'back' : 'front';
 
+/**
+ * Where each painting stands, in the drawn vessels' own units: its width, and the
+ * y its base sits on — matched to the drawing it replaces, so the shadow, the pip
+ * and the hit area land where they always did.
+ */
+const PAINTED_FOOT: Record<string, { w: number; bottom: number }> = {
+  mason_jar:    { w: 27, bottom: 10 },
+  onggi:        { w: 57, bottom: 33 },
+  koji_muro:    { w: 64, bottom: 37 },
+  incubator:    { w: 64, bottom: 37 },
+  cedar_barrel: { w: 66, bottom: 39 },
+  oak_cask:     { w: 70, bottom: 43 },
+};
+
 const Steam: React.FC<{ x: number; y: number }> = ({ x, y }) => (
   <g className="iso-steam" transform={`translate(${x},${y})`} aria-hidden="true">
     <path d="M0 0 c-7 -13 7 -19 0 -32" strokeWidth="3.2" strokeLinecap="round" fill="none" />
@@ -93,6 +108,30 @@ const IsoVessel: React.FC<IsoVesselProps> = ({ vesselId, scale = 1, state }) => 
       {children}
     </g>
   );
+
+  /* ------------------------------------------------------------ PAINTED
+     Six vessels have paintings. They take the same overlays as the drawn ones —
+     steam, mist, the paddle, the chamber's glow, the grey of a spoiled batch —
+     but a painting cannot show its own brine level, so `fill` only reaches the
+     drawn tray. The muro used to fall through to the barrel drawing below; it
+     has a picture of its own now. */
+  const art = VESSEL_ART[vesselId];
+  const foot = PAINTED_FOOT[vesselId];
+  if (art && foot) {
+    const w = foot.w;
+    const h = w * (art.h / art.w);
+    const top = foot.bottom - h;
+    return wrap(
+      <>
+        {hot && <Steam x={-6} y={top + 4} />}
+        <image href={art.src} x={-w / 2} y={top} width={w} height={h} />
+        {heated && (
+          <rect x={-w * 0.36} y={top + h * 0.14} width={w * 0.72} height={h * 0.5} rx={2}
+                fill="var(--amber, #e08a3c)" opacity={0.24} />
+        )}
+        {agitated && <Paddle x={6} y={top + h * 0.1} />}
+      </>);
+  }
 
   switch (vesselId) {
     /* ---------------------------------------------------------------- TRAY */
