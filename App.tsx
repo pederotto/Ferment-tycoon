@@ -6,6 +6,7 @@ import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER
   HEAT_DECAY_FROM_CLEANLINESS, HEAT_PER_ILLEGAL_BATCH, HEAT_FROM_FILTH, HYGIENE_NEGLECT_FLOOR,
   HYGIENE_IDLE_RECOVERY,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
+import { inSeason, nextInSeason, MONTH_NAMES } from './constants.forage';
 import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY, isContrabandBatch } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage , sporePotency } from './services/koji';
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
@@ -56,15 +57,8 @@ export default function App() {
     analyzedRecipeIds: [], // Start with empty discovery
     equipmentSlots: 8,
     ownedVessels: { mason_jar: 2, koji_tray: 1 },   // you start with a couple of jars and a tray
-    supplierRelationships: {
-      'nordic': { level: 1, xp: 0 },
-      'biolab': { level: 1, xp: 0 },
-      'prime': { level: 1, xp: 0 },
-      'black_market': { level: 1, xp: 0 },
-      'in_house': { level: 1, xp: 0 },
-      'asia_import': { level: 1, xp: 0 },
-      'tech': { level: 1, xp: 0 }
-    },
+    // Derived, so a supplier added to SUPPLIERS cannot be missing from a new game.
+    supplierRelationships: Object.fromEntries(SUPPLIERS.map(s => [s.id, { level: 1, xp: 0 }])),
     customIngredients: [],
     staff: {
         cleaner: false,
@@ -148,6 +142,33 @@ export default function App() {
     const ttl = n.type === 'alert' ? 9000 : n.type === 'warn' ? 7000 : 5000;
     setTimeout(() => setNotices(prev => prev.filter(p => p.id !== id)), ttl);
   }, []);
+
+  // SAY WHAT CAME IN. A supplier levelling up used to open stock in silence, and
+  // a month turning is the same event: the forager's van changes with it, and a
+  // shelf that changes without saying so looks as if it never does. An effect,
+  // not the tick's updater — StrictMode runs updaters twice — and only for a
+  // single step forward, so loading a save made in another month announces
+  // nothing.
+  const lastSeasonMonth = useRef(gameState.month);
+  useEffect(() => {
+    const prev = lastSeasonMonth.current;
+    const now = gameState.month;
+    lastSeasonMonth.current = now;
+    if (now !== (prev + 1) % 12) return;
+    const picked = INGREDIENTS.filter(i => i.season && i.season.length < 12 && !i.legitCounterpartId);
+    const arrived = picked.filter(i => inSeason(i, now) && !inSeason(i, prev)).map(i => i.name);
+    const going = picked.filter(i => inSeason(i, now) && !inSeason(i, (now + 1) % 12)).map(i => i.name);
+    if (arrived.length === 0 && going.length === 0) return;
+    const list = (xs: string[]) => xs.length <= 4 ? xs.join(', ') : `${xs.slice(0, 4).join(', ')} and ${xs.length - 4} more`;
+    setLabNotification({
+      id: Date.now(),
+      text: [
+        arrived.length ? `${MONTH_NAMES[now]} — in season: ${list(arrived)}.` : `${MONTH_NAMES[now]}.`,
+        going.length ? `Last month for ${list(going)}.` : '',
+      ].filter(Boolean).join(' '),
+      type: 'info',
+    });
+  }, [gameState.month, setLabNotification]);
 
   // Spacebar to pause / unpause
   useEffect(() => {
@@ -843,6 +864,28 @@ export default function App() {
         setLabNotification({
             id: Date.now(),
             text: `${quantity}x ${ingredient.name} — no receipt. Heat +${heatGain}.`,
+            type: 'warn'
+        });
+        return;
+    }
+
+    // The shelf greys both of these out, but the shelf is not the only thing that
+    // can call this — gate the purchase itself, the same lesson as the vendor
+    // unlock routes.
+    if (!inSeason(ingredient, gameState.month)) {
+        const back = nextInSeason(ingredient, gameState.month);
+        setLabNotification({
+            id: Date.now(),
+            text: `${ingredient.name} is out of season${back !== null ? ` — back in ${MONTH_NAMES[back]}` : ''}.`,
+            type: 'warn'
+        });
+        return;
+    }
+    if (rel.level < ingredient.tierRequired) {
+        const supplierName = SUPPLIERS.find(x => x.id === supplierId)?.name ?? 'The supplier';
+        setLabNotification({
+            id: Date.now(),
+            text: `${supplierName} keeps ${ingredient.name} for regulars — level ${ingredient.tierRequired}.`,
             type: 'warn'
         });
         return;
@@ -2134,6 +2177,7 @@ export default function App() {
                   currentPower={currentPower}
                   maxPower={gameState.maxPower}
                   usedSlots={usedSlots}
+                  month={gameState.month}
                   onBuy={handleBuyIngredient}
                   onSellCulture={handleSellCulture}
                   onInspect={setOpenIngredient}

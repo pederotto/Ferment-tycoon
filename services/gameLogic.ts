@@ -1896,6 +1896,9 @@ export const recipesUsing = (ingredient: Ingredient): { recipe: Recipe; role: 's
     const sub = entry.substrate;
     if (sub) {
       if (sub.kind === 'is' && sub.id === ingredient.id) role = 'substrate';
+      // Families (every mushroom, every heritage grain) are `oneOf`. Missing this
+      // case told the player a maitake went into nothing at all.
+      else if (sub.kind === 'oneOf' && sub.ids.includes(ingredient.id)) role = 'substrate';
       else if (sub.kind === 'includes' && ingredient.id.includes(sub.token)) role = 'substrate';
       else if (sub.kind === 'kojiBase' && /koji/.test(ingredient.id)) role = 'substrate';
       else if (sub.kind === 'any' && ingredient.type === IngredientType.SUBSTRATE) role = 'substrate';
@@ -1954,7 +1957,9 @@ export const describeFormula = (recipeId: string): {
   let substrateLabel: string;
   switch (entry.substrate.kind) {
     case 'is': substrateLabel = nameOf(entry.substrate.id); break;
-    case 'oneOf': substrateLabel = entry.substrate.ids.map(nameOf).join(' or '); break;
+    // A family of twelve mushrooms printed as twelve names joined by "or" is a
+    // paragraph, not a formula; the family carries its own name.
+    case 'oneOf': substrateLabel = entry.substrate.label ?? entry.substrate.ids.map(nameOf).join(' or '); break;
     case 'includes': substrateLabel = `Any ${entry.substrate.token}`; break;
     case 'none': substrateLabel = 'No substrate'; break;
     case 'present': substrateLabel = 'Any substrate'; break;
@@ -2305,7 +2310,13 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
       text: acidRel > 1 ? 'sharp over the top of it' : 'flat, wanting acid' });
   }
   if (batch.params.salinity > 18) weighed.push({ w: 1.2, text: 'salt over everything — it needs cutting to be usable' });
-  else if (batch.params.salinity < 5 && recipe.type !== FermentType.KOJI) weighed.push({ w: 0.5, text: 'under-seasoned for what it is' });
+  // Relative to what the recipe wants, like every other note here. The absolute
+  // "under 5%" told every kombucha, vinegar, mead and ponzu it was under-seasoned,
+  // and a correctly brined 3% pickle too.
+  else if (recipe.idealParams.salinity > 0 && recipe.type !== FermentType.KOJI
+    && batch.params.salinity < Math.min(5, recipe.idealParams.salinity * 0.6)) {
+    weighed.push({ w: 0.5, text: 'under-seasoned for what it is' });
+  }
 
   // At most one clause carrying an em-dash aside. Two of them in one sentence
   // ("salt over everything — it needs cutting, short on sweetness — the starch

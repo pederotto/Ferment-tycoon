@@ -60,6 +60,17 @@ export interface Ingredient {
   tierRequired: number;
   tags?: string[]; // 'SEAFOOD', 'HIGH_RISK', etc.
 
+  /**
+   * WHICH MONTHS THIS IS ON THE SHELF, 0-11, matching GameState.month.
+   *
+   * Absent means always, so every commodity keeps behaving as it did — a sack of
+   * barley is a sack of barley in March. Foraged goods are the exception: what
+   * the forager has depends on what is fruiting, which turns buying into
+   * planning. Read through `inSeason` in constants.forage.ts, never directly, so
+   * the "absent means always" rule lives in exactly one place.
+   */
+  season?: number[];
+
   // --- UNDERGROUND ---
   contraband?: boolean;        // sold by the fence; a batch built with one is contraband
   heatPerUnit?: number;        // inspector heat added per unit bought
@@ -409,7 +420,7 @@ export type LearnedVia = 'book' | 'discovery' | 'unknown';
 // which is what stops the two from drifting apart.
 export type MatrixSubstrate =
   | { kind: 'is'; id: string }          // sub.id === id
-  | { kind: 'oneOf'; ids: string[] }    // sub.id is one of these
+  | { kind: 'oneOf'; ids: string[]; label?: string } // sub.id is one of these; `label` names the family on a recipe card
   | { kind: 'includes'; token: string } // sub.id contains token
   | { kind: 'none' }                    // no substrate present
   | { kind: 'kojiBase' }                // koji IS the substrate, nothing else is

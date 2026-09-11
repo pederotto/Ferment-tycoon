@@ -1,5 +1,8 @@
 
 import { Ingredient, IngredientType, Recipe, FermentType, Supplier, Vessel, Buyer, StaffRole, MatrixEntry, Book, HiddenStats } from './types';
+import { FORAGE_SUPPLIER, FORAGED_MUSHROOMS, FORAGE_RECIPES, FORAGE_MATRIX } from './constants.forage';
+import { HERITAGE_INGREDIENTS, HERITAGE_RECIPES, HERITAGE_MATRIX } from './constants.heritage';
+import { MARKET_INGREDIENTS, MARKET_RECIPES, MARKET_MATRIX } from './constants.market';
 
 // --- CONFIGURATION ---
 // REBALANCE: was 3000 — enough to buy nearly every early vessel and ingredient
@@ -228,6 +231,16 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   // Dried chilies are an ADDITIVE, so there is no substrate to match on here.
   { recipeId: 'chili_mash',      substrate: { kind: 'any' },                   requires: ['chili', 'salt'],    vesselId: 'oak_cask' },
 
+  // --- The forager, the heritage staples and the market ---
+  // Families, not species: one entry per PROCESS, so twelve mushrooms never
+  // compete for one shape. Every one of these is broader than anything above it,
+  // so they go after the specific entries — and heritage_koji is spores on a
+  // tray, so it must come before the catch-all. Each module carries its own
+  // collision notes.
+  ...FORAGE_MATRIX,
+  ...HERITAGE_MATRIX,
+  ...MARKET_MATRIX,
+
   // Catch-all: anything sporulated on a tray becomes koji. Must stay last.
   { recipeId: 'barley_koji', substrate: { kind: 'present' }, requires: ['spores'], vesselId: 'koji_tray' },
 ];
@@ -253,6 +266,8 @@ export const MATRIX_TOKEN_LABELS: Record<string, string> = {
   meju_block: 'Meju block',
   rice_bran: 'Rice bran',
   scoby: 'SCOBY mother',
+  honey: 'Honey',
+  amino: 'Amino sauce (shoyu)',
 };
 
 // The one piece of theory the whole garum family turns on. Written as a book
@@ -619,6 +634,7 @@ export const SUPPLIERS: Supplier[] = [
   { id: 'asia_import', name: 'Silk Road Imports', description: 'Traditional soy, chilies, and rice varieties.', color: 'red' },
   { id: 'biolab', name: 'BioLab Cultures', description: 'Advanced spores and enzymatic starters.', color: 'purple' },
   { id: 'prime', name: 'Prime Sourcing Ltd.', description: 'High-end meats and seasonal produce.', color: 'rose' },
+  FORAGE_SUPPLIER,
   { id: 'tech', name: 'Lab Tech Solutions', description: 'Heavy machinery and processing tools.', color: 'blue' },
   { id: 'black_market', name: 'The Underground', description: 'Restricted, dangerous, and legendary items.', color: 'zinc' },
   { id: 'in_house', name: 'In-House Production', description: 'Made in your own lab.', color: 'emerald' }
@@ -1681,6 +1697,11 @@ const HIGH_TIER: Ingredient[] = [
 ];
 INGREDIENTS.push(...HIGH_TIER);
 
+// --- THE FORAGER, THE HERITAGE STAPLES AND THE MARKET ---
+// Appended, never interleaved. Nothing reads this list by position — the sheet
+// art is looked up by id — but appending leaves every existing entry where it was.
+INGREDIENTS.push(...FORAGED_MUSHROOMS, ...HERITAGE_INGREDIENTS, ...MARKET_INGREDIENTS);
+
 // Generated from the real entries above, so a grey copy can never drift from the
 // ingredient it is a copy of.
 GREY_MARKET_SOURCES.forEach(({ id, tier, heat }) => {
@@ -2741,3 +2762,5 @@ export const RECIPES: Recipe[] = [
     difficulty: 0
   }
 ];
+
+RECIPES.push(...FORAGE_RECIPES, ...HERITAGE_RECIPES, ...MARKET_RECIPES);

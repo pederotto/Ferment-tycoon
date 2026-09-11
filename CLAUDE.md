@@ -29,6 +29,26 @@ so they cannot drift.
 - Two recipes (Shio Koji, Amazake) were unreachable from the game's first commit
   because their condition required "no substrate" while both koji ingredients are
   typed `SUBSTRATE`. Hence the `kojiBase` matcher.
+- **Families are `oneOf` lists with a `label`, one entry per PROCESS.** Ten
+  mushroom misos would be ten entries fighting over one shape; the substrate's
+  stats carry the difference between a maitake and an enoki instead. The label is
+  what the formula card prints — twelve names joined by "or" is a paragraph.
+- **New entries go above the `barley_koji` catch-all, which stays last.** It
+  matches any substrate sporulated on a tray, so a grain koji placed after it is
+  unreachable and einkorn silently becomes barley koji.
+- **Tokens are substring tests.** `hasId` is `id.includes(token)`, so a token
+  that is a fragment of other ids leaks: `includes: 'pine'` matched pineapple and
+  pineberry. Families are exact id lists for this reason.
+- **Every reader must know every substrate kind.** `recipesUsing` had no `oneOf`
+  case, so the ingredient panel told the player a maitake went into nothing.
+  Adding a kind means grepping for `substrate.kind`.
+- **Differential-test any matrix change.** Resolve every old substrate × every
+  reagent set of up to three × every vessel against HEAD (a `git worktree`) and
+  against the working tree — 284,200 combinations. A change is fine when it moves
+  a combination off Bio-Sludge or a generated recipe; it is a regression when a
+  named recipe moves. That run caught the new vinegars accepting a salted koji
+  mash — 340 combinations — which reading the table had missed. Every vinegar
+  forbids salt and koji now.
 
 ## The simulation
 
@@ -339,6 +359,33 @@ it a vendor shows as locked in the order book while still appearing in the buyer
 list, which is worse than having no routes at all. `unlockedVendorIds` is a
 latch — once met, a condition stays met.
 
+## Seasons
+
+**Season is for things that are picked, not things that are stored.** A sack of
+einkorn is a sack of einkorn in March; a maitake is six weeks at the foot of an
+oak. `Ingredient.season` is optional and absent means always, so every commodity
+is untouched — read it through `inSeason`, never directly, so that rule lives in
+one place.
+
+- **Gate the purchase, not just the row.** `handleBuyIngredient` refuses stock
+  that is out of season or above the supplier's level. The shelf greying them
+  out is presentation — the same lesson as the vendor unlock routes.
+- **A missing supplier relationship is level 1, never "no gate".** The shelf
+  skipped the tier check whenever `relationships[id]` was undefined, so on any
+  save made before a supplier existed, its tier-2 and tier-3 stock went on sale
+  at once. `migrate()` seeds missing suppliers, the new-game state is derived
+  from `SUPPLIERS`, and the shelf defaults to level 1 regardless.
+- **Out of season is not a lock.** Nothing the player does brings it back
+  sooner, so the row says when ("Back in September") rather than why, and the
+  window is small print on every picked row, in season or out — knowing a window
+  is how you plan around one. The last month of a run says so.
+- **Say what came in.** The month turning announces what arrived and what is in
+  its last month — from an effect, and only for a single step forward, so loading
+  a save made in another month announces nothing.
+- **An import has a season too — someone else's.** A finger lime arrives in our
+  winter. Who picks a thing decides its supplier: hedge fruit and mushrooms are
+  the forager's, grown and shipped produce is Prime's or Silk Road's.
+
 ## The crew
 
 **Skill must cut both ways round the right way.** In `crewEffect`, a trait that
@@ -622,12 +669,25 @@ subjects off-centre.
 If the sheet is ever redrawn, ask for **no captions and a uniform grid** and all
 of the above collapses to a slice.
 
+**The second sheet broke the two-block rule.** Cells 49 onwards come from a
+10-column ruled sheet whose captions run to two and three lines and sometimes
+touch the art, so a gap-based peel left half of them captioned. Its columns also
+differ from one row band to the next, so the rules are detected per band. What
+worked for the captions: a caption row has many cream STROKES — at least four
+on/off transitions and a quarter of its occupied pixels cream — chained upward
+across gaps of up to ten rows (the descender and ascender rows between two lines
+carry few strokes, which is where the first attempt stopped), capped at 44 rows,
+then snapped up to the nearest empty row so no letter tops survive. Build a
+contact sheet and look at it; one cell (the anchovy jar) still needed the other
+method.
+
 **The ingredient sheet is sliced by index, and the order is load-bearing.**
-`SHEET_ORDER` in `ingredientSheet.ts` is the source order of the ingredient
-arrays as `constants.ts` concatenates them, and the sheet was drawn to match.
-Adding an ingredient means appending to that list AND adding a cell, in the same
-place — insert one in the middle and every icon after it becomes the wrong
-picture, silently.
+Entry N of `SHEET_ORDER` in `ingredientSheet.ts` is cell N of the picture. The
+lookup is by id, so the ingredient arrays in `constants.ts` can sit in any order,
+but the list and the sheet must agree: append to both, never insert — one cell in
+the middle and every icon after it becomes the wrong picture, silently. A
+finished product can have a cell too, keyed by the id harvest mints for it
+(`garum_bottle`), and it then shows wherever that product does.
 
 - **The grid was measured off the file, not assumed.** Columns every 137px from
   x=0, rows every 137px from **y=8** — the eight-pixel offset is the kind of thing
@@ -744,7 +804,13 @@ the padding.
 is **2.83:1** on the mid-stock — below AA for text you actually read while
 shopping ("99 in store"). The three ink levels are 10.1 / 5.6 / 4.7 now, and the
 hierarchy is carried by weight and size as much as tone, which is what a printed
-label does anyway. Anything new drawn on stock gets checked the same way.
+label does anyway. Anything new drawn on stock gets checked the same way — the
+season line was the next one caught: `--ink-moss` is 3.25:1, fine for a bar and
+too light for text. **Measure against the darker stop of the stock's gradient**,
+not the top: the top flatters every ink by nearly a whole point — `--stamp-good`
+is 5.2:1 up there and 4.32 at the other end. The season prints in #3b5429
+(4.86:1 at the dark end). By the same measure `--ink-faint` is 4.29:1 at the dark
+end, so the "4.7" above holds only on mid-stock.
 
 **Sorting is a control, not a column head.** Five sort buttons were dropped into
 the catalogue's six-track grid, which already held three labels — eight children,

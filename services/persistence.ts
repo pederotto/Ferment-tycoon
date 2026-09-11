@@ -1,5 +1,5 @@
 import { GameState, FermentType } from '../types';
-import { INGREDIENTS } from '../constants';
+import { INGREDIENTS, SUPPLIERS } from '../constants';
 import { rollCrewPool } from './crew';
 
 /**
@@ -69,6 +69,13 @@ function migrate(state: Partial<GameState>): GameState {
       : rollCrewPool(state.week ?? 1),
     contracts: state.contracts ?? [],
     unlockedVendorIds: state.unlockedVendorIds ?? [],
+    // A supplier added after the save was made has no relationship in it, and the
+    // shelf used to read a missing one as no gate at all — every tier-2 item from
+    // a new supplier on sale from day one. Seed any that are missing at level 1.
+    supplierRelationships: {
+      ...Object.fromEntries(SUPPLIERS.map(s => [s.id, { level: 1, xp: 0 }])),
+      ...(state.supplierRelationships ?? {}),
+    },
     discoveredRecipeIds: state.discoveredRecipeIds ?? [],
     undergroundBusts: state.undergroundBusts ?? 0,
     // An existing save has clearly got past the opening.

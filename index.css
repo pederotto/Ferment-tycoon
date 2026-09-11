@@ -3116,6 +3116,17 @@ input[type="range"].dial-slider::-moz-range-thumb {
   background: rgba(0, 0, 0, 0.25); color: var(--text-lo); border-color: var(--line);
 }
 
+/* OUT OF SEASON is unprinted stock too, but it is not a lock — nothing the
+   player does brings it back sooner — so the button says WHEN, not why, and
+   carries no padlock. The season itself is small print on every picked row,
+   in and out of it, because knowing a window is how you plan around one. */
+/* Measured against the DARKER stop of the stock's gradient, which is where the
+   text can land: --ink-moss was 3.25:1 there and --stamp-good 4.32:1, both short
+   of AA for text you read while shopping. This green is 4.86:1. */
+.cat-row .m .season { color: #3b5429; font-weight: 600; }
+.cat-row.locked .m .season { color: var(--text-mid); }
+.cat-row.away .buy-btn.away { font-style: italic; letter-spacing: 0.02em; }
+
 /* --------------------------------------------------------------------------
    THE FULL LABEL — what you get when you pick a spine up. Six parts, always in
    the same order: kind, name, what it is FOR in italic, the numbers as small

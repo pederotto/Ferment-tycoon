@@ -9,6 +9,7 @@ import { Lock, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
 import { SporeClusterIcon } from './icons';
+import { inSeason, nextInSeason, seasonLabel, MONTH_NAMES } from '../constants.forage';
 
 /**
  * SUPPLY — one place to spend money.
@@ -42,6 +43,8 @@ interface SupplyPanelProps {
   currentPower: number;
   maxPower: number;
   usedSlots: number;
+  /** The game month, 0-11. Anything picked is only on the shelf in its season. */
+  month: number;
   onBuy: (ingredient: Ingredient, quantity?: number) => void;
   marketDemand?: Record<string, number>;
   onSellCulture?: (ingredient: Ingredient, quantity: number) => void;
@@ -70,7 +73,7 @@ const Bar: React.FC<{ v: number; tone: string; title: string }> = ({ v, tone, ti
 
 const SupplyPanel: React.FC<SupplyPanelProps> = ({
   isOpen, onToggle, ingredients, inventory, money, playerXp, undergroundTier,
-  relationships, ownedVessels, ownedBookIds, currentPower, maxPower, usedSlots,
+  relationships, ownedVessels, ownedBookIds, currentPower, maxPower, usedSlots, month,
   onBuy, onSellCulture, onInspect, marketDemand, onBuyVessel, onBuyTool, onBuyBook, onUpgradePower,
 }) => {
   const [tab, setTab] = useState<Tab>('ingredients');
@@ -120,9 +123,27 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
       if (need > undergroundTier) return `standing · ${UNDERGROUND_TIER_XP[need - 1]} xp`;
       return null;
     }
-    const rel = relationships[i.supplierId];
-    if (rel && rel.level < i.tierRequired) return `loyalty · lvl ${i.tierRequired}`;
+    // A supplier this save has never dealt with is level 1, not "no gate at all".
+    // Reading a missing relationship as unlocked put every tier-2 item from a
+    // new supplier on the shelf on day one.
+    const rel = relationships[i.supplierId] ?? { level: 1, xp: 0 };
+    if (rel.level < i.tierRequired) return `loyalty · lvl ${i.tierRequired}`;
     return null;
+  };
+
+  /* Out of season is not a lock — nothing you do brings it back sooner — so it
+     says WHEN rather than why. */
+  const awayUntil = (i: Ingredient): string | null => {
+    if (inSeason(i, month)) return null;
+    const back = nextInSeason(i, month);
+    return back === null ? 'Out of season' : `Back in ${MONTH_NAMES[back]}`;
+  };
+
+  /** "Sep–Nov", and a warning in the last month of the run — the planning cue. */
+  const seasonNote = (i: Ingredient): string | null => {
+    if (!i.season || i.season.length >= 12) return null;
+    const last = inSeason(i, month) && !inSeason(i, (month + 1) % 12);
+    return `${seasonLabel(i.season)}${last ? ', last month' : ''}`;
   };
 
   const priceOf = (i: Ingredient) => {
@@ -332,6 +353,8 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                 {rows.map(i => {
                   const Glyph = getIngredientIcon(i);
                   const lock = lockReason(i);
+                  const away = awayUntil(i);
+                  const season = seasonNote(i);
                   const price = priceOf(i);
                   const cost = price * qty;
                   const affordable = money >= cost;
@@ -348,7 +371,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                         : 'kind-substrate';
 
                   return (
-                    <div key={i.id} className={`cat-row ${kind}${lock ? ' locked' : ''}`}>
+                    <div key={i.id} className={`cat-row ${kind}${lock || away ? ' locked' : ''}${away ? ' away' : ''}`}>
                       {/* The name and picture open the ingredient. The Buy button
                           sits outside this, so shopping never opens a panel by
                           accident. */}
@@ -370,7 +393,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                             {i.contraband && <span className="living-tag illicit">Illicit</span>}
                           </span>
                           <span className="m">
-                            {supplier?.name ?? '—'} · {owned(i.id)} in store
+                            {supplier?.name ?? '—'}
+                            {season && <> · <span className="season">{season}</span></>}
+                            {' · '}{owned(i.id)} in store
                             {i.heatPerUnit ? <> · <b className="heat">+{i.heatPerUnit} heat</b></> : null}
                           </span>
                         </span>
@@ -393,7 +418,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       <span className="c-price">${price}</span>
 
                       <span className="c-buy">
-                        {lock ? (
+                        {away ? (
+                          <span className="buy-btn locked away">{away}</span>
+                        ) : lock ? (
                           <span className="buy-btn locked"><Lock size={10} /> {lock}</span>
                         ) : (
                           <button
@@ -456,8 +483,8 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               <div className="eq-grid">
                 {tools.map(t => {
                   const canAfford = money >= t.baseCost;
-                  const rel = relationships[t.supplierId];
-                  const locked = rel && rel.level < t.tierRequired;
+                  const rel = relationships[t.supplierId] ?? { level: 1, xp: 0 };
+                  const locked = rel.level < t.tierRequired;
                   return (
                     <div key={t.id} className="eq-card">
                       <div className="eq-top">
