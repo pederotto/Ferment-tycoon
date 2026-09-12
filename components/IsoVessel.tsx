@@ -60,6 +60,7 @@ export const isoPlacement = (slotsRequired: number): 'floor' | 'back' | 'front' 
  * and the hit area land where they always did.
  */
 const PAINTED_FOOT: Record<string, { w: number; bottom: number }> = {
+  koji_tray:    { w: 92, bottom: 34 },
   mason_jar:    { w: 27, bottom: 10 },
   onggi:        { w: 57, bottom: 33 },
   koji_muro:    { w: 64, bottom: 37 },
@@ -115,7 +116,9 @@ const IsoVessel: React.FC<IsoVesselProps> = ({ vesselId, scale = 1, state }) => 
      but a painting cannot show its own brine level, so `fill` only reaches the
      drawn tray. The muro used to fall through to the barrel drawing below; it
      has a picture of its own now. */
-  const art = VESSEL_ART[vesselId];
+  // The tray is the one vessel with two paintings: a bare bed, and the lid
+  // propped. Everything else carries its state in the overlays.
+  const art = VESSEL_ART[vesselId === 'koji_tray' && lidOpen ? 'koji_tray_open' : vesselId];
   const foot = PAINTED_FOOT[vesselId];
   if (art && foot) {
     const w = foot.w;

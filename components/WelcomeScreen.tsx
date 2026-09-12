@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { SealGlyphIcon, ScienceIcon, LabLedgerIcon, MarketLedgerIcon, ArrowRightIcon } from './icons';
+import { ScienceIcon, LabLedgerIcon, MarketLedgerIcon, ArrowRightIcon } from './icons';
+import { KEY_ART, KEY_ART_TALL, CREST } from './titleArt';
 
 interface WelcomeScreenProps {
     onStart: () => void;
@@ -13,27 +14,16 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onContinue, save
     return (
         <div
             onClick={hasSave ? undefined : onStart}
-            className={`fixed inset-0 z-[100] flex items-center justify-center p-4 select-none overflow-hidden ${hasSave ? '' : 'cursor-pointer'}`}
-            style={{
-                background: `
-                    radial-gradient(ellipse 700px 500px at 15% 10%, rgba(217,164,65,0.09), transparent 60%),
-                    radial-gradient(ellipse 700px 600px at 90% 95%, rgba(138,154,107,0.07), transparent 60%),
-                    #120d09
-                `,
-            }}
+            className={`welcome-scene fixed inset-0 z-[100] flex items-center justify-center p-4 select-none overflow-hidden ${hasSave ? '' : 'cursor-pointer'}`}
+            /* The painting is the background; the type is set over it in the
+               game's own faces. Portrait windows get the taller cut — same
+               room, recomposed, rather than the wide one cropped to a slot. */
+            style={{ ['--art' as string]: `url(${KEY_ART})`, ['--art-tall' as string]: `url(${KEY_ART_TALL})` }}
         >
             <div className="grain" />
 
-            {/* Ambient bubbles */}
-            <div className="bubble" style={{ width: 120, height: 120, left: 40, top: 60 }} />
-            <div className="bubble" style={{ width: 70, height: 70, left: 120, top: 180 }} />
-            <div className="bubble" style={{ width: 160, height: 160, right: 40, bottom: 40, background: 'rgba(138,154,107,0.08)', borderColor: 'rgba(138,154,107,0.16)' }} />
-            <div className="bubble" style={{ width: 60, height: 60, right: 140, top: 90, background: 'rgba(138,154,107,0.08)', borderColor: 'rgba(138,154,107,0.16)' }} />
-
             <div className="welcome-card">
-                <div className="seal">
-                    <SealGlyphIcon size={38} />
-                </div>
+                <span className="crest-mark"><img src={CREST} alt="" aria-hidden="true" /></span>
                 <div className="kicker">Atelier &amp; Culture House</div>
                 <h1 className="title slab">FERMENTA <span className="accent">TYCOON</span></h1>
                 <p className="tagline">

@@ -1,6 +1,8 @@
 import React from 'react';
 import { LogEntry } from '../types';
 import { describeEnzymes, describeLineage } from '../services/koji';
+import { RECIPES } from '../constants';
+import IngredientIcon from './IngredientIcon';
 import { CloseIcon } from './icons';
 import { Star } from 'lucide-react';
 
@@ -170,6 +172,12 @@ export const HarvestReportBody: React.FC<{ entry: LogEntry }> = ({ entry }) => {
 };
 
 const HarvestReport: React.FC<HarvestReportProps> = ({ entry, variant = 'modal', onClose }) => {
+  // What came out of the vessel, as a picture. The log entry keeps the recipe it
+  // was made from, and the recipe names its own output.
+  const productId = entry.config
+    ? RECIPES.find(r => r.id === entry.config!.recipeId)?.outputIngredientId
+    : undefined;
+
   if (variant === 'inline') {
     return <div className="hreport inline"><HarvestReportBody entry={entry} /></div>;
   }
@@ -181,6 +189,7 @@ const HarvestReport: React.FC<HarvestReportProps> = ({ entry, variant = 'modal',
         <span className="corner c-br" />
 
         <div className="hr-head">
+          {productId && <span className="hr-pic"><IngredientIcon id={productId} size={56} /></span>}
           <div>
             <span className="kicker">Harvested</span>
             <h2>{entry.recipeName}</h2>

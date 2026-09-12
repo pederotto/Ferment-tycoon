@@ -3770,3 +3770,43 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .ob-vendor .sb-lab em, .ob-offer .sb-lab em, .ob-active .sb-lab em { color: var(--stamp-good); }
 .ob-vendor .ob-settled, .ob-offer .ob-settled { color: var(--ink-faint); }
 .ob-vendor .oh .pay { white-space: nowrap; }
+
+/* --------------------------------------------------------------------------
+   WHAT CAME OUT OF THE VESSEL
+   The docket shows the product itself. The product cells carry alpha, so the
+   jar stands on the stock with no plate behind it — which is the whole reason
+   the sheet was keyed rather than left on its ground.
+   -------------------------------------------------------------------------- */
+.hr-head .hr-pic { flex: none; width: 56px; display: flex; align-items: center; justify-content: center; }
+.hr-head > div { flex: 1; min-width: 0; }
+
+/* --------------------------------------------------------------------------
+   THE TITLE SCREEN IS A PAINTING
+   The workshop at first light, with the type set over it rather than drawn into
+   it. A scrim carries the contrast — the painting's own middle is already the
+   calm, dark part, which is what it was asked for — and the card goes
+   translucent so the room stays visible around it. Portrait windows get the
+   taller cut of the same scene instead of the wide one cropped.
+   -------------------------------------------------------------------------- */
+.welcome-scene {
+  background-color: #120d09;
+  background-image: var(--art);
+  background-size: cover; background-position: center;
+}
+@media (orientation: portrait) { .welcome-scene { background-image: var(--art-tall); } }
+.welcome-scene::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 78% 68% at 50% 48%, rgba(18, 13, 9, 0.52), rgba(18, 13, 9, 0.93) 100%);
+}
+.welcome-card {
+  position: relative; z-index: 1;
+  background: rgba(18, 13, 9, 0.72);
+  border: 1px solid rgba(243, 233, 216, 0.10);
+  backdrop-filter: blur(3px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+.welcome-card .crest-mark { display: block; width: 92px; margin: 0 auto 16px; }
+.welcome-card .crest-mark img {
+  display: block; width: 100%; height: auto;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.55));
+}
