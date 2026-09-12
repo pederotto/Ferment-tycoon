@@ -111,13 +111,14 @@ const IsoVessel: React.FC<IsoVesselProps> = ({ vesselId, scale = 1, state }) => 
   );
 
   /* ------------------------------------------------------------ PAINTED
-     Six vessels have paintings. They take the same overlays as the drawn ones —
-     steam, mist, the paddle, the chamber's glow, the grey of a spoiled batch —
-     but a painting cannot show its own brine level, so `fill` only reaches the
-     drawn tray. The muro used to fall through to the barrel drawing below; it
-     has a picture of its own now. */
-  // The tray is the one vessel with two paintings: a bare bed, and the lid
-  // propped. Everything else carries its state in the overlays.
+     Every vessel is a painting now. They take the same overlays the drawings
+     did — steam, mist, the paddle, the chamber's glow, the grey of a spoiled
+     batch — but a painting cannot show its own brine level, so `fill` no longer
+     reaches anything; the pip and the bar carry progress. The drawings below are
+     the fallback for any vessel added without art.
+
+     The tray is the one vessel with two paintings: a bare bed, and the lid
+     propped, which is what keeps `lidOpen` visible. */
   const art = VESSEL_ART[vesselId === 'koji_tray' && lidOpen ? 'koji_tray_open' : vesselId];
   const foot = PAINTED_FOOT[vesselId];
   if (art && foot) {

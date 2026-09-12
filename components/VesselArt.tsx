@@ -5,12 +5,14 @@ import { VesselLineIcon } from './icons';
 /**
  * A VESSEL, AS A PICTURE.
  *
- * The painting where the sheet had one, the line drawing where it did not (the
- * Cedar Tray). Height is the unit because vessels are tall things of different
- * widths — at the same height a glass fermenter is half the width of a muro.
+ * Height is the unit, because vessels are tall things of different widths: at
+ * the same height a glass fermenter is half the width of a muro. Every vessel
+ * has a painting now; the line drawing is the fallback for one added without.
  */
 const VesselArt: React.FC<{ vesselId: string; height: number; className?: string }> = ({ vesselId, height, className }) => {
-  const art = VESSEL_ART[vesselId];
+  // On a shelf or in a shop you are buying the vessel, not its contents, so a
+  // vessel with an empty painting shows that one here; the room keeps the full.
+  const art = VESSEL_ART[`${vesselId}_empty`] ?? VESSEL_ART[vesselId];
   if (!art) return <VesselLineIcon vesselId={vesselId} size={Math.round(height * 0.62)} color="currentColor" />;
   return (
     <img

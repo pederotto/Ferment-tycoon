@@ -30,6 +30,7 @@ import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
 import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, batchFitsContract, unitsFromBatch, makeContractOffer, overdueContracts, newlyUnlockedVendors, canOfferContract } from './services/vendors';
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import DevPanel from './components/DevPanel';
+import GameIcon from './components/GameIcon';
 import FirstCulture from './components/FirstCulture';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine, Boxes, Droplets, Sprout } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon , BagIcon , CloseIcon } from './components/icons';
@@ -325,13 +326,13 @@ export default function App() {
 
   const getWeatherIcon = (type: WeatherType) => {
       switch(type) {
-          case 'Sunny': return <Sun className="w-4 h-4 text-yellow-400" />;
-          case 'Heatwave': return <Sun className="w-4 h-4 text-orange-500 animate-pulse" />;
-          case 'Rainy': return <CloudRain className="w-4 h-4 text-blue-400" />;
-          case 'Stormy': return <Zap className="w-4 h-4 text-purple-400" />;
-          case 'Snowy': return <CloudSnow className="w-4 h-4 text-white" />;
-          case 'Foggy': return <CloudFog className="w-4 h-4" style={{ color: 'var(--text-mid)' }} />;
-          default: return <CloudSun className="w-4 h-4" style={{ color: 'var(--text-mid)' }} />;
+          case 'Sunny': return <GameIcon name="sunny" size={15} className="wx-sun" />;
+          case 'Heatwave': return <GameIcon name="heatwave" size={15} className="wx-heat" />;
+          case 'Rainy': return <GameIcon name="rain" size={15} className="wx-rain" />;
+          case 'Stormy': return <GameIcon name="storm" size={15} className="wx-storm" />;
+          case 'Snowy': return <GameIcon name="snow" size={15} className="wx-snow" />;
+          case 'Foggy': return <GameIcon name="fog" size={15} className="wx-fog" />;
+          default: return <GameIcon name="cloudy" size={15} className="wx-fog" />;
       }
   };
 
@@ -1986,7 +1987,7 @@ export default function App() {
             className={`tab-btn-hud${activeDrawer === 'marketplace' ? ' active' : ''}`}
             title="Ingredients, vessels, tools and books"
             >
-            <ShoppingBasket size={14} />
+            <GameIcon name="supply" size={15} />
             <span className="hidden sm:inline">Supply</span>
             </button>
             {/* Hardware is what you OWN and whether it is working. Supply is
@@ -1997,7 +1998,7 @@ export default function App() {
             className={`tab-btn-hud${showHardware ? ' active' : ''}`}
             title="The hardware you own, and what it is doing"
             >
-            <Wrench size={14} />
+            <GameIcon name="hardware" size={15} />
             <span className="hidden sm:inline">Hardware</span>
             </button>
             <button
@@ -2005,7 +2006,7 @@ export default function App() {
             className={`tab-btn-hud${uiState.showStaff ? ' active' : ''}`}
             title="Staff Management"
             >
-            <Users size={14} />
+            <GameIcon name="staff" size={15} />
             <span className="hidden sm:inline">Staff</span>
             </button>
             <button
@@ -2013,7 +2014,7 @@ export default function App() {
             className={`tab-btn-hud${uiState.showLogbook ? ' active' : ''}`}
             title="Lab Codex & Archives"
             >
-            <BookOpen size={14} />
+            <GameIcon name="codex" size={15} />
             <span className="hidden sm:inline">Codex</span>
             </button>
             {/* The cellar was a drawn door standing against a painted wall and
@@ -2024,7 +2025,7 @@ export default function App() {
             className="tab-btn-hud"
             title="Below the workshop — where things are laid down to age"
             >
-            <ArrowDownToLine size={14} />
+            <GameIcon name="cellar" size={15} />
             <span className="hidden sm:inline">Cellar</span>
             <span className="dot mono">{gameState.batches.filter(b => b.cellared).length}/{CELLAR_CAPACITY}</span>
             </button>
@@ -2033,7 +2034,7 @@ export default function App() {
             className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
             title="Vendor standing and contracts"
             >
-            <Handshake size={14} />
+            <GameIcon name="orders" size={15} />
             <span className="hidden sm:inline">Orders</span>
             {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
             </button>

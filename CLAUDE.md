@@ -733,15 +733,18 @@ turbulence data-URIs, so the printed-board texture costs nothing to download and
 does not tile. Applied via `::after` with `pointer-events: none`, and the scene's
 own SVG is lifted to `z-index: 2` above it.
 
-**Six of the seven vessels are paintings; the Cedar Tray is still drawn.** They
-live in `vesselSheet.ts`, keyed off a cream sheet at build time: the ground
-flooded in from each cell's edges, and the anti-aliased rim un-mixed from the
-cream, without which every vessel wears a pale halo on the dark room.
+**Every vessel is a painting; the drawings are the fallback.** They live in
+`vesselSheet.ts`, keyed at build time — the first six off a cream sheet (ground
+flooded in from each cell's edges, anti-aliased rim un-mixed from the cream,
+without which every vessel wears a pale halo on the dark room) and the Cedar
+Tray off flat magenta, which is the easier key and what every sheet since has
+used. The tray ships in two states, bare and lid-propped, because a painting
+cannot open its own lid.
 `IsoVessel` stands each one on the foot of the drawing it replaced
 (`PAINTED_FOOT`), so shadows, pips and hit areas did not move, and the group
 takes `.iso-lift.painted`, which drops the ink filter (a painting is already
 painted) and keeps the hover brightness. A painting cannot show its own brine
-level, so `fill` now reaches only the drawn tray; the pip carries progress.
+level, so `fill` reaches nothing now; the pip and the bar carry progress.
 
 - **Never name two modules apart only by case.** macOS is case-insensitive:
   `vesselArt.ts` beside `VesselArt.tsx` made `./VesselArt` resolve to the data

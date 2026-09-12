@@ -3810,3 +3810,24 @@ input[type="range"].dial-slider::-moz-range-thumb {
   display: block; width: 100%; height: auto;
   filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.55));
 }
+
+/* --------------------------------------------------------------------------
+   THE ENGRAVED ICON SET
+   A mask filled with currentColor, so one sheet is ink on paper and brass in
+   the rails. No repeat, and never a background — a background would paint the
+   cell's box instead of the shape.
+   -------------------------------------------------------------------------- */
+.gicon {
+  display: inline-block; flex: none; background-color: currentColor;
+  mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat;
+  vertical-align: -0.12em;
+}
+
+/* The almanac's weather, from the engraved set. The icons are masks, so the
+   weather's colour is simply the colour of the glyph. */
+.wx-sun { color: #e7c15e; }
+.wx-heat { color: var(--amber); }
+.wx-rain { color: #7fa8c9; }
+.wx-storm { color: #9fb2d8; }
+.wx-snow { color: #dfe7ee; }
+.wx-fog { color: var(--text-mid); }

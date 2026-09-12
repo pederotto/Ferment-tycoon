@@ -9,6 +9,7 @@ import { Lock, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
 import VesselArt from './VesselArt';
+import GameIcon from './GameIcon';
 import { SporeClusterIcon } from './icons';
 import { inSeason, nextInSeason, seasonLabel, MONTH_NAMES } from '../constants.forage';
 
@@ -185,11 +186,11 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
         <>
           <div className="sup-tabs">
             {([
-              { id: 'ingredients', label: 'Ingredients', icon: <BagIcon size={13} color="currentColor" /> },
-              { id: 'hardware', label: 'Vessels & Tools', icon: <WrenchIcon size={13} color="currentColor" /> },
-              { id: 'books', label: 'Books', icon: <BookIcon size={13} color="currentColor" /> },
-              { id: 'cultures', label: 'Culture Bank', icon: <SporeClusterIcon size={13} color="currentColor" /> },
-              { id: 'underground', label: 'Underground', icon: <ShieldIcon size={12} color="currentColor" /> },
+              { id: 'ingredients', label: 'Ingredients', icon: <GameIcon name="ingredients" size={14} /> },
+              { id: 'hardware', label: 'Vessels & Tools', icon: <GameIcon name="vessels" size={14} /> },
+              { id: 'books', label: 'Books', icon: <GameIcon name="books" size={14} /> },
+              { id: 'cultures', label: 'Culture Bank', icon: <GameIcon name="cultures" size={14} /> },
+              { id: 'underground', label: 'Underground', icon: <GameIcon name="underground" size={14} /> },
             ] as const).map(t => (
               <button
                 key={t.id}
