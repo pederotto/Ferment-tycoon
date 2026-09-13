@@ -1,0 +1,33 @@
+import React from 'react';
+import { PEOPLE_SHEET, PEOPLE_COLS, PEOPLE_CELL, portraitIndex } from './peopleSheet';
+
+/**
+ * A FACE FOR A GENERATED PERSON.
+ *
+ * Sliced out of the one sheet by a hash of the member's id, so the same hire
+ * keeps the same face for as long as they work for you without the crew record
+ * having to carry a portrait field for `migrate()` to backfill.
+ */
+const Portrait: React.FC<{ seed: string; size?: number; className?: string }> = ({ seed, size = 44, className }) => {
+  const i = portraitIndex(seed);
+  const col = i % PEOPLE_COLS;
+  const row = Math.floor(i / PEOPLE_COLS);
+  const k = size / PEOPLE_CELL;
+  return (
+    <span
+      className={`portrait${className ? ' ' + className : ''}`}
+      role="img"
+      aria-hidden="true"
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: `url(${PEOPLE_SHEET})`,
+        backgroundSize: `${PEOPLE_CELL * PEOPLE_COLS * k}px auto`,
+        backgroundPosition: `-${col * PEOPLE_CELL * k}px -${row * PEOPLE_CELL * k}px`,
+        backgroundRepeat: 'no-repeat',
+      }}
+    />
+  );
+};
+
+export default Portrait;

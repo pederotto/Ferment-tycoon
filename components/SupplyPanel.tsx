@@ -10,6 +10,7 @@ import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
 import VesselArt from './VesselArt';
 import GameIcon from './GameIcon';
+import { BOOK_COVER } from './bookSheet';
 import { SporeClusterIcon } from './icons';
 import { inSeason, nextInSeason, seasonLabel, MONTH_NAMES } from '../constants.forage';
 
@@ -540,7 +541,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                   return (
                     <div key={b.id} className={`eq-card${has ? ' owned' : ''}`}>
                       <div className="eq-top">
-                        <span className="eq-ic"><BookIcon size={14} color="currentColor" /></span>
+                        {BOOK_COVER[b.id]
+                          ? <span className="eq-art book"><img src={BOOK_COVER[b.id].src} alt="" aria-hidden="true" /></span>
+                          : <span className="eq-ic"><BookIcon size={14} color="currentColor" /></span>}
                         <span><b>{b.title}</b><em>{b.author} · teaches {b.teaches.length}</em></span>
                       </div>
                       <p>{b.blurb}</p>
@@ -571,7 +574,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                   return (
                     <div key={b.id} className={`eq-card${has ? ' owned' : ''}`}>
                       <div className="eq-top">
-                        <span className="eq-ic"><BookIcon size={14} color="currentColor" /></span>
+                        {BOOK_COVER[b.id]
+                          ? <span className="eq-art book"><img src={BOOK_COVER[b.id].src} alt="" aria-hidden="true" /></span>
+                          : <span className="eq-ic"><BookIcon size={14} color="currentColor" /></span>}
                         <span><b>{b.title}</b><em>{b.author}{b.heatOnPurchase ? ` · +${b.heatOnPurchase} heat` : ''}</em></span>
                       </div>
                       <p>{b.blurb}</p>

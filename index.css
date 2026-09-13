@@ -3831,3 +3831,10 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .wx-storm { color: #9fb2d8; }
 .wx-snow { color: #dfe7ee; }
 .wx-fog { color: var(--text-mid); }
+
+/* A book is its spine, and a hire has a face. Both are cut-outs, so they stand
+   on the card's own stock rather than in a plate. */
+.eq-card .eq-art.book { width: 34px; height: 86px; align-items: flex-start; }
+.eq-card .eq-art.book img { width: 100%; height: auto; filter: drop-shadow(0 3px 5px rgba(42, 32, 21, 0.34)); }
+.cw-face { flex: none; margin-right: 11px; border-radius: 3px; }
+.cw-member .mh, .cw-candidate .mh { align-items: flex-start; }

@@ -1,3 +1,4 @@
+import Portrait from './Portrait';
 import React from 'react';
 import { CrewMember, StaffRoleType } from '../types';
 import { STAFF_ROLES } from '../constants';
@@ -93,6 +94,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               return (
                 <div key={c.id} className="cw-member">
                   <div className="mh">
+                    <Portrait seed={c.id} size={46} className="cw-face" />
                     <div>
                       <span className="nm">{c.name}</span>
                       <span className="rl">{ROLE_NAME[c.role]} · {trait.label}</span>
@@ -129,6 +131,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               return (
                 <div key={c.id} className={`cw-candidate${afford ? '' : ' poor'}`}>
                   <div className="mh">
+                    <Portrait seed={c.id} size={46} className="cw-face" />
                     <div>
                       <span className="nm">{c.name}</span>
                       <span className="rl">{ROLE_NAME[c.role]} · {trait.label}</span>
