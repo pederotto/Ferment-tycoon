@@ -30,6 +30,7 @@ import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
 import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, batchFitsContract, unitsFromBatch, makeContractOffer, overdueContracts, newlyUnlockedVendors, canOfferContract } from './services/vendors';
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import DevPanel from './components/DevPanel';
+import PanelMark from './components/PanelMark';
 import GameIcon from './components/GameIcon';
 import FirstCulture from './components/FirstCulture';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine, Boxes, Droplets, Sprout } from 'lucide-react';
@@ -2137,6 +2138,7 @@ export default function App() {
             <span className="corner c-tl" />
             <span className="corner c-br" />
             <div className="pr-head">
+              <PanelMark name="hardware" />
               <div>
                 <span className="kicker">What you own</span>
                 <h2>Hardware</h2>

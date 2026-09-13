@@ -1,3 +1,4 @@
+import PanelMark from './PanelMark';
 import React, { useState } from 'react';
 import { Batch, Recipe } from '../types';
 import { VESSELS } from '../constants';
@@ -159,6 +160,7 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
         <span className="corner c-br" />
 
         <div className="pr-head">
+          <PanelMark name="cellar" />
           <div>
             <span className="kicker">Below the workshop</span>
             <h2>The Cellar</h2>

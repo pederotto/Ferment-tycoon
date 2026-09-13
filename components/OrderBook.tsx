@@ -1,3 +1,5 @@
+import PanelMark from './PanelMark';
+import { BUYER_SEAL } from './sealSheet';
 import React from 'react';
 import { Contract, GameState } from '../types';
 import { BUYERS } from '../constants';
@@ -46,6 +48,12 @@ const StandingBar: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
+/** A buyer's stamp, where one has been cut. */
+const Seal: React.FC<{ id?: string; size?: number }> = ({ id, size = 26 }) =>
+  id && BUYER_SEAL[id]
+    ? <img className="seal" src={BUYER_SEAL[id]} width={size} height={size} alt="" aria-hidden="true" draggable={false} />
+    : null;
+
 const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onDecline }) => {
   const offered = gameState.contracts.filter(c => c.status === 'offered');
   const active = gameState.contracts.filter(c => c.status === 'active');
@@ -67,6 +75,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
         <span className="corner c-br" />
 
         <div className="ob-head">
+          <PanelMark name="orders" />
           <div>
             <span className="kicker">Week {gameState.week}</span>
             <h2>The Order Book</h2>
@@ -84,6 +93,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
               {offered.map(c => (
                 <div key={c.id} className="ob-offer">
                   <div className="oh">
+                    <Seal id={c.buyerId} />
                     <span className="who">{c.buyerName}</span>
                     <span className="pay">${c.pricePerUnit.toLocaleString()} <em>per unit</em></span>
                   </div>
@@ -155,6 +165,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
               return (
                 <div key={b.id} className="ob-vendor">
                   <div className="oh">
+                    <Seal id={b.id} />
                     <span className="who">{b.name}</span>
                     <span className="mult">×{b.priceMultiplier}{b.paysIn === 'renown' && ' renown'}</span>
                   </div>
@@ -171,6 +182,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
               <span className="ob-lbl"><Lock size={12} /> Not yet</span>
               {locked.map(b => (
                 <div key={b.id} className="ob-locked">
+                  <Seal id={b.id} size={20} />
                   <span className="who">{b.name}</span>
                   <span className="how">{b.unlock ? describeUnlock(b.unlock) : `Reputation ${b.minReputation}.`}</span>
                 </div>

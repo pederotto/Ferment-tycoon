@@ -1,3 +1,4 @@
+import PanelMark from './PanelMark';
 import React, { useState, useMemo } from 'react';
 import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
 import { RECIPES, VESSELS, eraForRecipe } from '../constants';
@@ -83,7 +84,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
         {/* Header */}
         <div className="lhead" style={{ flexWrap: 'wrap' }}>
           <div className="ttl-row">
-            <div className="ic"><BookIcon size={18} color="var(--moss)" /></div>
+            <div className="ic mark"><PanelMark name="codex" size={40} /></div>
             <div>
               <h1 className="slab">Laboratory Codex &amp; Archive</h1>
               <div className="sub">Culinary taxonomy, tested parameters, and vintage harvest registries</div>

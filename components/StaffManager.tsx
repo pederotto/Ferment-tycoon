@@ -1,3 +1,4 @@
+import PanelMark from './PanelMark';
 import Portrait from './Portrait';
 import React from 'react';
 import { CrewMember, StaffRoleType } from '../types';
@@ -58,6 +59,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         <span className="corner c-br" />
 
         <div className="cw-head">
+          <PanelMark name="crew" />
           <div>
             <span className="kicker">Week {week}</span>
             <h2>The Crew</h2>

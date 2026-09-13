@@ -10,6 +10,7 @@ import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
 import VesselArt from './VesselArt';
 import GameIcon from './GameIcon';
+import PanelMark from './PanelMark';
 import { BOOK_COVER } from './bookSheet';
 import { SporeClusterIcon } from './icons';
 import { inSeason, nextInSeason, seasonLabel, MONTH_NAMES } from '../constants.forage';
@@ -169,7 +170,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
     <div className="supply" onClick={e => e.stopPropagation()}>
       <div className="sup-head">
         <div className="ttl">
-          <div className="ic"><BagIcon size={18} /></div>
+          <div className="ic mark"><PanelMark name="supply" size={40} /></div>
           <div>
             <h1 className="slab">Supply</h1>
             <div className="sub">Ingredients, vessels, tools, books and the underground</div>

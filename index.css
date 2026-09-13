@@ -3257,8 +3257,11 @@ input[type="range"].dial-slider::-moz-range-thumb {
 }
 .label-plate::after {
   content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
-  background-image: var(--grain-paper); background-size: 160px;
-  opacity: 0.11; mix-blend-mode: multiply;
+  /* The generated speckle carries the print; the photographed linen carries the
+     weave underneath it. Both multiply, so neither can lighten the stock. */
+  background-image: var(--grain-paper), var(--paper-linen, none);
+  background-size: 160px, 180px;
+  opacity: 0.13; mix-blend-mode: multiply;
 }
 .lhead .label-plate .type-tag {
   font-family: var(--f-spec); font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 600;
@@ -3838,3 +3841,26 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .eq-card .eq-art.book img { width: 100%; height: auto; filter: drop-shadow(0 3px 5px rgba(42, 32, 21, 0.34)); }
 .cw-face { flex: none; margin-right: 11px; border-radius: 3px; }
 .cw-member .mh, .cw-candidate .mh { align-items: flex-start; }
+
+/* A screen says what it is with an object, not only a heading. The mark is
+   decorative — it sits before the title and never pushes the close stamp off
+   the right-hand end. */
+.panel-mark {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 3px 5px rgba(28, 20, 12, 0.45));
+}
+.panel-mark img { display: block; object-fit: contain; }
+.pr-head > .panel-mark + div,
+.ob-head > .panel-mark + div,
+.cw-head > .panel-mark + div { margin-right: auto; }
+/* Where a head already held a plated icon, the object replaces the plate too. */
+.ic.mark { background: none; border: 0; box-shadow: none; padding: 0; width: auto; height: auto; }
+
+/* A house stamps its own paper. The mark sits before the name and takes the
+   row's baseline, so a buyer without one simply has a shorter row. */
+.seal { flex: none; display: block; object-fit: contain; opacity: 0.92; }
+.ob-vendor .oh, .ob-offer .oh { display: flex; align-items: center; gap: 9px; }
+.ob-vendor .oh .who, .ob-offer .oh .who { margin-right: auto; }
+.ob-locked { display: flex; align-items: center; gap: 9px; }
+.ob-locked .who { margin-right: auto; }
+.ob-locked .seal { opacity: 0.4; filter: grayscale(1); }
