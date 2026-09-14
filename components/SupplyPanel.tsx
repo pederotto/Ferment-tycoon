@@ -168,7 +168,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
     <div className={`supply${tab === 'underground' ? ' underground' : ''}`} onClick={e => e.stopPropagation()}>
       <div className="sup-head">
         <div className="ttl">
-          <div className="ic mark"><PanelMark name="supply" size={40} /></div>
+          <div className="ic mark"><PanelMark name={tab === 'underground' ? 'underground' : 'supply'} size={40} /></div>
           <div>
             <h1 className="slab">Supply</h1>
             <div className="sub">Ingredients, vessels, tools, books and the underground</div>

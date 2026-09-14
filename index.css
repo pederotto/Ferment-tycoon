@@ -3957,3 +3957,40 @@ html, body {
 }
 /* The selected speed and filter chip stays solid amber — it is a lit control. */
 .chip-tab.active { background: var(--amber); }
+
+/* =========================================================================
+   PRINTER'S ORNAMENTS (ornamentPlate.ts)
+   ========================================================================= */
+/* Corners: one engraved top-left piece, mirrored for the other three. */
+.corner {
+  width: 30px; height: 28px; border: none; opacity: 0.7;
+  background: var(--brass);
+  -webkit-mask: var(--orn-corner, none) no-repeat center / contain;
+          mask: var(--orn-corner, none) no-repeat center / contain;
+}
+.c-tl { top: 10px; left: 10px; }
+.c-tr { top: 10px; right: 10px; transform: scaleX(-1); }
+.c-bl { bottom: 10px; left: 10px; transform: scaleY(-1); }
+.c-br { bottom: 10px; right: 10px; transform: scale(-1, -1); }
+
+/* Stamps: an inked rubber-stamp frame instead of a 2px border. border-image
+   stretches the edges and keeps the corners, so the frame fits any word. */
+.overstamp, .eq-card.owned::before {
+  border: 8px solid transparent;
+  border-image: var(--stamp-frame-bad, none) 30 / 8px / 0 stretch;
+  padding: 0 8px;
+}
+.overstamp.good, .eq-card.owned::before { border-image-source: var(--stamp-frame-good, none); }
+
+/* Dividers under a screen's heading, in place of a hairline rule. */
+.rc-head, .hr-head, .ob-head, .cw-head, .pr-head, .codex-panel .lhead { border-bottom: none; position: relative; }
+.rc-head::after, .hr-head::after, .ob-head::after, .cw-head::after, .pr-head::after, .codex-panel .lhead::after {
+  content: ""; position: absolute; left: 10%; right: 10%; bottom: -6px; height: 14px; pointer-events: none;
+  background: var(--brass); opacity: 0.6;
+  -webkit-mask: var(--orn-divider-leaf, none) no-repeat center / contain;
+          mask: var(--orn-divider-leaf, none) no-repeat center / contain;
+}
+.rc-head::after, .codex-panel .lhead::after {
+  -webkit-mask-image: var(--orn-divider-wheat, none);
+          mask-image: var(--orn-divider-wheat, none);
+}

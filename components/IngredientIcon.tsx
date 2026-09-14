@@ -1,6 +1,9 @@
 import React from 'react';
 import { INGREDIENT_SHEET, SHEET_COLS, SHEET_CELL_W, SHEET_CELL_H, sheetIndex } from './ingredientSheet';
 import { PRODUCT_SHEET, PRODUCT_COLS, PRODUCT_CELL, productIndex } from './productSheet';
+import { GRAIN_IDS, CORN_IDS } from '../constants.heritage';
+
+const HERITAGE_KOJI_GRAINS: string[] = [...GRAIN_IDS, ...CORN_IDS];
 import { artFor } from './IngredientArt';
 
 /**
@@ -62,9 +65,13 @@ const IngredientIcon: React.FC<Props> = ({ id, size = 30, fallback, className })
   }
 
   // Koji the player grows is minted per bed (`koji_<substrate>_a6_p4`) and matches
-  // no cell, so every grown bed drew nothing. They are all a tray of koji: show
-  // the barley koji until a substrate has a picture of its own.
-  if (/^koji_/.test(id) || id === 'heritage_koji_tray') {
+  // no cell, so every grown bed drew nothing. A bed on a heritage grain or a
+  // landrace corn is the heritage tray; every other bed is the barley koji.
+  if (/^koji_.*_a\d+_p\d+$/.test(id)) {
+    const substrate = id.replace(/^koji_/, '').replace(/_a\d+_p\d+$/, '');
+    const heritage = HERITAGE_KOJI_GRAINS.includes(substrate) ? productIndex('heritage_koji_tray') : -1;
+    if (heritage >= 0) return <Sliced sheet={PRODUCT_SHEET} cols={PRODUCT_COLS} cw={PRODUCT_CELL} ch={PRODUCT_CELL}
+                                      index={heritage} size={size} className={`product${className ? ' ' + className : ''}`} />;
     const k = sheetIndex('barley_koji');
     if (k >= 0) return <Sliced sheet={INGREDIENT_SHEET} cols={SHEET_COLS} cw={SHEET_CELL_W} ch={SHEET_CELL_H}
                                index={k} size={size} className={className} />;
