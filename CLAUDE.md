@@ -1120,4 +1120,8 @@ Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
 
 ## Performance
 - **Never put a data URI in an inline style that renders per item.** `IngredientIcon` and `GameIcon` each wrote `url(<the whole sheet>)` into every element's style attribute: 111 catalogue rows carried 57 MB of style text and Supply took 1,078 ms to open. Each sheet is one injected rule now (`.ing-icon.sheet-*`, `.gicon`) and the inline style is size and position — 89 ms, 16 KB. A single image drawn once (a plate, a crest) is fine inline.
-- **Supply shows only what is unlocked.** Locked ingredients, tools and books are counted in one line, not listed; out-of-season stock stays because it is not a lock.
+- **Supply shows only what can be bought today.** Locked ingredients, tools and books, and out-of-season stock, are counted in one line, not listed (the owner asked for this; it overrides the older "out of season stays on the shelf" rule in Seasons).
+
+## Rail widgets
+- Go To is a grid of walnut tiles with the painted `PanelMark` each screen opens under; the pantry is jars (a painted `IngredientIcon` in a `#1a130b` medallion, count on a brass plate). The global `.dot` is a 5x5 status dot and `.rail .tab-btn-hud span` is forced inline, so tile rules restate both.
+- The window paints the same weather painting as the weather glass (`weatherWindowSheet.ts`, cut from the discs to the 4:5 opening, picked by `weatherScene`); `window-life` only adds motion on top and never greys it over. `windowPlate.ts` (the four season paintings) is no longer drawn.

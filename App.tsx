@@ -13,6 +13,7 @@ import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
+import IngredientIcon from './components/IngredientIcon';
 import { BrassSpeed, BrassGauge, BrassTicket, BrassRail, WeatherGlass, SeasonKey } from './components/BrassHud';
 import InkDefs from './components/InkDefs';
 import ToolRack from './components/ToolRack';
@@ -2089,67 +2090,60 @@ export default function App() {
 
 
 
+          {/* GO TO — painted marks on walnut tiles with a brass rim, the same
+              objects the screens themselves open under, so a destination is
+              recognised before its name is read. */}
           <section className="rail-sect">
-            <h3>Go to</h3>
-            <div className="tabs-hud">
-            {/* A visible way into the dev tools. The keyboard route alone was not
-            enough: the original binding (Cmd/Ctrl+Shift+D) is claimed by
-            Chrome for "Bookmark all tabs", so the page never saw it. */}
-            <button
-            className="dev-chip"
-            onClick={() => setShowDev(v => !v)}
-            title="Dev tools and god mode — or press the backtick key"
-            >
-            DEV
-            </button>
-            {/* Supply sits with the other places you go rather than being a
-            button of its own — it is one destination among five, and it
-            used to be the only one with a drawer sliding over the room. */}
+            <h3 className="goto-head">
+              Go to
+              {/* A visible way into the dev tools. The keyboard route alone was not
+                  enough: Cmd/Ctrl+Shift+D is claimed by Chrome for "Bookmark all tabs". */}
+              <button className="dev-chip" onClick={() => setShowDev(v => !v)}
+                      title="Dev tools and god mode — or press the backtick key">DEV</button>
+            </h3>
+            <div className="tabs-hud nav-grid">
+            {/* Supply is one destination among the others, not a drawer over the room. */}
             <button
             onClick={() => toggleDrawer('marketplace')}
             className={`tab-btn-hud${activeDrawer === 'marketplace' ? ' active' : ''}`}
             title="Ingredients, vessels, tools and books"
             >
-            <GameIcon name="supply" size={20} />
-            <span className="hidden sm:inline">Supply</span>
+            <PanelMark name="supply" size={38} />
+            <span className="nt-name">Supply</span>
             </button>
-            {/* Hardware is what you OWN and whether it is working. Supply is
-            what you can buy. They were the same button for a while, which
-            is why neither question had a clear answer. */}
+            {/* Hardware is what you OWN and whether it is working; Supply is what you can buy. */}
             <button
             onClick={() => setShowHardware(v => !v)}
             className={`tab-btn-hud${showHardware ? ' active' : ''}`}
             title="The hardware you own, and what it is doing"
             >
-            <GameIcon name="hardware" size={20} />
-            <span className="hidden sm:inline">Hardware</span>
+            <PanelMark name="hardware" size={38} />
+            <span className="nt-name">Hardware</span>
             </button>
             <button
             onClick={() => setUiState(prev => ({ ...prev, showStaff: !prev.showStaff }))}
             className={`tab-btn-hud${uiState.showStaff ? ' active' : ''}`}
             title="Staff Management"
             >
-            <GameIcon name="staff" size={20} />
-            <span className="hidden sm:inline">Staff</span>
+            <PanelMark name="crew" size={38} />
+            <span className="nt-name">Staff</span>
             </button>
             <button
             onClick={() => setUiState(prev => ({ ...prev, showLogbook: !prev.showLogbook }))}
             className={`tab-btn-hud${uiState.showLogbook ? ' active' : ''}`}
             title="Lab Codex & Archives"
             >
-            <GameIcon name="codex" size={20} />
-            <span className="hidden sm:inline">Codex</span>
+            <PanelMark name="codex" size={38} />
+            <span className="nt-name">Codex</span>
             </button>
-            {/* The cellar was a drawn door standing against a painted wall and
-                never sat in the room. It is a place you go, so it goes where the
-                other places are. */}
+            {/* The cellar is a place you go, so it goes where the other places are. */}
             <button
             onClick={() => setShowCellar(true)}
             className="tab-btn-hud"
             title="Below the workshop — where things are laid down to age"
             >
-            <GameIcon name="cellar" size={20} />
-            <span className="hidden sm:inline">Cellar</span>
+            <PanelMark name="cellar" size={38} />
+            <span className="nt-name">Cellar</span>
             <span className="dot mono">{gameState.batches.filter(b => b.cellared).length}/{CELLAR_CAPACITY}</span>
             </button>
             {gameState.kojiRoomOwned && (
@@ -2158,8 +2152,8 @@ export default function App() {
             className="tab-btn-hud"
             title="The warm cedar room where the koji grows"
             >
-            <GameIcon name="cultures" size={20} />
-            <span className="hidden sm:inline">Koji Room</span>
+            <PanelMark name="kojiroom" size={38} />
+            <span className="nt-name">Koji Room</span>
             <span className="dot mono">{gameState.batches.filter(b => b.kojiRoom).length}/{KOJI_ROOM_CAPACITY}</span>
             </button>
             )}
@@ -2168,8 +2162,8 @@ export default function App() {
             className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
             title="Vendor standing and contracts"
             >
-            <GameIcon name="orders" size={20} />
-            <span className="hidden sm:inline">Orders</span>
+            <PanelMark name="orders" size={38} />
+            <span className="nt-name">Orders</span>
             {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
             </button>
             </div>
@@ -2180,7 +2174,7 @@ export default function App() {
             {/* The pantry reads better as a list than as a strip along the bottom. */}
             <div className="pantry">
 
-            <div className="pantry-items custom-scrollbar">
+            <div className="pantry-items jar-shelf custom-scrollbar">
             {/* COUNTED BY TYPE, NOT BY A HARDCODED LIST OF IDS.
             Every line here was wrong in its own way. Salt printed the UNIT
             count with a "g" suffix while a unit of salt is 1000g, so a
@@ -2212,29 +2206,33 @@ export default function App() {
 
             return (
             <>
-            <div className="pantry-item" title="Every salt on the shelf, by weight">
-            <GameIcon name="sparkle" size={16} color="var(--text-mid)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
-            </div>
-            <div className="pantry-item" title="Every live starter, bought or cultured">
-            <GameIcon name="sprout" size={16} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
-            </div>
-            <div className="pantry-item" title="Every substrate on the shelf, by weight">
-            <GameIcon name="crates" size={16} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
-            </div>
-            <div className="pantry-item" title="Filtered water">
-            <GameIcon name="droplet" size={16} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
-            </div>
+            {/* Jars on a sacking shelf: the painted ingredient in a dark medallion
+                (the sheet's own ground, so the cell reads as engraved, not pasted)
+                and the count on a small brass plate. */}
+            {([
+              { id: 'salt', name: 'Salt', n: kg(saltG), title: 'Every salt on the shelf, by weight' },
+              { id: 'koji_spores', name: 'Spores', n: `${sporePkts} pkts`, title: 'Every live starter, bought or cultured' },
+              { id: 'barley', name: 'Substrate', n: kg(substrateG), title: 'Every substrate on the shelf, by weight' },
+              { id: 'water', name: 'Water', n: `${(waterMl / 1000).toFixed(0)}L`, title: 'Filtered water' },
+            ]).map(j => (
+              <div key={j.id} className="jar" title={j.title}>
+                <span className="jar-medal"><IngredientIcon id={j.id} size={36} /></span>
+                <span className="jar-name">{j.name}</span>
+                <span className="jar-n mono">{j.n}</span>
+              </div>
+            ))}
             </>
             );
             })()}
-            <div
+            <button
             onClick={() => toggleDrawer('marketplace')}
-            className="pantry-item"
-            style={{ cursor: 'pointer' }}
+            className="jar jar-wide"
             title="Click to view & purchase hardware vessels"
             >
-            <GameIcon name="flask" size={16} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
-            </div>
+            <span className="jar-medal"><PanelMark name="crock" size={30} /></span>
+            <span className="jar-name">Vessels</span>
+            <span className="jar-n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
+            </button>
             </div>
             </div>
           </section>
