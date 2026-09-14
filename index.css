@@ -3889,3 +3889,31 @@ input[type="range"].dial-slider::-moz-range-thumb {
 @media (max-width: 900px) {
   .hud { flex-wrap: wrap; justify-content: center; }
 }
+
+/* The room's frame is oak. `--oak-grain` (paperArt.ts) is grain only, centred on
+   mid-grey, so it SOFT-LIGHTS onto each surface's existing colour and never
+   repaints it — the palette, the contrast of the type and the paper-versus-room
+   rule all stay where they were. The dark surfaces only: anything printed on
+   stock keeps the linen.
+
+   Each rule restates its own ground as the second layer, because a
+   background-image list replaces the gradient it sits on rather than adding to
+   it. If one of these grounds changes above, change it here too. */
+.hud,
+.rail,
+.wood-panel, .ledger,
+.supply, .hw-modal,
+.cellar,
+.orderbook, .crewroom, .pressroom,
+.inoc-head {
+  background-size: 512px 512px, auto;
+  background-blend-mode: soft-light, normal;
+}
+.hud { background-image: var(--oak-grain), linear-gradient(180deg, #241c14, #1c160f); }
+.rail { background-color: var(--bg-void); background-image: var(--oak-grain); background-blend-mode: soft-light; background-size: 512px 512px; }
+.rail.right { background-color: #120d09; }
+.wood-panel, .ledger { background-image: var(--oak-grain), linear-gradient(180deg, #241c14, #1a140d); }
+.supply, .hw-modal { background-image: var(--oak-grain), linear-gradient(180deg, #241c14, #191309); }
+.cellar { background-image: var(--oak-grain), linear-gradient(180deg, #1c1710, #141009); }
+.orderbook, .crewroom, .pressroom { background-color: var(--bg-panel); background-image: var(--oak-grain); background-blend-mode: soft-light; background-size: 512px 512px; }
+.inoc-head { background-image: var(--oak-grain), linear-gradient(180deg, #2a2117, #221a12); }
