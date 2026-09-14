@@ -90,35 +90,6 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
 
   const legalSuppliers = SUPPLIERS.filter(s => s.id !== 'black_market' && s.id !== 'in_house');
 
-  const rows = useMemo(() => {
-    const underground = tab === 'underground';
-    let list = ingredients.filter(i => {
-      if (i.type === IngredientType.TOOL) return false;
-      const isBM = i.supplierId === 'black_market';
-      if (underground !== isBM) return false;
-      if (i.supplierId === 'in_house') return false;
-      if (category !== 'all' && i.type !== category) return false;
-      if (supplierFilter !== 'all' && i.supplierId !== supplierFilter) return false;
-      if (search.trim() && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
-      return true;
-    });
-
-    const dir = asc ? 1 : -1;
-    list = [...list].sort((a, b) => {
-      switch (sort) {
-        case 'price': return (a.baseCost - b.baseCost) * dir;
-        case 'protein': return (a.hiddenStats.proteinContent - b.hiddenStats.proteinContent) * dir;
-        case 'starch': return (a.hiddenStats.starchContent - b.hiddenStats.starchContent) * dir;
-        case 'quality': return (a.quality - b.quality) * dir;
-        default: return a.name.localeCompare(b.name) * dir;
-      }
-    });
-    return list;
-  }, [ingredients, tab, category, supplierFilter, search, sort, asc]);
-
-  const tools = ingredients.filter(i => i.type === IngredientType.TOOL);
-  const shelfBooks = BOOKS.filter(b => b.shelf === (tab === 'underground' ? 'underground' : 'bindery'));
-
   const lockReason = (i: Ingredient): string | null => {
     if (i.supplierId === 'black_market') {
       const need = i.undergroundTier ?? 1;
@@ -132,6 +103,64 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
     if (rel.level < i.tierRequired) return `loyalty · lvl ${i.tierRequired}`;
     return null;
   };
+
+  /* THE SHELF SHOWS WHAT YOU CAN BUY.
+     Locked stock used to stand on it with a padlock where the price button goes —
+     54 of 111 rows on an early run — so the catalogue read as a list of things you
+     could not have. It holds what is unlocked now; how much is still behind a
+     supplier's loyalty or the underground's standing is one line in the rail, a
+     lead rather than a list. Out of season is NOT a lock and stays: nothing you
+     do brings it back sooner, and knowing when it returns is how you plan. */
+  const { rows, lockedCount } = useMemo(() => {
+    const underground = tab === 'underground';
+    let list = ingredients.filter(i => {
+      if (i.type === IngredientType.TOOL) return false;
+      const isBM = i.supplierId === 'black_market';
+      if (underground !== isBM) return false;
+      if (i.supplierId === 'in_house') return false;
+      if (category !== 'all' && i.type !== category) return false;
+      if (supplierFilter !== 'all' && i.supplierId !== supplierFilter) return false;
+      if (search.trim() && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+    const lockedCount = list.filter(i => lockReason(i) !== null).length;
+    list = list.filter(i => lockReason(i) === null);
+
+    const dir = asc ? 1 : -1;
+    list = [...list].sort((a, b) => {
+      switch (sort) {
+        case 'price': return (a.baseCost - b.baseCost) * dir;
+        case 'protein': return (a.hiddenStats.proteinContent - b.hiddenStats.proteinContent) * dir;
+        case 'starch': return (a.hiddenStats.starchContent - b.hiddenStats.starchContent) * dir;
+        case 'quality': return (a.quality - b.quality) * dir;
+        default: return a.name.localeCompare(b.name) * dir;
+      }
+    });
+    return { rows: list, lockedCount };
+    // lockReason reads relationships and undergroundTier
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ingredients, tab, category, supplierFilter, search, sort, asc, relationships, undergroundTier]);
+
+  /* Same rule for tools and books: what is unlocked, and a count of the rest. */
+  const allTools = ingredients.filter(i => i.type === IngredientType.TOOL);
+  const toolLocked = (t: Ingredient) => (relationships[t.supplierId] ?? { level: 1, xp: 0 }).level < t.tierRequired;
+  const tools = allTools.filter(t => !toolLocked(t));
+  const bookReachable = (b: typeof BOOKS[number]) => {
+    if (ownedBookIds.includes(b.id)) return true;
+    if (playerXp < b.xpRequired) return false;
+    if (b.shelf !== 'underground' && b.gatedBy) {
+      const rel = relationships[b.gatedBy.supplierId];
+      if (!rel || rel.level < b.gatedBy.level) return false;
+    }
+    return true;
+  };
+  const shelfAll = BOOKS.filter(b => b.shelf === 'bindery');
+  const shelfBooks = shelfAll.filter(bookReachable);
+  const undergroundAll = BOOKS.filter(b => b.shelf === 'underground');
+  const undergroundBooks = undergroundAll.filter(bookReachable);
+  const stillLocked = (n: number, what: string) => n > 0
+    ? <p className="sup-locked-note"><GameIcon name="lock" size={11} /> {n} more {what} unlock{n === 1 ? 's' : ''} as you go</p>
+    : null;
 
   /* Out of season is not a lock — nothing you do brings it back sooner — so it
      says WHEN rather than why. */
@@ -338,7 +367,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                     {sk.label}{sort === sk.id && <ArrowUpDown size={9} />}
                   </button>
                 ))}
-                <span className="sr-count">{rows.length} on the shelf</span>
+                <span className="sr-count">{rows.length} on the shelf{lockedCount > 0 ? ` · ${lockedCount} still locked` : ''}</span>
               </div>
 
               <div className="cat-head">
@@ -354,10 +383,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               </div>
 
               <div className="catalogue custom-scrollbar">
-                {rows.length === 0 && <div className="cat-empty empty-mark"><PanelMark name="supply" size={56} faded />Nothing on this shelf matches.</div>}
+                {rows.length === 0 && <div className="cat-empty empty-mark"><PanelMark name="supply" size={56} faded />{lockedCount > 0 ? 'Nothing unlocked here matches yet.' : 'Nothing on this shelf matches.'}</div>}
                 {rows.map(i => {
                   const Glyph = getIngredientIcon(i);
-                  const lock = lockReason(i);
                   const away = awayUntil(i);
                   const season = seasonNote(i);
                   const price = priceOf(i);
@@ -376,7 +404,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                         : 'kind-substrate';
 
                   return (
-                    <div key={i.id} className={`cat-row ${kind}${lock || away ? ' locked' : ''}${away ? ' away' : ''}`}>
+                    <div key={i.id} className={`cat-row ${kind}${away ? ' locked away' : ''}`}>
                       {/* The name and picture open the ingredient. The Buy button
                           sits outside this, so shopping never opens a panel by
                           accident. */}
@@ -425,8 +453,6 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       <span className="c-buy">
                         {away ? (
                           <span className="buy-btn locked away">{away}</span>
-                        ) : lock ? (
-                          <span className="buy-btn locked"><GameIcon name="lock" size={10} /> {lock}</span>
                         ) : (
                           <button
                             className={`buy-btn${!affordable ? ' locked' : ''}`}
@@ -488,8 +514,6 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               <div className="eq-grid">
                 {tools.map(t => {
                   const canAfford = money >= t.baseCost;
-                  const rel = relationships[t.supplierId] ?? { level: 1, xp: 0 };
-                  const locked = rel.level < t.tierRequired;
                   return (
                     <div key={t.id} className="eq-card">
                       <div className="eq-top">
@@ -497,15 +521,14 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                         <span><b>{t.name}</b><em>{owned(t.id)} owned</em></span>
                       </div>
                       <p>{t.description}</p>
-                      {locked
-                        ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> Lab Tech lvl {t.tierRequired}</span>
-                        : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyTool(t)} aria-label={`Buy ${t.name} for $${t.baseCost}`}>
-                            {canAfford ? `Buy unit $${t.baseCost}` : `Need $${t.baseCost}`}
-                          </button>}
+                      <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyTool(t)} aria-label={`Buy ${t.name} for $${t.baseCost}`}>
+                        {canAfford ? `Buy unit $${t.baseCost}` : `Need $${t.baseCost}`}
+                      </button>
                     </div>
                   );
                 })}
               </div>
+              {stillLocked(allTools.length - tools.length, allTools.length - tools.length === 1 ? 'tool' : 'tools')}
 
               {onUpgradePower && (
                 <>
@@ -536,9 +559,6 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               <div className="eq-grid">
                 {shelfBooks.map(b => {
                   const has = ownedBookIds.includes(b.id);
-                  const tooGreen = playerXp < b.xpRequired;
-                  const rel = b.gatedBy ? relationships[b.gatedBy.supplierId] : undefined;
-                  const notRegular = !!b.gatedBy && (!rel || rel.level < b.gatedBy.level);
                   const canAfford = money >= b.price;
                   return (
                     <div key={b.id} className={`eq-card${has ? ' owned' : ''}`}>
@@ -551,17 +571,14 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       <p>{b.blurb}</p>
                       {has
                         ? <span className="eq-btn owned-tag"><CheckIcon size={11} /> On the shelf</span>
-                        : tooGreen
-                          ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> {b.xpRequired} bench xp</span>
-                          : notRegular
-                            ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> kept for regulars</span>
-                            : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyBook(b)}>
-                                {canAfford ? `Buy $${b.price.toLocaleString()}` : `Need $${b.price.toLocaleString()}`}
-                              </button>}
+                        : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyBook(b)}>
+                            {canAfford ? `Buy $${b.price.toLocaleString()}` : `Need $${b.price.toLocaleString()}`}
+                          </button>}
                     </div>
                   );
                 })}
               </div>
+              {stillLocked(shelfAll.length - shelfBooks.length, shelfAll.length - shelfBooks.length === 1 ? 'book' : 'books')}
             </div>
           )}
 
@@ -569,9 +586,8 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
             <div className="sup-body custom-scrollbar" style={{ paddingTop: 0 }}>
               <span className="sup-lbl illicit">The restricted shelf</span>
               <div className="eq-grid">
-                {BOOKS.filter(b => b.shelf === 'underground').map(b => {
+                {undergroundBooks.map(b => {
                   const has = ownedBookIds.includes(b.id);
-                  const tooGreen = playerXp < b.xpRequired;
                   const canAfford = money >= b.price;
                   return (
                     <div key={b.id} className={`eq-card${has ? ' owned' : ''}`}>
@@ -584,15 +600,14 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       <p>{b.blurb}</p>
                       {has
                         ? <span className="eq-btn owned-tag"><CheckIcon size={11} /> On the shelf</span>
-                        : tooGreen
-                          ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> {b.xpRequired} bench xp</span>
-                          : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyBook(b)}>
-                              {canAfford ? `Buy $${b.price.toLocaleString()}` : `Need $${b.price.toLocaleString()}`}
-                            </button>}
+                        : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyBook(b)}>
+                            {canAfford ? `Buy $${b.price.toLocaleString()}` : `Need $${b.price.toLocaleString()}`}
+                          </button>}
                     </div>
                   );
                 })}
               </div>
+              {stillLocked(undergroundAll.length - undergroundBooks.length, 'restricted titles')}
             </div>
           )}
         </>

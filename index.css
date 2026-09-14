@@ -4460,3 +4460,6 @@ html, body {
 .bgauge .top { grid-column: 2; grid-row: 1; }
 .bgauge .tube { grid-column: 2; grid-row: 2; }
 @media (max-width: 1179px) { .bgauge { grid-template-columns: 0 auto; column-gap: 0; } }
+
+/* Supply shows only what is unlocked; what is still locked is one quiet line. */
+.sup-locked-note { display: flex; align-items: center; gap: 6px; margin: 10px 2px 4px; font-size: 11.5px; color: var(--text-lo); font-style: italic; }

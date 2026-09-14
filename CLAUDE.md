@@ -1117,3 +1117,7 @@ Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
 
 ## Koji beds by contents
 - `kojiBedChart.ts` is the room's tray sprites with the grain-and-mould chart warped into the tray interior at four stages (built from the chart swatches, keeping the tray's shading). `bedRow` in KojiRoomView reads the row from the words in `starterId` then `substrateId`, so bred spore generations and new grains still resolve; `KOJI_BED` remains the fallback.
+
+## Performance
+- **Never put a data URI in an inline style that renders per item.** `IngredientIcon` and `GameIcon` each wrote `url(<the whole sheet>)` into every element's style attribute: 111 catalogue rows carried 57 MB of style text and Supply took 1,078 ms to open. Each sheet is one injected rule now (`.ing-icon.sheet-*`, `.gicon`) and the inline style is size and position — 89 ms, 16 KB. A single image drawn once (a plate, a crest) is fine inline.
+- **Supply shows only what is unlocked.** Locked ingredients, tools and books are counted in one line, not listed; out-of-season stock stays because it is not a lock.

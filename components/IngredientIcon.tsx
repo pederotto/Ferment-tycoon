@@ -28,21 +28,32 @@ interface Props {
   className?: string;
 }
 
+/* Each sheet is registered once as a class. Inlining `url(<data URI>)` in every
+   icon's style put the whole half-megabyte sheet into each element's style
+   attribute — 111 rows in Supply carried 57 MB of style text and the screen took
+   over a second to open. */
+if (typeof document !== 'undefined' && !document.getElementById('ing-icon-sheets')) {
+  const tag = document.createElement('style');
+  tag.id = 'ing-icon-sheets';
+  tag.textContent = `.ing-icon.sheet-ing{background-image:url("${INGREDIENT_SHEET}")}`
+    + `.ing-icon.sheet-product{background-image:url("${PRODUCT_SHEET}")}`;
+  document.head.appendChild(tag);
+}
+
 const Sliced: React.FC<{
-  sheet: string; cols: number; cw: number; ch: number; index: number; size: number; className?: string;
+  sheet: 'ing' | 'product'; cols: number; cw: number; ch: number; index: number; size: number; className?: string;
 }> = ({ sheet, cols, cw, ch, index, size, className }) => {
   const col = index % cols;
   const row = Math.floor(index / cols);
   const k = size / cw;                       // one scale for the whole sheet
   return (
     <span
-      className={`ing-icon${className ? ' ' + className : ''}`}
+      className={`ing-icon sheet-${sheet}${className ? ' ' + className : ''}`}
       role="img"
       aria-hidden="true"
       style={{
         width: size,
         height: ch * k,
-        backgroundImage: `url(${sheet})`,
         backgroundSize: `${cw * cols * k}px auto`,
         backgroundPosition: `-${col * cw * k}px -${row * ch * k}px`,
         backgroundRepeat: 'no-repeat',
@@ -54,13 +65,13 @@ const Sliced: React.FC<{
 const IngredientIcon: React.FC<Props> = ({ id, size = 30, fallback, className }) => {
   const i = sheetIndex(id);
   if (i >= 0) {
-    return <Sliced sheet={INGREDIENT_SHEET} cols={SHEET_COLS} cw={SHEET_CELL_W} ch={SHEET_CELL_H}
+    return <Sliced sheet="ing" cols={SHEET_COLS} cw={SHEET_CELL_W} ch={SHEET_CELL_H}
                    index={i} size={size} className={className} />;
   }
 
   const p = productIndex(id);
   if (p >= 0) {
-    return <Sliced sheet={PRODUCT_SHEET} cols={PRODUCT_COLS} cw={PRODUCT_CELL} ch={PRODUCT_CELL}
+    return <Sliced sheet="product" cols={PRODUCT_COLS} cw={PRODUCT_CELL} ch={PRODUCT_CELL}
                    index={p} size={size} className={`product${className ? ' ' + className : ''}`} />;
   }
 
@@ -70,10 +81,10 @@ const IngredientIcon: React.FC<Props> = ({ id, size = 30, fallback, className })
   if (/^koji_.*_a\d+_p\d+$/.test(id)) {
     const substrate = id.replace(/^koji_/, '').replace(/_a\d+_p\d+$/, '');
     const heritage = HERITAGE_KOJI_GRAINS.includes(substrate) ? productIndex('heritage_koji_tray') : -1;
-    if (heritage >= 0) return <Sliced sheet={PRODUCT_SHEET} cols={PRODUCT_COLS} cw={PRODUCT_CELL} ch={PRODUCT_CELL}
+    if (heritage >= 0) return <Sliced sheet="product" cols={PRODUCT_COLS} cw={PRODUCT_CELL} ch={PRODUCT_CELL}
                                       index={heritage} size={size} className={`product${className ? ' ' + className : ''}`} />;
     const k = sheetIndex('barley_koji');
-    if (k >= 0) return <Sliced sheet={INGREDIENT_SHEET} cols={SHEET_COLS} cw={SHEET_CELL_W} ch={SHEET_CELL_H}
+    if (k >= 0) return <Sliced sheet="ing" cols={SHEET_COLS} cw={SHEET_CELL_W} ch={SHEET_CELL_H}
                                index={k} size={size} className={className} />;
   }
 

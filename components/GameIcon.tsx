@@ -20,6 +20,18 @@ interface GameIconProps {
   label?: string;
 }
 
+/* THE SHEET IS REGISTERED ONCE, NOT INLINED PER ICON.
+   The mask used to be `url(<the 363 KB data URI>)` in every icon's style
+   attribute, so a screen with thirty icons parsed eleven megabytes of CSS text
+   to draw them, and Supply took over a second to open. One rule carries it now;
+   the inline style is size and position only. */
+if (typeof document !== 'undefined' && !document.getElementById('gicon-sheet')) {
+  const tag = document.createElement('style');
+  tag.id = 'gicon-sheet';
+  tag.textContent = `.gicon{-webkit-mask-image:url("${ICON_SHEET}");mask-image:url("${ICON_SHEET}")}`;
+  document.head.appendChild(tag);
+}
+
 const GameIcon: React.FC<GameIconProps> = ({ name, size = 16, className, color, style, label }) => {
   const i = ICON_ORDER.indexOf(name);
   if (i < 0) return null;
@@ -27,8 +39,6 @@ const GameIcon: React.FC<GameIconProps> = ({ name, size = 16, className, color, 
   const row = Math.floor(i / ICON_COLS);
   const k = size / ICON_CELL;
   const mask = {
-    maskImage: `url(${ICON_SHEET})`,
-    WebkitMaskImage: `url(${ICON_SHEET})`,
     maskSize: `${ICON_CELL * ICON_COLS * k}px auto`,
     WebkitMaskSize: `${ICON_CELL * ICON_COLS * k}px auto`,
     maskPosition: `-${col * ICON_CELL * k}px -${row * ICON_CELL * k}px`,
