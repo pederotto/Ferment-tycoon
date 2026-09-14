@@ -13,7 +13,7 @@ import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
-import SpeedControl from './components/SpeedControl';
+import { BrassSpeed, BrassGauge, BrassTicket, BrassRail, WeatherGlass, SeasonKey } from './components/BrassHud';
 import InkDefs from './components/InkDefs';
 import ToolRack from './components/ToolRack';
 import CellarView from './components/CellarView';
@@ -38,7 +38,7 @@ import PanelMark from './components/PanelMark';
 import GameIcon from './components/GameIcon';
 import FirstCulture, { guideProgress } from './components/FirstCulture';
 import { TrendingUp, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine } from 'lucide-react';
-import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon, BagIcon, CloseIcon } from './components/icons';
+import { SealGlyphIcon, AlmanacIcon, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon, BagIcon, CloseIcon } from './components/icons';
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -1971,7 +1971,7 @@ export default function App() {
             <span className="sub">Atelier &amp; Culture House</span>
           </div>
           <div className="divider-line hidden md:block" />
-          <SpeedControl
+          <BrassSpeed
             gameSpeed={gameSpeed}
             paused={paused}
             onSetSpeed={setGameSpeed}
@@ -1983,62 +1983,45 @@ export default function App() {
             they describe the whole operation and you want them in the same place
             whichever pane a phone happens to be showing. */}
         <div className="gauges flex">
-            <div className="gauge">
-              <div className="ring-wrap">
-                <GaugeRing percent={(currentPower / gameState.maxPower) * 100} color={currentPower > gameState.maxPower ? 'var(--brick)' : 'var(--amber)'} />
-              </div>
-              <div className="val mono" style={currentPower > gameState.maxPower ? { color: 'var(--brick)' } : undefined}>{currentPower}W/{gameState.maxPower}W</div>
-              <div className="lbl">Power Grid</div>
-            </div>
-            <button
-              type="button"
-              className="gauge gauge-action"
+            <BrassGauge
+              emblem="fuse" label="Power" liquid="amber"
+              value={`${currentPower}W/${gameState.maxPower}W`}
+              percent={(currentPower / gameState.maxPower) * 100}
+              alarm={currentPower > gameState.maxPower}
+              title="Power drawn by the bench, against what the grid supplies"
+            />
+            <BrassGauge
+              emblem="brush" label="Hygiene" liquid="moss"
+              value={gameState.hygiene < 80 ? 'Clean $50' : `${Math.round(gameState.hygiene)}%`}
+              percent={gameState.hygiene}
+              alarm={gameState.hygiene < 50}
               onClick={handleDeepClean}
               title="Deep clean the bench for $50"
-              aria-label={`Hygiene ${Math.round(gameState.hygiene)}%. Deep clean the bench for $50.`}
-            >
-              <div className="ring-wrap">
-                <GaugeRing percent={gameState.hygiene} color={gameState.hygiene < 50 ? 'var(--brick)' : 'var(--moss)'} />
-              </div>
-              <div className="val mono">{gameState.hygiene < 80 ? 'Clean $50' : `${Math.round(gameState.hygiene)}%`}</div>
-              <div className="lbl">Hygiene</div>
-            </button>
-            <button
-              type="button"
-              className="gauge gauge-action"
+              ariaLabel={`Hygiene ${Math.round(gameState.hygiene)}%. Deep clean the bench for $50.`}
+            />
+            <BrassGauge
+              emblem="magnifier" label="Inspector" liquid="moss"
+              value={gameState.heat > 0 && gameState.renown >= GREASE_RENOWN_COST
+                ? `Grease ${GREASE_RENOWN_COST}`
+                : `${Math.round(gameState.heat)}%`}
+              percent={gameState.heat}
+              alarm={gameState.heat > 50}
               onClick={handleGreaseTheFile}
               disabled={gameState.renown < GREASE_RENOWN_COST || gameState.heat <= 0}
               title={`Spend ${GREASE_RENOWN_COST} renown to lose ${GREASE_HEAT_RELIEF} heat`}
-              aria-label={`Inspector heat ${Math.round(gameState.heat)}%. Spend ${GREASE_RENOWN_COST} renown to reduce it.`}
-            >
-              <div className="ring-wrap">
-                <GaugeRing percent={gameState.heat} color={gameState.heat > 50 ? 'var(--brick)' : 'var(--moss)'} />
-              </div>
-              <div className="val mono">
-                {gameState.heat > 0 && gameState.renown >= GREASE_RENOWN_COST
-                  ? `Grease ${GREASE_RENOWN_COST}`
-                  : `${Math.round(gameState.heat)}%`}
-              </div>
-              <div className="lbl">Inspector Heat</div>
-            </button>
+              ariaLabel={`Inspector heat ${Math.round(gameState.heat)}%. Spend ${GREASE_RENOWN_COST} renown to reduce it.`}
+            />
           </div>
 
         {/* Standing, renown and funds sit with the gauges: they are the other
             three numbers that describe the whole operation, and they were the
             last things still hunting for a home. */}
         <div className="tickets">
-          <div className="ticket hidden lg:flex" title="Selling safe, well-made stock opens better restaurants.">
-          <span className="lbl">Standing</span>
-          <span className="num">{Math.max(0, Math.round(gameState.reputation))}</span>
-          </div>
-          <div className="ticket renown hidden sm:flex">
-          <span className="lbl">Renown</span>
-          <span className="num mono">{gameState.renown}</span>
-          </div>
-          <div className="ticket funds">
-          <span className="lbl">Funds</span>
-          <span className="num mono">${gameState.money.toLocaleString()}</span>
-          </div>
+          <BrassTicket emblem="rosette" label="Standing" className="standing"
+            value={Math.max(0, Math.round(gameState.reputation))}
+            title="Selling safe, well-made stock opens better restaurants." />
+          <BrassTicket emblem="laurel" label="Renown" className="renown" value={gameState.renown} />
+          <BrassTicket emblem="purse" label="Funds" className="funds" value={`$${gameState.money.toLocaleString()}`} />
         </div>
 
         {/* On a phone the rails become one pane at a time, so the switch lives
@@ -2052,6 +2035,7 @@ export default function App() {
             </button>
           ))}
         </div>
+        <BrassRail />
       </header>
       
       {/* THE SPECTROMETER, HOVERED — small and fast, answering "what is this". */}
@@ -2093,16 +2077,14 @@ export default function App() {
         {/* LEFT RAIL — the world, and what you own. */}
         <aside className="rail left">
           <section className="rail-sect">
-            <h3>Almanac</h3>
-            <div className="alm">
-              <div className="season slab">
-                {getSeason(gameState.month)} &middot; {getMonthName(gameState.month)} Wk {(gameState.week - 1) % 4 + 1}
-              </div>
-              <div className="clime mono">
-                {currentAmbient.ambientTemp.toFixed(0)}&deg;C / {currentAmbient.ambientHumidity.toFixed(0)}% RH
-              </div>
-              <div className="wx">{gameState.weather.type} &mdash; {gameState.weather.description}</div>
-            </div>
+            <h3>Weather</h3>
+            <WeatherGlass
+              season={getSeason(gameState.month).toLowerCase() as SeasonKey}
+              dateLine={`${getSeason(gameState.month)} · ${getMonthName(gameState.month)} Wk ${(gameState.week - 1) % 4 + 1}`}
+              temp={currentAmbient.ambientTemp}
+              humidity={currentAmbient.ambientHumidity}
+              weather={gameState.weather}
+            />
           </section>
 
 

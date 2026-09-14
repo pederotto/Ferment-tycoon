@@ -4317,3 +4317,146 @@ html, body {
   .wl-bird, .wl-flash, .wl-drift, .wl-rain, .wl-snow { display: none; }
 }
 
+
+/* =========================================================================
+   THE HEADER AS AN INSTRUMENT BOARD (BrassHud.tsx)
+   A clock and lever for the speed, glass tubes for the three gauges, brass
+   nameplates for the numbers you own, a brass strip along the lower edge. The
+   liquid sits ON the painted glass with multiply, because the glass is opaque
+   paint: underneath it, it would not show.
+   ========================================================================= */
+.hud::after { display: none; }
+.hud-rail {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 9px; pointer-events: none;
+  background-repeat: repeat-x; background-size: auto 9px;
+  filter: drop-shadow(0 -1px 2px rgba(0, 0, 0, 0.45));
+}
+
+.bspeed { display: flex; align-items: center; gap: 7px; margin-left: 4px; position: relative; z-index: 50; }
+.bspeed button { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+.bspeed img { display: block; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.bspeed .blever { width: 28px; height: 38px; }
+.bspeed .blever img { width: 100%; height: 100%; object-fit: contain; }
+/* .bdial, not .dial: .dial is the inspector's telemetry dial (flex:1, min-width 90px) */
+.bspeed .bdial { position: relative; width: 46px; height: 46px; flex: none; }
+.bspeed .bdial .face { width: 100%; height: 100%; }
+/* pivot ring is at 89% of the hand's height; it is placed on the face's centre */
+.bspeed .bdial .hand {
+  position: absolute; left: 50%; top: 50%; width: 7px; height: 22px;
+  margin-left: -3.5px; margin-top: -19.6px; transform-origin: 50% 89%;
+  transition: transform 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.bspeed.paused .dial .face { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)) saturate(0.55) brightness(0.8); }
+.bspeed .notches { display: grid; grid-template-columns: repeat(2, auto); gap: 3px; }
+.bspeed .notch {
+  font-family: var(--f-spec); font-size: 10px; font-weight: 700; line-height: 1; padding: 3px 6px;
+  border-radius: 3px; color: var(--text-lo); border: 1px solid rgba(201, 164, 92, 0.3);
+  background: rgba(0, 0, 0, 0.25);
+}
+.bspeed .notch:hover { color: var(--text-hi); border-color: rgba(201, 164, 92, 0.6); }
+.bspeed .notch.on {
+  color: #2a1d0c; border-color: #6e5226;
+  background: linear-gradient(180deg, #e2c27a, #b48a44 55%, #8a6a32);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 210, 0.55);
+}
+.bspeed.paused .notch.on { opacity: 0.62; }
+.bspeed button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; border-radius: 4px; }
+
+.gauges { gap: 16px; }
+.bgauge {
+  display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 6px; row-gap: 1px;
+  align-items: center; background: none; border: 0; padding: 2px 4px; color: inherit; font: inherit; text-align: left;
+  border-radius: 6px;
+}
+.bgauge.action { cursor: pointer; }
+.bgauge.action:hover:not(:disabled) { background: rgba(201, 164, 92, 0.08); }
+.bgauge.action:disabled { cursor: default; }
+.bgauge.action:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.bgauge .emb { grid-row: 1 / 3; width: 28px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.bgauge .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 0 3px; }
+.bgauge .lbl { font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo); }
+.bgauge.action:hover:not(:disabled) .lbl { color: var(--text-mid); }
+.bgauge .val { font-size: 10.5px; font-weight: 600; color: var(--text-hi); white-space: nowrap; }
+.bgauge.alarm .val { color: var(--brick); }
+.bgauge .tube { position: relative; display: block; width: 104px; height: 18px; }
+.bgauge .tube img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bgauge .liq {
+  position: absolute; left: 14.5%; top: 27%; bottom: 27%; width: calc(71% * var(--p)); border-radius: 2px;
+  mix-blend-mode: multiply; transition: width 0.6s ease;
+}
+.bgauge .liq.amber { background: linear-gradient(180deg, #f0b25a, #c9791f 60%, #a45f14); }
+.bgauge .liq.moss  { background: linear-gradient(180deg, #a9c47a, #6f8a4a 60%, #536a34); }
+.bgauge .liq.brick { background: linear-gradient(180deg, #e0735a, #b3402b 60%, #8a2e1e); }
+.bgauge.alarm .liq { animation: bg-alarm 1.4s ease-in-out infinite; }
+@keyframes bg-alarm { 50% { filter: brightness(1.25); } }
+
+.tickets { gap: 20px; }
+.bticket {
+  position: relative; display: flex; flex-direction: column; justify-content: center; gap: 0;
+  width: 116px; height: 37px; padding: 0 12px 0 26px; margin-left: 12px;
+  background-size: 100% 100%; background-repeat: no-repeat;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.bticket .emb { position: absolute; left: -14px; top: 50%; transform: translateY(-50%); height: 34px; width: 34px; object-fit: contain; }
+.bticket.funds .emb { height: 38px; width: 38px; left: -17px; }
+.bticket .lbl { font-size: 7.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #5d4521; line-height: 1.1; }
+.bticket .num {
+  font-size: 14px; font-weight: 700; line-height: 1.1; color: #2e2110; white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.5);
+}
+.bticket.renown .num { color: #4a2748; }
+.bticket.funds .num { color: #5a300c; }
+
+@media (min-width: 901px) and (max-width: 1179px) {
+  .gauges { gap: 6px; }
+  .bgauge .emb { display: none; }
+  .bgauge .tube { width: 88px; }
+  .tickets { gap: 10px; }
+  .bticket { width: 100px; padding-left: 20px; margin-left: 8px; }
+  .bticket .emb { height: 28px; width: 28px; left: -11px; }
+}
+@media (max-width: 900px) {
+  .bgauge .emb { display: none; }
+  .bgauge .tube { width: 76px; height: 14px; }
+  .tickets { gap: 8px; }
+  .bticket { width: 96px; height: 32px; padding-left: 18px; margin-left: 8px; }
+  .bticket .emb { height: 26px; width: 26px; left: -10px; }
+  .bticket .num { font-size: 12px; }
+}
+@media (max-width: 420px) {
+  .bspeed .notches { grid-template-columns: repeat(4, auto); }
+}
+
+/* ---------- The weather glass, where the almanac was ---------- */
+.wglass { display: grid; grid-template-columns: 100px 22px minmax(0, 1fr); gap: 10px; align-items: center; padding: 4px 2px; }
+.wglass .port { position: relative; width: 100px; height: 103px; }
+/* the painted disc sits under the porthole ring, a touch larger than the hole */
+.wglass .port .scene { position: absolute; left: 21.5%; top: 21%; width: 57%; height: 55.5%; border-radius: 50%; object-fit: cover; }
+.wglass .port .frame { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5)); }
+.wglass .port .badge { position: absolute; right: -6px; bottom: -2px; width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
+.wglass .thermo { position: relative; width: 22px; height: 70px; }
+.wglass .thermo img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
+.wglass .merc {
+  position: absolute; left: 43.5%; width: 13%; bottom: 20%; height: calc(4% + 64% * var(--t));
+  border-radius: 2px 2px 0 0; background: #b3261e; mix-blend-mode: multiply; transition: height 0.8s ease;
+}
+.wglass .bulb {
+  position: absolute; left: 50%; top: 83%; width: 34%; aspect-ratio: 1; transform: translate(-50%, -50%);
+  border-radius: 50%; background: #b3261e; mix-blend-mode: multiply;
+}
+.wglass .wtext { min-width: 0; }
+.wglass .season { font-size: 14px; color: var(--text-hi); line-height: 1.2; }
+.wglass .temp { display: flex; align-items: baseline; gap: 2px; margin-top: 4px; font-family: var(--f-spec); }
+.wglass .temp b { font-size: 24px; font-weight: 700; color: var(--amber); line-height: 1; }
+.wglass .temp span { font-size: 12px; color: var(--amber); }
+.wglass .temp em { font-style: normal; font-size: 10.5px; color: var(--text-lo); margin-left: 8px; }
+.wglass .wx { font-size: 11.5px; line-height: 1.4; color: var(--text-lo); margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .bgauge.alarm .liq { animation: none; }
+  .bspeed .bdial .hand, .bgauge .liq, .wglass .merc { transition: none; }
+}
+/* Placed, not auto-flowed: with the emblem hidden, auto-placement put the label
+   and the tube side by side and each gauge went 190px wide at 1024. */
+.bgauge .top { grid-column: 2; grid-row: 1; }
+.bgauge .tube { grid-column: 2; grid-row: 2; }
+@media (max-width: 1179px) { .bgauge { grid-template-columns: 0 auto; column-gap: 0; } }

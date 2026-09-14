@@ -117,14 +117,27 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
           );
           return (
             <g className="window-life">
-              {/* clouds drift across on grey days */}
+              {/* The painting is a fair day. On a wet one the whole view greys over
+                  first, or pale rain on a pale sky simply does not show. */}
+              {wet && <rect x="-40" y="-66" width="80" height="100" fill={stormy ? '#39424c' : '#5f6a74'} opacity={stormy ? 0.42 : 0.3} />}
+              {/* clouds drift across on grey days: soft-edged, high in the sky and
+                  clear of the tree's crown, or they read as a grey pill stuck on it */}
               {(weather.type === 'Cloudy' || wet) && (
-                <g className="wl-clouds" fill={stormy ? '#5b626b' : '#eef0f1'} opacity={stormy ? 0.55 : 0.5}>
+                <g className="wl-clouds" opacity={wet ? 0.8 : 0.6}>
+                  <defs>
+                    <radialGradient id={`${uid}cloud`}>
+                      <stop offset="0" stopColor={stormy ? '#3f464e' : wet ? '#7d868e' : '#f3f4f4'} stopOpacity="0.95" />
+                      <stop offset="0.6" stopColor={stormy ? '#3f464e' : wet ? '#7d868e' : '#f3f4f4'} stopOpacity="0.55" />
+                      <stop offset="1" stopColor={stormy ? '#3f464e' : wet ? '#7d868e' : '#f3f4f4'} stopOpacity="0" />
+                    </radialGradient>
+                  </defs>
                   <g className="wl-cloud" style={{ animationDuration: '46s' }}>
-                    <ellipse cx="0" cy="-52" rx="9" ry="3.2" /><ellipse cx="6" cy="-54" rx="6" ry="3" /><ellipse cx="-6" cy="-51" rx="5" ry="2.4" />
+                    <ellipse cx="0" cy="-59" rx="16" ry="5" fill={`url(#${uid}cloud)`} />
+                    <ellipse cx="9" cy="-61" rx="10" ry="4.5" fill={`url(#${uid}cloud)`} />
                   </g>
                   <g className="wl-cloud" style={{ animationDuration: '63s', animationDelay: '-24s' }}>
-                    <ellipse cx="0" cy="-41" rx="11" ry="3.6" /><ellipse cx="7" cy="-43" rx="6.5" ry="3" />
+                    <ellipse cx="0" cy="-53" rx="19" ry="5" fill={`url(#${uid}cloud)`} />
+                    <ellipse cx="-10" cy="-55" rx="9" ry="4" fill={`url(#${uid}cloud)`} />
                   </g>
                 </g>
               )}
@@ -160,10 +173,10 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
               )}
               {/* rain that actually falls, heavier in a storm */}
               {wet && (
-                <g className="wl-rain" stroke="#c7d6de" strokeWidth="0.45" strokeLinecap="round" opacity={stormy ? 0.6 : 0.45}>
-                  {Array.from({ length: stormy ? 22 : 14 }, (_, i) => {
-                    const x = -36 + ((i * 37) % 72);
-                    return <path key={i} d={`M${x} -64 l-1.6 5`} style={{ animationDelay: `${-((i * 0.137) % 1.1)}s` }} />;
+                <g className="wl-rain" stroke="#dbe6ee" strokeWidth="0.45" strokeLinecap="round" opacity={stormy ? 0.6 : 0.5}>
+                  {Array.from({ length: stormy ? 40 : 28 }, (_, i) => {
+                    const x = -38 + ((i * 37) % 78);
+                    return <path key={i} d={`M${x} -64 l-2.2 7`} style={{ animationDelay: `${-((i * 0.137) % 1.1)}s` }} />;
                   })}
                 </g>
               )}
@@ -224,7 +237,8 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
             <circle cx="4" cy="16" r="1.5" />
           </g>
         )}
-        {snowy && (
+        {/* the drawn view's own static snow and rain; the painted view has animated ones above */}
+        {snowy && !bare && (
           <>
             {!bare && <path d="M-52 24 q26 -8 52 -2 q28 8 52 -2 v14 h-104z" fill="#c9d4dc" opacity="0.55" />}
             <g className="iso-snow" fill="#e8eef2" opacity="0.8">
@@ -234,7 +248,7 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
             </g>
           </>
         )}
-        {wet && (
+        {wet && !bare && (
           <g className="iso-rain" stroke="#9fb6c4" strokeWidth="1" opacity="0.5" strokeLinecap="round">
             <path d="M-34 -52 l-4 12" /><path d="M-12 -58 l-4 12" />
             <path d="M10 -50 l-4 12" /><path d="M32 -56 l-4 12" />
