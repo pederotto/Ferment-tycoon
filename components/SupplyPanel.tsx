@@ -109,9 +109,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
      54 of 111 rows on an early run — so the catalogue read as a list of things you
      could not have. It holds what is unlocked now; how much is still behind a
      supplier's loyalty or the underground's standing is one line in the rail, a
-     lead rather than a list. Out of season is NOT a lock and stays: nothing you
-     do brings it back sooner, and knowing when it returns is how you plan. */
-  const { rows, lockedCount } = useMemo(() => {
+     lead rather than a list. Out-of-season stock leaves the shelf too (the owner
+     asked for only what can be bought today) and is counted beside the locks. */
+  const { rows, lockedCount, awayCount } = useMemo(() => {
     const underground = tab === 'underground';
     let list = ingredients.filter(i => {
       if (i.type === IngredientType.TOOL) return false;
@@ -124,7 +124,8 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
       return true;
     });
     const lockedCount = list.filter(i => lockReason(i) !== null).length;
-    list = list.filter(i => lockReason(i) === null);
+    const awayCount = list.filter(i => lockReason(i) === null && !inSeason(i, month)).length;
+    list = list.filter(i => lockReason(i) === null && inSeason(i, month));
 
     const dir = asc ? 1 : -1;
     list = [...list].sort((a, b) => {
@@ -136,10 +137,10 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
         default: return a.name.localeCompare(b.name) * dir;
       }
     });
-    return { rows: list, lockedCount };
+    return { rows: list, lockedCount, awayCount };
     // lockReason reads relationships and undergroundTier
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ingredients, tab, category, supplierFilter, search, sort, asc, relationships, undergroundTier]);
+  }, [ingredients, tab, category, supplierFilter, search, sort, asc, relationships, undergroundTier, month]);
 
   /* Same rule for tools and books: what is unlocked, and a count of the rest. */
   const allTools = ingredients.filter(i => i.type === IngredientType.TOOL);
@@ -367,7 +368,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                     {sk.label}{sort === sk.id && <ArrowUpDown size={9} />}
                   </button>
                 ))}
-                <span className="sr-count">{rows.length} on the shelf{lockedCount > 0 ? ` · ${lockedCount} still locked` : ''}</span>
+                <span className="sr-count">{rows.length} on the shelf{lockedCount > 0 ? ` · ${lockedCount} still locked` : ''}{awayCount > 0 ? ` · ${awayCount} out of season` : ''}</span>
               </div>
 
               <div className="cat-head">
