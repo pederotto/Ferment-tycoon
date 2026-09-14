@@ -1021,7 +1021,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             </div>
 
             <div className="station-scroll custom-scrollbar">
-              {VESSELS.map(v => {
+              {VESSELS.filter(v => !v.builtIn).map(v => {
                 const notOwned = (ownedVessels[v.id] ?? 0) === 0;
                 const notEnoughSpace = v.slotsRequired > availableSlots;
                 const notEnoughPower = (currentPower + v.powerDraw) > maxPower;

@@ -30,6 +30,9 @@ import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persisten
 import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
 import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, batchFitsContract, unitsFromBatch, makeContractOffer, overdueContracts, newlyUnlockedVendors, canOfferContract } from './services/vendors';
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
+import { keeperRound, mintSporeHarvest, kojiStockKg, KOJI_ROOM_VESSEL } from './services/kojiRoom';
+import KojiRoomView from './components/KojiRoomView';
+import { KOJI_ROOM_COST, KOJI_ROOM_CAPACITY, KOJI_ROOM_TEMP, KOJI_ROOM_DEFAULT_TARGET_KG, KOJI_ROOM_TARGET_MAX_KG } from './constants';
 import DevPanel from './components/DevPanel';
 import PanelMark from './components/PanelMark';
 import GameIcon from './components/GameIcon';
@@ -67,7 +70,8 @@ export default function App() {
         cleaner: false,
         tech: false,
         chef: false,
-        rd: false
+        rd: false,
+        toji: false
     },
     // Vendors remember you now: standing accumulates, contracts are signed
     // against it, and some of the roster has to be earned rather than reached.
@@ -84,7 +88,9 @@ export default function App() {
     gameOver: false,
     recipeMastery: {},
     undergroundBusts: 0,
-    onboardingDone: false
+    onboardingDone: false,
+    kojiRoomOwned: false,
+    kojiTargetKg: KOJI_ROOM_DEFAULT_TARGET_KG,
   });
 
   // Any run left behind by a previous session, read once so the welcome screen
@@ -105,6 +111,7 @@ export default function App() {
    * and `paused` is separate. The loop reads both.
    */
   const [showCellar, setShowCellar] = useState<boolean>(false);
+  const [showKojiRoom, setShowKojiRoom] = useState(false);
   /**
    * WHICH RAIL A PHONE IS SHOWING.
    *
@@ -276,13 +283,13 @@ export default function App() {
   // A cellared batch is out of the way — it does not hold a bench slot or draw
   // power, which is the whole point of moving it there.
   const usedSlots = gameState.batches.reduce((acc, b) => {
-     if (b.cellared) return acc;
+     if (b.cellared || b.kojiRoom) return acc;
      const v = VESSELS.find(v => v.id === b.vesselId);
      return acc + (v?.slotsRequired || 1);
   }, 0);
   
   const currentPower = gameState.batches.reduce((acc, b) => {
-     if (b.cellared) return acc;
+     if (b.cellared || b.kojiRoom) return acc;
      const v = VESSELS.find(v => v.id === b.vesselId);
      return acc + (v?.powerDraw || 0);
   }, 0);
@@ -393,6 +400,10 @@ export default function App() {
               // Pass current weather and power availability to simulation
               // The cellar is cool, dark and undisturbed: batches there tick at a
               // fraction of the rate and are not exposed to bench hygiene.
+              // The koji room is warm, clean and the beds' own: full rate, out of reach of bench hygiene.
+              if (batch.kojiRoom) {
+                return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true, prev.crew ?? []);
+              }
               if (batch.cellared) {
                 if (tickCount.current % CELLAR_TICK_DIVISOR !== 0) return batch;
                 return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true, prev.crew ?? []);
@@ -408,7 +419,7 @@ export default function App() {
         // running a full bench is genuinely harder to keep sanitary than tending
         // one jar — previously the decay rate was flat no matter how much load
         // you carried, so scaling up had no real management cost.
-        const activeBatchCount = prev.batches.filter(b => b.status === 'active').length;
+        const activeBatchCount = prev.batches.filter(b => b.status === 'active' && !b.kojiRoom).length;
 
         // AN EMPTY BENCH DOES NOT GET DIRTY. IT AIRS OUT.
         //
@@ -567,7 +578,7 @@ export default function App() {
                 // The pool refreshes monthly — who is looking for work is part of
                 // the situation, not a permanent shop.
                 newCrew = advanceCrew(prev.crew ?? []);
-                if (newWeek % 4 === 1 || newCrewPool.length === 0) newCrewPool = rollCrewPool(newWeek);
+                if (newWeek % 4 === 1 || newCrewPool.length === 0) newCrewPool = rollCrewPool(newWeek, prev.kojiRoomOwned);
 
                 // Appetite for every ferment type drifts back toward normal.
                 newMarketDemand = recoverDemand(prev.marketDemand);
@@ -718,6 +729,92 @@ export default function App() {
     }));
     setLabNotification({ id: Date.now(), text: `Brought up from the cellar.`, type: 'info' });
   };
+
+  /* THE KOJI ROOM. What the keeper does lives in services/kojiRoom.ts. */
+  const handleBuyKojiRoom = () => {
+    if (gameState.kojiRoomOwned) return;
+    if (!gameState.crew.some(c => c.role === 'rd')) {
+      setLabNotification({ id: Date.now(), text: 'The koji room is a Head of R&D\'s project. Hire one first.', type: 'warn' });
+      return;
+    }
+    if (gameState.money < KOJI_ROOM_COST) {
+      setLabNotification({ id: Date.now(), text: `The room costs $${KOJI_ROOM_COST.toLocaleString()}.`, type: 'warn' });
+      return;
+    }
+    setGameState(prev => ({
+      ...prev,
+      money: prev.money - KOJI_ROOM_COST,
+      kojiRoomOwned: true,
+      // Someone who can keep it turns up now, rather than at the next monthly roll.
+      crewPool: [...prev.crewPool.filter(c => c.role !== 'toji'), ...rollCrewPool(prev.week, true).filter(c => c.role === 'toji')],
+    }));
+    setLabNotification({ id: Date.now(), text: 'The koji room is built. Carry koji beds in from the bench, and hire a koji keeper in Staff to run it.', type: 'info' });
+  };
+
+  const handleToKojiRoom = (batch: Batch) => {
+    const recipe = getRecipeForBatch(batch);
+    if (!gameState.kojiRoomOwned || !isKojiRecipe(recipe)) return;
+    if (batch.status === 'spoiled') {
+      setLabNotification({ id: Date.now(), text: 'A spoiled bed stays out of the warm room.', type: 'warn' });
+      return;
+    }
+    if (gameState.batches.filter(b => b.kojiRoom).length >= KOJI_ROOM_CAPACITY) {
+      setLabNotification({ id: Date.now(), text: `The koji room is full — ${KOJI_ROOM_CAPACITY} beds.`, type: 'warn' });
+      return;
+    }
+    setGameState(prev => ({
+      ...prev,
+      batches: prev.batches.map(b => b.id === batch.id
+        ? { ...b, kojiRoom: true, cellared: false, vesselId: KOJI_ROOM_VESSEL, controls: { ...(b.controls ?? { vent: 0, mist: 0, heat: null }), heat: KOJI_ROOM_TEMP } }
+        : b),
+    }));
+    setUiState(prev => ({ ...prev, activeBatchId: null }));
+    setLabNotification({ id: Date.now(), text: `${recipe.name} carried to the koji room. The bench slot is yours again.`, type: 'info' });
+  };
+
+  const handleFromKojiRoom = (batch: Batch) => {
+    if (usedSlots + 1 > gameState.equipmentSlots) {
+      setLabNotification({ id: Date.now(), text: 'No bench slot free to bring it back to.', type: 'warn' });
+      return;
+    }
+    setGameState(prev => ({
+      ...prev,
+      batches: prev.batches.map(b => b.id === batch.id
+        ? { ...b, kojiRoom: false, kojiReserve: false, vesselId: 'koji_tray', controls: { ...(b.controls ?? { vent: 0, mist: 0, heat: null }), heat: null } }
+        : b),
+    }));
+    setLabNotification({ id: Date.now(), text: 'Back on the bench, in a cedar tray.', type: 'info' });
+  };
+
+  const handleKojiTarget = (delta: number) => setGameState(prev => ({
+    ...prev,
+    kojiTargetKg: Math.max(0, Math.min(KOJI_ROOM_TARGET_MAX_KG, (prev.kojiTargetKg ?? KOJI_ROOM_DEFAULT_TARGET_KG) + delta)),
+  }));
+
+  // THE KEEPER'S ROUND, once a game day. In an effect keyed on the date, never in
+  // the tick's updater with a side effect: the round itself is pure, so running
+  // it inside setGameState (which StrictMode calls twice) is safe, and the notice
+  // is posted once, out here.
+  const keeperDayKey = `${gameState.year}-${gameState.month}-${gameState.week}-${gameState.day}`;
+  const keeperLastDay = useRef<string | null>(null);
+  useEffect(() => {
+    if (keeperLastDay.current === keeperDayKey) return;
+    const firstLook = keeperLastDay.current === null;
+    keeperLastDay.current = keeperDayKey;
+    if (firstLook || !gameState.kojiRoomOwned || gameState.gameOver) return;
+    const { report, acted } = keeperRound(gameState, keeperDayKey);
+    if (!acted) return;
+    setGameState(prev => keeperRound(prev, keeperDayKey).state);
+    const bits: string[] = [];
+    if (report.harvested) bits.push(`${report.kg} kg of koji to the pantry`);
+    if (report.spores) bits.push(`${report.spores} packets of house spore`);
+    if (report.laid) bits.push(`${report.laid} new bed${report.laid > 1 ? 's' : ''} laid`);
+    if (report.bought) bits.push(`${report.bought} packet${report.bought > 1 ? 's' : ''} of founder spore bought ($${report.spent})`);
+    if (report.spoiled) bits.push(`${report.spoiled} spoiled bed${report.spoiled > 1 ? 's' : ''} cleared`);
+    if (report.short === 'grain') bits.push('out of grain to lay more');
+    if (report.short === 'spores') bits.push('out of spores to lay more');
+    if (bits.length) setLabNotification({ id: Date.now(), text: `Koji keeper: ${bits.join(' · ')}.`, type: report.short ? 'warn' : 'info' });
+  }, [keeperDayKey]);
 
   const handleBuyBook = (book: Book) => {
     if (gameState.ownedBookIds.includes(book.id)) return;
@@ -1049,6 +1146,10 @@ export default function App() {
    * matters, and it recurs whether or not the bench is busy.
    */
   const handleHire = (candidate: CrewMember) => {
+    if (candidate.role === 'toji' && !gameState.kojiRoomOwned) {
+      setLabNotification({ id: Date.now(), text: 'There is no koji room for a keeper to keep yet.', type: 'warn' });
+      return;
+    }
     if (gameState.money < candidate.hiringCost) {
       setLabNotification({ id: Date.now(), text: `Not enough to take ${candidate.name} on.`, type: 'warn' });
       return;
@@ -1495,61 +1596,11 @@ export default function App() {
     // amylolytic) so the drift is a thing you can pick up and use rather than a
     // hidden number.
     if (sporeAmount > 0) {
-        const parent = getLineage(batch);
-        // How well THIS bed was run decides what its children are worth. Without
-        // it every sporulation was a free step up the ladder.
-        const potency = sporePotency(batch.quality.safety, batch.stress ?? 0, batch.enzymes);
-        const child = propagateLineage(parent, batch.history, batch.lineageDamaged, potency);
-        const strain = lineageStrainKey(child.bias);
-        const nextGen = child.generation;
-
-        const sporeId = `koji_spores_gen${nextGen}_${strain}`;
-        const existingIdx = newCustomIngredients.findIndex(i => i.id === sporeId);
-
-        // Re-propagating into a strain you already hold blends the two rather
-        // than overwriting: your house culture is the average of what you have
-        // been doing to it, which is how selection actually works.
-        const merged: Lineage = existingIdx >= 0 && newCustomIngredients[existingIdx].lineage
-            ? {
-                generation: nextGen,
-                // Blending kept the BEST of vigour and resilience, which meant a
-                // ruined generation could never actually cost you anything — you
-                // simply kept the old numbers. A strain is the average of how you
-                // have been treating it, good and bad.
-                vigor: (newCustomIngredients[existingIdx].lineage!.vigor + child.vigor) / 2,
-                resilience: Math.round((newCustomIngredients[existingIdx].lineage!.resilience + child.resilience) / 2),
-                bias: (newCustomIngredients[existingIdx].lineage!.bias + child.bias) / 2,
-                potency: ((newCustomIngredients[existingIdx].lineage!.potency ?? 1) + (child.potency ?? 1)) / 2,
-              }
-            : child;
-
-        const spore: Ingredient = {
-            id: sporeId,
-            name: `Master Spores (Gen ${nextGen} · ${lineageStrainLabel(merged.bias)})`,
-            type: IngredientType.STARTER,
-            // Priced on strength, not on how many times you have propagated it.
-            baseCost: sporeValue(merged),
-            currency: 'money',
-            quality: Math.round(Math.max(20, Math.min(100, (merged.potency ?? 1) * 78))),
-            description: describeLineage(merged),
-            idealFor: ['koji'],
-            supplierId: 'in_house',
-            tierRequired: 0,
-            hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
-            mass: 10,
-            unitDisplay: 'g',
-            isLiving: true,
-            generation: nextGen,
-            // strainBias is what advanceEnzymes actually reads, so the drift
-            // reaches the simulation through the same door a bought spore does.
-            strainBias: merged.bias,
-            lineage: merged,
-        };
-
-        if (existingIdx >= 0) newCustomIngredients[existingIdx] = spore;
-        else newCustomIngredients.push(spore);
-
-        newInventory[sporeId] = (newInventory[sporeId] || 0) + sporeAmount;
+        // Shared with the koji keeper (services/kojiRoom.ts), so a strain taken by
+        // hand and a strain taken by the keeper are the same strain.
+        const minted = mintSporeHarvest(batch, sporeAmount, newInventory, newCustomIngredients);
+        newInventory = minted.inventory;
+        newCustomIngredients = minted.customIngredients;
     }
 
     // Selling floods the market for that ferment type. Bulk floods it harder,
@@ -2031,6 +2082,17 @@ export default function App() {
             <span className="hidden sm:inline">Cellar</span>
             <span className="dot mono">{gameState.batches.filter(b => b.cellared).length}/{CELLAR_CAPACITY}</span>
             </button>
+            {gameState.kojiRoomOwned && (
+            <button
+            onClick={() => setShowKojiRoom(true)}
+            className="tab-btn-hud"
+            title="The warm cedar room where the koji grows"
+            >
+            <GameIcon name="cultures" size={20} />
+            <span className="hidden sm:inline">Koji Room</span>
+            <span className="dot mono">{gameState.batches.filter(b => b.kojiRoom).length}/{KOJI_ROOM_CAPACITY}</span>
+            </button>
+            )}
             <button
             onClick={() => setShowOrders(true)}
             className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
@@ -2112,7 +2174,7 @@ export default function App() {
         <main className="stage">
           <div className="flex-1 relative flex flex-col min-h-0">
            <LabView 
-             batches={gameState.batches} 
+             batches={gameState.batches.filter(b => !b.cellared && !b.kojiRoom)} 
              maxSlots={gameState.equipmentSlots} 
              onSelectSlot={handleSlotClick} 
              onIntervention={handleIntervention}
@@ -2153,6 +2215,36 @@ export default function App() {
               owning it. This is the list, and which of it is working right now.
             </p>
             <div className="hw-body custom-scrollbar">
+              {/* THE KOJI ROOM, as something you own or can build. A later stage:
+                  it only goes on sale once a Head of R&D is on the crew. */}
+              <div className={`kr-deed${gameState.kojiRoomOwned ? ' owned' : ''}`}>
+                <PanelMark name="inoculation" size={52} />
+                <div className="kr-deed-body">
+                  <span className="kicker">{gameState.kojiRoomOwned ? 'Yours' : 'A later stage'}</span>
+                  <h3>The Koji Room</h3>
+                  <p>
+                    Twelve cedar beds held at {KOJI_ROOM_TEMP} °C. Beds carried in stop taking bench slots, and a
+                    koji keeper runs the room: turning, taking beds at their peak, laying new ones to keep koji
+                    at your target, and letting a bed run to spore when the house is low.
+                  </p>
+                  {gameState.kojiRoomOwned ? (
+                    <div className="kr-deed-row">
+                      <span className="mono">
+                        {gameState.batches.filter(b => b.kojiRoom).length} / {KOJI_ROOM_CAPACITY} beds ·{' '}
+                        {gameState.crew.some(c => c.role === 'toji') ? 'keeper on' : 'no keeper yet — hire one in Staff'}
+                      </span>
+                      <button className="btn btn-amber sm" onClick={() => { setShowHardware(false); setShowKojiRoom(true); }}>Go in</button>
+                    </div>
+                  ) : !gameState.crew.some(c => c.role === 'rd') ? (
+                    <div className="kr-deed-row locked"><GameIcon name="lock" size={14} /> Hire a Head of R&amp;D first — this is their room to plan.</div>
+                  ) : (
+                    <div className="kr-deed-row">
+                      <span className="mono">${KOJI_ROOM_COST.toLocaleString()}</span>
+                      <button className="btn btn-amber sm" disabled={gameState.money < KOJI_ROOM_COST} onClick={handleBuyKojiRoom}>Build the room</button>
+                    </div>
+                  )}
+                </div>
+              </div>
               <ToolRack
                 inventory={gameState.inventory}
                 batches={gameState.batches}
@@ -2224,6 +2316,19 @@ export default function App() {
           />
         )}
 
+        {showKojiRoom && gameState.kojiRoomOwned && (
+          <KojiRoomView
+            batches={gameState.batches.filter(b => b.kojiRoom)}
+            keeper={gameState.crew.find(c => c.role === 'toji')}
+            stockKg={kojiStockKg(gameState.inventory)}
+            targetKg={gameState.kojiTargetKg ?? KOJI_ROOM_DEFAULT_TARGET_KG}
+            onTarget={handleKojiTarget}
+            onClose={() => setShowKojiRoom(false)}
+            onSelect={b => { setShowKojiRoom(false); setUiState(u => ({ ...u, activeBatchId: b.id })); }}
+            onCarryOut={b => handleFromKojiRoom(b)}
+          />
+        )}
+
       {/* UNIFIED BIOREACTOR INSPECTOR & HARVEST DECK */}
       {activeBatchForTest && (
 
@@ -2251,6 +2356,9 @@ export default function App() {
              onStore={() => handleStore(activeBatchForTest)}
              onCellar={() => handleCellarBatch(activeBatchForTest)}
              canCellar={!activeBatchForTest.cellared && ageingBehaviour(getRecipeForBatch(activeBatchForTest)) === 'matures'}
+             onToKojiRoom={() => handleToKojiRoom(activeBatchForTest)}
+             canToKojiRoom={gameState.kojiRoomOwned && !activeBatchForTest.kojiRoom && activeBatchForTest.status !== 'spoiled' && isKojiRecipe(getRecipeForBatch(activeBatchForTest))}
+             onFromKojiRoom={activeBatchForTest.kojiRoom ? () => handleFromKojiRoom(activeBatchForTest) : undefined}
              maturityNote={describeMaturity(activeBatchForTest, getRecipeForBatch(activeBatchForTest))}
              onDiscard={handleDiscard}
              onBackSlop={handleBackSlop}

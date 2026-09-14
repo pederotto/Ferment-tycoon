@@ -177,6 +177,8 @@ export interface Vessel {
    */
   heatedTo?: number; // max setpoint in C; absent = unheated
   capacityL: number; // Volume capacity in Liters
+  /** Part of a room rather than something you buy: never offered in a shop or the vessel picker. */
+  builtIn?: boolean;
 }
 
 export interface FlavorProfile {
@@ -335,6 +337,11 @@ export interface Batch {
   // Moved to the cellar to age. Cellared batches free their bench slot, tick
   // slowly, and are protected from the hazards of an open bench.
   cellared?: boolean;
+
+  /** On a shelf in the koji room: off the bench, held warm, tended by the keeper if there is one. */
+  kojiRoom?: boolean;
+  /** The keeper is letting this bed run on to spore rather than taking it at its peak. */
+  kojiReserve?: boolean;
 
   // Post-Processing State
   isPressed?: boolean;
@@ -595,7 +602,7 @@ export type VendorUnlock =
    where the game has people in it at all, which is what a story would need.
    ============================================================================= */
 
-export type StaffRoleType = 'cleaner' | 'tech' | 'chef' | 'rd';
+export type StaffRoleType = 'cleaner' | 'tech' | 'chef' | 'rd' | 'toji';
 
 export interface CrewTrait {
   id: string;
@@ -719,6 +726,11 @@ export interface GameState {
 
   // The guided opening has been finished or waved away.
   onboardingDone: boolean;
+
+  /** The koji room has been built. A later stage: needs a Head of R&D. */
+  kojiRoomOwned: boolean;
+  /** Kilograms of koji the keeper keeps in the pantry. */
+  kojiTargetKg: number;
 
   // Consecutive weeks ended in the red. Three closes the lab.
   insolvencyStrikes: number;

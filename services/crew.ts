@@ -84,6 +84,10 @@ const LINES: Record<StaffRoleType, string[]> = {
     'I can tell you what it needs. Whether you listen is your business.',
     'I have cooked with worse and sold it for more. Let us not do that here.',
   ],
+  toji: [
+    'A bed tells you when it wants turning. You only have to be in the room to hear it.',
+    'Keep the room warm and the spores honest. The rest is patience.',
+  ],
   rd: [
     'Everything you are doing by feel, I can tell you why it works.',
     'I read the literature so you can keep your hands in the mash.',
@@ -121,9 +125,9 @@ export const makeCandidate = (role: StaffRoleType, seed: number): CrewMember => 
   };
 };
 
-/** Four candidates, one per role, refreshed on a schedule. */
-export const rollCrewPool = (week: number): CrewMember[] =>
-  (['cleaner', 'tech', 'chef', 'rd'] as StaffRoleType[])
+/** One candidate per role, refreshed on a schedule. A koji keeper only once there is a room to keep. */
+export const rollCrewPool = (week: number, kojiRoom = false): CrewMember[] =>
+  ((kojiRoom ? ['cleaner', 'tech', 'chef', 'rd', 'toji'] : ['cleaner', 'tech', 'chef', 'rd']) as StaffRoleType[])
     .map((role, i) => makeCandidate(role, week * 11 + i * 29));
 
 /**
@@ -183,6 +187,7 @@ export const crewToStaffFlags = (crew: CrewMember[]): Record<StaffRoleType, bool
   tech: crew.some(c => c.role === 'tech'),
   chef: crew.some(c => c.role === 'chef'),
   rd: crew.some(c => c.role === 'rd'),
+  toji: crew.some(c => c.role === 'toji'),
 });
 
 export const describeCrewMember = (c: CrewMember): string => {

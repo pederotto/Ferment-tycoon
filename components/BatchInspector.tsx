@@ -305,6 +305,9 @@ interface BatchInspectorProps {
   onStore?: () => void;
   onCellar?: () => void;
   canCellar?: boolean;
+  onToKojiRoom?: () => void;
+  canToKojiRoom?: boolean;
+  onFromKojiRoom?: () => void;
   maturityNote?: string | null;
   onDiscard?: () => void;
   onBackSlop?: () => void;
@@ -376,6 +379,9 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   onStore,
   onCellar,
   canCellar,
+  onToKojiRoom,
+  canToKojiRoom,
+  onFromKojiRoom,
   maturityNote,
   onDiscard,
   onBackSlop,
@@ -995,6 +1001,16 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                       {onCellar && canCellar && (
                         <button className="btn btn-plum" onClick={onCellar} title="Age this in the cellar — it keeps developing and frees the bench slot">
                           <GameIcon name="hourglass" size={14} /> Lay down to age
+                        </button>
+                      )}
+                      {onToKojiRoom && canToKojiRoom && (
+                        <button className="btn btn-moss" onClick={onToKojiRoom} title="Carry this bed to the koji room — it stops taking a bench slot, and the keeper looks after it">
+                          <GameIcon name="warm" size={14} /> Carry to the koji room
+                        </button>
+                      )}
+                      {onFromKojiRoom && (
+                        <button className="btn btn-ghost" onClick={onFromKojiRoom} title="Bring this bed back to a cedar tray on the bench">
+                          <GameIcon name="vessels" size={14} /> Back to the bench
                         </button>
                       )}
                       {onStore && (

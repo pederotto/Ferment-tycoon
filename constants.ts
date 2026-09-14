@@ -337,6 +337,27 @@ export const AGEING_VALUE_BONUS = 0.9;      // up to +90% price at full maturity
 export const CELLAR_TICK_DIVISOR = 6;       // the cellar ages slowly and safely
 export const CELLAR_CAPACITY = 6;
 
+/**
+ * THE KOJI ROOM — a later stage, bought once a Head of R&D is on the crew.
+ *
+ * Measured before it was built (see CLAUDE.md): a 3 kg bed peaks in ~5 game days
+ * and scores the same on the bench or in the room, so the room does not make
+ * better koji — it takes beds off the bench and gives them to a keeper. Twelve
+ * beds make ~43 kg a week against ~10 kg that a full bench of casks and barrels
+ * can use, and dumping the surplus drives koji demand to a third. So the keeper
+ * works to a pantry TARGET rather than filling every bed: the room is headroom
+ * for a sake season, not a koji mill.
+ */
+export const KOJI_ROOM_COST = 8000;
+export const KOJI_ROOM_CAPACITY = 12;
+export const KOJI_ROOM_BED_KG = 3;
+export const KOJI_ROOM_TEMP = 34;
+export const KOJI_ROOM_DEFAULT_TARGET_KG = 25;
+export const KOJI_ROOM_TARGET_STEP_KG = 5;
+export const KOJI_ROOM_TARGET_MAX_KG = 120;
+/** Only for the old floor rule, kept for comparison in services/kojiRoom.ts; the keeper now reserves by demand. */
+export const KOJI_ROOM_SPORE_FLOOR = 6;
+
 // --- ERAS ---
 // The campaign frame. Fermentation has a history, and the game had none of it:
 // colatura and rose garum sat side by side with no indication that one is a
@@ -625,6 +646,15 @@ export const STAFF_ROLES: StaffRole[] = [
         weeklyWage: 1200,
         icon: 'Microscope',
         effectDescription: 'Prevents Thermal Death events. Maximizes Umami potential scaling.'
+    },
+    {
+        id: 'toji',
+        name: 'Koji Keeper',
+        description: 'A tōji who lives in the warm room and knows every bed by smell.',
+        hiringCost: 1500,
+        weeklyWage: 350,
+        icon: 'Thermometer',
+        effectDescription: 'Runs the koji room: holds every bed at temperature, turns them, takes them to the pantry at their peak, lays new beds to keep koji at your target, and lets a bed run to spore when the house runs low. Only hired once the room is built.'
     }
 ];
 
@@ -733,6 +763,21 @@ export const VESSELS: Vessel[] = [
         idealFor: [FermentType.GARUM, FermentType.ALCOHOL, FermentType.VINEGAR],
         insulationFactor: 0.6,
         capacityL: 60
+    },
+    {
+        // Not for sale. A bed in the koji room is a cedar tray on a shelf that the
+        // room itself holds warm, which is exactly what `heatedTo` already means.
+        id: 'koji_room_bed',
+        name: 'Koji Room Bed',
+        slotsRequired: 0,
+        powerDraw: 0,
+        cost: 0,
+        description: 'A cedar bed on a shelf in the koji room, held warm by the room itself.',
+        idealFor: [FermentType.KOJI],
+        insulationFactor: 0.6,
+        heatedTo: KOJI_ROOM_TEMP,
+        capacityL: 3,
+        builtIn: true
     }
 ];
 

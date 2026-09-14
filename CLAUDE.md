@@ -386,6 +386,43 @@ one place.
   winter. Who picks a thing decides its supplier: hedge fruit and mushrooms are
   the forager's, grown and shipped produce is Prime's or Silk Road's.
 
+## The koji room
+
+**A place, a vessel and a person — each doing one job.** Beds on its shelves
+carry `kojiRoom` and the built-in `koji_room_bed` vessel: off the bench (no
+slot, no power, no hygiene load), held warm by `heatedTo`. That is ALL the room
+does. The `toji` keeper is what turns beds, takes them at peak, lays new ones
+and keeps spore — without one the room is a warm shelf.
+
+- **Built-in vessels never reach a shop.** `Vessel.builtIn` is filtered out of
+  Supply and the bench's picker. Anything new that lists `VESSELS` must do the
+  same, or the room bed goes on sale for $0.
+- **The keeper's round is pure and runs from an effect keyed on the date.**
+  `keeperRound(state, dayKey)` is called inside `setGameState`, which StrictMode
+  runs twice — so it has no `Date.now`, no `Math.random` and posts no notices;
+  ids come from the day key. The notice is posted once, from the effect.
+- **It works to a target, not to a full room.** Measured before building: a 3 kg
+  bed peaks in ~5 game days and scores the same on the bench or in the room, so
+  the room does not make better koji. Twelve beds make ~43 kg a week; a full
+  bench of casks and barrels at 20% koji (full enzyme strength) uses ~10; selling
+  the surplus settles koji demand at 0.33. The target is what stops a late-game
+  room turning into a koji mill. Re-measure that spread if you touch bed size,
+  capacity or the target default.
+- **Spore is the binding constraint, not beds.** A spore bed returns three
+  packets and every bed takes one, so a room growing only its own spore stalls
+  for a week at a time: measured over twelve weeks it fed a 10 kg/week bench 75%
+  of its koji and a 25 kg/week sake season 30%. The keeper lays spore beds ahead
+  of need (0.6 per koji bed) and buys founder spore only when the house has none:
+  94% both ways, never short, $165 / $375 of spore across the twelve weeks. The
+  target counts beds already growing, so the pantry settles ~7 kg under it.
+- **One spore helper.** `mintSporeHarvest` is shared by the player's Sporulate
+  and the keeper, so a strain taken by hand and by the keeper is the same strain.
+- **A keeper-run bed teaches nothing.** Mastery is information earned at the
+  bench; a room you do not touch has nothing to tell you.
+- **A role added after saves exist needs migrating twice**: the flag in
+  `staff` (a missing key is not `false` to every reader) and the pool, which
+  only offers a keeper once `kojiRoomOwned`.
+
 ## The crew
 
 **Skill must cut both ways round the right way.** In `crewEffect`, a trait that

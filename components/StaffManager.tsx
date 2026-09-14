@@ -37,6 +37,7 @@ const ROLE_NAME: Record<StaffRoleType, string> = {
   tech: 'Technician',
   chef: 'Sous Chef',
   rd: 'Head of R&D',
+  toji: 'Koji Keeper',
 };
 
 const Pips: React.FC<{ n: number }> = ({ n }) => (

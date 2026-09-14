@@ -12,7 +12,7 @@ import { VesselLineIcon } from './icons';
 const VesselArt: React.FC<{ vesselId: string; height: number; className?: string }> = ({ vesselId, height, className }) => {
   // On a shelf or in a shop you are buying the vessel, not its contents, so a
   // vessel with an empty painting shows that one here; the room keeps the full.
-  const art = VESSEL_ART[`${vesselId}_empty`] ?? VESSEL_ART[vesselId];
+  const art = VESSEL_ART[`${vesselId}_empty`] ?? VESSEL_ART[vesselId === 'koji_room_bed' ? 'koji_tray' : vesselId];
   if (!art) return <VesselLineIcon vesselId={vesselId} size={Math.round(height * 0.62)} color="currentColor" />;
   return (
     <img

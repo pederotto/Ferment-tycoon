@@ -1,5 +1,5 @@
 import { GameState, FermentType } from '../types';
-import { INGREDIENTS, SUPPLIERS } from '../constants';
+import { INGREDIENTS, SUPPLIERS, KOJI_ROOM_DEFAULT_TARGET_KG } from '../constants';
 import { rollCrewPool } from './crew';
 
 /**
@@ -66,7 +66,7 @@ function migrate(state: Partial<GameState>): GameState {
     // for up to a month after loading, which reads as a broken screen.
     crewPool: (state.crewPool && state.crewPool.length > 0)
       ? state.crewPool
-      : rollCrewPool(state.week ?? 1),
+      : rollCrewPool(state.week ?? 1, state.kojiRoomOwned ?? false),
     contracts: state.contracts ?? [],
     unlockedVendorIds: state.unlockedVendorIds ?? [],
     // A supplier added after the save was made has no relationship in it, and the
@@ -93,6 +93,11 @@ function migrate(state: Partial<GameState>): GameState {
       ?? Object.fromEntries((((state as any).ownedVesselIds as string[]) ?? ['mason_jar', 'koji_tray']).map(id => [id, 1])),
     logbook: state.logbook ?? [],
     batches: state.batches ?? [],
+    // The koji room postdates every save; nobody has built one yet.
+    kojiRoomOwned: state.kojiRoomOwned ?? false,
+    kojiTargetKg: state.kojiTargetKg ?? KOJI_ROOM_DEFAULT_TARGET_KG,
+    // A role added after the save leaves its flag missing, not false.
+    staff: { cleaner: false, tech: false, chef: false, rd: false, toji: false, ...(state.staff ?? {}) },
   };
 }
 

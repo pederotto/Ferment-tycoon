@@ -456,7 +456,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
 
               <span className="sup-lbl">Fermentation vessels</span>
               <div className="eq-grid">
-                {VESSELS.map(v => {
+                {VESSELS.filter(v => !v.builtIn).map(v => {
                   const ownedCount = ownedVessels[v.id] ?? 0;
                   const canAfford = money >= v.cost;
                   return (
