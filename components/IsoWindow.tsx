@@ -95,6 +95,110 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
         )}
         {bright && <circle cx="26" cy="-44" r="13" fill="#d8b878" opacity={bare ? 0.2 : 0.32} />}
 
+        {/* LIFE IN THE VIEW. The painting is still; these are the few things that
+            move across it, chosen by the season and the weather so they also say
+            something: swallows in spring, sheep on a mild day, leaves in autumn,
+            a flash in a storm. Drawn in code, animated in CSS, no filters (a
+            filter on something that animates is re-rasterised every frame), and
+            all of it stops under prefers-reduced-motion. Local units: the painted
+            view spans x -37..37, y -63..31; the sky is the top half. */}
+        {bare && (() => {
+          const stormy = weather.type === 'Stormy';
+          const foggy = weather.type === 'Foggy';
+          const hot = weather.type === 'Heatwave';
+          const calm = !wet && !snowy && !foggy;
+          const birds = calm && season !== 'winter';
+          const sheep = calm && season !== 'winter';
+          const Bird = ({ y, delay, dur, scale = 1 }: { y: number; delay: number; dur: number; scale?: number }) => (
+            <g className="wl-bird" style={{ animationDelay: `${delay}s`, animationDuration: `${dur}s` }}>
+              <path d={`M0 ${y} q${1.6 * scale} ${-1.4 * scale} ${3.2 * scale} 0 q${1.6 * scale} ${-1.4 * scale} ${3.2 * scale} 0`}
+                    className="wl-wing" fill="none" stroke="#2c2a26" strokeWidth="0.55" strokeLinecap="round" />
+            </g>
+          );
+          return (
+            <g className="window-life">
+              {/* clouds drift across on grey days */}
+              {(weather.type === 'Cloudy' || wet) && (
+                <g className="wl-clouds" fill={stormy ? '#5b626b' : '#eef0f1'} opacity={stormy ? 0.55 : 0.5}>
+                  <g className="wl-cloud" style={{ animationDuration: '46s' }}>
+                    <ellipse cx="0" cy="-52" rx="9" ry="3.2" /><ellipse cx="6" cy="-54" rx="6" ry="3" /><ellipse cx="-6" cy="-51" rx="5" ry="2.4" />
+                  </g>
+                  <g className="wl-cloud" style={{ animationDuration: '63s', animationDelay: '-24s' }}>
+                    <ellipse cx="0" cy="-41" rx="11" ry="3.6" /><ellipse cx="7" cy="-43" rx="6.5" ry="3" />
+                  </g>
+                </g>
+              )}
+              {/* birds: a few crossing now and then; swallows in spring are quicker */}
+              {birds && (
+                <>
+                  <Bird y={-48} delay={2} dur={season === 'spring' ? 9 : 14} />
+                  <Bird y={-44} delay={2.6} dur={season === 'spring' ? 9.4 : 14.5} scale={0.8} />
+                  <Bird y={-55} delay={11} dur={season === 'spring' ? 10 : 16} scale={0.9} />
+                </>
+              )}
+              {!birds && season === 'winter' && !stormy && <Bird y={-50} delay={6} dur={22} scale={1.1} />}
+              {/* sheep grazing on the lower slope, barely moving */}
+              {sheep && (
+                <g className="wl-sheep-field">
+                  {[{ x: -20, y: 16, d: 0 }, { x: -11, y: 19, d: -3 }, { x: 14, y: 14, d: -6 }].map((sh, i) => (
+                    <g key={i} className="wl-sheep" style={{ animationDelay: `${sh.d}s` }} transform={`translate(${sh.x},${sh.y})`}>
+                      <ellipse cx="0" cy="0" rx="2.3" ry="1.5" fill="#f2efe6" />
+                      <ellipse cx="2.2" cy="-0.4" rx="0.8" ry="0.7" fill="#3a332b" className="wl-head" />
+                      <path d="M-1.2 1.2 v1 M1 1.2 v1" stroke="#3a332b" strokeWidth="0.35" />
+                    </g>
+                  ))}
+                </g>
+              )}
+              {/* spring blossom and autumn leaves, drifting down across the view */}
+              {(season === 'spring' || season === 'autumn') && !wet && (
+                <g className="wl-drift" fill={season === 'spring' ? '#f3d6dc' : '#b8743a'}>
+                  {[[-28, 0], [-12, -4], [4, -1.5], [20, -6], [30, -2.8], [-2, -8]].map(([x, d], i) => (
+                    <ellipse key={i} cx={x} cy={-60} rx={season === 'spring' ? 0.7 : 1} ry={season === 'spring' ? 0.5 : 0.6}
+                             style={{ animationDelay: `${d}s` }} />
+                  ))}
+                </g>
+              )}
+              {/* rain that actually falls, heavier in a storm */}
+              {wet && (
+                <g className="wl-rain" stroke="#c7d6de" strokeWidth="0.45" strokeLinecap="round" opacity={stormy ? 0.6 : 0.45}>
+                  {Array.from({ length: stormy ? 22 : 14 }, (_, i) => {
+                    const x = -36 + ((i * 37) % 72);
+                    return <path key={i} d={`M${x} -64 l-1.6 5`} style={{ animationDelay: `${-((i * 0.137) % 1.1)}s` }} />;
+                  })}
+                </g>
+              )}
+              {/* snow: slow, wandering flakes */}
+              {snowy && (
+                <g className="wl-snow" fill="#ffffff" opacity="0.85">
+                  {Array.from({ length: 16 }, (_, i) => (
+                    <circle key={i} cx={-35 + ((i * 29) % 70)} cy={-64} r={0.45 + ((i * 7) % 3) * 0.2}
+                            style={{ animationDelay: `${-((i * 0.83) % 9)}s`, animationDuration: `${7 + (i % 4)}s` }} />
+                  ))}
+                </g>
+              )}
+              {/* fog rolling through in two slow bands */}
+              {foggy && (
+                <g className="wl-fog">
+                  {/* a gradient that fades to nothing at every edge, so the band
+                      has no outline — a flat rounded rect read as a pill */}
+                  <defs>
+                    <radialGradient id={`${uid}fog`}>
+                      <stop offset="0" stopColor="#eef1f2" stopOpacity="0.75" />
+                      <stop offset="1" stopColor="#eef1f2" stopOpacity="0" />
+                    </radialGradient>
+                  </defs>
+                  <ellipse className="wl-fog-band" cx="-25" cy="-2" rx="48" ry="9" fill={`url(#${uid}fog)`} />
+                  <ellipse className="wl-fog-band slow" cx="-10" cy="15" rx="55" ry="11" fill={`url(#${uid}fog)`} />
+                </g>
+              )}
+              {/* a lightning flash, now and then */}
+              {stormy && <rect className="wl-flash" x="-40" y="-66" width="80" height="100" fill="#f4f6ff" />}
+              {/* heat: a warm haze breathing over the horizon */}
+              {hot && <rect className="wl-haze" x="-40" y="-14" width="80" height="18" fill="#f3c98a" />}
+            </g>
+          );
+        })()}
+
         {!bare && <>
         {/* far hill, so the tree has something to stand on */}
         <path d="M-52 20 q26 -14 52 -4 q28 10 52 -2 v18 h-104z"

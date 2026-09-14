@@ -4268,3 +4268,52 @@ html, body {
 @media (max-width: 1179px) { .firstrun { left: 18px; } .guide-recall { left: 18px; } }
 @media (max-width: 759px) { .guide-recall { left: 12px; right: auto; bottom: 12px; } }
 
+/* =========================================================================
+   LIFE IN THE WINDOW (IsoWindow, bare view)
+   ========================================================================= */
+.window-life * { pointer-events: none; }
+.wl-cloud { animation: wl-cloud linear infinite; }
+@keyframes wl-cloud { from { transform: translateX(-60px); } to { transform: translateX(60px); } }
+.wl-bird { animation: wl-fly linear infinite; transform: translateX(-50px); }
+@keyframes wl-fly {
+  0% { transform: translate(-50px, 0); opacity: 0; }
+  4% { opacity: 1; }
+  50% { transform: translate(0px, -3px); }
+  60% { opacity: 1; }
+  66% { transform: translate(14px, -1px); opacity: 0; }
+  100% { transform: translate(14px, -1px); opacity: 0; }
+}
+.wl-wing { animation: wl-flap 0.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes wl-flap { 50% { transform: scaleY(0.35); } }
+.wl-sheep { animation: wl-graze 9s ease-in-out infinite; }
+@keyframes wl-graze { 0%, 100% { translate: 0 0; } 45% { translate: 1.4px 0; } 55% { translate: 1.4px 0; } }
+.wl-head { animation: wl-nibble 4.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes wl-nibble { 0%, 60%, 100% { translate: 0 0; } 70%, 90% { translate: 0 0.9px; } }
+.wl-drift ellipse { animation: wl-leaf 8s linear infinite; }
+@keyframes wl-leaf {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(-5px, 45px) rotate(160deg); }
+  90% { opacity: 0.9; }
+  100% { transform: translate(3px, 92px) rotate(320deg); opacity: 0; }
+}
+.wl-rain path { animation: wl-rain 1.1s linear infinite; }
+@keyframes wl-rain { from { transform: translate(0, 0); } to { transform: translate(-6px, 96px); } }
+.wl-snow circle { animation: wl-snow 8s linear infinite; }
+@keyframes wl-snow {
+  0% { transform: translate(0, 0); } 25% { transform: translate(2px, 24px); }
+  50% { transform: translate(-1.5px, 48px); } 75% { transform: translate(2.5px, 72px); }
+  100% { transform: translate(0, 96px); }
+}
+.wl-fog-band { animation: wl-fog 26s ease-in-out infinite alternate; }
+.wl-fog-band.slow { animation-duration: 38s; }
+@keyframes wl-fog { from { transform: translateX(0); } to { transform: translateX(40px); } }
+.wl-flash { opacity: 0; animation: wl-flash 9s linear infinite; }
+@keyframes wl-flash { 0%, 71%, 75%, 77%, 100% { opacity: 0; } 72% { opacity: 0.7; } 76% { opacity: 0.45; } }
+.wl-haze { animation: wl-haze 5s ease-in-out infinite; }
+@keyframes wl-haze { 0%, 100% { opacity: 0.05; } 50% { opacity: 0.16; } }
+@media (prefers-reduced-motion: reduce) {
+  .window-life * { animation: none !important; }
+  .wl-bird, .wl-flash, .wl-drift, .wl-rain, .wl-snow { display: none; }
+}
+
