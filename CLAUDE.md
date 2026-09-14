@@ -1108,3 +1108,12 @@ Backtick `` ` ``, the DEV chip in the header, or `?dev` / `?god` in the URL.
 `components/DevPanel.tsx` is self-contained and can be deleted outright.
 
 Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
+
+## Header instruments and the weather glass
+- The header is `components/BrassHud.tsx` over `brassSheet.ts` (painted brass cut to about twice drawn size). Every instrument still prints its reading; the pictures never carry a number alone.
+- Painted glass is opaque paint, so a tube's liquid and the thermometer's mercury sit ON the glass with `mix-blend-mode: multiply`, not under it.
+- Class names in the header are prefixed (`bdial`, `blever`, `bgauge`, `bticket`): `.dial` and `.lever` are already the inspector's controls and their rules leak in.
+- The weather glass picks one of twelve painted skies with `weatherScene(type, season)`; the window's moving life (IsoWindow `window-life`) is SVG + CSS keyframes, no filters on animated things, and stops under prefers-reduced-motion.
+
+## Koji beds by contents
+- `kojiBedChart.ts` is the room's tray sprites with the grain-and-mould chart warped into the tray interior at four stages (built from the chart swatches, keeping the tray's shading). `bedRow` in KojiRoomView reads the row from the words in `starterId` then `substrateId`, so bred spore generations and new grains still resolve; `KOJI_BED` remains the fallback.

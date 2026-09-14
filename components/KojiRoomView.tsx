@@ -8,6 +8,7 @@ import { CloseIcon } from './icons';
 import { getRecipeForBatch as recipeOf } from '../services/gameLogic';
 import { KOJI_PLATE } from './kojiPlate';
 import { KOJI_BED, BedView, BedStage } from './kojiBedSheet';
+import { KOJI_BED_CHART, BedRow } from './kojiBedChart';
 import { KOJI_ROOM_CAPACITY, KOJI_ROOM_TEMP, KOJI_ROOM_TARGET_STEP_KG, KOJI_ROOM_TARGET_MAX_KG, KOJI_ROOM_BED_KG, SPORULATION_START } from '../constants';
 
 /**
@@ -59,6 +60,26 @@ const SPOTS: Spot[] = [
 ];
 
 
+
+/**
+ * Which row of the chart a bed is: the starter decides first, because tempeh,
+ * black and ancient moulds look like themselves on any grain; an ordinary oryzae
+ * bed looks like the grain under it. Read from the ids' words, so a bred spore
+ * generation (koji_spores_gen3_…) or a new heritage grain still finds its row.
+ */
+const bedRow = (b: Batch): BedRow => {
+  const starter = (b.starterId ?? '').toLowerCase();
+  const grain = (b.substrateId ?? '').toLowerCase();
+  if (/rhizopus|tempeh/.test(starter)) return 'soy_tempeh';
+  if (/luchuensis|black/.test(starter)) return 'barley_black';
+  if (/ancient/.test(starter)) return 'barley_ancient';
+  if (/sake/.test(starter)) return 'rice_sake';
+  if (/shoyu/.test(starter) || /soy|bean|pea|chickpea/.test(grain)) return 'soy_shoyu';
+  if (/rice/.test(grain)) return 'rice_oryzae';
+  if (/wheat|einkorn|emmer|kamut|spelt|durum|rye/.test(grain)) return 'wheat_oryzae';
+  if (/corn|maize/.test(grain)) return 'corn_oryzae';
+  return 'barley_oryzae';
+};
 
 type Stage = 'growing' | 'peak' | 'spore' | 'spoiled';
 /** Which painting: the bed's own look, which moves earlier than its label does. */
@@ -156,7 +177,7 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
                    onClick={() => onSelect(v.batch)}
                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(v.batch); } }}>
                   {(() => {
-                    const art = KOJI_BED[spot.view][pictureOf(v.batch, v.recipe)];
+                    const art = KOJI_BED_CHART[bedRow(v.batch)]?.[spot.view][pictureOf(v.batch, v.recipe)] ?? KOJI_BED[spot.view][pictureOf(v.batch, v.recipe)];
                     const h = spot.w * (art.h / art.w);
                     return (
                       <>
