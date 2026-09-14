@@ -147,6 +147,7 @@ export default function App() {
   const [journalOpen, setJournalOpen] = useState(false);
   const [unreadNotes, setUnreadNotes] = useState(0);
   const noticeDate = useRef('');
+  const recentNoteKeys = useRef<string[]>([]);
   noticeDate.current = `${MONTH_NAMES[gameState.month]} · week ${gameState.week}`;
   // Callers pass Date.now() as an id, which was fine for a single slot but
   // collides in a queue when several notices fire in the same millisecond —
@@ -155,8 +156,16 @@ export default function App() {
   const setLabNotification = React.useCallback((n: Notice | null) => {
     if (!n) { setNotices([]); return; }
     const id = ++noticeSeq.current;
-    setJournal(prev => (prev.length && prev[prev.length - 1].text === n.text) ? prev : [...prev, { ...n, id, when: noticeDate.current }].slice(-40));
-    setUnreadNotes(u => u + 1);
+    // ONE NOTE PER EVENT. The weekly loop still raises its notices from inside a
+    // state updater, which StrictMode runs twice (see CLAUDE.md), so every weekly
+    // note arrived as a pair. The toast stack hid that by skipping what was on
+    // screen; the journal has to skip the same note already written this week.
+    const noteKey = `${noticeDate.current}|${n.text}`;
+    if (!recentNoteKeys.current.includes(noteKey)) {
+      recentNoteKeys.current = [...recentNoteKeys.current, noteKey].slice(-60);
+      setJournal(prev => [...prev, { ...n, id, when: noticeDate.current }].slice(-40));
+      setUnreadNotes(u => u + 1);
+    }
     if (n.quiet && n.type !== 'alert') return;
     setNotices(prev => {
       // Drop an identical message already on screen rather than stacking it.
