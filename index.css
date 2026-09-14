@@ -4015,3 +4015,38 @@ html, body {
 }
 .rc-border.l { left: 8px; }
 .rc-border.r { right: 8px; transform: scaleX(-1); }
+
+/* =========================================================================
+   A HIERARCHY OF MATERIALS, NOT ONE MATERIAL EVERYWHERE
+   Oak on every dark surface was one texture at one scale, repeated until it
+   stopped meaning anything. It stays where it is literally true — the room's
+   frame: the header, the rails, the ground behind them. Inside a screen:
+
+     linen      the trading ledgers (Supply, Orders)
+     leather    the bound things (Codex, the underground shelf, the recipe card)
+     quiet dark everything else: instruments, the bench, the inspector, notices
+
+   "Quiet dark" is a flat ground with the oak barely showing through a heavy
+   shade, so a screen reads as dark wood in low light rather than as a floor.
+   Placed last so it wins at equal weight over the materials block above.
+   ========================================================================= */
+.wood-panel, .ledger, .sheet, .pantry,
+.hw-modal, .ing-modal, .hreport, .crewroom, .pressroom,
+.inoc-head, .protocol-pop, .station.pick-pane,
+.scan-dock, .scan.floating, .toast, .firstrun, .guide-recall, .iso-actions {
+  background: linear-gradient(180deg, rgba(20, 14, 9, 0.80), rgba(14, 10, 6, 0.88)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #1e1610;
+}
+.cellar { background: linear-gradient(180deg, rgba(14, 11, 8, 0.82), rgba(8, 6, 4, 0.9)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #15100b; }
+.supply, .orderbook {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.34)), var(--tex-linen, none) 0 0 / 256px 256px repeat, #222a24;
+}
+.codex-panel, .supply.underground, .reccard {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.26)), var(--tex-leather, none) 0 0 / 512px 512px repeat, #2b1c15;
+}
+/* Tabs and buttons inside a linen screen would be linen on linen: they go dark. */
+.supply .sup-tab:not(.active), .supply .chip-tab:not(.active), .orderbook .chip-tab:not(.active) {
+  background: rgba(0, 0, 0, 0.28);
+}
+.toast.alert, .raid-card {
+  background: linear-gradient(180deg, rgba(110, 32, 18, 0.72), rgba(50, 14, 8, 0.86)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #2e1a13;
+}
