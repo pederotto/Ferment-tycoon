@@ -33,8 +33,8 @@ import DevPanel from './components/DevPanel';
 import PanelMark from './components/PanelMark';
 import GameIcon from './components/GameIcon';
 import FirstCulture from './components/FirstCulture';
-import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine, Boxes, Droplets, Sprout } from 'lucide-react';
-import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon , BagIcon , CloseIcon } from './components/icons';
+import { TrendingUp, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine } from 'lucide-react';
+import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon, BagIcon, CloseIcon } from './components/icons';
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -1790,7 +1790,7 @@ export default function App() {
         <div className="toast-stack">
           {notices.map(n => (
             <div key={n.id} className={`toast ${n.type === 'alert' ? 'alert' : n.type === 'warn' ? 'warn' : ''}`}>
-              <Sparkles className="w-4 h-4 shrink-0" style={{ color: 'var(--brass)' }} />
+              <GameIcon name="sparkle" size={16} className="shrink-0" style={{ color: 'var(--brass)' }} />
               <span style={{ flex: 1 }}>{n.text}</span>
               <button
                 className="close"
@@ -2080,16 +2080,16 @@ export default function App() {
             return (
             <>
             <div className="pantry-item" title="Every salt on the shelf, by weight">
-            <Sparkles size={13} color="var(--text-mid)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
+            <GameIcon name="sparkle" size={13} color="var(--text-mid)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
             </div>
             <div className="pantry-item" title="Every live starter, bought or cultured">
-            <Sprout size={13} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
+            <GameIcon name="sprout" size={13} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
             </div>
             <div className="pantry-item" title="Every substrate on the shelf, by weight">
-            <Boxes size={13} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
+            <GameIcon name="crates" size={13} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
             </div>
             <div className="pantry-item" title="Filtered water">
-            <Droplets size={13} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
+            <GameIcon name="droplet" size={13} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
             </div>
             </>
             );
@@ -2100,7 +2100,7 @@ export default function App() {
             style={{ cursor: 'pointer' }}
             title="Click to view & purchase hardware vessels"
             >
-            <FlaskConical size={13} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
+            <GameIcon name="flask" size={13} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
             </div>
             </div>
             </div>
@@ -2343,7 +2343,7 @@ export default function App() {
                   <span className="corner c-tl" />
                   <span className="corner c-br" />
                   <div className="badge">
-                      <ShieldAlert className="w-7 h-7" style={{ color: 'var(--brick)' }} />
+                      <GameIcon name="badge" size={28} style={{ color: 'var(--brick)' }} />
                   </div>
                   <h2>The Atelier Is Closed</h2>
                   <p className="quote">
@@ -2382,7 +2382,7 @@ export default function App() {
                   <span className="corner c-tl" />
                   <span className="corner c-br" />
                   <div className="badge">
-                      <ShieldAlert className="w-7 h-7" style={{ color: 'var(--brick)' }} />
+                      <GameIcon name="badge" size={28} style={{ color: 'var(--brick)' }} />
                   </div>
                   <h2>Health Inspection</h2>
                   <p className="quote">
