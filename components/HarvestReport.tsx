@@ -1,10 +1,10 @@
 import React from 'react';
+import GameIcon from './GameIcon';
 import { LogEntry } from '../types';
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { RECIPES } from '../constants';
 import IngredientIcon from './IngredientIcon';
 import { CloseIcon } from './icons';
-import { Star } from 'lucide-react';
 
 /**
  * THE HARVEST REPORT
@@ -83,8 +83,7 @@ export const HarvestReportBody: React.FC<{ entry: LogEntry }> = ({ entry }) => {
         </div>
         <div className="stars">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} size={13} color="var(--amber)"
-                  fill={i < (entry.rating || 0) ? 'var(--amber)' : 'none'} />
+            <GameIcon key={i} name="star" size={13} color="var(--amber)" style={{ opacity: (i < (entry.rating || 0)) ? 1 : 0.28 }} />
           ))}
         </div>
         <div className="paid">

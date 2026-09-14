@@ -1,10 +1,11 @@
 import React from 'react';
+import GameIcon from './GameIcon';
+import PanelMark from './PanelMark';
 import { Recipe, RecipeMastery, RecipeKnowledge } from '../types';
 import { BOOK_ADVICE, BOOKS, MASTERY_RUNG_TITLES, SALT_AND_HEAT_NOTE } from '../constants';
 import { describeFormula } from '../services/gameLogic';
 import { getMasteryLadder, benchAdvice, xpToNextLevel, masteryReveal } from '../services/mastery';
 import { CloseIcon, BookIcon } from './icons';
-import { Lightbulb, HelpCircle } from 'lucide-react';
 
 /**
  * THE RECIPE CARD
@@ -57,6 +58,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, knowledge, mastery, own
         <span className="corner c-br" />
 
         <div className="rc-head">
+          <PanelMark name="recipe" />
           <div>
             <span className="type">{recipe.type}</span>
             <h2>{knowledge === 'unknown' ? 'Unknown Protocol' : recipe.name}</h2>
@@ -106,7 +108,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, knowledge, mastery, own
               </>
             ) : (
               <p className="rc-locked">
-                <HelpCircle size={12} />
+                <GameIcon name="help" size={12} />
                 {teachingBook
                   ? `Written up in ${teachingBook.title}. Buy it from the Bindery and this fills in.`
                   : 'No published account of this one. You will have to work it out at the bench.'}
@@ -117,13 +119,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, knowledge, mastery, own
           {/* --- FROM YOUR BENCH --- */}
           <section className="rc-sec">
             <span className="rc-lbl bench">
-              <Lightbulb size={12} color="var(--brass)" /> From your bench
+              <GameIcon name="lamp" size={12} color="var(--brass)" /> From your bench
               {m.cooks > 0 && <em> · {m.cooks} run{m.cooks === 1 ? '' : 's'}</em>}
             </span>
 
             {m.cooks === 0 ? (
               <p className="rc-locked">
-                <HelpCircle size={12} />
+                <GameIcon name="help" size={12} />
                 You have not made this yet. Run it and the bench starts keeping score.
               </p>
             ) : (

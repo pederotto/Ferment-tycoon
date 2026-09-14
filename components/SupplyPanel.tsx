@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { SUPPLIER_SEAL } from './sealSheet';
 import { Ingredient, IngredientType, Vessel, Book, Supplier } from '../types';
 import { VESSELS, BOOKS, SUPPLIERS, UNDERGROUND_TIER_XP, MAX_EQUIPMENT_SLOTS } from '../constants';
-import {
-  BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon,
-  JarOutlineIcon, WrenchIcon, BookIcon, BoltIcon,
-} from './icons';
-import { Lock, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, JarOutlineIcon, WrenchIcon, BookIcon, BoltIcon } from './icons';
+import { ChevronUp, ArrowUpDown } from 'lucide-react';
 import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
 import VesselArt from './VesselArt';
@@ -167,7 +165,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onToggle}>
-    <div className="supply" onClick={e => e.stopPropagation()}>
+    <div className={`supply${tab === 'underground' ? ' underground' : ''}`} onClick={e => e.stopPropagation()}>
       <div className="sup-head">
         <div className="ttl">
           <div className="ic mark"><PanelMark name="supply" size={40} /></div>
@@ -271,7 +269,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
             <>
               <div className="sup-controls">
                 <div className="search-box">
-                  <SearchIcon size={13} />
+                  <GameIcon name="search" size={13} />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the shelf…" aria-label="Search ingredients" />
                 </div>
 
@@ -309,7 +307,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                         onClick={() => setSupplierFilter(supplierFilter === s.id ? 'all' : s.id)}
                         title={`${rel.xp}/${next} xp to level ${rel.level + 1}`}
                       >
-                        <span className="dot" style={{ background: `var(--${s.color === 'zinc' ? 'text-lo' : 'amber'})` }} />
+                        {SUPPLIER_SEAL[s.id]
+                          ? <img className="sup-seal" src={SUPPLIER_SEAL[s.id]} style={{ width: 20, height: 20 }} alt="" aria-hidden="true" draggable={false} />
+                          : <span className="dot" style={{ background: `var(--${s.color === 'zinc' ? 'text-lo' : 'amber'})` }} />}
                         {s.name.split(' ')[0]}
                         <b>L{rel.level}</b>
                         <span className="ltrack"><span className="lfill" style={{ width: `${Math.min(100, (rel.xp / next) * 100)}%` }} /></span>
@@ -425,7 +425,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                         {away ? (
                           <span className="buy-btn locked away">{away}</span>
                         ) : lock ? (
-                          <span className="buy-btn locked"><Lock size={10} /> {lock}</span>
+                          <span className="buy-btn locked"><GameIcon name="lock" size={10} /> {lock}</span>
                         ) : (
                           <button
                             className={`buy-btn${!affordable ? ' locked' : ''}`}
@@ -497,7 +497,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       </div>
                       <p>{t.description}</p>
                       {locked
-                        ? <span className="eq-btn disabled"><Lock size={11} /> Lab Tech lvl {t.tierRequired}</span>
+                        ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> Lab Tech lvl {t.tierRequired}</span>
                         : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyTool(t)} aria-label={`Buy ${t.name} for $${t.baseCost}`}>
                             {canAfford ? `Buy unit $${t.baseCost}` : `Need $${t.baseCost}`}
                           </button>}
@@ -551,9 +551,9 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       {has
                         ? <span className="eq-btn owned-tag"><CheckIcon size={11} /> On the shelf</span>
                         : tooGreen
-                          ? <span className="eq-btn disabled"><Lock size={11} /> {b.xpRequired} bench xp</span>
+                          ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> {b.xpRequired} bench xp</span>
                           : notRegular
-                            ? <span className="eq-btn disabled"><Lock size={11} /> kept for regulars</span>
+                            ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> kept for regulars</span>
                             : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyBook(b)}>
                                 {canAfford ? `Buy $${b.price.toLocaleString()}` : `Need $${b.price.toLocaleString()}`}
                               </button>}
@@ -584,7 +584,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       {has
                         ? <span className="eq-btn owned-tag"><CheckIcon size={11} /> On the shelf</span>
                         : tooGreen
-                          ? <span className="eq-btn disabled"><Lock size={11} /> {b.xpRequired} bench xp</span>
+                          ? <span className="eq-btn disabled"><GameIcon name="lock" size={11} /> {b.xpRequired} bench xp</span>
                           : <button className={`eq-btn${!canAfford ? ' disabled' : ''}`} disabled={!canAfford} onClick={() => onBuyBook(b)}>
                               {canAfford ? `Buy $${b.price.toLocaleString()}` : `Need $${b.price.toLocaleString()}`}
                             </button>}

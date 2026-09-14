@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import GameIcon from './GameIcon';
+import PanelMark from './PanelMark';
 import { Ingredient, IngredientType, Batch, Vessel, Recipe, LogEntry, FermentType, RecipeMastery } from '../types';
 import { VESSELS, MAX_REAGENT_UNITS, HYDRATION_TARGETS, DEFAULT_HYDRATION, MAX_HYDRATION , KOJI_INOCULATION_TEMP } from '../constants';
 import VesselArt from './VesselArt';
@@ -9,34 +11,8 @@ import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../serv
 import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias } from '../services/koji';
 import RecipeCard from './RecipeCard';
 import MolecularScan, { ScanTarget } from './MolecularScan';
-import {
-  Play,
-  Info,
-  Skull,
-  Minus,
-  Scale,
-  Thermometer,
-  ChevronRight,
-  AlertTriangle,
-  Lock,
-  Lightbulb,
-  Activity
-} from 'lucide-react';
-import {
-  SporeClusterIcon,
-  BookIcon,
-  CloseIcon,
-  SearchIcon,
-  PlusIcon,
-  JarOutlineIcon,
-  JarLineIcon,
-  BoltIcon,
-  CheckCircleIcon,
-  WaterDropIcon,
-  SaltCrystalIcon,
-  VesselLineIcon,
-  getIngredientIcon
-} from './icons';
+import { Play, Info, Skull, Minus, Scale, Thermometer, ChevronRight, AlertTriangle, Lock, Lightbulb, Activity } from 'lucide-react';
+import { SporeClusterIcon, BookIcon, CloseIcon, SearchIcon, PlusIcon, JarOutlineIcon, JarLineIcon, BoltIcon, CheckCircleIcon, WaterDropIcon, SaltCrystalIcon, VesselLineIcon, getIngredientIcon } from './icons';
 
 interface BatchControllerProps {
   onClose: () => void;
@@ -635,7 +611,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
         {/* ---------- HEADER ---------- */}
         <div className="inoc-head">
           <div className="ttl">
-            <div className="ic"><SporeClusterIcon size={18} color="var(--moss)" /></div>
+            <PanelMark name="inoculation" size={44} />
             <div>
               <h1>Inoculation Bench</h1>
               <div className="sub">Draw your reagents, charge the vessel, and set the chamber before you seal it</div>
@@ -659,7 +635,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
         {errorNotice && (
           <div className="inoc-notice">
             <span className="msg">
-              <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+              <GameIcon name="alert" size={14} style={{ flexShrink: 0 }} />
               {errorNotice}
             </span>
             <button className="dismiss" onClick={() => setErrorNotice(null)}>Dismiss</button>
@@ -696,7 +672,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
         {/* ---------- STATION TABS (mobile) ---------- */}
         <div className="station-tabs md:hidden">
           {([
-            { id: 'pantry', label: 'Reagents', icon: <SearchIcon size={12} color="currentColor" /> },
+            { id: 'pantry', label: 'Reagents', icon: <GameIcon name="search" size={12} color="currentColor" /> },
             { id: 'bowl', label: 'Chamber', icon: <JarOutlineIcon size={12} color="currentColor" /> },
             { id: 'vessel', label: 'Vessel', icon: <JarLineIcon size={12} color="currentColor" /> },
             { id: 'run', label: 'Seal', icon: <BoltIcon size={12} color="currentColor" /> },
@@ -735,7 +711,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             </div>
 
             <div className="search-box" style={{ width: '100%', marginBottom: 9 }}>
-              <SearchIcon size={12} />
+              <GameIcon name="search" size={12} />
               <input
                 type="text"
                 placeholder="Search the pantry…"
@@ -840,7 +816,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                 keeps its own step-through through the same four stations. */}
             <div className="pick-row">
               <button type="button" className="pick-btn" onClick={() => setPicker('pantry')}>
-                <SearchIcon size={12} color="currentColor" />
+                <GameIcon name="search" size={12} color="currentColor" />
                 Draw reagents
                 <em>{selectedIngredientIds.length}</em>
               </button>
@@ -1063,13 +1039,13 @@ const BatchController: React.FC<BatchControllerProps> = ({
                     aria-label={`${v.name}${notOwned ? ' — not owned' : ''}`}
                   >
                     <span className="art">
-                      {notOwned ? <Lock size={14} /> : <VesselArt vesselId={v.id} height={30} />}
+                      {notOwned ? <GameIcon name="lock" size={14} /> : <VesselArt vesselId={v.id} height={30} />}
                     </span>
                     <span className="body">
                       <span className="row1">
                         <span className="n">{v.name}</span>
                         {notEnoughCapacity && !disabled && (
-                          <AlertTriangle size={12} color="var(--brick)" aria-label="Mass exceeds capacity" />
+                          <GameIcon name="alert" size={12} color="var(--brick)" label="Mass exceeds capacity" />
                         )}
                       </span>
                       <span className="specs">
@@ -1182,7 +1158,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
               {isKojiStart ? (
                 <div className="dial-ctl fixed">
                   <div className="dh">
-                    <span className="l"><Thermometer size={12} color="var(--brick)" /> Temperature</span>
+                    <span className="l"><GameIcon name="thermometer" size={12} color="var(--brick)" /> Temperature</span>
                     <span className="v">{KOJI_INOCULATION_TEMP}°C</span>
                   </div>
                   <p className="dial-fixed-note">
@@ -1193,7 +1169,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
               ) : (
                 <div className="dial-ctl">
                   <div className="dh">
-                    <span className="l"><Thermometer size={12} color="var(--brick)" /> Temperature</span>
+                    <span className="l"><GameIcon name="thermometer" size={12} color="var(--brick)" /> Temperature</span>
                     <span className="v">{temp}°C</span>
                   </div>
                   <input
@@ -1228,7 +1204,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             {earnedRungs.length > 0 && !isUndiscovered && (
               <button className="hand-strip" onClick={() => setShowCard(true)}>
                 <span className="hs-l">
-                  <Lightbulb size={12} color="var(--brass)" /> The hand
+                  <GameIcon name="lamp" size={12} color="var(--brass)" /> The hand
                   <b>{handLevel}/5</b>
                 </span>
                 <span className="hs-r">Read the card <ChevronRight size={12} /></span>
@@ -1324,7 +1300,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             ) : null
           ) : (
             <div key="scan-idle" className="scan-idle">
-              <span className="puck"><Activity size={14} color="var(--text-lo)" /></span>
+              <span className="puck"><GameIcon name="pulse" size={14} color="var(--text-lo)" /></span>
               <span className="t">Spectrometer idle</span>
               <span className="s">Hover a reagent, starter or vessel to read its profile</span>
             </div>

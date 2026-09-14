@@ -1,4 +1,5 @@
 import React from 'react';
+import PanelMark from './PanelMark';
 import { Batch, Recipe, FermentType } from '../types';
 import { INGREDIENTS } from '../constants';
 import { calculateBatchDynamics, getRecipeForBatch } from '../services/gameLogic';
@@ -75,6 +76,7 @@ const PressRoom: React.FC<PressRoomProps> = ({ tool, batches, customIngredients,
         </div>
 
         <div className="pr-head">
+          <PanelMark name="press" />
           <div>
             <span className="kicker">Hardware</span>
             <h2>{isPress ? 'The Press' : 'The Centrifuge'}</h2>

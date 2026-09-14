@@ -1,11 +1,11 @@
 import PanelMark from './PanelMark';
 import Portrait from './Portrait';
 import React from 'react';
+import GameIcon from './GameIcon';
 import { CrewMember, StaffRoleType } from '../types';
 import { STAFF_ROLES } from '../constants';
 import { getTrait, describeCrewMember, crewWages } from '../services/crew';
 import { CloseIcon } from './icons';
-import { Users, UserPlus, TrendingUp, AlertTriangle } from 'lucide-react';
 
 /**
  * THE CREW
@@ -70,7 +70,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         </div>
 
         <div className="cw-payroll">
-          <span className="l"><Users size={12} /> Payroll</span>
+          <span className="l"><GameIcon name="staff" size={12} /> Payroll</span>
           <span className={`v${payroll > 900 ? ' bad' : payroll > 450 ? ' warn' : ''}`}>
             ${payroll.toLocaleString()} / week
           </span>
@@ -109,7 +109,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
                   <p className="dsc">{describeCrewMember(c)}</p>
                   <div className="mf">
                     <span className="srv">
-                      <TrendingUp size={10} /> {c.weeksWorked} week{c.weeksWorked === 1 ? '' : 's'} in
+                      <GameIcon name="ledger_up" size={10} /> {c.weeksWorked} week{c.weeksWorked === 1 ? '' : 's'} in
                       {c.skill < 5 && <em> · still improving</em>}
                     </span>
                     <button className="btn btn-ghost sm" onClick={() => onLetGo(c.id)}>Let go</button>
@@ -120,7 +120,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           </section>
 
           <section>
-            <span className="cw-lbl"><UserPlus size={12} /> Looking for work</span>
+            <span className="cw-lbl"><GameIcon name="hire" size={12} /> Looking for work</span>
             <p className="cw-note">
               This lot are available now. The list changes every month whether you
               hire from it or not.
@@ -165,7 +165,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               </div>
             ))}
             <p className="cw-note">
-              <AlertTriangle size={10} /> A second person in the same role is worth
+              <GameIcon name="alert" size={10} /> A second person in the same role is worth
               having, but never as much as the first.
             </p>
           </section>

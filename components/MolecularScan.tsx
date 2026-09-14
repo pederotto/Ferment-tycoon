@@ -1,10 +1,11 @@
 import React from 'react';
+import GameIcon from './GameIcon';
 import { Ingredient, Vessel, Recipe, IngredientType } from '../types';
 import { masteryReveal } from '../services/mastery';
 import { recipesUsing, getRecipeKnowledge } from '../services/gameLogic';
 import { describeEnzymes, suggestPairing } from '../services/koji';
-import { Pin, PinOff } from 'lucide-react';
-import { SearchIcon, getIngredientIcon } from './icons';
+import { Pin } from 'lucide-react';
+import { getIngredientIcon } from './icons';
 import IngredientIcon from './IngredientIcon';
 import VesselArt from './VesselArt';
 
@@ -118,7 +119,7 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
               ? <VesselArt vesselId={(data as Vessel).id} height={full ? 84 : 30} />
               : Glyph
                 ? <IngredientIcon id={(data as Ingredient).id} size={full ? 84 : 30} fallback={Glyph} />
-                : <SearchIcon size={14} color="currentColor" />}
+                : <GameIcon name="search" size={14} color="currentColor" />}
           </span>
           <div style={{ minWidth: 0 }}>
             <span className="sc-kicker">
@@ -131,7 +132,7 @@ const MolecularScan: React.FC<MolecularScanProps> = ({
         {onTogglePin && (
           <button className={`sc-pin${pinned ? ' on' : ''}`} onClick={onTogglePin}
                   aria-label={pinned ? 'Unpin this scan' : 'Pin this scan to compare'}>
-            {pinned ? <PinOff size={12} /> : <Pin size={12} />}
+            {pinned ? <GameIcon name="unpin" size={12} /> : <GameIcon name="pin" size={12} />}
           </button>
         )}
       </div>

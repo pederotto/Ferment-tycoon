@@ -3917,3 +3917,20 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .cellar { background-image: var(--oak-grain), linear-gradient(180deg, #1c1710, #141009); }
 .orderbook, .crewroom, .pressroom { background-color: var(--bg-panel); background-image: var(--oak-grain); background-blend-mode: soft-light; background-size: 512px 512px; }
 .inoc-head { background-image: var(--oak-grain), linear-gradient(180deg, #2a2117, #221a12); }
+
+/* Leather for the bound things, over the same grounds as the oak rule above:
+   the Codex is a book, and the underground shelf is the one place in the game
+   that is not the workshop. Placed after the oak so it wins at equal weight. */
+.codex-panel { background-image: var(--leather-grain), linear-gradient(180deg, #241c14, #1a140d); }
+.supply.underground { background-image: var(--leather-grain), linear-gradient(180deg, #241c14, #191309); }
+
+/* Marks on the heads that had only a word. */
+.rc-head > .panel-mark + div { margin-right: auto; }
+.lhead > .panel-mark { align-self: center; }
+.fr-head > .panel-mark { margin: -4px 0; }
+.fr-head > .panel-mark + .l { margin-right: auto; }
+
+/* A supplier's stamp stands where its coloured dot was. Sized inline in the
+   component: a global .seal rule already sizes the brand seal, and an inline
+   style is the only thing that cannot collide with it. */
+.sup-supplier .sup-seal { flex: none; display: block; object-fit: contain; opacity: 0.9; margin: -3px 0; }

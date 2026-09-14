@@ -9,7 +9,18 @@ import { ICON_SHEET, ICON_COLS, ICON_CELL, ICON_ORDER, IconName } from './iconSh
  * amber when something is running. Inherits colour like a glyph, so nothing has
  * to be told what shade it is standing on.
  */
-const GameIcon: React.FC<{ name: IconName; size?: number; className?: string }> = ({ name, size = 16, className }) => {
+interface GameIconProps {
+  name: IconName;
+  size?: number;
+  className?: string;
+  /** Fills the mask. Omit to inherit, which is what an icon beside text wants. */
+  color?: string;
+  style?: React.CSSProperties;
+  /** Only for an icon that carries meaning on its own (a warning with no text). */
+  label?: string;
+}
+
+const GameIcon: React.FC<GameIconProps> = ({ name, size = 16, className, color, style, label }) => {
   const i = ICON_ORDER.indexOf(name);
   if (i < 0) return null;
   const col = i % ICON_COLS;
@@ -27,8 +38,9 @@ const GameIcon: React.FC<{ name: IconName; size?: number; className?: string }> 
     <span
       className={`gicon${className ? ' ' + className : ''}`}
       role="img"
-      aria-hidden="true"
-      style={{ width: size, height: size, ...mask }}
+      aria-hidden={label ? undefined : true}
+      aria-label={label}
+      style={{ width: size, height: size, ...mask, ...(color ? { color } : null), ...style }}
     />
   );
 };

@@ -1,13 +1,14 @@
 import PanelMark from './PanelMark';
 import React, { useState, useMemo } from 'react';
+import GameIcon from './GameIcon';
 import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
 import { RECIPES, VESSELS, eraForRecipe } from '../constants';
 import { getMastery, masteryReveal } from '../services/mastery';
 import RecipeCard from './RecipeCard';
 import { HarvestReportBody } from './HarvestReport';
 import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
-import { Star, Sparkles, Award, CheckCircle2, HelpCircle, Thermometer, Droplets, Clock, Box, BookOpen } from 'lucide-react';
-import { CloseIcon, BookIcon, SearchIcon } from './icons';
+import { CheckCircle2 } from 'lucide-react';
+import { CloseIcon, BookIcon } from './icons';
 
 interface LogbookModalProps {
   onClose: () => void;
@@ -79,7 +80,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
 
   return (
     <div className="modal-overlay">
-      <div className="wood-panel" style={{ width: 'min(1100px, 96vw)', height: 'min(90vh, 760px)', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="wood-panel codex-panel" style={{ width: 'min(1100px, 96vw)', height: 'min(90vh, 760px)', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div className="lhead" style={{ flexWrap: 'wrap' }}>
@@ -123,15 +124,15 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
         <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--line)', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={() => setActiveTab('codex')} className={`chip-tab${activeTab === 'codex' ? ' active' : ''}`}>
-              <Sparkles size={12} style={{ display: 'inline', marginRight: 5 }} /> Recipe Codex
+              <GameIcon name="sparkle" size={12} style={{ display: 'inline', marginRight: 5 }} /> Recipe Codex
             </button>
             <button onClick={() => setActiveTab('archives')} className={`chip-tab${activeTab === 'archives' ? ' active' : ''}`}>
-              <Award size={12} style={{ display: 'inline', marginRight: 5 }} /> Vintage Archives ({logbook.length})
+              <GameIcon name="award" size={12} style={{ display: 'inline', marginRight: 5 }} /> Vintage Archives ({logbook.length})
             </button>
           </div>
 
           <div className="search-box" style={{ width: 260 }}>
-            <SearchIcon size={13} />
+            <GameIcon name="search" size={13} />
             <input
               type="text"
               value={searchQuery}
@@ -229,15 +230,15 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                             </span>
                           ) : discoveredRecipeIds.includes(recipe.id) ? (
                             <span className="status-chip" style={{ background: 'rgba(217,164,65,0.15)', color: 'var(--amber)' }}>
-                              <Sparkles size={10} /> Found it yourself
+                              <GameIcon name="sparkle" size={10} /> Found it yourself
                             </span>
                           ) : knowledge === 'known' ? (
                             <span className="status-chip" style={{ background: 'rgba(157,139,176,0.15)', color: 'var(--plum)' }}>
-                              <BookOpen size={10} /> In the book
+                              <GameIcon name="books" size={10} /> In the book
                             </span>
                           ) : (
                             <span className="status-chip" style={{ color: 'var(--text-lo)', background: 'rgba(0,0,0,0.2)' }}>
-                              <HelpCircle size={10} /> Undiscovered
+                              <GameIcon name="help" size={10} /> Undiscovered
                             </span>
                           )}
                         </div>
@@ -270,21 +271,21 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                         the monospace even on paper — a figure copied off a gauge. */}
                     <div className="cc-params">
                       <div>
-                        <div className="l"><Thermometer size={10} color="currentColor" /> Temp</div>
+                        <div className="l"><GameIcon name="thermometer" size={10} color="currentColor" /> Temp</div>
                         <div className="v">{isDiscovered ? reveal.temp : '??°'}</div>
                       </div>
                       <div>
-                        <div className="l"><Droplets size={10} color="currentColor" /> Humid</div>
+                        <div className="l"><GameIcon name="droplet" size={10} color="currentColor" /> Humid</div>
                         <div className="v">{isDiscovered ? reveal.humidity : '??%'}</div>
                       </div>
                       <div>
-                        <div className="l"><Clock size={10} color="currentColor" /> Time</div>
+                        <div className="l"><GameIcon name="clock" size={10} color="currentColor" /> Time</div>
                         <div className="v">{isDiscovered ? reveal.duration : '??s'}</div>
                       </div>
                     </div>
 
                     <div className="cc-foot">
-                      <span><Box size={11} color="currentColor" /> {vessel?.name || 'Any Vessel'}</span>
+                      <span><GameIcon name="parcel" size={11} color="currentColor" /> {vessel?.name || 'Any Vessel'}</span>
                       {hand.cooks > 0 && (
                         <span className="hand" title={`${hand.xp} xp on this recipe`}>
                           Hand {hand.level}/5 · {hand.cooks} run{hand.cooks === 1 ? '' : 's'}
@@ -329,7 +330,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
                         <div style={{ display: 'flex', gap: 2 }}>
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} size={13} color="var(--amber)" fill={i < (entry.rating || 0) ? 'var(--amber)' : 'none'} />
+                            <GameIcon key={i} name="star" size={13} color="var(--amber)" style={{ opacity: (i < (entry.rating || 0)) ? 1 : 0.28 }} />
                           ))}
                         </div>
                         <div style={{ textAlign: 'right', minWidth: 70 }}>

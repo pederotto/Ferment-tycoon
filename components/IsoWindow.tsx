@@ -1,5 +1,6 @@
 import React from 'react';
 import { WeatherState } from '../types';
+import { WINDOW_VIEW } from './windowPlate';
 
 /**
  * THE WINDOW
@@ -83,8 +84,18 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
       <rect x="-52" y="-64" width="104" height="96" rx={bare ? 0 : 3} fill={`url(#${uid}sky)`} />
 
       <g clipPath={`url(#${uid}clip)`}>
-        {bright && <circle cx="26" cy="-44" r="13" fill="#d8b878" opacity="0.32" />}
+        {/* PAINTED, WHEN IT STANDS IN THE PAINTED ROOM.
+            The room shows this through a portrait opening (134x170) scaled to
+            cover, so the painting is placed on that opening in local units —
+            centred on the sky's middle at y=-16 — rather than on the landscape
+            104x96 sky, which would crop the portrait to a letterbox. */}
+        {bare && (
+          <image href={WINDOW_VIEW[season].src} x={-37} y={-63} width={74} height={94}
+                 preserveAspectRatio="xMidYMid slice" />
+        )}
+        {bright && <circle cx="26" cy="-44" r="13" fill="#d8b878" opacity={bare ? 0.2 : 0.32} />}
 
+        {!bare && <>
         {/* far hill, so the tree has something to stand on */}
         <path d="M-52 20 q26 -14 52 -4 q28 10 52 -2 v18 h-104z"
               fill={season === 'winter' ? '#4a5560' : '#3c4438'} opacity="0.7" />
@@ -102,7 +113,8 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
             <circle cx="-16" cy="-10" r="9"  fill={leaves[1]} />
           </g>
         )}
-        {season === 'autumn' && (
+        </>}
+        {!bare && season === 'autumn' && (
           <g className="iso-fall" fill={leaves[0]} opacity="0.75">
             <circle cx="-24" cy="2" r="1.8" /><circle cx="22" cy="10" r="1.6" />
             <circle cx="4" cy="16" r="1.5" />
@@ -110,7 +122,7 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
         )}
         {snowy && (
           <>
-            <path d="M-52 24 q26 -8 52 -2 q28 8 52 -2 v14 h-104z" fill="#c9d4dc" opacity="0.55" />
+            {!bare && <path d="M-52 24 q26 -8 52 -2 q28 8 52 -2 v14 h-104z" fill="#c9d4dc" opacity="0.55" />}
             <g className="iso-snow" fill="#e8eef2" opacity="0.8">
               <circle cx="-30" cy="-40" r="1.6" /><circle cx="-6" cy="-52" r="1.4" />
               <circle cx="18" cy="-34" r="1.7" /><circle cx="34" cy="-50" r="1.3" />

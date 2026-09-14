@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import GameIcon from './GameIcon';
+import PanelMark from './PanelMark';
 import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls, Contract, GameState } from '../types';
-import { AlertTriangle, PauseCircle, Star, Package, Trash2, Sprout, Activity, ArrowDownToLine, Filter, Hourglass, Handshake } from 'lucide-react';
+import { AlertTriangle, PauseCircle } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
@@ -8,10 +10,7 @@ import RunTrace from './RunTrace';
 import SpeedControl from './SpeedControl';
 import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour , sporulation, sporeYield, describeSporulation } from '../services/gameLogic';
 import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS , SPORULATION_START } from '../constants';
-import {
-  CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon,
-  LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon
-} from './icons';
+import { CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon, LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon } from './icons';
 
 /**
  * THE CHAMBER PANEL
@@ -529,6 +528,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
         <div className="corner c-tl" /><div className="corner c-tr" /><div className="corner c-bl" /><div className="corner c-br" />
 
         <div className="lhead">
+          <PanelMark name="inspector" size={44} />
           {/* STATE HAPPENS TO THE PAPER. A spoiled batch is not a red number —
               its label is water-stained and overstamped, and everybody already
               knows what that means without being told. */}
@@ -789,7 +789,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   if (fits.length === 0) return null;
                   return (
                     <div className="ct-deliver">
-                      <span className="cd-lbl"><Handshake size={12} /> Owed to a vendor</span>
+                      <span className="cd-lbl"><GameIcon name="handshake" size={12} /> Owed to a vendor</span>
                       {fits.map(c => {
                         const units = Math.min(unitsFromBatch(batch), c.unitsRequired - c.unitsDelivered);
                         return (
@@ -905,13 +905,13 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                       <div className="tool-row">
                         {canPress && (
                           <button className="tool-btn" onClick={() => onProcess?.('press')}>
-                            <ArrowDownToLine size={18} color="var(--teal)" />
+                            <GameIcon name="stow" size={18} color="var(--teal)" />
                             <span className="lbl">{isWetMash ? 'Extract Sauce' : 'Hydro-Press'}</span>
                           </button>
                         )}
                         {canFilter && (
                           <button className="tool-btn" onClick={() => onProcess?.('filter')}>
-                            <Filter size={18} color="var(--plum)" />
+                            <GameIcon name="filter" size={18} color="var(--plum)" />
                             <span className="lbl">Clarify</span>
                           </button>
                         )}
@@ -932,7 +932,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                     if (fits.length === 0) return null;
                     return (
                       <div className="ct-deliver">
-                        <span className="cd-lbl"><Handshake size={12} /> Owed to a vendor</span>
+                        <span className="cd-lbl"><GameIcon name="handshake" size={12} /> Owed to a vendor</span>
                         {fits.map(c => {
                           const units = Math.min(unitsFromBatch(batch), c.unitsRequired - c.unitsDelivered);
                           return (
@@ -993,17 +993,17 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {onCellar && canCellar && (
                         <button className="btn btn-plum" onClick={onCellar} title="Age this in the cellar — it keeps developing and frees the bench slot">
-                          <Hourglass size={14} /> Lay down to age
+                          <GameIcon name="hourglass" size={14} /> Lay down to age
                         </button>
                       )}
                       {onStore && (
                         <button className="btn btn-ghost" onClick={onStore} title="Into the pantry as an ingredient — a koji you can inoculate the next batch with, rather than a product you sell">
-                          <Package size={14} /> Keep in Pantry
+                          <GameIcon name="parcel" size={14} /> Keep in Pantry
                         </button>
                       )}
                       {isKoji && isExemplary && onBackSlop && (
                         <button className="btn btn-ghost" onClick={onBackSlop}>
-                          <Sprout size={14} color="var(--teal)" /> Back-Slop Inoculant
+                          <GameIcon name="sprout" size={14} color="var(--teal)" /> Back-Slop Inoculant
                         </button>
                       )}
                       {/* Gated on the bed having actually gone to spore, not on
@@ -1014,13 +1014,13 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                           decides how MUCH you get. */}
                       {isKoji && onSporulate && sporeYield(batch, recipe) > 0 && (
                         <button className="btn btn-ghost" onClick={onSporulate}>
-                          <Activity size={14} color="var(--amber)" />
+                          <GameIcon name="pulse" size={14} color="var(--amber)" />
                           Take {sporeYield(batch, recipe)} packets of spore
                         </button>
                       )}
                       {onDiscard && (
                         <button className="btn btn-brick" style={{ marginLeft: 'auto' }} onClick={onDiscard}>
-                          <Trash2 size={14} /> Discard / Clean
+                          <GameIcon name="pail" size={14} /> Discard / Clean
                         </button>
                       )}
                     </div>
@@ -1039,7 +1039,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
               <span style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 12 }}>{score}/100</span>
               <div style={{ display: 'flex', gap: 1 }}>
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} size={11} color="var(--amber)" fill={i < stars ? 'var(--amber)' : 'none'} />
+                  <GameIcon key={i} name="star" size={11} color="var(--amber)" style={{ opacity: (i < stars) ? 1 : 0.28 }} />
                 ))}
               </div>
             </div>

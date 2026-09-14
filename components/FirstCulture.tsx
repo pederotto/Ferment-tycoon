@@ -1,4 +1,5 @@
 import React from 'react';
+import PanelMark from './PanelMark';
 import { GameState } from '../types';
 import { INGREDIENTS } from '../constants';
 import { CloseIcon, CheckIcon } from './icons';
@@ -119,6 +120,7 @@ const FirstCulture: React.FC<FirstCultureProps> = ({ gameState, onDismiss }) => 
   return (
     <div className="firstrun">
       <div className="fr-head">
+        <PanelMark name="first" size={30} />
         <span className="l">First culture · {completed}/{STEPS.length}</span>
         <button className="close-stamp" style={{ width: 22, height: 22 }} onClick={onDismiss} aria-label="Dismiss the guide">
           <CloseIcon size={10} />

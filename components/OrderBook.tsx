@@ -1,6 +1,7 @@
 import PanelMark from './PanelMark';
 import { BUYER_SEAL } from './sealSheet';
 import React from 'react';
+import GameIcon from './GameIcon';
 import { Contract, GameState } from '../types';
 import { BUYERS } from '../constants';
 import {
@@ -8,7 +9,7 @@ import {
   contractProgressLabel, isVendorUnlocked, describeUnlock,
 } from '../services/vendors';
 import { CloseIcon } from './icons';
-import { Handshake, Clock, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 /**
  * THE ORDER BOOK
@@ -89,7 +90,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
           {/* --- offers on the table --- */}
           {offered.length > 0 && (
             <section>
-              <span className="ob-lbl"><Handshake size={12} /> On the table</span>
+              <span className="ob-lbl"><GameIcon name="handshake" size={12} /> On the table</span>
               {offered.map(c => (
                 <div key={c.id} className="ob-offer">
                   <div className="oh">
@@ -119,7 +120,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
 
           {/* --- what you owe --- */}
           <section>
-            <span className="ob-lbl"><Clock size={12} /> Promised</span>
+            <span className="ob-lbl"><GameIcon name="clock" size={12} /> Promised</span>
             {active.length === 0 ? (
               <p className="ob-empty">
                 Nothing outstanding. Sell good stock to the same vendor a few times
@@ -146,7 +147,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
                   </div>
                   {tight && (
                     <p className="risk bad">
-                      <AlertTriangle size={11} /> ${c.cashPenalty.toLocaleString()} and {c.standingPenalty} standing
+                      <GameIcon name="alert" size={11} /> ${c.cashPenalty.toLocaleString()} and {c.standingPenalty} standing
                       if this is not finished.
                     </p>
                   )}
@@ -179,7 +180,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
           {/* --- who you have not met --- */}
           {locked.length > 0 && (
             <section>
-              <span className="ob-lbl"><Lock size={12} /> Not yet</span>
+              <span className="ob-lbl"><GameIcon name="lock" size={12} /> Not yet</span>
               {locked.map(b => (
                 <div key={b.id} className="ob-locked">
                   <Seal id={b.id} size={20} />
@@ -198,7 +199,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
                 <div key={c.id} className={`ob-settled${c.status === 'failed' ? ' failed' : ''}`}>
                   {c.status === 'complete'
                     ? <CheckCircle2 size={12} color="var(--moss)" />
-                    : <AlertTriangle size={12} color="var(--brick)" />}
+                    : <GameIcon name="alert" size={12} color="var(--brick)" />}
                   <span className="who">{c.buyerName}</span>
                   <span className="what">{c.unitsRequired} × {describeContractWant(c)}</span>
                   <span className="res">{c.status === 'complete' ? 'delivered' : 'failed'}</span>
