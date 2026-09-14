@@ -148,6 +148,24 @@ export default function App() {
   const [unreadNotes, setUnreadNotes] = useState(0);
   const noticeDate = useRef('');
   const recentNoteKeys = useRef<string[]>([]);
+  // Notes closes the way every popover should: a click anywhere else, or Escape.
+  useEffect(() => {
+    if (!journalOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      const t = e.target as Element | null;
+      if (t && t.closest('.notice-journal, .notice-chip')) return;
+      setJournalOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setJournalOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [journalOpen]);
   noticeDate.current = `${MONTH_NAMES[gameState.month]} · week ${gameState.week}`;
   // Callers pass Date.now() as an id, which was fine for a single slot but
   // collides in a queue when several notices fire in the same millisecond —
