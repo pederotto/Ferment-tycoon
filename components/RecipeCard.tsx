@@ -56,6 +56,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, knowledge, mastery, own
       <div className="reccard" onClick={e => e.stopPropagation()}>
         <span className="corner c-tl" />
         <span className="corner c-br" />
+        <span className="rc-border l" aria-hidden="true" />
+        <span className="rc-border r" aria-hidden="true" />
 
         <div className="rc-head">
           <PanelMark name="recipe" />

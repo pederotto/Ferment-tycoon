@@ -3994,3 +3994,24 @@ html, body {
   -webkit-mask-image: var(--orn-divider-wheat, none);
           mask-image: var(--orn-divider-wheat, none);
 }
+
+/* The laurel cartouche sits behind the Codex and harvest-docket headings as a
+   faint watermark — decoration that takes no room and moves nothing. */
+.codex-panel .lhead::before, .hr-head::before {
+  content: ""; position: absolute; left: 50%; top: 4px; width: min(420px, 70%); height: 88px;
+  transform: translateX(-50%); pointer-events: none; z-index: 0;
+  background: var(--brass); opacity: 0.12;
+  -webkit-mask: var(--orn-cartouche, none) no-repeat center / contain;
+          mask: var(--orn-cartouche, none) no-repeat center / contain;
+}
+.codex-panel .lhead > *, .hr-head > * { position: relative; z-index: 1; }
+
+/* A vine border down each side of the recipe card, mirrored on the right. */
+.rc-border {
+  position: absolute; top: 72px; bottom: 56px; width: 16px; pointer-events: none; z-index: 0;
+  background: var(--brass); opacity: 0.32;
+  -webkit-mask: var(--orn-border-vine, none) repeat-y center top / 100% auto;
+          mask: var(--orn-border-vine, none) repeat-y center top / 100% auto;
+}
+.rc-border.l { left: 8px; }
+.rc-border.r { right: 8px; transform: scaleX(-1); }
