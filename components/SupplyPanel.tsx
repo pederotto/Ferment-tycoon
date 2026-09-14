@@ -217,7 +217,8 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                 );
                 if (held.length === 0) {
                   return (
-                    <p className="sup-empty">
+                    <p className="sup-empty empty-mark">
+                      <PanelMark name="first" size={52} faded />
                       No house cultures yet. Hold a koji bed past its peak until it
                       fruits, and take the spores — the bed is spent, but the strain
                       is yours.
@@ -353,7 +354,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               </div>
 
               <div className="catalogue custom-scrollbar">
-                {rows.length === 0 && <div className="cat-empty">Nothing on this shelf matches.</div>}
+                {rows.length === 0 && <div className="cat-empty empty-mark"><PanelMark name="supply" size={56} faded />Nothing on this shelf matches.</div>}
                 {rows.map(i => {
                   const Glyph = getIngredientIcon(i);
                   const lock = lockReason(i);
@@ -448,7 +449,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
           {tab === 'hardware' && (
             <div className="sup-body custom-scrollbar">
               <div className="sup-meta">
-                <span><BoltIcon size={12} /> Grid {currentPower}W / {maxPower}W</span>
+                <span><GameIcon name="power" size={12} /> Grid {currentPower}W / {maxPower}W</span>
                 <span>Bench {usedSlots} / {MAX_EQUIPMENT_SLOTS} slots</span>
                 <span>Vessels {Object.values(ownedVessels).reduce((a: number, b) => a + (b as number), 0)} owned</span>
               </div>
@@ -492,7 +493,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                   return (
                     <div key={t.id} className="eq-card">
                       <div className="eq-top">
-                        <span className="eq-ic"><WrenchIcon size={14} color="currentColor" /></span>
+                        <span className="eq-ic"><GameIcon name="hardware" size={14} color="currentColor" /></span>
                         <span><b>{t.name}</b><em>{owned(t.id)} owned</em></span>
                       </div>
                       <p>{t.description}</p>
@@ -513,7 +514,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                     {[{ w: 50, c: 500 }, { w: 100, c: 1000 }].map(u => (
                       <div key={u.w} className="eq-card">
                         <div className="eq-top">
-                          <span className="eq-ic"><BoltIcon size={14} color="currentColor" /></span>
+                          <span className="eq-ic"><GameIcon name="power" size={14} color="currentColor" /></span>
                           <span><b>+{u.w}W breaker</b><em>Raises the ceiling to {maxPower + u.w}W</em></span>
                         </div>
                         <p>Powered vessels trip the breaker above the grid limit and stop heating.</p>
@@ -544,7 +545,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       <div className="eq-top">
                         {BOOK_COVER[b.id]
                           ? <span className="eq-art book"><img src={BOOK_COVER[b.id].src} alt="" aria-hidden="true" /></span>
-                          : <span className="eq-ic"><BookIcon size={14} color="currentColor" /></span>}
+                          : <span className="eq-ic"><GameIcon name="books" size={14} color="currentColor" /></span>}
                         <span><b>{b.title}</b><em>{b.author} · teaches {b.teaches.length}</em></span>
                       </div>
                       <p>{b.blurb}</p>
@@ -577,7 +578,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                       <div className="eq-top">
                         {BOOK_COVER[b.id]
                           ? <span className="eq-art book"><img src={BOOK_COVER[b.id].src} alt="" aria-hidden="true" /></span>
-                          : <span className="eq-ic"><BookIcon size={14} color="currentColor" /></span>}
+                          : <span className="eq-ic"><GameIcon name="books" size={14} color="currentColor" /></span>}
                         <span><b>{b.title}</b><em>{b.author}{b.heatOnPurchase ? ` · +${b.heatOnPurchase} heat` : ''}</em></span>
                       </div>
                       <p>{b.blurb}</p>

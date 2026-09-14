@@ -122,7 +122,7 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
           <section>
             <span className="ob-lbl"><GameIcon name="clock" size={12} /> Promised</span>
             {active.length === 0 ? (
-              <p className="ob-empty">
+              <p className="ob-empty empty-mark"><PanelMark name="orders" size={56} faded />
                 Nothing outstanding. Sell good stock to the same vendor a few times
                 and they will start offering you work.
               </p>

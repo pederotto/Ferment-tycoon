@@ -231,7 +231,8 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
               <button className="mini-btn salvage" onClick={() => onBringUp(active.batch)}>Bring up</button>
             </div>
           ) : (
-            <p className="iso-hint">
+            <p className={`iso-hint${batches.length === 0 ? ' empty-mark' : ''}`}>
+              {batches.length === 0 && <PanelMark name="door" size={60} faded />}
               {batches.length === 0
                 ? 'Nothing down here yet. Send a miso, a shoyu, a garum or a vinegar down and it will keep developing while the bench slot goes back to work.'
                 : 'Nothing down here is being managed. It is being waited for — that is the whole point of the room.'}

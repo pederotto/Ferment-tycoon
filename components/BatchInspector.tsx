@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BUYER_SEAL } from './sealSheet';
 import GameIcon from './GameIcon';
 import PanelMark from './PanelMark';
 import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls, Contract, GameState } from '../types';
@@ -776,7 +777,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
 
                 {alertText && (
                   <div className="log-strip">
-                    <LogLinesIcon size={11} />
+                    <GameIcon name="contract" size={11} />
                     <span><b>{isSpoiled ? 'Spoiled' : 'Warning'}</b> &middot; {alertText}</span>
                   </div>
                 )}
@@ -838,7 +839,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                       const accent = getBuyerAccentColor(buyer.type);
                       return (
                         <div key={buyer.id} className="buyer" style={!willBuy ? { opacity: 0.5 } : undefined}>
-                          <span className="n"><BIcon size={12} color={accent} />{buyer.name}</span>
+                          <span className="n">{BUYER_SEAL[buyer.id] ? <img className="buyer-seal" src={BUYER_SEAL[buyer.id]} style={{ width: 16, height: 16 }} alt="" aria-hidden="true" draggable={false} /> : <BIcon size={12} color={accent} />}{buyer.name}</span>
                           {buyer.paysIn === 'renown'
                             ? <span className="p plum">+{renownGain} Renown</span>
                             : <span className="p">${price.toLocaleString()}</span>}
@@ -970,7 +971,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                         const accent = getBuyerAccentColor(buyer.type);
                         return (
                           <div key={buyer.id} className="buyer" style={{ opacity: willBuy ? 1 : 0.55 }}>
-                            <span className="n"><BIcon size={12} color={accent} />{buyer.name}</span>
+                            <span className="n">{BUYER_SEAL[buyer.id] ? <img className="buyer-seal" src={BUYER_SEAL[buyer.id]} style={{ width: 16, height: 16 }} alt="" aria-hidden="true" draggable={false} /> : <BIcon size={12} color={accent} />}{buyer.name}</span>
                             {buyer.paysIn === 'renown'
                               ? <span className="p plum">+{renownGain} Renown</span>
                               : <span className="p">${price.toLocaleString()}</span>}

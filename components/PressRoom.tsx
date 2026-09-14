@@ -94,7 +94,7 @@ const PressRoom: React.FC<PressRoomProps> = ({ tool, batches, customIngredients,
           </p>
 
           {pressable.length === 0 ? (
-            <p className="pr-empty">
+            <p className="pr-empty empty-mark"><PanelMark name="press" size={56} faded />
               {isPress
                 ? 'Nothing on the bench to press. A wet mash gives up liquid; a dry one only compacts.'
                 : 'Nothing to clarify. The centrifuge is for liquids — a garum or a vinegar, not a paste.'}

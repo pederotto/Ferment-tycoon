@@ -96,7 +96,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, knowledge, mastery, own
           {/* --- FROM THE BOOK --- */}
           <section className="rc-sec">
             <span className="rc-lbl book">
-              <BookIcon size={12} color="var(--plum)" /> From the book
+              <GameIcon name="books" size={12} color="var(--plum)" /> From the book
               {teachingBook && <em> · {teachingBook.title}</em>}
             </span>
             {showBookText ? (

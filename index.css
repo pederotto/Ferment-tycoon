@@ -19,7 +19,7 @@
   --line-strong: rgba(243, 233, 216, 0.20);
   --text-hi: #f4ead9;
   --text-mid: #c3b39a;
-  --text-lo: #8a7c65;
+  --text-lo: #b19f81;
 
   --amber: oklch(72% 0.15 55);
   --amber-deep: oklch(50% 0.13 50);
@@ -3890,39 +3890,7 @@ input[type="range"].dial-slider::-moz-range-thumb {
   .hud { flex-wrap: wrap; justify-content: center; }
 }
 
-/* The room's frame is oak. `--oak-grain` (paperArt.ts) is grain only, centred on
-   mid-grey, so it SOFT-LIGHTS onto each surface's existing colour and never
-   repaints it — the palette, the contrast of the type and the paper-versus-room
-   rule all stay where they were. The dark surfaces only: anything printed on
-   stock keeps the linen.
 
-   Each rule restates its own ground as the second layer, because a
-   background-image list replaces the gradient it sits on rather than adding to
-   it. If one of these grounds changes above, change it here too. */
-.hud,
-.rail,
-.wood-panel, .ledger,
-.supply, .hw-modal,
-.cellar,
-.orderbook, .crewroom, .pressroom,
-.inoc-head {
-  background-size: 512px 512px, auto;
-  background-blend-mode: soft-light, normal;
-}
-.hud { background-image: var(--oak-grain), linear-gradient(180deg, #241c14, #1c160f); }
-.rail { background-color: var(--bg-void); background-image: var(--oak-grain); background-blend-mode: soft-light; background-size: 512px 512px; }
-.rail.right { background-color: #120d09; }
-.wood-panel, .ledger { background-image: var(--oak-grain), linear-gradient(180deg, #241c14, #1a140d); }
-.supply, .hw-modal { background-image: var(--oak-grain), linear-gradient(180deg, #241c14, #191309); }
-.cellar { background-image: var(--oak-grain), linear-gradient(180deg, #1c1710, #141009); }
-.orderbook, .crewroom, .pressroom { background-color: var(--bg-panel); background-image: var(--oak-grain); background-blend-mode: soft-light; background-size: 512px 512px; }
-.inoc-head { background-image: var(--oak-grain), linear-gradient(180deg, #2a2117, #221a12); }
-
-/* Leather for the bound things, over the same grounds as the oak rule above:
-   the Codex is a book, and the underground shelf is the one place in the game
-   that is not the workshop. Placed after the oak so it wins at equal weight. */
-.codex-panel { background-image: var(--leather-grain), linear-gradient(180deg, #241c14, #1a140d); }
-.supply.underground { background-image: var(--leather-grain), linear-gradient(180deg, #241c14, #191309); }
 
 /* Marks on the heads that had only a word. */
 .rc-head > .panel-mark + div { margin-right: auto; }
@@ -3934,3 +3902,58 @@ input[type="range"].dial-slider::-moz-range-thumb {
    component: a global .seal rule already sizes the brand seal, and an inline
    style is the only thing that cannot collide with it. */
 .sup-supplier .sup-seal { flex: none; display: block; object-fit: contain; opacity: 0.9; margin: -3px 0; }
+
+/* An empty screen shows its own object, faded — the crate with nothing in it,
+   the crock waiting for a charge, the door to a cellar with nothing below. */
+.empty-mark { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.panel-mark.faded { opacity: 0.42; filter: grayscale(0.35) drop-shadow(0 3px 5px rgba(28, 20, 12, 0.35)); }
+
+/* The header's seal is the painted brass crest now, so it wears no drawn ring. */
+.brand .seal.crest { border: none; background: none; }
+.brand .seal.crest img { display: block; object-fit: contain; }
+.buyer .n .buyer-seal { flex: none; display: inline-block; vertical-align: -3px; margin-right: 5px; object-fit: contain; }
+
+/* =========================================================================
+   MATERIALS, NOT BROWN
+   The room and its instruments were flat brown gradients. They are made of
+   something now: oak for the frame, leather for the bound things, green linen
+   bookcloth for tabs and nav buttons (materialPlate.ts). Printed stock — labels,
+   cards, dockets — is not touched; the paper-versus-room line is unchanged.
+
+   Each surface is `a light-and-shade gradient, the tile, a fallback colour`, so
+   a surface without the tile still reads as the right tone. Translucent inner
+   panels (gauges, stations, pantry rows) are left as they were: they darken the
+   material beneath them rather than hiding it.
+   ========================================================================= */
+html, body {
+  background: linear-gradient(rgba(8, 5, 3, 0.46), rgba(8, 5, 3, 0.46)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #1a120b;
+}
+.hud, .rail,
+.wood-panel, .ledger, .sheet, .pantry,
+.supply, .hw-modal, .ing-modal, .reccard, .hreport,
+.orderbook, .crewroom, .pressroom, .cellar,
+.inoc-head, .protocol-pop, .station.pick-pane,
+.scan-dock, .scan.floating,
+.toast, .firstrun, .guide-recall, .iso-actions {
+  background: linear-gradient(180deg, rgba(255, 236, 205, 0.035), rgba(0, 0, 0, 0.16)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #2a1d12;
+}
+.rail.right { background: linear-gradient(rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.16)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #22170e; }
+.cellar { background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.32)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #1c140c; }
+/* An alert is the same oak with a warning laid over it. */
+.toast.alert, .raid-card {
+  background: linear-gradient(180deg, rgba(128, 38, 20, 0.40), rgba(64, 16, 8, 0.48)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #2e1a13;
+}
+.codex-panel, .supply.underground {
+  background: linear-gradient(180deg, rgba(255, 236, 205, 0.03), rgba(0, 0, 0, 0.14)), var(--tex-leather, none) 0 0 / 512px 512px repeat, #2b1c15;
+}
+.tab-btn-hud, .rail .tab-btn-hud, .tool-btn, .chip-tab, .sup-tab, .rail-tab, .station-tabs {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.14)), var(--tex-linen, none) 0 0 / 256px 256px repeat, #26302a;
+}
+.tab-btn-hud.active, .rail .tab-btn-hud.active, .sup-tab.active, .rail-tab.active, .tool-btn.on {
+  background: linear-gradient(rgba(217, 164, 65, 0.16), rgba(217, 164, 65, 0.16)), var(--tex-linen, none) 0 0 / 256px 256px repeat, #26302a;
+}
+.sup-tab.illicit.active {
+  background: linear-gradient(rgba(179, 69, 47, 0.2), rgba(179, 69, 47, 0.2)), var(--tex-linen, none) 0 0 / 256px 256px repeat, #26302a;
+}
+/* The selected speed and filter chip stays solid amber — it is a lit control. */
+.chip-tab.active { background: var(--amber); }

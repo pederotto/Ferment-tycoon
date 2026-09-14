@@ -61,6 +61,15 @@ const IngredientIcon: React.FC<Props> = ({ id, size = 30, fallback, className })
                    index={p} size={size} className={`product${className ? ' ' + className : ''}`} />;
   }
 
+  // Koji the player grows is minted per bed (`koji_<substrate>_a6_p4`) and matches
+  // no cell, so every grown bed drew nothing. They are all a tray of koji: show
+  // the barley koji until a substrate has a picture of its own.
+  if (/^koji_/.test(id) || id === 'heritage_koji_tray') {
+    const k = sheetIndex('barley_koji');
+    if (k >= 0) return <Sliced sheet={INGREDIENT_SHEET} cols={SHEET_COLS} cw={SHEET_CELL_W} ch={SHEET_CELL_H}
+                               index={k} size={size} className={className} />;
+  }
+
   const Drawn = artFor(id) ?? fallback;
   return Drawn ? <Drawn size={Math.round(size * 0.8)} color="currentColor" /> : null;
 };

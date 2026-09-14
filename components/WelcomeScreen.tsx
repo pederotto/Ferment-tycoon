@@ -1,5 +1,6 @@
 
 import React from 'react';
+import GameIcon from './GameIcon';
 import { ScienceIcon, LabLedgerIcon, MarketLedgerIcon, ArrowRightIcon } from './icons';
 import { KEY_ART, KEY_ART_TALL, CREST } from './titleArt';
 
@@ -33,21 +34,21 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onContinue, save
 
                 <div className="ledger-lines">
                     <div className="ledger-line">
-                        <div className="ic"><ScienceIcon size={16} /></div>
+                        <div className="ic"><GameIcon name="flask" size={16} /></div>
                         <div>
                             <div className="t">The Science</div>
                             <div className="d">Real biology under the hood — temperature, humidity, and salt all matter.</div>
                         </div>
                     </div>
                     <div className="ledger-line">
-                        <div className="ic"><LabLedgerIcon size={16} color="#8a9a6b" /></div>
+                        <div className="ic"><GameIcon name="archives" size={16} color="#8a9a6b" /></div>
                         <div>
                             <div className="t">The Lab</div>
                             <div className="d">Grow the bench, hire staff, and automate the parts you've mastered.</div>
                         </div>
                     </div>
                     <div className="ledger-line">
-                        <div className="ic"><MarketLedgerIcon size={16} /></div>
+                        <div className="ic"><GameIcon name="money" size={16} /></div>
                         <div>
                             <div className="t">The Market</div>
                             <div className="d">Sell clean to restaurants, or take the risk — and the price — of the underground.</div>

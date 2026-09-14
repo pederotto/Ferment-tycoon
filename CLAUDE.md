@@ -799,6 +799,22 @@ cream is mud.
   background and the cell reads as an engraved illustration block; give it
   anything else and it reads as a square pasted on.
 
+**The room is made of materials, not brown.** Oak for the frame (header, rails,
+every dark screen), leather for the bound things (the Codex, the underground
+shelf), green linen bookcloth for tabs and nav buttons — colour tiles in
+`materialPlate.ts`, set as `--tex-*` properties at startup. Two rules that are
+not visible from any one rule:
+
+- **Each textured surface restates its own ground.** A `background` list
+  replaces the gradient it sits on rather than adding to it, so the materials
+  block at the end of `index.css` carries each surface's tone as its last
+  layer. Change a surface's colour there, not in its original rule.
+- **Measure type against the LIGHT end of a texture.** A textured ground is
+  not one colour; the 95th-percentile luminance is where text fails. That is
+  why `--text-lo` went from `#8a7c65` (2.6:1 on the oak's light end) to
+  `#b19f81` (4.5:1 on all three), and why the tiles are built dark. A new
+  material gets the same check before it ships.
+
 **A label has two forms, and the second one is what makes long lists work.**
 Turned edge-on it is a spine — type stripe, name, small print, price — and
 sixty spines is a shelf. Sixty full cards is a wall. The catalogue and the

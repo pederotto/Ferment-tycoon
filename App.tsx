@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { CREST } from './components/titleArt';
 import { GameState, Batch, Ingredient, IngredientType, LogEntry, Buyer, StaffRoleType, WeatherState, WeatherType, Vessel, FermentType, Book, Lineage, ChamberControls, CrewMember } from './types';
 import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER, DAY_DURATION_MS, STAFF_ROLES, DEMAND_FLOOR, BANKRUPTCY_STRIKES, BOOKS, SUPPLIERS, CELLAR_CAPACITY, CELLAR_TICK_DIVISOR,
   RAID_HEAT_THRESHOLD, RAID_CHANCE_PER_DAY, HEAT_DECAY_PER_TICK, HEAT_DECAY_AFTER_BUST,
@@ -1825,7 +1826,7 @@ export default function App() {
           instead of a ring the size of a thumbnail. */}
       <header className="hud sticky top-0 z-30">
         <div className="brand" style={{ minWidth: 0 }}>
-          <div className="seal"><SealGlyphIcon size={22} /></div>
+          <div className="seal crest"><img src={CREST} style={{ width: 38, height: 38 }} alt="" aria-hidden="true" draggable={false} /></div>
           <div className="wordmark hidden sm:flex">
             <span className="title slab">FERMENTA</span>
             <span className="sub">Atelier &amp; Culture House</span>

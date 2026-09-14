@@ -303,7 +303,7 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {filteredArchives.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-lo)' }}>
-                  <BookIcon size={40} color="var(--text-lo)" />
+                  <PanelMark name="books" size={64} faded />
                   <p className="mono" style={{ marginTop: 12 }}>No vintage records found.</p>
                   <p style={{ fontSize: 11, marginTop: 4 }}>Harvest batches in the lab to populate your permanent registry.</p>
                 </div>

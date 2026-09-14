@@ -87,7 +87,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           <section>
             <span className="cw-lbl">On the books</span>
             {crew.length === 0 ? (
-              <p className="cw-empty">
+              <p className="cw-empty empty-mark">
+                <PanelMark name="crew" size={56} faded />
                 You are running this alone. That is fine while everything fits in a
                 jar — a large vessel stratifies faster than one person can turn it.
               </p>
@@ -126,7 +127,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               hire from it or not.
             </p>
             {pool.length === 0 ? (
-              <p className="cw-empty">Nobody about this month.</p>
+              <p className="cw-empty empty-mark"><PanelMark name="crew" size={44} faded />Nobody about this month.</p>
             ) : pool.map(c => {
               const trait = getTrait(c.traitId);
               const afford = money >= c.hiringCost;

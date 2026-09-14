@@ -29,7 +29,7 @@ export default {
         cubby: '#0f0b07',
         hi: '#f4ead9',
         mid: '#c3b39a',
-        lo: '#8a7c65',
+        lo: '#b19f81',
         amber: {
           DEFAULT: 'oklch(72% 0.15 55)',
           deep: 'oklch(50% 0.13 50)',

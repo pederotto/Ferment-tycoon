@@ -621,7 +621,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
           <div className="acts">
             {logbook.length > 0 && (
               <button className="protocol-btn" onClick={() => setShowVintageLoader(!showVintageLoader)}>
-                <BookIcon size={13} color="var(--plum)" />
+                <GameIcon name="books" size={13} color="var(--plum)" />
                 Proven Protocols ({logbook.filter(l => l.rating >= 4).length})
               </button>
             )}
@@ -653,7 +653,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             </div>
             <div className="pbody custom-scrollbar">
               {logbook.filter(l => l.rating >= 4 && l.config).length === 0 ? (
-                <div className="empty">Nothing rated 4★ yet. Sell a good batch and it lands here.</div>
+                <div className="empty empty-mark"><PanelMark name="books" size={44} faded />Nothing rated 4★ yet. Sell a good batch and it lands here.</div>
               ) : (
                 logbook.filter(l => l.rating >= 4 && l.config).map(log => (
                   <button key={log.id} className="vintage" onClick={() => loadVintage(log)}>
@@ -673,9 +673,9 @@ const BatchController: React.FC<BatchControllerProps> = ({
         <div className="station-tabs md:hidden">
           {([
             { id: 'pantry', label: 'Reagents', icon: <GameIcon name="search" size={12} color="currentColor" /> },
-            { id: 'bowl', label: 'Chamber', icon: <JarOutlineIcon size={12} color="currentColor" /> },
-            { id: 'vessel', label: 'Vessel', icon: <JarLineIcon size={12} color="currentColor" /> },
-            { id: 'run', label: 'Seal', icon: <BoltIcon size={12} color="currentColor" /> },
+            { id: 'bowl', label: 'Chamber', icon: <GameIcon name="warm" size={12} color="currentColor" /> },
+            { id: 'vessel', label: 'Vessel', icon: <GameIcon name="vessels" size={12} color="currentColor" /> },
+            { id: 'run', label: 'Seal', icon: <GameIcon name="seal" size={12} color="currentColor" /> },
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -754,7 +754,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
 
             <div className="station-scroll custom-scrollbar">
               {availableIngredients.length === 0 ? (
-                <div className="pantry-empty">No reagents in stock.</div>
+                <div className="pantry-empty empty-mark"><PanelMark name="supply" size={48} faded />No reagents in stock.</div>
               ) : (
                 availableIngredients.map(ing => {
                   const remaining = getRemainingInventory(ing.id);
@@ -821,15 +821,15 @@ const BatchController: React.FC<BatchControllerProps> = ({
                 <em>{selectedIngredientIds.length}</em>
               </button>
               <button type="button" className="pick-btn" onClick={() => setPicker('vessel')}>
-                <JarLineIcon size={12} color="currentColor" />
+                <GameIcon name="vessels" size={12} color="currentColor" />
                 {vesselId ? (VESSELS.find(v => v.id === vesselId)?.name ?? 'Vessel') : 'Choose a vessel'}
                 {vesselId && <em>{capacityLimitL}L</em>}
               </button>
             </div>
 
             {selectedIngredientIds.length === 0 ? (
-              <div className="chamber-empty">
-                <JarOutlineIcon size={26} color="var(--text-lo)" />
+              <div className="chamber-empty empty-mark">
+                <PanelMark name="crock" size={52} faded />
                 <span className="t">The chamber is empty.</span>
                 <span className="s">Load it up to {capacityLimitL}L from the pantry.</span>
               </div>
@@ -931,7 +931,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             {selectedIngredientIds.length > 0 && (
               <div className="bench-block">
                 <div className="bh">
-                  <span className="l"><SaltCrystalIcon size={12} color="var(--teal)" /> Salinity</span>
+                  <span className="l"><GameIcon name="additive" size={12} color="var(--teal)" /> Salinity</span>
                   <span className={`v ${hasSalt ? '' : 'off'}`}>{salinity.toFixed(1)}%</span>
                 </div>
                 {hasSalt ? (
@@ -960,7 +960,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             {selectedIngredientIds.length > 0 && (
               <div className="bench-block">
                 <div className="bh">
-                  <span className="l"><WaterDropIcon size={12} color="var(--teal)" /> Hydration</span>
+                  <span className="l"><GameIcon name="droplet" size={12} color="var(--teal)" /> Hydration</span>
                   <span className={`v ${hasWater ? '' : 'off'}`}>{hydration.toFixed(0)}%</span>
                 </div>
                 {hasWater ? (
@@ -1062,7 +1062,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
             {selectedIngredientIds.length > 0 && (
               <div className="bench-block">
                 <div className="bh">
-                  <span className="l"><Scale size={12} color="var(--brass)" /> Predicted physics</span>
+                  <span className="l"><GameIcon name="scales" size={12} color="var(--brass)" /> Predicted physics</span>
                 </div>
                 <div className="kv">
                   <span className="k">Batch volume</span>
@@ -1124,10 +1124,10 @@ const BatchController: React.FC<BatchControllerProps> = ({
             >
               <div className="ch">
                 <span className="l">What this becomes</span>
-                <Info size={12} color="var(--text-lo)" />
+                <GameIcon name="help" size={12} color="var(--text-lo)" />
               </div>
               <span className="nm">
-                {isBioSludge && <Skull size={15} />}
+                {isBioSludge && <GameIcon name="cracked_seal" size={15} />}
                 {projectedRecipeName}
               </span>
               {isUndiscovered && !isBioSludge && (
@@ -1186,7 +1186,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
 
               <div className="dial-ctl">
                 <div className="dh">
-                  <span className="l"><WaterDropIcon size={12} color="var(--teal)" /> Moisture</span>
+                  <span className="l"><GameIcon name="droplet" size={12} color="var(--teal)" /> Moisture</span>
                   <span className="v">{humidity}%</span>
                 </div>
                 <input

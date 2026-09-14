@@ -1,4 +1,5 @@
 import React from 'react';
+import PanelMark from './PanelMark';
 import { Batch } from '../types';
 import { getRecipeForBatch, isAgitatedFerment } from '../services/gameLogic';
 import IsoAppliance, { ApplianceId } from './IsoAppliance';
@@ -34,7 +35,7 @@ interface ToolRackProps {
 const ToolRack: React.FC<ToolRackProps> = ({ inventory, batches, onOpenTool }) => {
   const owned = RACK.filter(h => (inventory[h.id] ?? 0) > 0);
   if (owned.length === 0) {
-    return <p className="rack-empty">Nothing yet. Tools are bought from Supply.</p>;
+    return <p className="rack-empty empty-mark"><PanelMark name="hardware" size={40} faded />Nothing yet. Tools are bought from Supply.</p>;
   }
 
   // A tool is "running" when a batch is actually calling on it this tick — the
