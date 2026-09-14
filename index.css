@@ -3864,3 +3864,28 @@ input[type="range"].dial-slider::-moz-range-thumb {
 .ob-locked { display: flex; align-items: center; gap: 9px; }
 .ob-locked .who { margin-right: auto; }
 .ob-locked .seal { opacity: 0.4; filter: grayscale(1); }
+
+/* Funds was off the right-hand end of the header at every width below 1100 —
+   and the header's scrollbar is hidden, so the one number the player checks
+   most could not be seen at all. Two causes, both in the header rules above.
+
+   Below 900 the header is meant to WRAP, but the `nowrap` that fixed the
+   1024–1250 collisions sits later in this file at the same specificity, so it
+   silently won there too and a phone got one 860px row inside 400px. Wrapping
+   is safe now that nothing shrinks: a child that does not fit takes a new row.
+
+   Between the wrap and 1180 there is one row and not enough of it, so the
+   wordmark gives way — the seal still marks the brand — before any number does.
+   The gaps tighten too: measured at 901px with $1,234,567 in the bank, the
+   wordmark alone left Funds 15px short. Bounded below, because the phone
+   blocks set their own tighter gaps and a wrapped header has room for the name. */
+@media (min-width: 901px) and (max-width: 1179px) {
+  .hud .wordmark, .hud .brand > .divider-line { display: none; }
+  .hud { gap: 10px; }
+  .hud .brand { gap: 10px; }
+  .hud .gauges, .tickets { gap: 6px; }
+  .hud .ticket { padding: 5px 9px; }
+}
+@media (max-width: 900px) {
+  .hud { flex-wrap: wrap; justify-content: center; }
+}
