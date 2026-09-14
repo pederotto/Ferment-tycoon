@@ -4207,3 +4207,64 @@ html, body {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.34)), var(--tex-greyoak, none) 0 0 / 512px 512px repeat, #1e1d1b;
 }
 
+/* =========================================================================
+   NOTICES IN A CORNER, AND A GUIDE THAT KNOWS WHERE THE RAIL IS
+   Toasts were a 560px card top-centre over the room, three deep, for up to nine
+   seconds, for weather and bills. They sit bottom-right of the stage now, small,
+   two at most, and routine notes go to the Notes journal instead.
+   ========================================================================= */
+.notice-dock {
+  position: fixed; right: 18px; bottom: 16px; z-index: 70;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  max-width: min(340px, calc(100vw - 36px)); pointer-events: none;
+}
+.notice-dock > * { pointer-events: auto; }
+@media (max-width: 1179px) { .notice-dock { right: 308px; } }
+@media (max-width: 759px)  { .notice-dock { right: 12px; bottom: 56px; } }
+.notice-dock .toast-stack {
+  position: static; transform: none; top: auto; left: auto;
+  align-items: flex-end; max-width: 100%; gap: 6px;
+}
+.notice-dock .toast {
+  position: static; transform: none; width: auto; max-width: 340px;
+  font-size: 11px; line-height: 1.4; padding: 7px 9px 7px 12px; border-radius: 5px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); backdrop-filter: none;
+  border-left-width: 3px; animation: notice-in 0.22s ease-out;
+}
+@keyframes notice-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.notice-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+  font-family: var(--f-spec); font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-mid); background: rgba(14, 10, 6, 0.72); border: 1px solid var(--line-strong);
+  cursor: pointer; opacity: 0.7; transition: opacity 0.15s, border-color 0.15s;
+}
+.notice-chip:hover { opacity: 1; border-color: var(--brass); }
+.notice-chip.unread { color: var(--text-hi); opacity: 0.92; }
+.notice-chip b {
+  min-width: 17px; padding: 1px 5px; border-radius: 999px; background: var(--amber); color: #1d1206;
+  font-size: 10px; letter-spacing: 0; text-align: center; font-variant-numeric: tabular-nums;
+}
+.notice-journal {
+  width: min(330px, calc(100vw - 36px)); max-height: 46vh; overflow-y: auto; padding: 10px 12px 12px;
+  border-radius: 6px; border: 1px solid var(--line-strong); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.32)), var(--tex-plaster, none) 0 0 / 512px 512px repeat, #2c2823;
+}
+.nj-head {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+  font-family: var(--f-spec); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brass);
+}
+.nj-head .close { background: none; border: none; color: var(--text-lo); font-size: 15px; cursor: pointer; }
+.nj-empty { margin: 0; font-size: 11.5px; color: var(--text-lo); font-style: italic; }
+.notice-journal ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.notice-journal li { font-size: 11.5px; line-height: 1.45; color: var(--text-mid); padding-bottom: 7px; border-bottom: 1px solid var(--line); }
+.notice-journal li:last-child { border-bottom: none; padding-bottom: 0; }
+.notice-journal li.warn { color: #e6c27a; }
+.notice-journal li.alert { color: #e8ab94; }
+.notice-journal .when { display: block; font-size: 9.5px; letter-spacing: 0.06em; color: var(--text-lo); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+
+/* The guide card and its chip dock to the stage, clear of the 300px rail. */
+.firstrun { left: 318px; bottom: 60px; }
+.guide-recall { left: 318px; }
+@media (max-width: 1179px) { .firstrun { left: 18px; } .guide-recall { left: 18px; } }
+@media (max-width: 759px) { .guide-recall { left: 12px; right: auto; bottom: 12px; } }
+

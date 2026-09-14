@@ -102,6 +102,15 @@ const STEPS: Step[] = [
   },
 ];
 
+/**
+ * How far through the guide a run is. `complete` means it has nothing left to
+ * say, which is when it should retire rather than sit there empty.
+ */
+export const guideProgress = (g: GameState) => {
+  const done = STEPS.filter(step => step.done(g)).length;
+  return { done, total: STEPS.length, complete: done === STEPS.length };
+};
+
 const FirstCulture: React.FC<FirstCultureProps> = ({ gameState, onDismiss }) => {
   const doneFlags = STEPS.map(s => s.done(gameState));
   const currentIdx = doneFlags.findIndex(d => !d);

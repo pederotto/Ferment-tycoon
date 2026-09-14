@@ -36,7 +36,7 @@ import { KOJI_ROOM_COST, KOJI_ROOM_CAPACITY, KOJI_ROOM_TEMP, KOJI_ROOM_DEFAULT_T
 import DevPanel from './components/DevPanel';
 import PanelMark from './components/PanelMark';
 import GameIcon from './components/GameIcon';
-import FirstCulture from './components/FirstCulture';
+import FirstCulture, { guideProgress } from './components/FirstCulture';
 import { TrendingUp, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, GaugeRing, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon, BagIcon, CloseIcon } from './components/icons';
 
@@ -135,8 +135,19 @@ export default function App() {
   // weather, raids, level-ups, mastery, purchases — and with a single slot on a
   // 5s timer they overwrote each other, so the ones that mattered were routinely
   // eaten by the ones that did not.
-  type Notice = { id: number; text: string; type: 'info' | 'warn' | 'alert' };
+  //
+  // QUIET BY DEFAULT. Weather, bills, what came into season, a mastery note and
+  // the keeper's daily round fired a toast in the middle of the room every few
+  // game days, which is a newsfeed, not a workshop. A `quiet` notice is written
+  // in the Notes journal and nothing pops up; a toast is for what needs you now.
+  type Notice = { id: number; text: string; type: 'info' | 'warn' | 'alert'; quiet?: boolean };
+  type Note = Notice & { when: string };
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [journal, setJournal] = useState<Note[]>([]);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [unreadNotes, setUnreadNotes] = useState(0);
+  const noticeDate = useRef('');
+  noticeDate.current = `${MONTH_NAMES[gameState.month]} · week ${gameState.week}`;
   // Callers pass Date.now() as an id, which was fine for a single slot but
   // collides in a queue when several notices fire in the same millisecond —
   // React then sees duplicate keys. The id is assigned here instead.
@@ -144,12 +155,21 @@ export default function App() {
   const setLabNotification = React.useCallback((n: Notice | null) => {
     if (!n) { setNotices([]); return; }
     const id = ++noticeSeq.current;
+    setJournal(prev => (prev.length && prev[prev.length - 1].text === n.text) ? prev : [...prev, { ...n, id, when: noticeDate.current }].slice(-40));
+    setUnreadNotes(u => u + 1);
+    if (n.quiet && n.type !== 'alert') return;
     setNotices(prev => {
       // Drop an identical message already on screen rather than stacking it.
       if (prev.some(p => p.text === n.text)) return prev;
-      return [...prev, { ...n, id }].slice(-3);
+      // Two at most, and an alert is never pushed off by a routine one.
+      const next = [...prev, { ...n, id }];
+      while (next.length > 2) {
+        const drop = next.findIndex(p => p.type !== 'alert');
+        next.splice(drop >= 0 ? drop : 0, 1);
+      }
+      return next;
     });
-    const ttl = n.type === 'alert' ? 9000 : n.type === 'warn' ? 7000 : 5000;
+    const ttl = n.type === 'alert' ? 8000 : n.type === 'warn' ? 5500 : 3800;
     setTimeout(() => setNotices(prev => prev.filter(p => p.id !== id)), ttl);
   }, []);
 
@@ -177,8 +197,23 @@ export default function App() {
         going.length ? `Last month for ${list(going)}.` : '',
       ].filter(Boolean).join(' '),
       type: 'info',
+      quiet: true,
     });
   }, [gameState.month, setLabNotification]);
+
+  // THE GUIDE RETIRES. It is a first-culture tutorial: once every step is done it
+  // has nothing left to say, and the Guide chip used to reopen an empty card.
+  // Finishing it closes it for good, with one note to say so.
+  const guideDoneNow = guideProgress(gameState).complete;
+  const guideWasDone = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (guideWasDone.current === null) { guideWasDone.current = guideDoneNow; return; }
+    if (guideDoneNow && !guideWasDone.current) {
+      setGameState(prev => (prev.onboardingDone ? prev : { ...prev, onboardingDone: true }));
+      setLabNotification({ id: Date.now(), text: 'First culture done. The guide steps back — the Codex, the post-mortems and your own archive carry it from here.', type: 'info' });
+    }
+    guideWasDone.current = guideDoneNow;
+  }, [guideDoneNow, setLabNotification]);
 
   // Spacebar to pause / unpause
   useEffect(() => {
@@ -568,7 +603,8 @@ export default function App() {
                         setLabNotification({
                             id: Date.now(),
                             text: `Weekly bills: $${bills.rent} rent · $${bills.upkeep} upkeep · $${bills.utilities} power${bills.wages > 0 ? ` · $${bills.wages} wages` : ''}.`,
-                            type: 'info'
+                            type: 'info',
+                            quiet: true
                         });
                     }
                     newStrikes = 0;
@@ -651,8 +687,9 @@ export default function App() {
                 newWeather = generateWeather(newMonth);
                 setLabNotification({
                     id: Date.now() + 1,
-                    text: `Seasonal Shift: Current weather is now ${newWeather.type} (${newWeather.description}).`,
-                    type: 'info'
+                    text: `The weather turns ${newWeather.type.toLowerCase()} — ${newWeather.description.toLowerCase()}.`,
+                    type: 'info',
+                    quiet: true
                 });
             }
 
@@ -813,7 +850,7 @@ export default function App() {
     if (report.spoiled) bits.push(`${report.spoiled} spoiled bed${report.spoiled > 1 ? 's' : ''} cleared`);
     if (report.short === 'grain') bits.push('out of grain to lay more');
     if (report.short === 'spores') bits.push('out of spores to lay more');
-    if (bits.length) setLabNotification({ id: Date.now(), text: `Koji keeper: ${bits.join(' · ')}.`, type: report.short ? 'warn' : 'info' });
+    if (bits.length) setLabNotification({ id: Date.now(), text: `Koji keeper: ${bits.join(' · ')}.`, type: report.short ? 'warn' : 'info', quiet: !report.short });
   }, [keeperDayKey]);
 
   const handleBuyBook = (book: Book) => {
@@ -1618,7 +1655,8 @@ export default function App() {
       setLabNotification({
         id: Date.now() + 2,
         text: `Hand steadied — ${recipe.name}, note ${mastery.leveledTo} of 5 unsealed.`,
-        type: 'info'
+        type: 'info',
+        quiet: true
       });
     }
 
@@ -1702,7 +1740,8 @@ export default function App() {
       setLabNotification({
         id: Date.now() + 2,
         text: `Hand steadied — ${recipe.name}, note ${storeMastery.leveledTo} of 5 unsealed.`,
-        type: 'info'
+        type: 'info',
+        quiet: true
       });
     }
     const logEntry: LogEntry = {
@@ -1837,22 +1876,44 @@ export default function App() {
       {/* HARDWARE STORE (Top Drawer) */}
 
 
-      {/* LAB NOTIFICATIONS — newest at the bottom, each on its own timer */}
-      {notices.length > 0 && (
-        <div className="toast-stack">
-          {notices.map(n => (
-            <div key={n.id} className={`toast ${n.type === 'alert' ? 'alert' : n.type === 'warn' ? 'warn' : ''}`}>
-              <GameIcon name="sparkle" size={16} className="shrink-0" style={{ color: 'var(--brass)' }} />
-              <span style={{ flex: 1 }}>{n.text}</span>
-              <button
-                className="close"
-                onClick={() => setNotices(prev => prev.filter(p => p.id !== n.id))}
-                aria-label="Dismiss notification"
-              >
-                &times;
-              </button>
+      {/* NOTICES LIVE IN A CORNER, NOT IN THE MIDDLE OF THE ROOM. Toasts for what
+          needs you now, two at most; everything else is in Notes, one click away. */}
+      {!uiState.showWelcome && (
+        <div className="notice-dock">
+          {notices.length > 0 && (
+            <div className="toast-stack">
+              {notices.map(n => (
+                <div key={n.id} className={`toast ${n.type === 'alert' ? 'alert' : n.type === 'warn' ? 'warn' : ''}`} role="status">
+                  <span style={{ flex: 1 }}>{n.text}</span>
+                  <button className="close" onClick={() => setNotices(prev => prev.filter(p => p.id !== n.id))} aria-label="Dismiss notification">&times;</button>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+          {journalOpen && (
+            <div className="notice-journal" role="log" aria-label="Recent notes">
+              <div className="nj-head">
+                <span>Notes</span>
+                <button className="close" onClick={() => setJournalOpen(false)} aria-label="Close notes">&times;</button>
+              </div>
+              {journal.length === 0
+                ? <p className="nj-empty">Nothing yet.</p>
+                : (
+                  <ul>
+                    {[...journal].reverse().map(j => (
+                      <li key={j.id} className={j.type}><span className="when">{j.when}</span>{j.text}</li>
+                    ))}
+                  </ul>
+                )}
+            </div>
+          )}
+          <button
+            className={`notice-chip${unreadNotes > 0 ? ' unread' : ''}`}
+            onClick={() => { setJournalOpen(o => !o); setUnreadNotes(0); }}
+            title="Recent notes — the weather, the bills, what the keeper did"
+          >
+            <GameIcon name="contract" size={14} /> Notes{unreadNotes > 0 && <b>{unreadNotes > 99 ? '99+' : unreadNotes}</b>}
+          </button>
         </div>
       )}
 
@@ -2416,7 +2477,7 @@ export default function App() {
           />
       )}
 
-      {!gameState.onboardingDone && !uiState.showWelcome && !gameState.gameOver && (
+      {!gameState.onboardingDone && !guideDoneNow && !uiState.showWelcome && !gameState.gameOver && (
         <FirstCulture
           gameState={gameState}
           onDismiss={() => setGameState(prev => ({ ...prev, onboardingDone: true }))}
@@ -2425,7 +2486,7 @@ export default function App() {
 
       {/* Dismissing the guide used to be permanent, which punished closing it
           once to see the screen underneath. */}
-      {gameState.onboardingDone && !uiState.showWelcome && !gameState.gameOver && (
+      {gameState.onboardingDone && !guideDoneNow && !uiState.showWelcome && !gameState.gameOver && (
         <button
           className="guide-recall"
           onClick={() => setGameState(prev => ({ ...prev, onboardingDone: false }))}
