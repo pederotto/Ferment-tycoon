@@ -51,7 +51,7 @@ const StandingBar: React.FC<{ value: number }> = ({ value }) => {
 /** A buyer's stamp, where one has been cut. */
 const Seal: React.FC<{ id?: string; size?: number }> = ({ id, size = 26 }) =>
   id && BUYER_SEAL[id]
-    ? <img className="seal" src={BUYER_SEAL[id]} width={size} height={size} alt="" aria-hidden="true" draggable={false} />
+    ? <img className="seal" src={BUYER_SEAL[id]} style={{ width: size, height: size }} alt="" aria-hidden="true" draggable={false} />
     : null;
 
 const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onDecline }) => {
