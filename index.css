@@ -3930,7 +3930,7 @@ html, body {
 }
 .hud, .rail,
 .wood-panel, .ledger, .sheet, .pantry,
-.supply, .hw-modal, .ing-modal, .reccard, .hreport,
+.supply, .hw-modal, .reccard,
 .orderbook, .crewroom, .pressroom, .cellar,
 .inoc-head, .protocol-pop, .station.pick-pane,
 .scan-dock, .scan.floating,
@@ -4031,7 +4031,7 @@ html, body {
    Placed last so it wins at equal weight over the materials block above.
    ========================================================================= */
 .wood-panel, .ledger, .sheet, .pantry,
-.hw-modal, .ing-modal, .hreport, .crewroom, .pressroom,
+.hw-modal, .crewroom, .pressroom,
 .inoc-head, .protocol-pop, .station.pick-pane,
 .scan-dock, .scan.floating, .toast, .firstrun, .guide-recall, .iso-actions {
   background: linear-gradient(180deg, rgba(20, 14, 9, 0.80), rgba(14, 10, 6, 0.88)), var(--tex-oak, none) 0 0 / 512px 512px repeat, #1e1610;
@@ -4122,7 +4122,7 @@ html, body {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.22)), var(--tex-slate, none) 0 0 / 512px 512px repeat, #26302c;
 }
 .ledger .wood-panel, .inoc .station .wood-panel { background: rgba(0, 0, 0, 0.24); }
-.crewroom, .toast, .firstrun, .guide-recall, .hreport {
+.crewroom, .toast, .firstrun, .guide-recall {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.26)), var(--tex-plaster, none) 0 0 / 512px 512px repeat, #2c2823;
 }
 /* The Codex and the underground stay leather even though they are wood-panels too. */
@@ -4168,4 +4168,42 @@ html, body {
 .kr-deed-body p { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: var(--text-mid); }
 .kr-deed-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--text-mid); }
 .kr-deed-row.locked { justify-content: flex-start; color: var(--text-lo); }
+
+/* Printed stock stays printed stock. The ingredient panel and the harvest docket
+   were paper before the room got its materials, and the material blocks above
+   had swallowed them; their selectors are taken back out, so the original stock
+   rules (grain, linen weave, coffee ring) apply again. Anything that is a piece
+   of PAPER never goes in a material list — see "One line decides which side of
+   the game a surface falls on" in CLAUDE.md. */
+
+/* =========================================================================
+   FELT, STRAW, HESSIAN
+   ========================================================================= */
+/* Orders and contracts are the one green surface: the table business is done at. */
+.orderbook {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.28)), var(--tex-felt, none) 0 0 / 512px 512px repeat, #1d3527;
+}
+/* The koji room's strips are a straw mat laid along the shelf. */
+.kojiroom .cellar-clime, .kojiroom .kr-stock {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.30), rgba(0, 0, 0, 0.42)), var(--tex-straw, none) 0 0 / 512px 512px repeat, #2e2618;
+}
+/* The pantry list in the rail sits on sacking — it is what the stock came in. */
+.rail .pantry {
+  padding: 8px; border-radius: 4px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.30)), var(--tex-hessian, none) 0 0 / 512px 512px repeat, #2f2217;
+}
+.kojiroom .iso-pip { pointer-events: none; }
+
+/* =========================================================================
+   CEDAR, WALNUT, GREY OAK
+   ========================================================================= */
+.kojiroom {
+  background: linear-gradient(180deg, rgba(20, 14, 9, 0.30), rgba(14, 10, 6, 0.52)), var(--tex-cedar, none) 0 0 / 512px 512px repeat, #2a1d12;
+}
+.codex-panel .arch-entry {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.30)), var(--tex-walnut, none) 0 0 / 512px 512px repeat, #261a12;
+}
+.cellar {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.34)), var(--tex-greyoak, none) 0 0 / 512px 512px repeat, #1e1d1b;
+}
 

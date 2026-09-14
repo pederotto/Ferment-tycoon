@@ -2218,7 +2218,7 @@ export default function App() {
               {/* THE KOJI ROOM, as something you own or can build. A later stage:
                   it only goes on sale once a Head of R&D is on the crew. */}
               <div className={`kr-deed${gameState.kojiRoomOwned ? ' owned' : ''}`}>
-                <PanelMark name="inoculation" size={52} />
+                <PanelMark name="kojiroom" size={52} />
                 <div className="kr-deed-body">
                   <span className="kicker">{gameState.kojiRoomOwned ? 'Yours' : 'A later stage'}</span>
                   <h3>The Koji Room</h3>

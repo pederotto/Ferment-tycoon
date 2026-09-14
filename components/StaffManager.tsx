@@ -98,7 +98,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               return (
                 <div key={c.id} className="cw-member">
                   <div className="mh">
-                    <Portrait seed={c.id} size={46} className="cw-face" />
+                    <Portrait seed={c.id} size={46} className="cw-face" role={c.role} />
                     <div>
                       <span className="nm">{c.name}</span>
                       <span className="rl">{ROLE_NAME[c.role]} · {trait.label}</span>
@@ -135,7 +135,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               return (
                 <div key={c.id} className={`cw-candidate${afford ? '' : ' poor'}`}>
                   <div className="mh">
-                    <Portrait seed={c.id} size={46} className="cw-face" />
+                    <Portrait seed={c.id} size={46} className="cw-face" role={c.role} />
                     <div>
                       <span className="nm">{c.name}</span>
                       <span className="rl">{ROLE_NAME[c.role]} · {trait.label}</span>

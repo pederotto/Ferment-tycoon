@@ -7,6 +7,7 @@ import { VESSEL_ART } from './vesselSheet';
 import { CloseIcon } from './icons';
 import { getRecipeForBatch as recipeOf } from '../services/gameLogic';
 import { KOJI_PLATE } from './kojiPlate';
+import { KOJI_BED, BedView, BedStage } from './kojiBedSheet';
 import { KOJI_ROOM_CAPACITY, KOJI_ROOM_TEMP, KOJI_ROOM_TARGET_STEP_KG, KOJI_ROOM_TARGET_MAX_KG, KOJI_ROOM_BED_KG, SPORULATION_START } from '../constants';
 
 /**
@@ -35,27 +36,37 @@ interface KojiRoomViewProps {
 
 const W = 1344;
 const H = 800;
-type Spot = { x: number; y: number; s: number };
+/* Where a bed stands, read off the painting: `x,y` is the middle of the tray's
+   FOOT on the board or the floor, `w` its width in the plate's units (smaller as
+   it recedes), and the view that matches that surface. Side boards take the
+   turned tray, mirrored on the right wall so it runs back into the room. */
+type Spot = { x: number; y: number; w: number; view: BedView; flip?: boolean };
 
 /* Filled far to near, alternating walls, then the floor — a half-full room looks kept. */
 const SPOTS: Spot[] = [
-  { x: 322,  y: 356, s: 0.78 },   // left, middle board, far
-  { x: 1022, y: 356, s: 0.78 },   // right, middle board, far
-  { x: 326,  y: 500, s: 0.86 },   // left, bottom board, far
-  { x: 1018, y: 500, s: 0.86 },   // right, bottom board, far
-  { x: 160,  y: 374, s: 0.90 },   // left, middle board, near
-  { x: 1184, y: 374, s: 0.90 },   // right, middle board, near
-  { x: 150,  y: 578, s: 1.00 },   // left, bottom board, near
-  { x: 1194, y: 578, s: 1.00 },   // right, bottom board, near
-  { x: 340,  y: 716, s: 1.20 },   // floor, front
-  { x: 1004, y: 716, s: 1.20 },
-  { x: 566,  y: 742, s: 1.28 },
-  { x: 778,  y: 742, s: 1.28 },
+  { x: 296, y: 362, w: 118, view: 'turn' },               // left, middle board, far
+  { x: 1048, y: 362, w: 118, view: 'turn', flip: true },   // right, middle board, far
+  { x: 300, y: 516, w: 128, view: 'turn' },               // left, bottom board, far
+  { x: 1044, y: 516, w: 128, view: 'turn', flip: true },   // right, bottom board, far
+  { x: 126, y: 384, w: 138, view: 'turn' },               // left, middle board, near
+  { x: 1218, y: 384, w: 138, view: 'turn', flip: true },   // right, middle board, near
+  { x: 134, y: 604, w: 152, view: 'turn' },               // left, bottom board, near
+  { x: 1210, y: 604, w: 152, view: 'turn', flip: true },   // right, bottom board, near
+  { x: 330,  y: 738, w: 188, view: 'front' },              // floor, front
+  { x: 1014, y: 738, w: 188, view: 'front' },
+  { x: 560,  y: 772, w: 204, view: 'front' },
+  { x: 784,  y: 772, w: 204, view: 'front' },
 ];
 
-const ROOM_SCALE = 2.0;
+
 
 type Stage = 'growing' | 'peak' | 'spore' | 'spoiled';
+/** Which painting: the bed's own look, which moves earlier than its label does. */
+const pictureOf = (b: Batch, r: Recipe): BedStage =>
+  b.progress >= SPORULATION_START ? 'spore'
+    : b.progress >= r.peakWindowStart ? 'peak'
+      : b.progress >= 25 ? 'bloom'
+        : 'laid';
 const stageOf = (b: Batch, r: Recipe): Stage =>
   b.status === 'spoiled' ? 'spoiled'
     : (b.kojiReserve || b.progress >= SPORULATION_START) ? 'spore'
@@ -74,7 +85,6 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
     .map(batch => { const recipe = recipeOf(batch); return { batch, recipe, stage: stageOf(batch, recipe) }; })
     .sort((a, b) => (a.batch.startTime ?? 0) - (b.batch.startTime ?? 0));
   const active = beds.find(v => v.batch.id === focused);
-  const trayScale = isoScaleFor(3) * ROOM_SCALE;
   const growingKg = batches.filter(b => !b.kojiReserve && b.status !== 'spoiled').length * KOJI_ROOM_BED_KG;
 
   return (
@@ -84,7 +94,7 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
         <span className="corner c-br" />
 
         <div className="pr-head">
-          <PanelMark name="inoculation" />
+          <PanelMark name="kojiroom" />
           <div>
             <span className="kicker">Off the workshop</span>
             <h2>The Koji Room</h2>
@@ -134,7 +144,6 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
             {beds.map((v, i) => {
               const spot = SPOTS[i];
               if (!spot) return null;
-              const s = trayScale * spot.s;
               return (
                 <g key={v.batch.id}
                    className={`iso-slot${focused === v.batch.id ? ' open' : ''}`}
@@ -146,12 +155,21 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
                    onFocus={() => setFocused(v.batch.id)}
                    onClick={() => onSelect(v.batch)}
                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(v.batch); } }}>
-                  <ellipse className="iso-shadow" cx="0" cy="8" rx={30 * s} ry={10 * s} />
-                  <g className={`iso-lift${VESSEL_ART['koji_tray'] ? ' painted' : ''}`}>
-                    <IsoVessel vesselId="koji_tray" scale={s}
-                      state={{ fill: 0.85, lidOpen: false, hot: false, spoiled: v.stage === 'spoiled', agitated: false, heated: false, mist: 0 }} />
-                  </g>
-                  <circle className="iso-pip" cx="0" cy={-54 * s} r="4" fill={STAGE_TONE[v.stage]} />
+                  {(() => {
+                    const art = KOJI_BED[spot.view][pictureOf(v.batch, v.recipe)];
+                    const h = spot.w * (art.h / art.w);
+                    return (
+                      <>
+                        <ellipse className="iso-shadow" cx="0" cy="-2" rx={spot.w * 0.46} ry={spot.w * 0.06} />
+                        <g className="iso-lift painted" transform={spot.flip ? 'scale(-1,1)' : undefined}
+                           style={v.stage === 'spoiled' ? { filter: 'sepia(0.7) saturate(0.6) brightness(0.8)' } : undefined}>
+                          <image href={art.src} x={-spot.w / 2} y={-h} width={spot.w} height={h} />
+                        </g>
+                        <circle className="iso-pip" cx="0" cy={-h - 10} r={Math.max(4, spot.w * 0.035)} fill={STAGE_TONE[v.stage]}
+                                stroke="rgba(20,14,9,0.7)" strokeWidth="1.5" />
+                      </>
+                    );
+                  })()}
                 </g>
               );
             })}
@@ -170,7 +188,7 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
             </div>
           ) : (
             <p className={`iso-hint${batches.length === 0 ? ' empty-mark' : ''}`}>
-              {batches.length === 0 && <PanelMark name="inoculation" size={56} faded />}
+              {batches.length === 0 && <PanelMark name="kojiroom" size={56} faded />}
               {batches.length === 0
                 ? (keeper
                     ? 'Nothing growing yet. The keeper lays beds from pantry grain and spore whenever koji falls below the target.'

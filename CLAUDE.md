@@ -842,6 +842,11 @@ shelf), green linen bookcloth for tabs and nav buttons — colour tiles in
 `materialPlate.ts`, set as `--tex-*` properties at startup. Two rules that are
 not visible from any one rule:
 
+- **Paper never takes a material.** The ingredient panel (`.ing-modal`) and the
+  harvest docket (`.hreport`) were swallowed by an early materials list and
+  turned to wood, with ink-coloured type on a dark ground. Anything that would
+  exist as a piece of paper keeps its stock rules; a new material list is
+  checked against them before it ships.
 - **Each textured surface restates its own ground.** A `background` list
   replaces the gradient it sits on rather than adding to it, so the materials
   block at the end of `index.css` carries each surface's tone as its last

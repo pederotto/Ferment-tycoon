@@ -1,5 +1,7 @@
 import React from 'react';
 import { PEOPLE_SHEET, PEOPLE_COLS, PEOPLE_CELL, portraitIndex } from './peopleSheet';
+import { KEEPER_FACES } from './keeperSheet';
+import { StaffRoleType } from '../types';
 
 /**
  * A FACE FOR A GENERATED PERSON.
@@ -8,8 +10,16 @@ import { PEOPLE_SHEET, PEOPLE_COLS, PEOPLE_CELL, portraitIndex } from './peopleS
  * keeps the same face for as long as they work for you without the crew record
  * having to carry a portrait field for `migrate()` to backfill.
  */
-const Portrait: React.FC<{ seed: string; size?: number; className?: string }> = ({ seed, size = 44, className }) => {
+const Portrait: React.FC<{ seed: string; size?: number; className?: string; role?: StaffRoleType }> = ({ seed, size = 44, className, role }) => {
   const i = portraitIndex(seed);
+  // A koji keeper wears the room's clothes: their faces come from their own four.
+  if (role === 'toji' && KEEPER_FACES.length) {
+    return (
+      <span className={`portrait${className ? ' ' + className : ''}`} role="img" aria-hidden="true"
+            style={{ width: size, height: size, backgroundImage: `url(${KEEPER_FACES[i % KEEPER_FACES.length]})`,
+                     backgroundSize: 'cover', backgroundPosition: 'center bottom', backgroundRepeat: 'no-repeat' }} />
+    );
+  }
   const col = i % PEOPLE_COLS;
   const row = Math.floor(i / PEOPLE_COLS);
   const k = size / PEOPLE_CELL;
