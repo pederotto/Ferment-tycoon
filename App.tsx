@@ -1989,7 +1989,7 @@ export default function App() {
             className={`tab-btn-hud${activeDrawer === 'marketplace' ? ' active' : ''}`}
             title="Ingredients, vessels, tools and books"
             >
-            <GameIcon name="supply" size={15} />
+            <GameIcon name="supply" size={20} />
             <span className="hidden sm:inline">Supply</span>
             </button>
             {/* Hardware is what you OWN and whether it is working. Supply is
@@ -2000,7 +2000,7 @@ export default function App() {
             className={`tab-btn-hud${showHardware ? ' active' : ''}`}
             title="The hardware you own, and what it is doing"
             >
-            <GameIcon name="hardware" size={15} />
+            <GameIcon name="hardware" size={20} />
             <span className="hidden sm:inline">Hardware</span>
             </button>
             <button
@@ -2008,7 +2008,7 @@ export default function App() {
             className={`tab-btn-hud${uiState.showStaff ? ' active' : ''}`}
             title="Staff Management"
             >
-            <GameIcon name="staff" size={15} />
+            <GameIcon name="staff" size={20} />
             <span className="hidden sm:inline">Staff</span>
             </button>
             <button
@@ -2016,7 +2016,7 @@ export default function App() {
             className={`tab-btn-hud${uiState.showLogbook ? ' active' : ''}`}
             title="Lab Codex & Archives"
             >
-            <GameIcon name="codex" size={15} />
+            <GameIcon name="codex" size={20} />
             <span className="hidden sm:inline">Codex</span>
             </button>
             {/* The cellar was a drawn door standing against a painted wall and
@@ -2027,7 +2027,7 @@ export default function App() {
             className="tab-btn-hud"
             title="Below the workshop — where things are laid down to age"
             >
-            <GameIcon name="cellar" size={15} />
+            <GameIcon name="cellar" size={20} />
             <span className="hidden sm:inline">Cellar</span>
             <span className="dot mono">{gameState.batches.filter(b => b.cellared).length}/{CELLAR_CAPACITY}</span>
             </button>
@@ -2036,7 +2036,7 @@ export default function App() {
             className={`tab-btn-hud${showOrders ? ' active' : ''}${gameState.contracts.some(c => c.status === 'offered') ? ' has-offer' : ''}`}
             title="Vendor standing and contracts"
             >
-            <GameIcon name="orders" size={15} />
+            <GameIcon name="orders" size={20} />
             <span className="hidden sm:inline">Orders</span>
             {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
             </button>
@@ -2081,16 +2081,16 @@ export default function App() {
             return (
             <>
             <div className="pantry-item" title="Every salt on the shelf, by weight">
-            <GameIcon name="sparkle" size={13} color="var(--text-mid)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
+            <GameIcon name="sparkle" size={16} color="var(--text-mid)" /> Salt &nbsp;<span className="n mono">{kg(saltG)}</span>
             </div>
             <div className="pantry-item" title="Every live starter, bought or cultured">
-            <GameIcon name="sprout" size={13} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
+            <GameIcon name="sprout" size={16} color="var(--moss)" /> Spores &nbsp;<span className="n mono">{sporePkts} pkts</span>
             </div>
             <div className="pantry-item" title="Every substrate on the shelf, by weight">
-            <GameIcon name="crates" size={13} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
+            <GameIcon name="crates" size={16} color="var(--amber)" /> Substrate &nbsp;<span className="n mono">{kg(substrateG)}</span>
             </div>
             <div className="pantry-item" title="Filtered water">
-            <GameIcon name="droplet" size={13} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
+            <GameIcon name="droplet" size={16} color="var(--teal)" /> Water &nbsp;<span className="n mono">{(waterMl / 1000).toFixed(0)}L</span>
             </div>
             </>
             );
@@ -2101,7 +2101,7 @@ export default function App() {
             style={{ cursor: 'pointer' }}
             title="Click to view & purchase hardware vessels"
             >
-            <GameIcon name="flask" size={13} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
+            <GameIcon name="flask" size={16} color="var(--brass)" /> Vessels &nbsp;<span className="n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
             </div>
             </div>
             </div>

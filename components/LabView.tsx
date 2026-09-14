@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { Batch, Recipe, FermentType, WeatherState, WeatherType } from '../types';
 import { RECIPES, VESSELS } from '../constants';
 import { isAgitatedFerment } from '../services/gameLogic';
@@ -246,6 +246,31 @@ const LabView: React.FC<LabViewProps> = ({
 
   const active = seen.find(v => v.batch.id === focused);
 
+  /* FILL THE ROOM, WITHIN REASON.
+     The stage and the painting rarely share an aspect. Fitting it whole leaves
+     bands; covering it crops shelves the hardware stands on. So the painting is
+     fitted, then zoomed by up to 12% towards covering — enough to close most of
+     a band, never enough to cut into the boards. What remains shows the painting
+     itself, blurred, behind it (see .bench-wrap::before). */
+  const roomRef = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = roomRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      const contain = Math.min(width / W, height / H);
+      const cover = Math.max(width / W, height / H);
+      const k = Math.min(cover, contain * 1.12);
+      setFit(prev => (prev && Math.abs(prev.w - W * k) < 1 && Math.abs(prev.h - H * k) < 1) ? prev : { w: W * k, h: H * k });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div className="bench-wrap">
       <div className="bench-head">
@@ -256,8 +281,9 @@ const LabView: React.FC<LabViewProps> = ({
         <div className="slot-pill">Bench: <b>{usedSlots}</b> / {maxSlots} slots</div>
       </div>
 
-      <div className="iso-room">
-        <svg viewBox={`0 0 ${W} ${H}`} className="iso-svg" role="group" aria-label="The fermentation bench">
+      <div className="iso-room" ref={roomRef}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="iso-svg" role="group" aria-label="The fermentation bench"
+             style={fit ? { width: fit.w, height: fit.h } : undefined}>
           <defs>
             <radialGradient id="labVignette" cx="50%" cy="44%" r="74%">
               <stop offset="0%" stopColor="#000" stopOpacity="0" />
