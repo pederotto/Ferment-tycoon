@@ -100,7 +100,7 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
 
         {/* LIFE IN THE VIEW. The painting is still; these are the few things that
             move across it, chosen by the season and the weather so they also say
-            something: swallows in spring, sheep on a mild day, leaves in autumn,
+            something: swallows in spring, leaves in autumn,
             a flash in a storm. Drawn in code, animated in CSS, no filters (a
             filter on something that animates is re-rasterised every frame), and
             all of it stops under prefers-reduced-motion. Local units: the painted
@@ -111,7 +111,6 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
           const hot = weather.type === 'Heatwave';
           const calm = !wet && !snowy && !foggy;
           const birds = calm && season !== 'winter';
-          const sheep = calm && season !== 'winter';
           const Bird = ({ y, delay, dur, scale = 1 }: { y: number; delay: number; dur: number; scale?: number }) => (
             <g className="wl-bird" style={{ animationDelay: `${delay}s`, animationDuration: `${dur}s` }}>
               <path d={`M0 ${y} q${1.6 * scale} ${-1.4 * scale} ${3.2 * scale} 0 q${1.6 * scale} ${-1.4 * scale} ${3.2 * scale} 0`}
@@ -152,18 +151,6 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
                 </>
               )}
               {!birds && season === 'winter' && !stormy && <Bird y={-50} delay={6} dur={22} scale={1.1} />}
-              {/* sheep grazing on the lower slope, barely moving */}
-              {sheep && (
-                <g className="wl-sheep-field">
-                  {[{ x: -20, y: 16, d: 0 }, { x: -11, y: 19, d: -3 }, { x: 14, y: 14, d: -6 }].map((sh, i) => (
-                    <g key={i} className="wl-sheep" style={{ animationDelay: `${sh.d}s` }} transform={`translate(${sh.x},${sh.y})`}>
-                      <ellipse cx="0" cy="0" rx="2.3" ry="1.5" fill="#f2efe6" />
-                      <ellipse cx="2.2" cy="-0.4" rx="0.8" ry="0.7" fill="#3a332b" className="wl-head" />
-                      <path d="M-1.2 1.2 v1 M1 1.2 v1" stroke="#3a332b" strokeWidth="0.35" />
-                    </g>
-                  ))}
-                </g>
-              )}
               {/* spring blossom and autumn leaves, drifting down across the view */}
               {(season === 'spring' || season === 'autumn') && !wet && (
                 <g className="wl-drift" fill={season === 'spring' ? '#f3d6dc' : '#b8743a'}>

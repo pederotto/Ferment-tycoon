@@ -4285,10 +4285,6 @@ html, body {
 }
 .wl-wing { animation: wl-flap 0.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes wl-flap { 50% { transform: scaleY(0.35); } }
-.wl-sheep { animation: wl-graze 9s ease-in-out infinite; }
-@keyframes wl-graze { 0%, 100% { translate: 0 0; } 45% { translate: 1.4px 0; } 55% { translate: 1.4px 0; } }
-.wl-head { animation: wl-nibble 4.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-@keyframes wl-nibble { 0%, 60%, 100% { translate: 0 0; } 70%, 90% { translate: 0 0.9px; } }
 .wl-drift ellipse { animation: wl-leaf 8s linear infinite; }
 @keyframes wl-leaf {
   0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
