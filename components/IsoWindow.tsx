@@ -1,6 +1,6 @@
 import React from 'react';
 import { WeatherState } from '../types';
-import { WEATHER_WINDOW } from './weatherWindowSheet';
+import { WEATHER_SCENES } from './weatherSheet';
 import { WINDOW_LIFE } from './windowLifeSheet';
 import { weatherScene } from './BrassHud';
 
@@ -92,11 +92,10 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
             centred on the sky's middle at y=-16 — rather than on the landscape
             104x96 sky, which would crop the portrait to a letterbox. */}
         {bare && (
-          // The same painting as the weather glass, cut to this opening: the window
-          // and the glass used to disagree (a blossom spring outside, a storm in the glass).
-          // (A 16-scene seasonal set was tried and taken back out: small, flat and
-          // photographic next to these. Its replacement is briefed, not built.)
-          <image href={WEATHER_WINDOW[weatherScene(weather.type, season)]} x={-37} y={-63} width={74} height={94}
+          // The season's panel for the day's weather — painted tall, so it fills the
+          // opening as painted (only a sliver top and bottom is trimmed). The weather
+          // glass shows the same panel, so the two never disagree.
+          <image href={WEATHER_SCENES[weatherScene(weather.type, season)]} x={-37} y={-63} width={74} height={94}
                  preserveAspectRatio="xMidYMid slice" />
         )}
         {bright && !bare && <circle cx="26" cy="-44" r="13" fill="#d8b878" opacity={0.32} />}

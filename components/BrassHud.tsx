@@ -102,22 +102,21 @@ export const BrassRail: React.FC = () => (
 export type SeasonKey = 'spring' | 'summer' | 'autumn' | 'winter';
 
 /**
- * Which painted sky for the weather. The paintings are one hill under twelve
- * skies (weatherSheet.ts): 0 clear, 1 cloud, 2 rain, 3 snow, 4 golden, 5 fog,
- * 6 bright mist, 7 night storm, 8/10 wind and leaves, 9 day storm, 11 haze.
+ * Which painting for the weather and the season (weatherSheet.ts): four panels
+ * per season, in rows spring, summer, autumn, winter. The tree always matches the
+ * season; the sky matches the weather as closely as that season's four allow.
  */
-export const weatherScene = (type: WeatherType, season: SeasonKey): number => {
-  switch (type) {
-    case 'Sunny':    return season === 'winter' ? 3 : season === 'autumn' ? 4 : 0;
-    case 'Cloudy':   return season === 'winter' ? 3 : season === 'autumn' ? 10 : 1;
-    case 'Rainy':    return 2;
-    case 'Snowy':    return 3;
-    case 'Heatwave': return 11;
-    case 'Foggy':    return season === 'spring' || season === 'summer' ? 6 : 5;
-    case 'Stormy':   return season === 'autumn' || season === 'winter' ? 7 : 9;
-    default:         return 0;
-  }
+const SCENE: Record<SeasonKey, Record<WeatherType, number>> = {
+  //        panels:  0 clear · 1 cloudy · 2 rain  · 3 mist
+  spring: { Sunny: 0, Cloudy: 1, Rainy: 2, Stormy: 2, Snowy: 1, Heatwave: 0, Foggy: 3 },
+  //        panels:  4 clear · 5 clouds · 6 heat  · 7 thunderstorm
+  summer: { Sunny: 4, Cloudy: 5, Rainy: 7, Stormy: 7, Snowy: 5, Heatwave: 6, Foggy: 5 },
+  //        panels:  8 clear · 9 windy  · 10 rain · 11 fog
+  autumn: { Sunny: 8, Cloudy: 9, Rainy: 10, Stormy: 10, Snowy: 11, Heatwave: 8, Foggy: 11 },
+  //        panels: 12 frost · 13 overcast · 14 snowfall · 15 blizzard
+  winter: { Sunny: 12, Cloudy: 13, Rainy: 13, Stormy: 15, Snowy: 14, Heatwave: 12, Foggy: 13 },
 };
+export const weatherScene = (type: WeatherType, season: SeasonKey): number => SCENE[season]?.[type] ?? 0;
 
 /* The thermometer reads -5..40°C, the span the ambient model actually produces. */
 const T_LO = -5, T_HI = 40;
