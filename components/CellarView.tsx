@@ -57,11 +57,11 @@ type Spot = { x: number; y: number; s: number };
    newest arrival sits nearest the stair, which is how anyone stacks a cellar and
    means nothing ever has to be moved to get at what is ready. */
 const FLOOR_SPOTS: Spot[] = [
-  { x: 590, y: 505, s: 1.06 },   // back of the floor, against the barrels
-  { x: 754, y: 505, s: 1.06 },
-  { x: 500, y: 596, s: 1.30 },   // front row, nearest the stair
-  { x: 672, y: 612, s: 1.36 },
-  { x: 844, y: 596, s: 1.30 },
+  { x: 560, y: 585, s: 1.00 },   // back of the floor, before the arch
+  { x: 784, y: 585, s: 1.00 },
+  { x: 430, y: 695, s: 1.22 },   // front row, nearest the stair
+  { x: 914, y: 695, s: 1.22 },
+  { x: 672, y: 712, s: 1.28 },   // over the drain, at the foot of the stair
 ];
 
 /* Jars and trays go on the boards. Also back to front, and alternating left and
@@ -69,16 +69,16 @@ const FLOOR_SPOTS: Spot[] = [
    The last spots are the near ends of the bottom boards — the ones you could
    actually reach without a stool. */
 const SHELF_SPOTS: Spot[] = [
-  { x: 292,  y: 327, s: 0.82 },   // left, middle board, far
-  { x: 1052, y: 327, s: 0.82 },   // right, middle board, far
-  { x: 285,  y: 440, s: 0.86 },   // left, bottom board, far
-  { x: 1059, y: 440, s: 0.86 },   // right, bottom board, far
-  { x: 145,  y: 245, s: 0.88 },   // left, top board, near
-  { x: 1199, y: 245, s: 0.88 },   // right, top board, near
-  { x: 148,  y: 381, s: 0.94 },   // left, middle board, near
-  { x: 1196, y: 381, s: 0.94 },   // right, middle board, near
-  { x: 150,  y: 528, s: 1.00 },   // left, bottom board, near — easiest to reach
-  { x: 1194, y: 528, s: 1.00 },   // right, bottom board, near
+  { x: 300,  y: 378, s: 0.70 },   // left, middle board, far
+  { x: 1044, y: 378, s: 0.70 },   // right, middle board, far
+  { x: 290,  y: 484, s: 0.74 },   // left, bottom board, far
+  { x: 1054, y: 484, s: 0.74 },   // right, bottom board, far
+  { x: 150,  y: 236, s: 0.76 },   // left, top board, near
+  { x: 1194, y: 236, s: 0.76 },   // right, top board, near
+  { x: 150,  y: 374, s: 0.81 },   // left, middle board, near
+  { x: 1194, y: 374, s: 0.81 },   // right, middle board, near
+  { x: 150,  y: 508, s: 0.86 },   // left, bottom board, near — easiest to reach
+  { x: 1194, y: 508, s: 0.86 },   // right, bottom board, near
 ];
 
 /* A jar drawn at isoScaleFor(2) is ~30 units wide in this grid, and the room is
@@ -200,14 +200,12 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
                 below is the live room standing in it. */}
             <image href={CELLAR_PLATE} x="0" y="0" width={W} height={H}
                    preserveAspectRatio="xMidYMid slice" />
-            {/* The plate is lit cool blue-grey stone; the game is warm brown
-                throughout. A warm multiply pulls the room into the same palette
-                as everything standing in it — without it a cream jar on a slate
-                shelf reads as two pictures, not one room. */}
+            {/* The restored vault is painted warm already (terracotta brick, pale
+                plaster), so only a light warm multiply is left: the old plate was
+                cool blue-grey stone and needed 0.34 plus an orange overlay to sit
+                in the game's palette. */}
             <rect x="0" y="0" width={W} height={H} fill="#6b4a29"
-                  style={{ mixBlendMode: 'multiply' }} opacity="0.34" />
-            <rect x="0" y="0" width={W} height={H} fill="#e08a3c"
-                  style={{ mixBlendMode: 'overlay' }} opacity="0.10" />
+                  style={{ mixBlendMode: 'multiply' }} opacity="0.12" />
             <rect x="0" y={H * 0.62} width={W} height={H * 0.38} fill="url(#cellarFloorHaze)" />
             <rect x="0" y="0" width={W} height={H} fill="url(#cellarVignette)" />
 

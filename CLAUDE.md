@@ -1125,3 +1125,9 @@ Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
 ## Rail widgets
 - Go To is a grid of walnut tiles with the painted `PanelMark` each screen opens under; the pantry is jars (a painted `IngredientIcon` in a `#1a130b` medallion, count on a brass plate). The global `.dot` is a 5x5 status dot and `.rail .tab-btn-hud span` is forced inline, so tile rules restate both.
 - The window paints the same weather painting as the weather glass (`weatherWindowSheet.ts`, cut from the discs to the 4:5 opening, picked by `weatherScene`); `window-life` only adds motion on top and never greys it over. `windowPlate.ts` (the four season paintings) is no longer drawn.
+
+## The restored rooms (plates v2)
+- All three rooms are one building now: an old stone farmhouse restored as a modern studio (lime plaster, pale oak, black steel, brass, concealed light), painted by the same hand from the same one-point camera. Sources are `art/lab-v2.jpg`, `art/cellar-v2.jpg`, `art/koji-v2.jpg`, cropped from 1376x768 (16:9) to the 1344x800 grid by scaling to 800 tall and trimming 44px off each side. Ask for any future plate at 16:9 with the outer 4% of each side kept clear.
+- **Workshop:** the window opening is x601-743, y203-418 with steel glazing bars at x672 / y313, which LabView draws back over the weather view. The bench top is a narrow strip (back edge y~463, front y~503), so the table rows are 30px apart and smaller than on the old plate.
+- **Cellar and koji room share board geometry:** top boards run (0,198)->(355,290) (above eye level), middle (0,370)->(355,378), bottom from front y~540 near to y~478 far; the right wall is the mirror at 1344-x. The cellar's stair and drain are at the bottom centre.
+- The cellar plate is painted warm, so its grade is a 0.12 multiply only; the 0.34 multiply and orange overlay were for the old blue-grey stone.

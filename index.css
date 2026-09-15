@@ -4544,3 +4544,17 @@ html, body {
 .rail .pantry-items.jar-shelf .jar { align-self: start; }
 /* the global `.dot` is a 5x5 status dot; on a tile it is a count plate, sized by its text */
 .rail .nav-grid .tab-btn-hud .dot { width: auto; height: auto; display: inline-block; }
+
+/* Where the header wraps (below 900px) the nameplates are its last row, and the
+   brass rail along the bottom edge was drawn across them: measured at 583px the
+   plates ended exactly at the header's height. The rail gets its own strip. */
+@media (max-width: 900px) {
+  :root { --hud-h: 122px; }
+  .hud { padding-bottom: 14px; }
+}
+@media (max-width: 620px) {
+  :root { --hud-h: 148px; }
+}
+@media (max-width: 420px) {
+  :root { --hud-h: 166px; }
+}

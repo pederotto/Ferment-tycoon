@@ -45,14 +45,14 @@ type Spot = { x: number; y: number; w: number; view: BedView; flip?: boolean };
 
 /* Filled far to near, alternating walls, then the floor — a half-full room looks kept. */
 const SPOTS: Spot[] = [
-  { x: 296, y: 362, w: 118, view: 'turn' },               // left, middle board, far
-  { x: 1048, y: 362, w: 118, view: 'turn', flip: true },   // right, middle board, far
-  { x: 300, y: 516, w: 128, view: 'turn' },               // left, bottom board, far
-  { x: 1044, y: 516, w: 128, view: 'turn', flip: true },   // right, bottom board, far
-  { x: 126, y: 384, w: 138, view: 'turn' },               // left, middle board, near
-  { x: 1218, y: 384, w: 138, view: 'turn', flip: true },   // right, middle board, near
-  { x: 134, y: 604, w: 152, view: 'turn' },               // left, bottom board, near
-  { x: 1210, y: 604, w: 152, view: 'turn', flip: true },   // right, bottom board, near
+  { x: 300, y: 380, w: 110, view: 'turn' },               // left, middle board, far
+  { x: 1044, y: 380, w: 110, view: 'turn', flip: true },   // right, middle board, far
+  { x: 292, y: 484, w: 120, view: 'turn' },               // left, bottom board, far
+  { x: 1052, y: 484, w: 120, view: 'turn', flip: true },   // right, bottom board, far
+  { x: 140, y: 376, w: 128, view: 'turn' },               // left, middle board, near
+  { x: 1204, y: 376, w: 128, view: 'turn', flip: true },   // right, middle board, near
+  { x: 145, y: 512, w: 140, view: 'turn' },               // left, bottom board, near
+  { x: 1199, y: 512, w: 140, view: 'turn', flip: true },   // right, bottom board, near
   { x: 330,  y: 738, w: 188, view: 'front' },              // floor, front
   { x: 1014, y: 738, w: 188, view: 'front' },
   { x: 560,  y: 772, w: 204, view: 'front' },

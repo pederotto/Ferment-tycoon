@@ -69,29 +69,32 @@ type Spot = { x: number; y: number; s: number };
 /* On the table. Back row first — filling back to front means a new batch lands
    at the front where you can see it, and nothing already there has to move. */
 const TABLE_SPOTS: Spot[] = [
-  { x: 590, y: 472, s: 0.80 },
-  { x: 675, y: 472, s: 0.80 },
-  { x: 760, y: 472, s: 0.80 },
-  { x: 490, y: 536, s: 0.96 },
-  { x: 615, y: 540, s: 0.99 },
-  { x: 740, y: 540, s: 0.99 },
-  { x: 865, y: 536, s: 0.96 },
+  { x: 560, y: 470, s: 0.66 },
+  { x: 672, y: 470, s: 0.66 },
+  { x: 784, y: 470, s: 0.66 },
+  { x: 445, y: 500, s: 0.78 },
+  { x: 585, y: 500, s: 0.80 },
+  { x: 759, y: 500, s: 0.80 },
+  { x: 899, y: 500, s: 0.78 },
 ];
 
 /* On the floor, either side of the table. */
 const FLOOR_SPOTS: Spot[] = [
-  { x: 330, y: 660, s: 0.95 },
-  { x: 1020, y: 660, s: 0.95 },
-  { x: 245, y: 745, s: 1.05 },
-  { x: 1105, y: 745, s: 1.05 },
+  { x: 280, y: 660, s: 0.92 },
+  { x: 1064, y: 660, s: 0.92 },
+  { x: 170, y: 724, s: 1.00 },
+  { x: 1174, y: 724, s: 1.00 },
 ];
 
 /* The window in the back wall. The plate has a painted sky inside it; the game
    draws its own over the top, because that view is the month and the weather. */
-/* Measured off the plate: the black opening runs x593-727, y218-388. The first
-   guess was 15px out horizontally and 33 too tall, which is why the view sat off
-   to one side of its own hole. */
-const WINDOW = { x: 660, y: 303, w: 134, h: 170 };
+/* Measured off the plate: the black opening runs x601-743, y203-418 on the
+   restored workshop (a steel-framed window in a limestone wall). Its glazing bars
+   sit at x672 and y313 and are drawn back over the view, because the view covers
+   the painted ones. Re-measure rather than estimate if the plate changes: the
+   first guess on the old plate was 15px out and 33 too tall. */
+const WINDOW = { x: 672, y: 310.5, w: 142, h: 215 };
+const GLAZING = { x: 672, y: 313 };
 
 /* A jar at isoScaleFor(2) is ~30 units wide in this grid. Measured against the
    painted table, ~60 is what sits on it without looking like a bead. */
@@ -388,6 +391,9 @@ const LabView: React.FC<LabViewProps> = ({
                              x={WINDOW.x} y={WINDOW.y + 16 * k} scale={k} />
                 );
               })()}
+              {/* the painted steel glazing bars, over the view as they are over the glass */}
+              <path d={`M${GLAZING.x} ${WINDOW.y - WINDOW.h / 2} V${WINDOW.y + WINDOW.h / 2} M${WINDOW.x - WINDOW.w / 2} ${GLAZING.y} H${WINDOW.x + WINDOW.w / 2}`}
+                    stroke="#1f2021" strokeWidth="4" />
             </g>
           )}
 
