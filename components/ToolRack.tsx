@@ -3,6 +3,8 @@ import PanelMark from './PanelMark';
 import { Batch } from '../types';
 import { getRecipeForBatch, isAgitatedFerment } from '../services/gameLogic';
 import IsoAppliance, { ApplianceId } from './IsoAppliance';
+import { PRESS_FRAMES } from './pressSheet';
+import { CENTRIFUGE_PARTS } from './centrifugeSheet';
 
 /**
  * THE RACK
@@ -54,9 +56,16 @@ const ToolRack: React.FC<ToolRackProps> = ({ inventory, batches, onOpenTool }) =
         const cls = `tool-card${on ? ' running' : ''}${h.opens ? ' opens' : ''}`;
         const art = (
           <>
-            <svg viewBox="-80 -80 160 160" className="tc-art" aria-hidden="true">
-              <IsoAppliance id={h.id} scale={0.85} running={on} />
-            </svg>
+            {/* The press and centrifuge have their own painting now (the one their
+                screen plays); the other tools keep the older sheet until repainted. */}
+            {h.id === 'wooden_press' || h.id === 'centrifuge' ? (
+              <img className="tc-art tc-img" aria-hidden="true" alt="" draggable={false}
+                   src={h.id === 'wooden_press' ? PRESS_FRAMES.empty.src : CENTRIFUGE_PARTS.closed.src} />
+            ) : (
+              <svg viewBox="-80 -80 160 160" className="tc-art" aria-hidden="true">
+                <IsoAppliance id={h.id} scale={0.85} running={on} />
+              </svg>
+            )}
             <span className="tc-name">{h.label}</span>
             <span className="tc-state">{on ? 'running' : h.opens ? 'open it' : 'idle'}</span>
           </>

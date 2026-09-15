@@ -1143,3 +1143,9 @@ Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
 - The window and the weather glass share `weatherSheet.ts`: sixteen tall painted panels, four per season (rows spring→winter; `art/weather-<season>.jpg`), in the style of the earlier round paintings. The window shows a panel as painted, the glass takes a circle centred on the tree. `weatherScene(type, season)` is a table, so the tree always matches the season. An earlier 2:1 photographic landscape set was rejected: small and flat next to these. Ask for any replacement as tall panels, one sheet per season, painterly.
 - Window life is painted (`windowLifeSheet.ts`: swallows, crows, grazing sheep, blossom, leaves), keyed harder than a sheet because at 4-10px a magenta fringe is the whole outline.
 - The pantry is a chest of drawers rebuilt from parts (`drawerPlate.ts`: the oak front with the hardware painted out, the brass card-holder, the cup handle; set once as `--drawer-front`, `--drawer-label`, `--drawer-handle`). The whole painting was too tall at the rail's width, and cropping it to stack cut the top label and left a handle at the bottom.
+
+## Notices from inside a state updater
+- Never call `setLabNotification` inside `setGameState(prev => ...)`. Use `queueNotice`: it keys by type and text, so StrictMode's second run overwrites the first, and an effect posts the queue once after the commit. The weekly loop's nine notices went through here.
+
+## Picture weight
+- Every picture module is WebP. PNG and JPEG data URIs were the heaviest thing in the page (the tool sheet PNG 244 KB, 51 KB as WebP; the ingredient JPEG halved). When adding art, encode WebP at quality ~80 (icon masks ~90) and keep a re-encode only when it saves 8% or more. A single HTML file downloads whole, so "load pictures later" does not shrink it — size does.

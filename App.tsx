@@ -201,6 +201,20 @@ export default function App() {
     setTimeout(() => setNotices(prev => prev.filter(p => p.id !== id)), ttl);
   }, []);
 
+  /* NOTICES RAISED INSIDE A STATE UPDATER. React runs an updater twice under
+     StrictMode, so a notice posted from inside one fired twice — the weekly
+     loop's bills, raids and seasons arrived as pairs, and the journal had to
+     skip the copy. They are queued by type and text now (the second run
+     overwrites the first) and posted once after the update commits. */
+  const pendingNotices = useRef(new Map<string, Notice>());
+  const queueNotice = (n: Notice) => { pendingNotices.current.set(`${n.type}|${n.text}`, n); };
+  useEffect(() => {
+    if (pendingNotices.current.size === 0) return;
+    const queued = [...pendingNotices.current.values()];
+    pendingNotices.current.clear();
+    queued.forEach(n => setLabNotification(n));
+  });
+
   // SAY WHAT CAME IN. A supplier levelling up used to open stock in silence, and
   // a month turning is the same event: the forager's van changes with it, and a
   // shelf that changes without saying so looks as if it never does. An effect,
@@ -608,13 +622,13 @@ export default function App() {
 
                     if (newStrikes >= BANKRUPTCY_STRIKES) {
                         newGameOver = true;
-                        setLabNotification({
+                        queueNotice({
                             id: Date.now(),
                             text: `The lease is up. ${BANKRUPTCY_STRIKES} weeks in the red and the atelier is closed.`,
                             type: 'alert'
                         });
                     } else {
-                        setLabNotification({
+                        queueNotice({
                             id: Date.now(),
                             text: `In the red by $${Math.abs(Math.round(newMoney))} — bills were $${bills.total}. Strike ${newStrikes} of ${BANKRUPTCY_STRIKES}.${totalWages > 0 ? ' Your staff have walked.' : ''}`,
                             type: 'alert'
@@ -622,13 +636,13 @@ export default function App() {
                     }
                 } else {
                     if (newStrikes > 0) {
-                        setLabNotification({
+                        queueNotice({
                             id: Date.now(),
                             text: `Back in the black. Bills settled: $${bills.total}.`,
                             type: 'info'
                         });
                     } else if (bills.total > 0) {
-                        setLabNotification({
+                        queueNotice({
                             id: Date.now(),
                             text: `Weekly bills: $${bills.rent} rent · $${bills.upkeep} upkeep · $${bills.utilities} power${bills.wages > 0 ? ` · $${bills.wages} wages` : ''}.`,
                             type: 'info',
@@ -661,7 +675,7 @@ export default function App() {
                         return { ...c, status: 'failed' as const };
                     });
                     const worst = late[0];
-                    setLabNotification({
+                    queueNotice({
                         id: Date.now() + 3,
                         text: `Contract failed — ${worst.buyerName} went without. $${worst.cashPenalty} forfeited, and they will not forget.`,
                         type: 'alert',
@@ -675,7 +689,7 @@ export default function App() {
                 const fresh = newlyUnlockedVendors(probeUnlock);
                 if (fresh.length > 0) {
                     newUnlockedVendorIds = [...newUnlockedVendorIds, ...fresh.map(b => b.id)];
-                    setLabNotification({
+                    queueNotice({
                         id: Date.now() + 5,
                         text: `${fresh[0].name} will deal with you now. ${fresh[0].dialogue.intro}`,
                         type: 'info',
@@ -693,7 +707,7 @@ export default function App() {
                         const offer = makeContractOffer(willing[0], probe, newWeek * 7 + willing.length);
                         if (offer) {
                             newContracts = [offer, ...newContracts];
-                            setLabNotification({
+                            queueNotice({
                                 id: Date.now() + 4,
                                 text: `${offer.buyerName} has work for you. Check the order book.`,
                                 type: 'info',
@@ -713,7 +727,7 @@ export default function App() {
 
                 // --- WEEKLY WEATHER UPDATE ---
                 newWeather = generateWeather(newMonth);
-                setLabNotification({
+                queueNotice({
                     id: Date.now() + 1,
                     text: `The weather turns ${newWeather.type.toLowerCase()} — ${newWeather.description.toLowerCase()}.`,
                     type: 'info',
@@ -1237,7 +1251,7 @@ export default function App() {
       const leaving = prev.crew.find(c => c.id === id);
       const crew = prev.crew.filter(c => c.id !== id);
       if (leaving) {
-        setLabNotification({ id: Date.now(), text: `${leaving.name} has gone. That is ${leaving.weeksWorked} weeks of knowing your benches walking out.`, type: 'warn' });
+        queueNotice({ id: Date.now(), text: `${leaving.name} has gone. That is ${leaving.weeksWorked} weeks of knowing your benches walking out.`, type: 'warn' });
       }
       return { ...prev, crew, staff: crewToStaffFlags(crew) };
     });

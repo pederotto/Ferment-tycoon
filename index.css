@@ -4884,3 +4884,10 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .dw-handle { aspect-ratio: 318 / 123; width: 52px; }
 /* the weather glass takes its circle from the tall panel, centred on the tree */
 .wglass .port .scene { object-position: 50% 44%; }
+
+/* THE ROOM SITS AT THE TOP OF THE STAGE. On a tall window it was centred with a
+   blurred copy of the painting above and below, which read as a smear. The room
+   is pinned to the top now and any spare height is the charcoal frame. */
+.bench-wrap::before { display: none; }
+.iso-room { justify-content: flex-start; }
+.tool-card .tc-img { object-fit: contain; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.45)); }
