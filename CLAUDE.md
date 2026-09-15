@@ -1131,3 +1131,8 @@ Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
 - **Workshop:** the window opening is x601-743, y203-418 with steel glazing bars at x672 / y313, which LabView draws back over the weather view. The bench top is a narrow strip (back edge y~463, front y~503), so the table rows are 30px apart and smaller than on the old plate.
 - **Cellar and koji room share board geometry:** top boards run (0,198)->(355,290) (above eye level), middle (0,370)->(355,378), bottom from front y~540 near to y~478 far; the right wall is the mirror at 1344-x. The cellar's stair and drain are at the bottom centre.
 - The cellar plate is painted warm, so its grade is a 0.12 multiply only; the 0.34 multiply and orange overlay were for the old blue-grey stone.
+
+## The frame and the studio head
+- The page frame (body, header, rails) and the studio heads are the plaster tile smoked to charcoal with a `color` blend layer (a micro-cement look), edged in black steel with a brass hairline. Smoked oak still read as planks; wood is kept for furniture (Go To tiles, jars).
+- Every dark screen's header is the studio head: painted mark in a brass-ringed medallion, a kicker, a short title, numbers on brass plates (`.sh-plate`), one round brass close. Supply and the Codex use `.studio-head`; `.pr-head`, `.ob-head`, `.cw-head` take the same rules. No engraved dividers, watermarks or "Rev" footers on dark screens — printed paper (recipe card, harvest docket) keeps its ornaments.
+- Every modal closes on a backdrop click (`e.target === e.currentTarget`, so a click inside, or on a card opened from it, does not) and on Escape. A modal opened from another closes first.

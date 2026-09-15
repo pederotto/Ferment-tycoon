@@ -1,5 +1,5 @@
 import PanelMark from './PanelMark';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import GameIcon from './GameIcon';
 import { LogEntry, Recipe, FermentType, RecipeMastery } from '../types';
 import { RECIPES, VESSELS, eraForRecipe } from '../constants';
@@ -78,46 +78,49 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
     { label: 'Blackening', value: FermentType.BLACK }
   ];
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (openCard) setOpenCard(null); else onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [openCard, onClose]);
+
   return (
-    <div className="modal-overlay">
+    // Closes like every other screen: a click on the backdrop (never one that
+    // started inside, and never one on the recipe card opened from here, which
+    // has its own backdrop), or Escape.
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="wood-panel codex-panel" style={{ width: 'min(1100px, 96vw)', height: 'min(90vh, 760px)', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* Header */}
-        <div className="lhead" style={{ flexWrap: 'wrap' }}>
-          <div className="ttl-row">
-            <div className="ic mark"><PanelMark name="codex" size={40} /></div>
-            <div>
-              <h1 className="slab">Laboratory Codex &amp; Archive</h1>
-              <div className="sub">Culinary taxonomy, tested parameters, and vintage harvest registries</div>
-            </div>
+        {/* THE STUDIO HEAD — the same header as every dark screen: the painted mark
+            in a brass-ringed medallion, a kicker, a short title, the numbers on brass
+            plates, one round close. The engraved wheat rule, the laurel watermark and
+            the "Rev 3.0" footer were a Victorian ledger in a restored studio. */}
+        <div className="studio-head">
+          <span className="sh-medal"><PanelMark name="codex" size={34} /></span>
+          <div className="sh-title">
+            <span className="kicker">The house library</span>
+            <h2>Codex</h2>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div className="hidden sm:flex mono" style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11 }}>
-              <div>
-                <span className="section-lbl" style={{ marginBottom: 0, display: 'block' }}>Discovered</span>
-                <span style={{ fontWeight: 700, color: 'var(--moss)' }}>{discoveredCount} / {RECIPES.length - 1}</span>
-                {knownCount > discoveredCount && (
-                  <span style={{ fontSize: 9, color: 'var(--plum)', display: 'block' }}>
-                    +{knownCount - discoveredCount} in the book
-                  </span>
-                )}
-              </div>
-              <div className="divider-line" style={{ height: 20 }} />
-              <div>
-                <span className="section-lbl" style={{ marginBottom: 0, display: 'block' }}>Harvests</span>
-                <span style={{ fontWeight: 700, color: 'var(--teal)' }}>{logbook.length}</span>
-              </div>
-              <div className="divider-line" style={{ height: 20 }} />
-              <div>
-                <span className="section-lbl" style={{ marginBottom: 0, display: 'block' }}>Net Yield</span>
-                <span style={{ fontWeight: 700, color: 'var(--amber)' }}>${totalValue.toLocaleString()}</span>
-              </div>
-            </div>
-            <button onClick={onClose} className="close-stamp" title="Close">
-              <CloseIcon size={14} />
-            </button>
+          <div className="sh-plates">
+            <span className="sh-plate" title={knownCount > discoveredCount ? `${knownCount - discoveredCount} more are written in books you own` : undefined}>
+              <span className="l">Discovered</span>
+              <span className="v">{discoveredCount}<small>/{RECIPES.length - 1}</small>{knownCount > discoveredCount && <em>+{knownCount - discoveredCount}</em>}</span>
+            </span>
+            <span className="sh-plate">
+              <span className="l">Harvests</span>
+              <span className="v">{logbook.length}</span>
+            </span>
+            <span className="sh-plate">
+              <span className="l">Net yield</span>
+              <span className="v">${totalValue.toLocaleString()}</span>
+            </span>
           </div>
+          <button onClick={onClose} className="close-stamp" title="Close (Esc)" aria-label="Close the Codex">
+            <CloseIcon size={14} />
+          </button>
         </div>
 
         {/* Tabs & Search */}
@@ -349,10 +352,6 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
           )}
         </div>
 
-        <div style={{ padding: '10px 24px', borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-lo)', flexShrink: 0 }} className="mono">
-          <span>Fermentation Science Database &middot; Rev 3.0</span>
-          <span>Press ESC or close to exit</span>
-        </div>
       </div>
 
       {openCard && (() => {

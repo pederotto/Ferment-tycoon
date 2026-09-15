@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SUPPLIER_SEAL } from './sealSheet';
 import { Ingredient, IngredientType, Vessel, Book, Supplier } from '../types';
 import { VESSELS, BOOKS, SUPPLIERS, UNDERGROUND_TIER_XP, MAX_EQUIPMENT_SLOTS } from '../constants';
-import { BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, JarOutlineIcon, WrenchIcon, BookIcon, BoltIcon } from './icons';
-import { ChevronUp, ArrowUpDown } from 'lucide-react';
+import { BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, JarOutlineIcon, WrenchIcon, BookIcon, BoltIcon, CloseIcon } from './icons';
+import { ArrowUpDown } from 'lucide-react';
 import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
 import VesselArt from './VesselArt';
@@ -191,25 +191,49 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
      the screen whether or not anyone wanted to shop. Every other screen in the
      game (Hardware, Staff, Codex, Orders, the cellar) is a modal; this is the
      one that was different, and the difference cost the room. */
+  /* Escape closes it, unless the ingredient panel opened from here is on top —
+     that one goes first. The search takes the keyboard on open, with a mouse
+     only: on a phone focusing it would throw the keyboard over the shelf. */
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.querySelector('.ing-overlay')) onToggle();
+    };
+    document.addEventListener('keydown', onKey);
+    if (window.matchMedia?.('(pointer: fine)').matches) searchRef.current?.focus({ preventScroll: true });
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onToggle]);
+
   if (!isOpen) return null;
+
+  /* Counts on the tabs: what is actually on each shelf today. */
+  const onShelfToday = (bm: boolean) => ingredients.filter(i =>
+    i.type !== IngredientType.TOOL && i.supplierId !== 'in_house' && (i.supplierId === 'black_market') === bm
+    && lockReason(i) === null && inSeason(i, month)).length;
+  const tabCount: Record<string, number> = {
+    ingredients: onShelfToday(false),
+    books: shelfBooks.filter(b => !ownedBookIds.includes(b.id)).length,
+    cultures: ingredients.filter(i => i.supplierId === 'in_house' && i.lineage && (inventory[i.id] || 0) > 0).length,
+    underground: onShelfToday(true),
+  };
 
   return (
     <div className="modal-overlay" onClick={onToggle}>
     <div className={`supply${tab === 'underground' ? ' underground' : ''}`} onClick={e => e.stopPropagation()}>
-      <div className="sup-head">
-        <div className="ttl">
-          <div className="ic mark"><PanelMark name={tab === 'underground' ? 'underground' : 'supply'} size={40} /></div>
-          <div>
-            <h1 className="slab">Supply</h1>
-            <div className="sub">Ingredients, vessels, tools, books and the underground</div>
-          </div>
+      {/* The studio head, shared with every dark screen (see LogbookModal). */}
+      <div className="studio-head">
+        <span className="sh-medal"><PanelMark name={tab === 'underground' ? 'underground' : 'supply'} size={34} /></span>
+        <div className="sh-title">
+          <span className="kicker">{tab === 'underground' ? 'Off the books' : 'For the house'}</span>
+          <h2>Supply</h2>
         </div>
-        <div className="right">
-          <span className="ticket funds"><span className="lbl">Funds</span><span className="num">${money.toLocaleString()}</span></span>
-          <button className="close-stamp" onClick={onToggle} aria-label="Close supply">
-            <ChevronUp size={14} color="currentColor" />
-          </button>
+        <div className="sh-plates">
+          <span className="sh-plate"><span className="l">Funds</span><span className="v">${money.toLocaleString()}</span></span>
         </div>
+        <button className="close-stamp" onClick={onToggle} title="Close (Esc)" aria-label="Close supply">
+          <CloseIcon size={14} />
+        </button>
       </div>
 
       {isOpen && (
@@ -228,6 +252,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
                 onClick={() => setTab(t.id as Tab)}
               >
                 {t.icon} {t.label}
+                {tabCount[t.id] !== undefined && <span className="tab-count">{tabCount[t.id]}</span>}
               </button>
             ))}
           </div>
@@ -301,7 +326,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
               <div className="sup-controls">
                 <div className="search-box">
                   <GameIcon name="search" size={13} />
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the shelf…" aria-label="Search ingredients" />
+                  <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the shelf…" aria-label="Search ingredients" />
                 </div>
 
                 <div className="chips">

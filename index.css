@@ -4558,3 +4558,102 @@ html, body {
 @media (max-width: 420px) {
   :root { --hud-h: 166px; }
 }
+
+/* =========================================================================
+   THE FRAME, SMOKED — AND ONE STUDIO HEAD FOR EVERY DARK SCREEN
+   The rooms are an old farmhouse restored as a modern studio: pale plaster,
+   pale oak, black steel, brass. The frame around them was still rustic brown
+   oak, and smoking it (a `color` blend) still read as planks. It is charcoal
+   plaster now — the plaster tile under the same smoke, like micro-cement —
+   edged in black steel with a brass hairline, so the brass instruments and the
+   rooms read as one place. Wood stays for furniture: the Go To tiles, the jars.
+   ========================================================================= */
+html, body {
+  background:
+    linear-gradient(rgba(12, 11, 10, 0.58), rgba(12, 11, 10, 0.58)),
+    linear-gradient(#6d655d, #6d655d),
+    var(--tex-plaster, none) 0 0 / 512px 512px repeat, #161412;
+  background-blend-mode: normal, color, normal, normal;
+}
+.hud, .rail, .rail.right {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.30)),
+    linear-gradient(#6d655d, #6d655d),
+    var(--tex-plaster, none) 0 0 / 512px 512px repeat, #1b1917;
+  background-blend-mode: normal, color, normal, normal;
+}
+.rail.left { border-right: 1px solid #0b0a09; box-shadow: inset -1px 0 0 rgba(222, 186, 110, 0.22); }
+.rail.right { border-left: 1px solid #0b0a09; box-shadow: inset 1px 0 0 rgba(222, 186, 110, 0.22); }
+.rail-sect > h3 { color: #cfae6e; font-family: var(--f-spec); letter-spacing: 0.2em; }
+
+/* The studio head. Supply and the Codex use `.studio-head`; the cellar, koji
+   room, press, orders and crew heads already had the same shape (mark, kicker,
+   title, close) and take the same look. */
+.studio-head, .pr-head, .ob-head, .cw-head {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 13px 20px 12px; position: relative; flex-shrink: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.34)),
+    linear-gradient(#6d655d, #6d655d),
+    var(--tex-plaster, none) 0 0 / 512px 512px repeat, #1b1917;
+  background-blend-mode: normal, color, normal, normal;
+  border-bottom: 1px solid #0b0a09;
+}
+/* a brass hairline instead of the engraved leaf and wheat rules */
+.studio-head::after, .pr-head::after, .ob-head::after, .cw-head::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; top: auto; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(222, 186, 110, 0.7) 14%, rgba(222, 186, 110, 0.7) 86%, transparent);
+  -webkit-mask: none; mask: none; opacity: 1; transform: none; width: auto;
+}
+.sh-medal, .pr-head > .panel-mark, .ob-head > .panel-mark, .cw-head > .panel-mark {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 48px !important; height: 48px !important; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, #28221c, #141210 72%);
+  box-shadow: 0 0 0 2px #8a6a32, 0 0 0 3px rgba(226, 194, 122, 0.55), inset 0 2px 6px rgba(0, 0, 0, 0.7), 0 3px 6px rgba(0, 0, 0, 0.45);
+}
+.pr-head > .panel-mark img, .ob-head > .panel-mark img, .cw-head > .panel-mark img {
+  width: auto !important; height: auto !important; max-width: 34px; max-height: 34px;
+}
+.sh-medal .panel-mark img { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); }
+.sh-title { margin-right: auto; min-width: 0; }
+.studio-head .kicker, .pr-head .kicker, .ob-head .kicker, .cw-head .kicker {
+  display: block; font-family: var(--f-spec); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.2em; text-transform: uppercase; color: #cfae6e; margin: 0 0 1px;
+}
+.studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2 {
+  font-family: var(--f-name); font-size: 22px; font-weight: 600; line-height: 1.1;
+  letter-spacing: 0.005em; color: var(--text-hi); margin: 0;
+}
+.sh-plates { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sh-plate {
+  display: flex; flex-direction: column; padding: 3px 11px 4px; border-radius: 4px; color: #2a1d0c;
+  background: linear-gradient(180deg, #e2c27a, #b48a44 55%, #8a6a32);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 210, 0.5), 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.sh-plate .l { font-family: var(--f-spec); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5d4521; line-height: 1.2; }
+.sh-plate .v { font-family: var(--f-spec); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
+.sh-plate .v small { font-size: 11px; font-weight: 600; color: #5d4521; }
+.sh-plate .v em { font-style: normal; font-size: 10px; margin-left: 5px; color: #4a2748; }
+/* one round close, brass-rimmed, on every dark head */
+.studio-head .close-stamp, .pr-head .close-stamp, .ob-head .close-stamp, .cw-head .close-stamp {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(222, 186, 110, 0.55); color: #e2c27a;
+  background: radial-gradient(circle at 50% 35%, #3a3430, #1a1715);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+.studio-head .close-stamp:hover, .pr-head .close-stamp:hover, .ob-head .close-stamp:hover, .cw-head .close-stamp:hover {
+  border-color: #e2c27a; color: #fff1cc; filter: brightness(1.12);
+}
+/* the Codex panel no longer wears the ledger's ornaments */
+.codex-panel .lhead::before, .codex-panel .lhead::after { display: none; }
+/* counts on Supply's tabs */
+.sup-tab .tab-count {
+  margin-left: 4px; padding: 0 6px; border-radius: 9px; font-family: var(--f-spec); font-size: 10.5px; font-weight: 700;
+  font-variant-numeric: tabular-nums; background: rgba(0, 0, 0, 0.35); color: var(--text-mid);
+}
+.sup-tab.active .tab-count { background: rgba(217, 164, 65, 0.25); color: var(--amber); }
+@media (max-width: 620px) {
+  .studio-head, .pr-head, .ob-head, .cw-head { padding: 10px 12px; gap: 10px; }
+  .studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2 { font-size: 19px; }
+  .sh-plates { order: 3; width: 100%; }
+}
