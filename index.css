@@ -4657,3 +4657,116 @@ html, body {
   .studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2 { font-size: 19px; }
   .sh-plates { order: 3; width: 100%; }
 }
+
+/* =========================================================================
+   SUPPLY AND THE CODEX, IN THE HOUSE STYLE
+   Hardware, Staff and Orders are quiet: a dark textured body, small uppercase
+   brass section labels, cream paper cards. Supply and the Codex carried a second
+   visual language on top — green cloth tabs, solid orange pills, dark leather
+   cards, big serif and italic type. Same controls, the house's clothes:
+   section tabs are brass labels with an underline, filters are outlines with a
+   brass plate for the active one, and a recipe is printed stock, met or not.
+   ========================================================================= */
+.codex-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.24)), var(--tex-slate, none) 0 0 / 512px 512px repeat, #26302c;
+}
+
+/* bars under the head, separated by brass hairlines */
+.cx-bar, .supply .sup-tabs {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px;
+  padding: 10px 22px 0; flex-shrink: 0;
+  border-bottom: 1px solid rgba(222, 186, 110, 0.18);
+}
+.cx-bar { padding-bottom: 8px; align-items: center; }
+.cx-tabs { display: flex; gap: 4px; align-self: stretch; align-items: flex-end; margin-bottom: -9px; }
+.cx-types, .codex-panel .shelf-row {
+  display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; flex-wrap: nowrap;
+  padding: 9px 22px; border-bottom: 1px solid rgba(222, 186, 110, 0.12); background: none;
+}
+.cx-body { flex: 1; overflow-y: auto; padding: 18px 22px 22px; }
+.cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.cx-search { width: 260px; }
+
+/* SECTION TABS — the cw-lbl / ob-lbl label, made clickable */
+.supply .sup-tab, .sec-tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px 9px; margin: 0;
+  font-family: var(--f-spec); font-size: 12.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(207, 174, 110, 0.72); cursor: pointer;
+  background: none !important; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+}
+.supply .sup-tab:hover, .sec-tab:hover { color: #e2c27a; }
+.supply .sup-tab.active, .sec-tab.active { color: var(--text-hi); border-bottom-color: #d8b46c; }
+.supply .sup-tab.illicit.active { color: #e8a08c; border-bottom-color: var(--brick); }
+.supply .sup-tab .gicon, .sec-tab .gicon { opacity: 0.85; }
+.supply .sup-tab .tab-count, .sec-tab .tab-count {
+  margin-left: 2px; padding: 0 6px; border-radius: 3px; font-size: 11px; letter-spacing: 0; font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.32); color: var(--text-mid);
+}
+.supply .sup-tab.active .tab-count, .sec-tab.active .tab-count {
+  color: #2a1d0c; background: linear-gradient(180deg, #e2c27a, #b48a44 55%, #8a6a32);
+}
+
+/* FILTERS — outlines; the active one is a brass plate, not an orange pill */
+.supply .chip-tab, .codex-panel .chip-tab,
+.supply .sr-btn, .supply .sup-supplier, .supply .bulk-buy .q {
+  font-family: var(--f-spec); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap;
+  color: var(--text-mid); background: rgba(0, 0, 0, 0.22) !important;
+  border: 1px solid rgba(222, 186, 110, 0.22); border-radius: 4px; box-shadow: none;
+}
+.supply .chip-tab, .codex-panel .chip-tab { padding: 5px 11px; }
+.supply .chip-tab:not(.active):hover, .codex-panel .chip-tab:not(.active):hover,
+.supply .sr-btn:hover, .supply .sup-supplier:hover, .supply .bulk-buy .q:not(.active):hover {
+  color: var(--text-hi); border-color: rgba(222, 186, 110, 0.55);
+}
+.supply .chip-tab.active, .codex-panel .chip-tab.active,
+.supply .bulk-buy .q.active, .supply .sort-rail .sr-btn.active {
+  color: #2a1d0c; border-color: #6e5226;
+  background: linear-gradient(180deg, #e2c27a, #b48a44 55%, #8a6a32) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 210, 0.5);
+}
+.supply .sup-supplier.active { color: var(--text-hi); border-color: #d8b46c; background: rgba(216, 180, 108, 0.12) !important; }
+.supply .sup-supplier b { color: #d8b46c; }
+.codex-panel .chip-tab .cnt, .supply .chip-tab .cnt { background: rgba(0, 0, 0, 0.3); color: var(--text-mid); border-radius: 3px; padding: 0 5px; margin-left: 4px; }
+.codex-panel .chip-tab.active .cnt, .supply .chip-tab.active .cnt { background: rgba(42, 29, 12, 0.18); color: #2a1d0c; }
+
+/* FIELDS */
+.supply .search-box, .codex-panel .search-box, .supply .bulk-buy {
+  background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(222, 186, 110, 0.22); border-radius: 4px;
+}
+.supply .search-box:focus-within, .codex-panel .search-box:focus-within { border-color: #d8b46c; }
+.supply .search-box input, .codex-panel .search-box input { font-family: var(--f-body); font-size: 12px; color: var(--text-hi); }
+.supply .bulk-buy .l, .supply .sort-rail .sr-l, .supply .sort-rail .sr-count, .supply .cat-head {
+  font-family: var(--f-spec); letter-spacing: 0.15em; text-transform: uppercase; color: #cfae6e;
+}
+.supply .sort-rail .sr-count { text-transform: none; letter-spacing: 0.02em; font-style: normal; color: var(--text-lo); }
+.supply .sup-controls, .supply .loyalty-strip, .supply .sort-rail {
+  border-bottom: 1px solid rgba(222, 186, 110, 0.12); background: none;
+}
+
+/* THE CODEX CARD, UNMET: blank printed stock — pale, faint ink, no decal —
+   rather than a dark leather tile. Same paper as every other card in the house. */
+.codex-card.unknown {
+  background: linear-gradient(180deg, #d6c9a9, #c9ba96) !important;
+  border-color: rgba(58, 42, 22, 0.25); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35); opacity: 0.86;
+}
+.codex-card.unknown:hover { opacity: 1; }
+.codex-card.unknown .cc-name { color: var(--ink-soft, #5a4830); }
+.codex-card.unknown .cc-desc, .codex-card.unknown .cc-foot { color: var(--ink-faint, #7a6446); }
+.codex-card.unknown .cc-diff { color: var(--ink-faint, #7a6446); border-color: rgba(58, 42, 22, 0.3); }
+.codex-card.unknown .cc-params, .codex-card.unknown .cc-params > div + div { border-color: rgba(58, 42, 22, 0.18); }
+.codex-card.unknown .cc-params .l, .codex-card.unknown .cc-params .v { color: var(--ink-faint, #7a6446); }
+.codex-card.unknown .vessel-badge { color: var(--ink-faint, #7a6446); border-color: rgba(58, 42, 22, 0.3); }
+.codex-card.unknown .status-chip { color: var(--ink-faint, #7a6446) !important; background: rgba(58, 42, 22, 0.08) !important; }
+.codex-card .cc-name { font-size: 19px; }
+
+@media (max-width: 620px) {
+  .cx-bar, .supply .sup-tabs, .cx-types, .codex-panel .shelf-row { padding-left: 12px; padding-right: 12px; }
+  .cx-search { width: 100%; }
+  .cx-body { padding: 12px; }
+  .cx-grid { grid-template-columns: 1fr; }
+}
+/* Supply's tab bar holds only tabs, so it packs left rather than spreading */
+.supply .sup-tabs { justify-content: flex-start; gap: 4px; }
+.cx-empty { padding: 64px 16px; color: var(--text-lo); }
+.cx-empty-t { font-family: var(--f-name); font-size: 17px; color: var(--text-mid); margin: 4px 0 0; }
+.cx-empty-s { font-size: 12px; margin: 0; }

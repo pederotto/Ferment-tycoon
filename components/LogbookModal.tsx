@@ -123,24 +123,25 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
           </button>
         </div>
 
-        {/* Tabs & Search */}
-        <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--line)', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => setActiveTab('codex')} className={`chip-tab${activeTab === 'codex' ? ' active' : ''}`}>
-              <GameIcon name="sparkle" size={12} style={{ display: 'inline', marginRight: 5 }} /> Recipe Codex
+        {/* Section tabs and search: the same bar Supply has, under the studio head. */}
+        <div className="cx-bar">
+          <div className="cx-tabs" role="tablist">
+            <button role="tab" aria-selected={activeTab === 'codex'} onClick={() => setActiveTab('codex')} className={`sec-tab${activeTab === 'codex' ? ' active' : ''}`}>
+              <GameIcon name="sparkle" size={12} /> Recipes <span className="tab-count">{RECIPES.length - 1}</span>
             </button>
-            <button onClick={() => setActiveTab('archives')} className={`chip-tab${activeTab === 'archives' ? ' active' : ''}`}>
-              <GameIcon name="award" size={12} style={{ display: 'inline', marginRight: 5 }} /> Vintage Archives ({logbook.length})
+            <button role="tab" aria-selected={activeTab === 'archives'} onClick={() => setActiveTab('archives')} className={`sec-tab${activeTab === 'archives' ? ' active' : ''}`}>
+              <GameIcon name="award" size={12} /> Archive <span className="tab-count">{logbook.length}</span>
             </button>
           </div>
 
-          <div className="search-box" style={{ width: 260 }}>
+          <div className="search-box cx-search">
             <GameIcon name="search" size={13} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeTab === 'codex' ? 'Search recipes...' : 'Search vintages...'}
+              placeholder={activeTab === 'codex' ? 'Search recipes…' : 'Search the archive…'}
+              aria-label={activeTab === 'codex' ? 'Search recipes' : 'Search the archive'}
             />
           </div>
         </div>
@@ -163,7 +164,6 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                   key={sh.id}
                   onClick={() => setShelf(sh.id)}
                   className={`chip-tab${shelf === sh.id ? ' active' : ''}`}
-                  style={{ whiteSpace: 'nowrap' }}
                 >
                   {sh.label} <span className="cnt">{n}</span>
                 </button>
@@ -173,13 +173,12 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
         )}
 
         {activeTab === 'codex' && (
-          <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 8, overflowX: 'auto', flexShrink: 0 }} className="custom-scrollbar">
+          <div className="cx-types custom-scrollbar">
             {fermentTypes.map(ft => (
               <button
                 key={ft.value}
                 onClick={() => setSelectedType(ft.value)}
                 className={`chip-tab${selectedType === ft.value ? ' active' : ''}`}
-                style={{ whiteSpace: 'nowrap' }}
               >
                 {ft.label}
               </button>
@@ -188,9 +187,9 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
         )}
 
         {/* Content */}
-        <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+        <div className="cx-body custom-scrollbar">
           {activeTab === 'codex' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+            <div className="cx-grid">
               {filteredRecipes.map(recipe => {
                 // Three states: unknown / known (bought the formula in a book, never
                 // run it) / analyzed (actually produced it). A book buys you the name,
@@ -305,10 +304,13 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {filteredArchives.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-lo)' }}>
+                /* The same empty state every screen uses: the faded mark centred over
+                   a line of what to do. text-align could not centre the mark, which is
+                   a flex box, so it sat stranded at the left. */
+                <div className="empty-mark cx-empty">
                   <PanelMark name="books" size={64} faded />
-                  <p className="mono" style={{ marginTop: 12 }}>No vintage records found.</p>
-                  <p style={{ fontSize: 11, marginTop: 4 }}>Harvest batches in the lab to populate your permanent registry.</p>
+                  <p className="cx-empty-t">{searchQuery ? 'Nothing in the archive matches that.' : 'The archive is empty.'}</p>
+                  <p className="cx-empty-s">Every batch you harvest is written in here, with its score and its notes.</p>
                 </div>
               ) : (
                 filteredArchives.map(entry => {
