@@ -12,6 +12,7 @@ import {
   SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
 
+import { tickMassLoss, currentMassG, concentratedProfile } from './massBalance';
 // --- GAMEPLAY CONSTANTS ---
 const OPTIMAL_TEMP = 30; // The "Goldilocks" zone
 const DANGER_TEMP = 42;  // Where Stress begins
@@ -1463,11 +1464,23 @@ export const processBatchTick = (
     history.push(sample);
   }
 
+  // WHERE THE MASS WENT this tick (services/massBalance.ts): water to the air
+  // through however open the vessel is, gas off whatever is fermenting. The
+  // yield follows what is actually left, so a cure sells at its dried weight and
+  // a vented tray loses what it breathed out.
+  const massLoss = tickMassLoss({
+    batch: { ...batch, totalMass, status }, recipe, ingredients,
+    prevProgress: batch.progress, progress, temp: newParams.temp, humidity: newParams.humidity, vent: ex.vent,
+  });
+  const yieldVolume = currentMassG({ ...batch, totalMass, massLoss }) / 1000;
+
   return {
     ...batch,
     history,
     enzymes,
     totalMass, 
+    massLoss,
+    yieldVolume,
     progress: progress,
     params: newParams,
     quality: newQuality,
@@ -1491,7 +1504,9 @@ export const processBatchTick = (
 export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?: Record<StaffRoleType, boolean>): number => {
   if (recipe.type === FermentType.FAIL || batch.status === 'spoiled') return 0;
   
-  const q = batch.quality;
+  // Scored on the flavour as it now is: reduced batches are more intense, so an
+  // over-dried or over-reduced one overshoots its target (services/massBalance.ts).
+  const q = concentratedProfile(batch, recipe);
   const t = recipe.idealFlavorProfile;
 
   let clarityBonus = batch.isFiltered ? 10 : 0;

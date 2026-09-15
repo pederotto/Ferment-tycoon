@@ -32,6 +32,7 @@ import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
 import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, batchFitsContract, unitsFromBatch, makeContractOffer, overdueContracts, newlyUnlockedVendors, canOfferContract } from './services/vendors';
 import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
 import { keeperRound, mintSporeHarvest, kojiStockKg, KOJI_ROOM_VESSEL } from './services/kojiRoom';
+import { planSeparation, currentMassG, emptyLoss, addRemoved } from './services/massBalance';
 import KojiRoomView from './components/KojiRoomView';
 import { KOJI_ROOM_COST, KOJI_ROOM_CAPACITY, KOJI_ROOM_TEMP, KOJI_ROOM_DEFAULT_TARGET_KG, KOJI_ROOM_TARGET_MAX_KG } from './constants';
 import DevPanel from './components/DevPanel';
@@ -1340,85 +1341,49 @@ export default function App() {
       const batch = targetBatch || activeBatchForTest;
       if (!batch) return;
 
-      // RESOLVE INGREDIENTS TO CHECK WATER CONTENT
-      const batchIngredients = batch.inputIngredientIds.map(id => 
-          [...INGREDIENTS, ...gameState.customIngredients].find(i => i.id === id)
-      ).filter(Boolean) as Ingredient[];
-
-      const { waterRatio, totalMass } = calculateBatchDynamics(batchIngredients, batch.ingredientQuantities);
+      // SEPARATION FROM COMPOSITION (services/massBalance.ts). The batch knows what
+      // it is made of — water, dissolved salt, amino acids, sugars, acids, alcohol,
+      // and the solids — and the press takes the liquid phase minus what the solids
+      // hold back, so how much runs off and what it tastes of come from the batch,
+      // not from a table. The liquid is minted from its own concentrations and
+      // named for its family; the cake stays as the batch. A dry mash only packs
+      // down; it no longer gains a quarter of its mass from nothing.
+      const all = [...INGREDIENTS, ...gameState.customIngredients];
       const recipe = getRecipeForBatch(batch);
+      const substrate = all.find(i => i.id === batch.substrateId);
+      const batchIngredients = batch.inputIngredientIds.map(id => all.find(i => i.id === id)).filter(Boolean) as Ingredient[];
+      const plan = planSeparation(batch, recipe, batchIngredients, action === 'filter' ? 'centrifuge' : 'press', substrate);
 
       setGameState(prev => {
-          let updatedBatches = prev.batches;
-          let updatedInventory = { ...prev.inventory };
-          let newMessages: string[] = [];
-
-          if (action === 'press') {
-              // LOGIC: If Wet Mash (>50% water), SPLIT into Sauce + Paste
-              if (waterRatio > 0.5) {
-                  // Pressing a moromi is not an optional yield tweak, it is the
-                  // last step of making soy sauce: the mash goes into cloth, the
-                  // liquid that runs out is shoyu and what stays behind is cake.
-                  // A press is the only way to get it out, which is why the tool
-                  // exists.
-                  const isMoromi = recipe?.type === FermentType.SHOYU;
-                  // A moromi gives up its liquid more completely than a loose
-                  // mash — it has been breaking down for months.
-                  const efficiency = isMoromi ? 0.92 : 0.8;
-                  const liquidMass = totalMass * waterRatio * efficiency;
-                  const liquidUnits = Math.floor(liquidMass / 1000);
-                  
-                  if (liquidUnits > 0) {
-                      updatedInventory['amino_sauce'] = (updatedInventory['amino_sauce'] || 0) + liquidUnits;
-                      newMessages.push(isMoromi
-                        ? `Pressed ${liquidUnits}L of raw shoyu. The cake keeps — it is still food.`
-                        : `Extracted ${liquidUnits}L Amino Sauce`);
-                  }
-
-                  updatedBatches = prev.batches.map(b => {
-                      if (b.id !== batch.id) return b;
-                      return {
-                          ...b,
-                          isPressed: true,
-                          yieldVolume: (b.yieldVolume || 1) * (1 - waterRatio), // Volume reduces to solids only
-                          messages: [...b.messages, ...newMessages, "Solids Separated"],
-                          // Force re-analysis
-                          status: b.status === 'analyzed' ? 'ready' : b.status 
-                      };
-                  });
-
-              } else {
-                  // Standard Dry Press (just increases yield slightly by compacting)
-                  updatedBatches = prev.batches.map(b => {
-                      if (b.id !== batch.id) return b;
-                      return {
-                          ...b,
-                          isPressed: true,
-                          yieldVolume: (b.yieldVolume || 1) * 1.25,
-                          messages: [...b.messages, "Hydro-Pressed (+Yield)"],
-                          status: b.status === 'analyzed' ? 'ready' : b.status 
-                      };
-                  });
+          const target = prev.batches.find(b => b.id === batch.id);
+          if (!target) return prev;
+          const loss = { ...emptyLoss(), ...(target.massLoss ?? {}) };
+          loss.removed = addRemoved(loss.removed, plan.removed);
+          let inventory = prev.inventory;
+          let customIngredients = prev.customIngredients;
+          if (action === 'filter') {
+              loss.leesG += plan.leesG;
+          } else {
+              // A dry press only squeezes a little water out; it still counts as liquid off the batch.
+              loss.pressedG += plan.runsOff ? plan.liquidG : (plan.removed.waterG ?? 0);
+              if (plan.product && plan.liquidUnits > 0) {
+                  const product = plan.product;
+                  inventory = { ...inventory, [product.id]: (inventory[product.id] ?? 0) + plan.liquidUnits };
+                  if (!customIngredients.some(i => i.id === product.id)) customIngredients = [...customIngredients, product];
               }
-          } else if (action === 'filter') {
-              // Centrifuge Logic (Clarification)
-              updatedBatches = prev.batches.map(b => {
-                  if (b.id !== batch.id) return b;
-                  return {
-                      ...b,
-                      isFiltered: true,
-                      yieldVolume: (b.yieldVolume || 1) * 0.9, // 10% loss
-                      messages: [...b.messages, "Centrifuged (Clarified)"],
-                      status: b.status === 'analyzed' ? 'ready' : b.status 
-                  };
-              });
           }
-
-          return {
-              ...prev,
-              batches: updatedBatches,
-              inventory: updatedInventory
+          const next: Batch = {
+              ...target,
+              massLoss: loss,
+              quality: plan.qualityAfter,
+              isPressed: action === 'press' ? true : target.isPressed,
+              isFiltered: action === 'filter' ? true : target.isFiltered,
+              messages: [...target.messages, plan.note],
+              // Force re-analysis
+              status: target.status === 'analyzed' ? 'ready' : target.status,
           };
+          next.yieldVolume = currentMassG(next) / 1000;
+          return { ...prev, inventory, customIngredients, batches: prev.batches.map(b => (b.id === batch.id ? next : b)) };
       });
   };
 

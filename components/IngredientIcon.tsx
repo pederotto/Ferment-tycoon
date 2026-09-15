@@ -62,6 +62,22 @@ const Sliced: React.FC<{
   );
 };
 
+const LIQUID_BOTTLES: [RegExp, string][] = [
+  [/^amino_|^tamari_amino|^moromi_cask/, 'pulse_amino_bottle'],
+  [/^garum_fish_sauce/, 'fish_sauce'],
+  [/^garum_tomato/, 'tomato_garum_bottle'],
+  [/^garum_rose/, 'rose_garum'],
+  [/^garum_/, 'colatura_bottle'],
+  [/^brine_|^buttermilk_/, 'brined_fruit_jar'],
+  [/^sake_pressed|^amazake/, 'grain_sake_bottle'],
+  [/^wine_pressed/, 'country_wine_bottle'],
+  [/^mead_pressed/, 'mead_bottle'],
+  [/^kvass_|^tepache_|^chicha_|^makgeolli_|^brew_/, 'kvass_bottle'],
+  [/^vinegar_raw/, 'fruit_vinegar_bottle'],
+  [/^kombucha_strained/, 'kombucha_jar'],
+  [/^ponzu_strained/, 'ponzu_bottle'],
+];
+
 const IngredientIcon: React.FC<Props> = ({ id, size = 30, fallback, className }) => {
   const i = sheetIndex(id);
   if (i >= 0) {
@@ -86,6 +102,17 @@ const IngredientIcon: React.FC<Props> = ({ id, size = 30, fallback, className })
     const k = sheetIndex('barley_koji');
     if (k >= 0) return <Sliced sheet="ing" cols={SHEET_COLS} cw={SHEET_CELL_W} ch={SHEET_CELL_H}
                                index={k} size={size} className={className} />;
+  }
+
+  // Liquids a press mints from a batch (services/massBalance.ts) carry a family
+  // prefix and a strength suffix, so no two share an id; each borrows the bottle
+  // of its family from the product sheet.
+  for (const [re, cell] of LIQUID_BOTTLES) {
+    if (re.test(id)) {
+      const pi = productIndex(cell);
+      if (pi >= 0) return <Sliced sheet="product" cols={PRODUCT_COLS} cw={PRODUCT_CELL} ch={PRODUCT_CELL}
+                                  index={pi} size={size} className={`product${className ? ' ' + className : ''}`} />;
+    }
   }
 
   const Drawn = artFor(id) ?? fallback;

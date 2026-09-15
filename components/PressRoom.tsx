@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PanelMark from './PanelMark';
-import { Batch, Recipe, FermentType } from '../types';
+import { Batch } from '../types';
 import { INGREDIENTS } from '../constants';
-import { calculateBatchDynamics, getRecipeForBatch } from '../services/gameLogic';
+import { getRecipeForBatch } from '../services/gameLogic';
+import { planSeparation } from '../services/massBalance';
 import { PRESS_FRAMES, PressFrame } from './pressSheet';
 import { CENTRIFUGE_PARTS } from './centrifugeSheet';
 import { CloseIcon } from './icons';
@@ -37,21 +38,6 @@ interface PressRoomProps {
   onPress: (batch: Batch) => void;
 }
 
-/** Matches the extraction in handleProcessBatch, so the preview cannot lie. */
-const previewYield = (batch: Batch, recipe: Recipe, ingredients: typeof INGREDIENTS) => {
-  const { waterRatio, totalMass } = calculateBatchDynamics(ingredients as any, batch.ingredientQuantities);
-  const wet = waterRatio > 0.5;
-  const isMoromi = recipe.type === FermentType.SHOYU;
-  const efficiency = isMoromi ? 0.92 : 0.8;
-  const liquidMass = wet ? totalMass * waterRatio * efficiency : 0;
-  return {
-    wet, isMoromi, totalMass, waterRatio,
-    liquidUnits: Math.floor(liquidMass / 1000),
-    liquidMass,
-    cakeMass: Math.max(0, totalMass - liquidMass),
-  };
-};
-
 /* The press's job, frame by frame, and how long each frame holds. */
 const PRESS_STEPS: PressFrame[] = ['loaded', 'pressing', 'pressed', 'cake'];
 const PRESS_STEP_MS = 650;
@@ -73,10 +59,10 @@ const PressRoom: React.FC<PressRoomProps> = ({ tool, batches, customIngredients,
     .filter(b => !b.kojiRoom && (isPress ? !b.isPressed : !b.isFiltered) && b.status !== 'spoiled')
     .map(b => {
       const recipe = getRecipeForBatch(b);
-      const ings = b.inputIngredientIds
-        .map(id => all.find(i => i.id === id))
-        .filter(Boolean) as typeof INGREDIENTS;
-      return { batch: b, recipe, ings, y: previewYield(b, recipe, ings) };
+      const substrate = all.find(i => i.id === b.substrateId);
+      const ings = b.inputIngredientIds.map(id => all.find(i => i.id === id)).filter(Boolean) as typeof INGREDIENTS;
+      // The same plan the App applies, so the preview cannot lie.
+      return { batch: b, recipe, y: planSeparation(b, recipe, ings, isPress ? 'press' : 'centrifuge', substrate) };
     });
 
   const [run, setRun] = useState<{ id: string; step: number } | null>(null);
@@ -142,17 +128,17 @@ const PressRoom: React.FC<PressRoomProps> = ({ tool, batches, customIngredients,
           ) : pressable.map(({ batch, recipe, y }) => {
             const busy = run?.id === batch.id;
             return (
-              <div key={batch.id} className={`pr-job${(isPress && !y.wet) ? ' dry' : ''}${busy ? ' busy' : ''}`}>
+              <div key={batch.id} className={`pr-job${(isPress && !y.runsOff) ? ' dry' : ''}${busy ? ' busy' : ''}`}>
                 <div className="pj-head">
                   <span className="n">{recipe.name}</span>
-                  <span className="v mono">{(y.totalMass / 1000).toFixed(1)} kg · {Math.round(y.waterRatio * 100)}% water</span>
+                  <span className="v mono">{(y.massG / 1000).toFixed(1)} kg · {y.saltPct.toFixed(1)}% salt</span>
                 </div>
 
                 <div className="pj-flow">
                   <div className="pj-side">
                     <span className="l">In</span>
-                    <span className="m mono">{(y.totalMass / 1000).toFixed(1)} kg</span>
-                    <span className="d">{y.wet ? 'wet mash' : 'dry mash'}</span>
+                    <span className="m mono">{(y.massG / 1000).toFixed(1)} kg</span>
+                    <span className="d">{y.runsOff ? 'wet mash' : 'dry mash'}</span>
                   </div>
 
                   <ArrowRight size={15} className="pj-arrow" />
@@ -162,36 +148,36 @@ const PressRoom: React.FC<PressRoomProps> = ({ tool, batches, customIngredients,
                       <div className="pj-side out">
                         <Thumb part="jug" />
                         <span className="l">Clarified</span>
-                        <span className="m mono">{(y.totalMass * 0.9 / 1000).toFixed(1)} kg</span>
+                        <span className="m mono">{((y.massG - y.leesG) / 1000).toFixed(1)} kg</span>
                         <span className="d">clear, and worth more</span>
                       </div>
                       <div className="pj-side cake">
                         <span className="l">Thrown out</span>
-                        <span className="m mono">{(y.totalMass * 0.1 / 1000).toFixed(1)} kg</span>
+                        <span className="m mono">{(y.leesG / 1000).toFixed(1)} kg</span>
                         <span className="d">lees and sediment</span>
                       </div>
                     </>
-                  ) : y.wet ? (
+                  ) : y.runsOff ? (
                     <>
                       <div className="pj-side out">
                         <Thumb part="jug" />
-                        <span className="l">Liquid</span>
+                        <span className="l">{y.product?.name.split(' · ')[0] ?? 'Liquid'}</span>
                         <span className="m mono">{y.liquidUnits} L</span>
-                        <span className="d">{y.isMoromi ? 'raw shoyu' : 'amino sauce'}</span>
+                        <span className="d">{y.saltPct.toFixed(1)}% salt · {y.aminoPct.toFixed(1)}% amino{y.ethanolPct >= 1 ? ` · ${y.ethanolPct.toFixed(0)}% alc` : ''}</span>
                       </div>
                       <div className="pj-side cake">
                         <Thumb part="cake" />
                         <span className="l">Cake</span>
-                        <span className="m mono">{(y.cakeMass / 1000).toFixed(1)} kg</span>
-                        <span className="d">stays in the cloth</span>
+                        <span className="m mono">{(y.cakeG / 1000).toFixed(1)} kg</span>
+                        <span className="d">stays on the bench as the batch</span>
                       </div>
                     </>
                   ) : (
                     <div className="pj-side out">
                       <Thumb part="cake" />
                       <span className="l">Compacted</span>
-                      <span className="m mono">+25%</span>
-                      <span className="d">yield only</span>
+                      <span className="m mono">{(y.cakeG / 1000).toFixed(1)} kg</span>
+                      <span className="d">barely anything runs off</span>
                     </div>
                   )}
                 </div>
@@ -200,16 +186,14 @@ const PressRoom: React.FC<PressRoomProps> = ({ tool, batches, customIngredients,
                   <span className="why">
                     {!isPress
                       ? 'Spinning drops the lees out. You give up a tenth of the volume and get back something clear enough to sell as a finished sauce.'
-                      : y.isMoromi
-                        ? 'A moromi has been breaking down for months, so it gives its liquid up almost completely — 92% against 80% for a loose mash. This is the step that turns it into soy sauce.'
-                        : y.wet
-                          ? 'Wet enough to separate. The liquid is worth more than the mash it came from.'
-                          : 'Too dry to run off. Pressing only packs it down.'}
+                      : y.runsOff
+                        ? (y.product?.description ?? 'Wet enough to separate.')
+                        : 'Too dry to run off. Pressing only packs it down — it does not make more of it.'}
                   </span>
                   <button className="btn btn-amber" onClick={() => start(batch)} disabled={!!run}>
                     {busy
                       ? (isPress ? 'Pressing…' : 'Spinning…')
-                      : !isPress ? 'Spin it clear' : y.wet ? `Press for ${y.liquidUnits} L` : 'Compact it'}
+                      : !isPress ? 'Spin it clear' : y.runsOff ? `Press for ${y.liquidUnits} L` : 'Compact it'}
                   </button>
                 </div>
               </div>

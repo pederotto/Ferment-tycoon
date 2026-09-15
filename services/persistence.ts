@@ -182,6 +182,8 @@ export function loadGame(): GameState | null {
       // inheriting a skin they never grew.
       surfaceFilm: b.surfaceFilm ?? 0,
       rancidity: b.rancidity ?? 0,
+      // Saves before the mass account start with nothing lost rather than a guess.
+      massLoss: b.massLoss ?? { waterG: 0, gasG: 0, pressedG: 0, leesG: 0, removed: {} },
       lineage: b.lineage ?? {
         generation: b.generation ?? 1,
         vigor: 1 + Math.min(10, (b.generation ?? 1) - 1) * 0.05,

@@ -3,6 +3,7 @@ import {
 } from '../types';
 import { BUYERS, RECIPES } from '../constants';
 
+import { currentMassG } from './massBalance';
 /* =============================================================================
    VENDORS WHO REMEMBER YOU
 
@@ -238,7 +239,7 @@ export const eligibleContracts = (
  * the deadline stops meaning anything.
  */
 export const unitsFromBatch = (batch: Batch): number =>
-  Math.max(1, Math.min(4, Math.round(Math.pow(Math.max(0.1, (batch.totalMass || 1000) / 1000), 0.5))));
+  Math.max(1, Math.min(4, Math.round(Math.pow(Math.max(0.1, (currentMassG(batch) || 1000) / 1000), 0.5))));
 
 export const contractProgressLabel = (c: Contract): string =>
   `${c.unitsDelivered}/${c.unitsRequired} delivered`;

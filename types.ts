@@ -181,6 +181,16 @@ export interface Vessel {
   builtIn?: boolean;
 }
 
+/** Where a batch's mass has gone since it was charged, in grams. */
+export interface MassLoss {
+  waterG: number;
+  gasG: number;
+  pressedG: number;
+  leesG: number;
+  /** Components a press or centrifuge took off (waterG, saltG, aminoG, sugarG, acidG, ethanolG, proteinG, starchG, fibreG, fatG). */
+  removed?: Record<string, number>;
+}
+
 export interface FlavorProfile {
   umami: number;
   acidity: number;
@@ -230,6 +240,8 @@ export interface Batch {
   ingredientQuantities?: Record<string, number>; // Map of IngredientID -> Grams used
   totalMass: number; // grams
   yieldVolume: number; // relative multiplier for value calc
+  /** Mass gone from the charge: evaporated water, fermentation gas, pressed liquid, spun lees (services/massBalance.ts). */
+  massLoss?: MassLoss;
   
   vesselId: string;
   startTime: number;
