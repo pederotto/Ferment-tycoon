@@ -102,22 +102,20 @@ export const BrassRail: React.FC = () => (
 export type SeasonKey = 'spring' | 'summer' | 'autumn' | 'winter';
 
 /**
- * Which painted sky for the weather. The paintings are one hill under twelve
- * skies (weatherSheet.ts): 0 clear, 1 cloud, 2 rain, 3 snow, 4 golden, 5 fog,
- * 6 bright mist, 7 night storm, 8/10 wind and leaves, 9 day storm, 11 haze.
+ * Which painting for the weather and the season (weatherSheet.ts): one oak, wall
+ * and farmhouse through the year, four scenes per season in rows spring,
+ * summer, autumn, winter. The tree always matches the season; the sky matches
+ * the weather as closely as the four scenes of that season allow. The three
+ * night scenes (3, 11, 15) are painted but unused — the game has no night.
  */
-export const weatherScene = (type: WeatherType, season: SeasonKey): number => {
-  switch (type) {
-    case 'Sunny':    return season === 'winter' ? 3 : season === 'autumn' ? 4 : 0;
-    case 'Cloudy':   return season === 'winter' ? 3 : season === 'autumn' ? 10 : 1;
-    case 'Rainy':    return 2;
-    case 'Snowy':    return 3;
-    case 'Heatwave': return 11;
-    case 'Foggy':    return season === 'spring' || season === 'summer' ? 6 : 5;
-    case 'Stormy':   return season === 'autumn' || season === 'winter' ? 7 : 9;
-    default:         return 0;
-  }
+const SCENE: Record<SeasonKey, Record<WeatherType, number>> = {
+  //        clear  cloud  rain  storm  snow  heat  fog
+  spring: { Sunny: 1, Cloudy: 1, Rainy: 2, Stormy: 6, Snowy: 0, Heatwave: 1, Foggy: 0 },
+  summer: { Sunny: 4, Cloudy: 4, Rainy: 6, Stormy: 7, Snowy: 4, Heatwave: 5, Foggy: 0 },
+  autumn: { Sunny: 9, Cloudy: 10, Rainy: 10, Stormy: 10, Snowy: 8, Heatwave: 9, Foggy: 8 },
+  winter: { Sunny: 13, Cloudy: 12, Rainy: 12, Stormy: 14, Snowy: 12, Heatwave: 13, Foggy: 12 },
 };
+export const weatherScene = (type: WeatherType, season: SeasonKey): number => SCENE[season]?.[type] ?? 1;
 
 /* The thermometer reads -5..40°C, the span the ambient model actually produces. */
 const T_LO = -5, T_HI = 40;

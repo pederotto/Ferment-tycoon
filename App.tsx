@@ -2172,9 +2172,9 @@ export default function App() {
           <section className="rail-sect">
             <h3>Pantry</h3>
             {/* The pantry reads better as a list than as a strip along the bottom. */}
-            <div className="pantry">
+            <div className="pantry chest">
 
-            <div className="pantry-items jar-shelf custom-scrollbar">
+            <div className="pantry-items drawer-chest custom-scrollbar">
             {/* COUNTED BY TYPE, NOT BY A HARDCODED LIST OF IDS.
             Every line here was wrong in its own way. Salt printed the UNIT
             count with a "g" suffix while a unit of salt is 1000g, so a
@@ -2206,19 +2206,18 @@ export default function App() {
 
             return (
             <>
-            {/* Jars on a sacking shelf: the painted ingredient in a dark medallion
-                (the sheet's own ground, so the cell reads as engraved, not pasted)
-                and the count on a small brass plate. */}
+            {/* A chest of oak drawers: what is in each is printed on its card, with
+                the painted ingredient in a medallion beside it (the sheet's own
+                ground, so the cell reads as engraved, not pasted). */}
             {([
               { id: 'salt', name: 'Salt', n: kg(saltG), title: 'Every salt on the shelf, by weight' },
               { id: 'koji_spores', name: 'Spores', n: `${sporePkts} pkts`, title: 'Every live starter, bought or cultured' },
               { id: 'barley', name: 'Substrate', n: kg(substrateG), title: 'Every substrate on the shelf, by weight' },
               { id: 'water', name: 'Water', n: `${(waterMl / 1000).toFixed(0)}L`, title: 'Filtered water' },
             ]).map(j => (
-              <div key={j.id} className="jar" title={j.title}>
-                <span className="jar-medal"><IngredientIcon id={j.id} size={36} /></span>
-                <span className="jar-name">{j.name}</span>
-                <span className="jar-n mono">{j.n}</span>
+              <div key={j.id} className="drawer" title={j.title}>
+                <span className="dw-icon"><IngredientIcon id={j.id} size={30} /></span>
+                <span className="dw-card"><span className="dw-name">{j.name}</span><span className="dw-n">{j.n}</span></span>
               </div>
             ))}
             </>
@@ -2226,12 +2225,11 @@ export default function App() {
             })()}
             <button
             onClick={() => toggleDrawer('marketplace')}
-            className="jar jar-wide"
-            title="Click to view & purchase hardware vessels"
+            className="drawer"
+            title="Vessels you own — open Supply to buy more"
             >
-            <span className="jar-medal"><PanelMark name="crock" size={30} /></span>
-            <span className="jar-name">Vessels</span>
-            <span className="jar-n mono">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span>
+            <span className="dw-icon"><PanelMark name="crock" size={28} /></span>
+            <span className="dw-card"><span className="dw-name">Vessels</span><span className="dw-n">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span></span>
             </button>
             </div>
             </div>

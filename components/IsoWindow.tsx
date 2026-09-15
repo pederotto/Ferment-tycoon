@@ -1,6 +1,7 @@
 import React from 'react';
 import { WeatherState } from '../types';
-import { WEATHER_WINDOW } from './weatherWindowSheet';
+import { WEATHER_SCENES, WEATHER_SCENE_W, WEATHER_SCENE_H, WEATHER_SCENE_FOCUS } from './weatherSheet';
+import { WINDOW_LIFE } from './windowLifeSheet';
 import { weatherScene } from './BrassHud';
 
 /**
@@ -91,17 +92,19 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
             centred on the sky's middle at y=-16 — rather than on the landscape
             104x96 sky, which would crop the portrait to a letterbox. */}
         {bare && (
-          // The same painting as the weather glass, cut to this opening: the window
-          // and the glass used to disagree (a blossom spring outside, a storm in the glass).
-          <image href={WEATHER_WINDOW[weatherScene(weather.type, season)]} x={-37} y={-63} width={74} height={94}
-                 preserveAspectRatio="xMidYMid slice" />
+          // The same landscape as the weather glass — the season's tree under the day's
+          // sky — scaled to fill the opening's height and centred on the tree. The
+          // painting is 2:1 and the opening portrait, so the sides are cropped.
+          <image href={WEATHER_SCENES[weatherScene(weather.type, season)]}
+                 x={-WEATHER_SCENE_FOCUS * (94 * WEATHER_SCENE_W / WEATHER_SCENE_H)} y={-63}
+                 width={94 * WEATHER_SCENE_W / WEATHER_SCENE_H} height={94} preserveAspectRatio="none" />
         )}
         {bright && !bare && <circle cx="26" cy="-44" r="13" fill="#d8b878" opacity={0.32} />}
 
         {/* LIFE IN THE VIEW. The painting is still; these are the few things that
             move across it, chosen by the season and the weather so they also say
-            something: swallows in spring, leaves in autumn,
-            a flash in a storm. Drawn in code, animated in CSS, no filters (a
+            something: swallows in spring, sheep on a mild day, leaves in autumn,
+            a flash in a storm. Painted sprites (windowLifeSheet) animated in CSS, no filters (a
             filter on something that animates is re-rasterised every frame), and
             all of it stops under prefers-reduced-motion. Local units: the painted
             view spans x -37..37, y -63..31; the sky is the top half. */}
@@ -111,12 +114,21 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
           const hot = weather.type === 'Heatwave';
           const calm = !wet && !snowy && !foggy;
           const birds = calm && season !== 'winter';
-          const Bird = ({ y, delay, dur, scale = 1 }: { y: number; delay: number; dur: number; scale?: number }) => (
-            <g className="wl-bird" style={{ animationDelay: `${delay}s`, animationDuration: `${dur}s` }}>
-              <path d={`M0 ${y} q${1.6 * scale} ${-1.4 * scale} ${3.2 * scale} 0 q${1.6 * scale} ${-1.4 * scale} ${3.2 * scale} 0`}
-                    className="wl-wing" fill="none" stroke="#2c2a26" strokeWidth="0.55" strokeLinecap="round" />
-            </g>
-          );
+          // Painted sprites, not drawn strokes: swallows in the warm half of the
+          // year, a crow in the cold half. Sizes are local units (the view is 74 wide).
+          const Bird = ({ y, delay, dur, scale = 1, kind = 'swallow', pose = 0 }:
+            { y: number; delay: number; dur: number; scale?: number; kind?: 'swallow' | 'crow'; pose?: number }) => {
+            const sp = WINDOW_LIFE[kind][pose % WINDOW_LIFE[kind].length];
+            const w = (kind === 'crow' ? 5 : 3.6) * scale;
+            const h = w * sp.h / sp.w;
+            return (
+              <g className="wl-bird" style={{ animationDelay: `${delay}s`, animationDuration: `${dur}s` }}>
+                <image href={sp.src} x={0} y={y - h / 2} width={w} height={h} />
+              </g>
+            );
+          };
+          const sheep = calm && season !== 'winter';
+          const drift = season === 'spring' ? WINDOW_LIFE.blossom : WINDOW_LIFE.leaf.slice(0, 2);
           return (
             <g className="window-life">
               {/* The painting already carries the weather's light (a storm is painted
@@ -145,19 +157,34 @@ const IsoWindow: React.FC<IsoWindowProps> = ({ month, weather, x = 0, y = 0, sca
               {/* birds: a few crossing now and then; swallows in spring are quicker */}
               {birds && (
                 <>
-                  <Bird y={-48} delay={2} dur={season === 'spring' ? 9 : 14} />
-                  <Bird y={-44} delay={2.6} dur={season === 'spring' ? 9.4 : 14.5} scale={0.8} />
-                  <Bird y={-55} delay={11} dur={season === 'spring' ? 10 : 16} scale={0.9} />
+                  <Bird y={-48} delay={2} dur={season === 'spring' ? 9 : 14} kind={season === 'autumn' ? 'crow' : 'swallow'} pose={0} />
+                  <Bird y={-44} delay={2.6} dur={season === 'spring' ? 9.4 : 14.5} scale={0.8} kind={season === 'autumn' ? 'crow' : 'swallow'} pose={2} />
+                  <Bird y={-55} delay={11} dur={season === 'spring' ? 10 : 16} scale={0.9} kind={season === 'autumn' ? 'crow' : 'swallow'} pose={1} />
                 </>
               )}
-              {!birds && season === 'winter' && !stormy && <Bird y={-50} delay={6} dur={22} scale={1.1} />}
+              {!birds && season === 'winter' && !stormy && <Bird y={-50} delay={6} dur={22} scale={1.1} kind="crow" pose={1} />}
+              {/* two painted sheep grazing on the meadow, barely moving */}
+              {sheep && (
+                <g className="wl-sheep2">
+                  {[{ x: -26, y: 13, w: 8, i: 0, flip: false }, { x: 9, y: 21, w: 10, i: 2, flip: true }].map(sh => {
+                    const sp = WINDOW_LIFE.sheep[sh.i];
+                    const h = sh.w * sp.h / sp.w;
+                    return (
+                      <image key={sh.i} href={sp.src} x={sh.flip ? -(sh.x + sh.w) : sh.x} y={sh.y - h} width={sh.w} height={h}
+                             transform={sh.flip ? 'scale(-1,1)' : undefined} />
+                    );
+                  })}
+                </g>
+              )}
               {/* spring blossom and autumn leaves, drifting down across the view */}
               {(season === 'spring' || season === 'autumn') && !wet && (
-                <g className="wl-drift" fill={season === 'spring' ? '#f3d6dc' : '#b8743a'}>
-                  {[[-28, 0], [-12, -4], [4, -1.5], [20, -6], [30, -2.8], [-2, -8]].map(([x, d], i) => (
-                    <ellipse key={i} cx={x} cy={-60} rx={season === 'spring' ? 0.7 : 1} ry={season === 'spring' ? 0.5 : 0.6}
-                             style={{ animationDelay: `${d}s` }} />
-                  ))}
+                <g className="wl-drift">
+                  {[[-28, 0], [-12, -4], [4, -1.5], [20, -6], [30, -2.8], [-2, -8]].map(([x, d], i) => {
+                    const sp = drift[i % drift.length];
+                    const w = season === 'spring' ? 2.4 : 2.8;
+                    return <image key={i} href={sp.src} x={x} y={-61} width={w} height={w * sp.h / sp.w}
+                                  style={{ animationDelay: `${d}s` }} />;
+                  })}
                 </g>
               )}
               {/* rain that actually falls, heavier in a storm */}

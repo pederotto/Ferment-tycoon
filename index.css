@@ -4770,3 +4770,86 @@ html, body {
 .cx-empty { padding: 64px 16px; color: var(--text-lo); }
 .cx-empty-t { font-family: var(--f-name); font-size: 17px; color: var(--text-mid); margin: 4px 0 0; }
 .cx-empty-s { font-size: 12px; margin: 0; }
+
+/* =========================================================================
+   THE PRESS AT WORK, PAINTED LIFE IN THE WINDOW, THE PANTRY CHEST
+   ========================================================================= */
+/* The machine stands over the jobs, on a lit plinth; the old drawn press behind
+   the list is gone. */
+.pressroom .pr-scene { display: none; }
+.pr-stage {
+  position: relative; height: 230px; margin: 2px 0 14px; padding-bottom: 10px;
+  display: flex; align-items: flex-end; justify-content: center; pointer-events: none;
+  border-radius: 6px; border: 1px solid rgba(222, 186, 110, 0.14);
+  background: radial-gradient(ellipse at 50% 88%, rgba(255, 226, 170, 0.16), transparent 62%),
+              linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.34));
+}
+.pr-machine { height: 100%; width: auto; max-width: 80%; object-fit: contain; filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.55)); }
+.pr-cf { position: relative; height: 78%; display: flex; align-items: flex-end; }
+.pr-cf .pr-machine { max-width: none; }
+.pr-cf.spinning .pr-machine { animation: pr-shake 0.09s linear infinite; }
+@keyframes pr-shake { 50% { transform: translate(0.7px, -0.4px); } }
+.pr-spin {
+  position: absolute; left: 10%; right: 10%; top: 6%; height: 26%; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, rgba(255, 255, 255, 0) 0 55%, rgba(255, 255, 255, 0.42) 72%, rgba(255, 255, 255, 0) 88%);
+  mix-blend-mode: screen; animation: pr-spin 0.32s linear infinite;
+}
+@keyframes pr-spin { to { transform: rotate(360deg); } }
+.pr-job.busy { box-shadow: 0 0 0 2px rgba(222, 186, 110, 0.7), 0 6px 14px rgba(0, 0, 0, 0.4); }
+.pj-thumb { display: block; width: 34px; height: 34px; object-fit: contain; margin: 0 0 3px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35)); }
+
+/* Window sprites: the drift keyframes move whatever is in the group */
+.wl-drift > image { animation: wl-leaf 8s linear infinite; }
+.wl-sheep2 { animation: wl-graze2 18s ease-in-out infinite alternate; }
+@keyframes wl-graze2 { to { transform: translateX(1.6px); } }
+/* the weather glass crops the 2:1 landscape on the tree, as the window does */
+.wglass .port .scene { object-position: 44% 50%; }
+
+/* THE PANTRY CHEST: full-width oak drawers stacked edge to edge. The painting's
+   own frame is cropped top and bottom (the drawer is shown from 18% to 84% of
+   its height) so the fronts meet like a real chest. The contents are printed on
+   the drawer's card; the medallion to the left is the painted ingredient. */
+.rail .pantry-items.drawer-chest {
+  display: flex !important; flex-direction: column !important; flex-wrap: nowrap !important; gap: 0; overflow: visible;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45));
+}
+.drawer {
+  position: relative; display: block; width: 100%; aspect-ratio: 440 / 148; padding: 0; border: 0; margin: 0;
+  background: var(--drawer, none) 0 52.9% / 100% 151.5% no-repeat, #8a5f33;
+  color: inherit; font: inherit; text-align: left; cursor: default;
+}
+button.drawer { cursor: pointer; }
+button.drawer:hover { filter: brightness(1.07); }
+button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+.dw-card {
+  position: absolute; left: 34.1%; width: 31.8%; top: 5.45%; height: 36.4%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; text-align: center;
+}
+.dw-name { font-family: var(--f-spec); font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #5a4830; }
+.dw-n { font-family: var(--f-spec); font-size: 14px; font-weight: 700; color: #2a2015; font-variant-numeric: tabular-nums; }
+.dw-icon {
+  position: absolute; left: 17%; top: 23.6%; transform: translate(-50%, -50%);
+  width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #241a10, #1a130b 70%);
+  box-shadow: 0 0 0 2px #8a6a32, 0 0 0 3px rgba(226, 194, 122, 0.55), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-cf.spinning .pr-machine, .pr-spin, .wl-sheep2 { animation: none; }
+}
+/* the spin reads as fine streaks on the lid, not a single blade */
+.pr-spin {
+  left: 14%; right: 14%; top: 5%; height: 22%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.0) 0deg 14deg, rgba(255, 255, 255, 0.22) 18deg, rgba(255, 255, 255, 0) 24deg);
+  animation-duration: 0.22s; opacity: 0.8;
+}
+/* The chest measured 0px tall: the sacking panel is a flex column, and while it
+   sized its content the drawers' percentage width was not yet resolved, so their
+   aspect-ratio height came out as nothing and they spilled below the panel. A
+   block panel and a grid chest resolve the width first. The grid also puts the
+   drawers two across when the rail is wide (the one-column phone layout). */
+.rail .pantry.chest { display: block; }
+.rail .pantry-items.drawer-chest {
+  display: grid !important; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  column-gap: 8px; row-gap: 0; align-items: start;
+}
