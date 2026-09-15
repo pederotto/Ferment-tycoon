@@ -6,12 +6,12 @@ import { OAK_TILE, LEATHER_TILE, LINEN_TILE, SLATE_TILE, PLASTER_TILE, FELT_TILE
 import { LAB_PLATE } from './components/labPlate';
 import { ORN_CORNER, ORN_DIVIDER_LEAF, ORN_DIVIDER_WHEAT, STAMP_FRAME_BAD, STAMP_FRAME_GOOD, ORN_CARTOUCHE, ORN_BORDER_VINE } from './components/ornamentPlate';
 import { CREST } from './components/titleArt';
-import { DRAWER } from './components/drawerPlate';
+import { DRAWER_FRONT, DRAWER_LABEL_PLATE, DRAWER_HANDLE_PLATE } from './components/drawerPlate';
 
 // The paper decals (a coffee ring, a splash, a torn edge) ride in as custom
 // properties, so index.css can place them without carrying the blobs itself.
 // Every rule that reads one has a fallback, so this failing costs a flourish.
-for (const [name, uri] of Object.entries({ ...PAPER_DECALS, '--paper-linen': LINEN, '--tex-oak': OAK_TILE, '--tex-leather': LEATHER_TILE, '--tex-linen': LINEN_TILE, '--tex-slate': SLATE_TILE, '--tex-plaster': PLASTER_TILE, '--tex-felt': FELT_TILE, '--tex-hessian': HESSIAN_TILE, '--tex-straw': STRAW_TILE, '--tex-cedar': CEDAR_TILE, '--tex-walnut': WALNUT_TILE, '--tex-greyoak': GREYOAK_TILE, '--lab-plate': LAB_PLATE, '--drawer': DRAWER.src,
+for (const [name, uri] of Object.entries({ ...PAPER_DECALS, '--paper-linen': LINEN, '--tex-oak': OAK_TILE, '--tex-leather': LEATHER_TILE, '--tex-linen': LINEN_TILE, '--tex-slate': SLATE_TILE, '--tex-plaster': PLASTER_TILE, '--tex-felt': FELT_TILE, '--tex-hessian': HESSIAN_TILE, '--tex-straw': STRAW_TILE, '--tex-cedar': CEDAR_TILE, '--tex-walnut': WALNUT_TILE, '--tex-greyoak': GREYOAK_TILE, '--lab-plate': LAB_PLATE, '--drawer-front': DRAWER_FRONT, '--drawer-label': DRAWER_LABEL_PLATE.src, '--drawer-handle': DRAWER_HANDLE_PLATE.src,
   '--orn-corner': ORN_CORNER, '--orn-divider-leaf': ORN_DIVIDER_LEAF, '--orn-divider-wheat': ORN_DIVIDER_WHEAT,
   '--stamp-frame-bad': STAMP_FRAME_BAD, '--stamp-frame-good': STAMP_FRAME_GOOD,
   '--orn-cartouche': ORN_CARTOUCHE, '--orn-border-vine': ORN_BORDER_VINE })) {

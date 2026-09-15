@@ -2216,8 +2216,9 @@ export default function App() {
               { id: 'water', name: 'Water', n: `${(waterMl / 1000).toFixed(0)}L`, title: 'Filtered water' },
             ]).map(j => (
               <div key={j.id} className="drawer" title={j.title}>
-                <span className="dw-icon"><IngredientIcon id={j.id} size={30} /></span>
-                <span className="dw-card"><span className="dw-name">{j.name}</span><span className="dw-n">{j.n}</span></span>
+                <span className="dw-icon"><IngredientIcon id={j.id} size={28} /></span>
+                <span className="dw-label"><span className="dw-card"><span className="dw-name">{j.name}</span><span className="dw-n">{j.n}</span></span></span>
+                <span className="dw-handle" aria-hidden="true" />
               </div>
             ))}
             </>
@@ -2228,8 +2229,9 @@ export default function App() {
             className="drawer"
             title="Vessels you own — open Supply to buy more"
             >
-            <span className="dw-icon"><PanelMark name="crock" size={28} /></span>
-            <span className="dw-card"><span className="dw-name">Vessels</span><span className="dw-n">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span></span>
+            <span className="dw-icon"><PanelMark name="crock" size={26} /></span>
+            <span className="dw-label"><span className="dw-card"><span className="dw-name">Vessels</span><span className="dw-n">{Object.values(gameState.ownedVessels).reduce((a: number, b) => a + (b as number), 0)}</span></span></span>
+            <span className="dw-handle" aria-hidden="true" />
             </button>
             </div>
             </div>

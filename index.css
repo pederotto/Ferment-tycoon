@@ -4803,7 +4803,6 @@ html, body {
 .wl-sheep2 { animation: wl-graze2 18s ease-in-out infinite alternate; }
 @keyframes wl-graze2 { to { transform: translateX(1.6px); } }
 /* the weather glass crops the 2:1 landscape on the tree, as the window does */
-.wglass .port .scene { object-position: 44% 50%; }
 
 /* THE PANTRY CHEST: full-width oak drawers stacked edge to edge. The painting's
    own frame is cropped top and bottom (the drawer is shown from 18% to 84% of
@@ -4853,3 +4852,33 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
   display: grid !important; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   column-gap: 8px; row-gap: 0; align-items: start;
 }
+
+/* THE DRAWER, REBUILT FROM ITS PARTS (drawerPlate.ts). The whole painting at the
+   rail's width was 132px a drawer, and cropping it to stack cut the salt label
+   and left a handle hanging at the bottom. A drawer is a row now: the medallion,
+   the brass card-holder with the contents on its card, the cup handle — on the
+   oak front with the hardware painted out, nothing cropped. */
+.rail .pantry-items.drawer-chest { row-gap: 3px; column-gap: 8px; }
+.drawer {
+  display: flex; align-items: center; gap: 10px; aspect-ratio: auto; min-height: 0;
+  padding: 7px 14px 7px 10px; border-radius: 2px;
+  background: var(--drawer-front, none) center / 100% 100% no-repeat, #8a5f33;
+}
+.dw-icon { position: static; transform: none; flex: none; width: 34px; height: 34px; }
+.dw-label {
+  position: relative; flex: 1 1 auto; max-width: 150px; margin: 0 auto; aspect-ratio: 224 / 94;
+  background: var(--drawer-label, none) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+.dw-label .dw-card { left: 26.3%; top: 18.1%; width: 53.6%; height: 51%; }
+.dw-label .dw-name { font-size: 8.5px; letter-spacing: 0.12em; }
+.dw-label .dw-n { font-size: 13px; }
+.dw-handle {
+  flex: none; width: 50px; aspect-ratio: 157 / 59;
+  background: var(--drawer-handle, none) center / contain no-repeat;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.35));
+}
+/* recut parts: the holder is cut at its frame, so the card sits wider inside it */
+.dw-label { aspect-ratio: 375 / 158; max-width: 140px; }
+.dw-label .dw-card { left: 12.8%; top: 12.7%; width: 74.7%; height: 68.3%; }
+.dw-handle { aspect-ratio: 318 / 123; width: 52px; }
