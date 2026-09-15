@@ -609,12 +609,15 @@ const BatchController: React.FC<BatchControllerProps> = ({
         <span className="corner c-tr" />
 
         {/* ---------- HEADER ---------- */}
+        {/* The studio head, as on every dark screen: mark in a brass medallion, a
+            kicker, a short title. The long instruction line is what the four
+            numbered stations already say. */}
         <div className="inoc-head">
           <div className="ttl">
-            <PanelMark name="inoculation" size={44} />
-            <div>
-              <h1>Inoculation Bench</h1>
-              <div className="sub">Draw your reagents, charge the vessel, and set the chamber before you seal it</div>
+            <span className="sh-medal"><PanelMark name="inoculation" size={34} /></span>
+            <div className="sh-title">
+              <span className="kicker">Draw · charge · seal</span>
+              <h2>Inoculation Bench</h2>
             </div>
           </div>
 

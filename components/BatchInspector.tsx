@@ -570,9 +570,9 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                 compact
               />
             )}
-            <div className="wood-panel" style={{ display: 'flex', borderRadius: 10, padding: 4, gap: 4 }}>
-              <button onClick={() => setActiveTab('telemetry')} className={`chip-tab${activeTab === 'telemetry' ? ' active' : ''}`}>Bioreactor</button>
-              <button onClick={() => setActiveTab('harvest')} className={`chip-tab${activeTab === 'harvest' ? ' active' : ''}`}>Harvest{isInPeakWindow && ' •'}</button>
+            <div className="insp-tabs" role="tablist">
+              <button role="tab" aria-selected={activeTab === 'telemetry'} onClick={() => setActiveTab('telemetry')} className={`sec-tab${activeTab === 'telemetry' ? ' active' : ''}`}>Bioreactor</button>
+              <button role="tab" aria-selected={activeTab === 'harvest'} onClick={() => setActiveTab('harvest')} className={`sec-tab${activeTab === 'harvest' ? ' active' : ''}`}>Harvest{isInPeakWindow && <span className="tab-count">ready</span>}</button>
             </div>
             <button onClick={onClose} className="close-stamp" title="Close Inspector">
               <CloseIcon size={14} />
