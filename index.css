@@ -5052,3 +5052,33 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .welcome-scene::before {
   background: radial-gradient(ellipse 80% 70% at 50% 48%, rgba(18, 16, 14, 0.38), rgba(18, 16, 14, 0.88) 100%);
 }
+
+/* --------------------------------------------------------------------------
+   SPOILAGE ODDS
+   Under-salting sets odds now instead of killing a batch outright, so the
+   inspector has to show them and show the working — the season, the vessel, the
+   starter. An instrument reading, so it stays dark and takes the monospace.
+   -------------------------------------------------------------------------- */
+.spoil-odds { margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(222, 186, 110, 0.18); }
+.so-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.so-head .section-lbl { margin: 0; }
+.so-v { font-family: var(--f-instr); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.so-bar {
+  margin: 6px 0 9px; height: 4px; border-radius: 2px; overflow: hidden;
+  background: rgba(0, 0, 0, 0.38); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.so-bar span { display: block; height: 100%; transition: width 0.3s ease; }
+.so-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.so-list li {
+  display: grid; grid-template-columns: auto auto 1fr; align-items: baseline; gap: 8px;
+  font-size: 11px; line-height: 1.35;
+}
+.so-list .l { font-family: var(--f-spec); font-weight: 600; letter-spacing: 0.04em; color: var(--text-mid); }
+.so-list .w { font-family: var(--f-instr); font-size: 10px; font-variant-numeric: tabular-nums; }
+.so-list li.up .w { color: var(--brick); }
+.so-list li.down .w { color: var(--moss); }
+.so-list .n { font-family: var(--f-body); font-size: 10.5px; color: var(--text-lo); text-align: right; }
+@media (max-width: 560px) {
+  .so-list li { grid-template-columns: 1fr auto; }
+  .so-list .n { grid-column: 1 / -1; text-align: left; }
+}

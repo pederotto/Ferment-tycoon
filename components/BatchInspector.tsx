@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { BUYER_SEAL } from './sealSheet';
 import GameIcon from './GameIcon';
 import PanelMark from './PanelMark';
-import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls, Contract, GameState } from '../types';
+import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls, Contract, GameState, Ingredient } from '../types';
 import { AlertTriangle, PauseCircle } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
 import SpeedControl from './SpeedControl';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour , sporulation, sporeYield, describeSporulation } from '../services/gameLogic';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour , sporulation, sporeYield, describeSporulation, contaminationRisk } from '../services/gameLogic';
 import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS , SPORULATION_START } from '../constants';
 import { CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon, LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon } from './icons';
 
@@ -722,6 +722,50 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                       })()}
                     />
                   </div>
+
+                  {/* WHAT THE GAMBLE ACTUALLY IS.
+                      Under-salting sets odds rather than killing the batch, so
+                      the odds have to be readable — a risk you cannot see is not
+                      a decision, it is noise. This prints the chance and the
+                      terms behind it, worst first, so "move it to the cellar" or
+                      "wait for the cold" are visible answers. */}
+                  {(() => {
+                    if (!gameState || isKoji) return null;
+                    const sub = [...INGREDIENTS, ...(gameState.customIngredients ?? [])].find(i => i.id === batch.substrateId);
+                    if (!sub) return null;
+                    const ings = batch.inputIngredientIds
+                      .map(id => [...INGREDIENTS, ...(gameState.customIngredients ?? [])].find(i => i.id === id))
+                      .filter(Boolean) as Ingredient[];
+                    const perTick = 100 / Math.max(1, recipe.baseDurationSeconds);
+                    const left = Math.max(0, Math.round((recipe.peakWindowEnd - batch.progress) / perTick));
+                    const risk = contaminationRisk(
+                      recipe, batch.params, batch.quality, sub, ings,
+                      gameState.hygiene ?? 100, gameState.month ?? 0, gameState.weather,
+                      batch.vesselId, batch.controls?.vent ?? 0, left,
+                    );
+                    const pct = risk.perRun * 100;
+                    const tone = pct >= 55 ? 'var(--brick)' : pct >= 20 ? 'var(--amber)' : 'var(--moss)';
+                    return (
+                      <div className="spoil-odds">
+                        <div className="so-head">
+                          <span className="section-lbl">Spoilage risk</span>
+                          <span className="so-v mono" style={{ color: tone }}>
+                            {pct < 1 ? '<1' : pct.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="so-bar"><span style={{ width: `${Math.min(100, pct)}%`, background: tone }} /></div>
+                        <ul className="so-list">
+                          {risk.factors.slice(0, 4).map(f => (
+                            <li key={f.label} className={f.weight > 1 ? 'up' : 'down'}>
+                              <span className="l">{f.label}</span>
+                              <span className="w mono">{f.weight > 1 ? '+' : ''}{((f.weight - 1) * 100).toFixed(0)}%</span>
+                              <span className="n">{f.note}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="peak-wrap">

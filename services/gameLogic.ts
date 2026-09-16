@@ -12,7 +12,7 @@ import {
   SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
 
-import { tickMassLoss, currentMassG, concentratedProfile } from './massBalance';
+import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness } from './massBalance';
 // --- GAMEPLAY CONSTANTS ---
 const OPTIMAL_TEMP = 30; // The "Goldilocks" zone
 const DANGER_TEMP = 42;  // Where Stress begins
@@ -824,6 +824,192 @@ export const chamberExchange = (c: ChamberControls, hasFan: boolean) => {
  * CORE SIMULATION LOOP
  * Updated with Conditional Logic Hooks for Recipe Matrix
  */
+
+/* =========================================================================
+   CONTAMINATION IS A ROLL, NOT A SENTENCE
+   =========================================================================
+   Under-salting used to be `safetyDecay += 2` every tick, unconditionally: a
+   batch below 40% of its salt target lost two points of safety per tick and was
+   dead inside forty. That is not how an under-salted ferment behaves. A low-salt
+   kraut in a cold cellar in January is what most of Europe ate all winter; the
+   same kraut in an open crock in an August heatwave is a coin toss. The salt is
+   one hurdle among several, and what it is up against is the weather.
+
+   So the deficit sets ODDS, and the odds are built from things the player can
+   actually see and act on. Each term is a multiplier on a small base chance, so
+   they compound the way hurdles really do — two weak hurdles are worse than one
+   strong one:
+
+   - THE DEFICIT is continuous and squared. There is no cliff at 40%: a batch at
+     90% of target is nearly as safe as one at 100%, and one at 10% is nearly as
+     exposed as one with no salt at all.
+   - THE ROOM is the season and the weather, which is the point of this rework.
+     A warm damp August week is the dangerous one; a dry frost is nearly free.
+     But only as far as the vessel lets it in — a sealed jar barely notices the
+     weather and an open crock lives in it, so the whole ambient term is scaled
+     by `vesselOpenness`. This is why the cellar is safe and the bench is not.
+   - THE BATCH'S OWN TEMPERATURE still carries the danger zone, because a heated
+     chamber is a preservative in its own right (the modern low-salt route).
+   - WHAT ELSE IS IN THERE: a live starter, a koji's acid, and the acidity the
+     ferment has already built are all real competition. An inoculated ferment
+     that has dropped its own pH is not relying on salt at all.
+   - THE RECIPE AND THE SUBSTRATE: an anaerobic vegetable pickle brings its own
+     lactobacillus and is forgiving; raw fish and offal in an open vessel is not.
+
+   A hit is a BLOOM, not a bleed — a real event with a message, that costs real
+   safety and adds funk. Several blooms will still ruin a batch, which is what
+   should happen when you keep rolling badly. One will not.
+   ========================================================================= */
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+/** Every term behind the odds, so the inspector can show its working. */
+export interface ContaminationRisk {
+  /** Chance of a spoilage bloom on this tick, 0-1. */
+  perTick: number;
+  /** Roughly the chance of at least one bloom across the whole run. */
+  perRun: number;
+  saltDeficit: number;
+  factors: { label: string; weight: number; note: string }[];
+}
+
+const SEASON_LABEL = ['deep winter', 'late winter', 'early spring', 'spring', 'late spring', 'early summer',
+                      'high summer', 'high summer', 'early autumn', 'autumn', 'late autumn', 'winter'];
+
+/**
+ * The odds a batch blooms on a given tick, and why. Pure: no randomness, no
+ * state. The inspector prints it, the tick rolls against it, and a harness can
+ * measure it — all three see exactly the same number.
+ */
+export const contaminationRisk = (
+  recipe: Recipe,
+  params: { temp: number; salinity: number },
+  quality: FlavorProfile,
+  substrate: Ingredient,
+  ingredients: Ingredient[],
+  hygiene: number,
+  month: number,
+  weather: WeatherState,
+  vesselId: string | undefined,
+  vent: number,
+  ticksRemaining: number,
+): ContaminationRisk => {
+  const factors: { label: string; weight: number; note: string }[] = [];
+  const push = (label: string, weight: number, note: string) => {
+    if (Math.abs(weight - 1) > 0.02) factors.push({ label, weight, note });
+  };
+
+  const target = recipe.idealParams.salinity ?? 0;
+  // No salt is asked for, so there is no deficit to be exposed by. A vinegar or
+  // a koji is protected by other things entirely.
+  const saltDeficit = target > 0 ? clamp(1 - (params.salinity ?? 0) / target, 0, 1) : 0;
+
+  // Base odds per tick when the salt is where it should be. Low, because a
+  // correctly made ferment is not a coin toss — it is the deficit and the room
+  // that turn this into one.
+  let p = 0.00028;
+
+  // THE DEFICIT — squared, so the curve is gentle near the target and steep at
+  // the bottom. At full deficit this is 13x the base.
+  const deficitTerm = 1 + 12 * saltDeficit * saltDeficit;
+  p *= deficitTerm;
+  if (saltDeficit > 0.02) {
+    push('Under-salted', deficitTerm,
+      `${((1 - saltDeficit) * 100).toFixed(0)}% of the ${target}% this wants`);
+  }
+
+  // THE ROOM — the season and the week's weather, through TWO channels, because
+  // a shut vessel is not shut to both. Heat conducts through oak and glass just
+  // as well as through an open crock, so a cask in an August loft is an August
+  // cask; what a lid actually keeps out is everything airborne. Gating both on
+  // the lid made the season almost irrelevant, which is the opposite of the
+  // point — so warmth couples nearly fully and the damp/airborne channel is the
+  // one `vesselOpenness` governs.
+  const { ambientTemp, ambientHumidity } = getAmbientConditions(month, weather);
+  const openness = vesselOpenness(vesselId, vent);
+  // Warmth over a cold-store 10 C, damp over a dry 45%.
+  const warmth = clamp((ambientTemp - 10) / 20, 0, 1.25);
+  const damp = clamp((ambientHumidity - 45) / 45, 0, 1);
+  const thermal = 1 + 3.4 * warmth;                                   // conducts regardless
+  const airborne = 1 + 3.0 * damp * clamp(openness, 0, 1.2);          // the lid's job
+  const roomTerm = thermal * airborne;
+  p *= roomTerm;
+  push('The season', roomTerm,
+    `${SEASON_LABEL[clamp(month, 0, 11)]}, ${weather.type.toLowerCase()} — ${ambientTemp.toFixed(0)}°C and ${ambientHumidity.toFixed(0)}% RH${openness < 0.3 ? ', and the vessel is shut' : ''}`);
+
+  // THE BATCH'S OWN TEMPERATURE — the danger zone, and the two ways out of it.
+  const t = params.temp;
+  const tempTerm = t >= 55 ? 0.08 : t >= 48 ? 0.3 : t <= 8 ? 0.25 : (t >= 20 && t <= 45) ? 1.7 : 1;
+  p *= tempTerm;
+  push('Held at ' + t.toFixed(0) + '°C', tempTerm,
+    t >= 55 ? 'too hot for anything to establish' : t <= 8 ? 'too cold to get going'
+      : (t >= 20 && t <= 45) ? 'the danger zone — something has to cover this' : 'cool enough to slow things');
+
+  // WHAT ELSE IS IN THERE — competition, in three forms.
+  const acidTerm = clamp(1 - (quality.acidity ?? 0) / 60, 0.18, 1);
+  p *= acidTerm;
+  push('Acidity ' + (quality.acidity ?? 0).toFixed(0), acidTerm, 'a ferment that has dropped its own pH defends itself');
+
+  const acidShield = getAcidProtection(ingredients);
+  const shieldTerm = acidShield > 0 ? Math.max(0.3, 1 - acidShield / 40) : 1;
+  p *= shieldTerm;
+  push('Acid-forming culture', shieldTerm, 'black koji throws citric acid and holds a warm ferment');
+
+  const hasStarter = ingredients.some(i => i.type === IngredientType.STARTER);
+  const starterTerm = hasStarter ? 0.45 : 1;
+  p *= starterTerm;
+  push('Live starter', starterTerm, 'an inoculated ferment out-competes what drifts in');
+
+  // THE RECIPE AND THE SUBSTRATE.
+  const familyTerm =
+    recipe.type === FermentType.LACTO ? 0.5 :          // anaerobic, brings its own lactobacillus
+    recipe.type === FermentType.VINEGAR ? 0.55 :        // the mother owns the surface
+    recipe.type === FermentType.KOMBUCHA ? 0.55 :
+    recipe.type === FermentType.ALCOHOL ? 0.7 :         // yeast takes it quickly
+    recipe.type === FermentType.GARUM ? 1.5 :           // raw fish, and time
+    recipe.type === FermentType.MISO || recipe.type === FermentType.SHOYU ? 0.8 : 1;
+  p *= familyTerm;
+  push(recipe.type, familyTerm,
+    familyTerm < 1 ? 'this family defends itself' : 'this family has nothing else holding it');
+
+  const perish = substrate.hiddenStats.proteinContent * 0.6 + substrate.hiddenStats.fatContent * 0.9;
+  const substrateTerm = 1 + clamp(perish / 45, 0, 1.1);
+  p *= substrateTerm;
+  // The note has to agree with the number beside it: anything that raises the
+  // odds cannot read "slow to turn".
+  push(substrate.name, substrateTerm,
+    perish > 26 ? 'rich in protein and fat, and quick to turn'
+      : perish > 9 ? 'enough protein and fat to feed something'
+      : 'lean, and slow to turn');
+
+  // HYGIENE — the bench itself.
+  const hygieneTerm = 0.55 + (100 - clamp(hygiene, 0, 100)) / 55;
+  p *= hygieneTerm;
+  push('Bench hygiene ' + hygiene.toFixed(0) + '%', hygieneTerm, 'what is already in the room');
+
+  const perTick = clamp(p, 0, 0.6);
+  const perRun = 1 - Math.pow(1 - perTick, Math.max(0, ticksRemaining));
+  factors.sort((a, b) => b.weight - a.weight);
+  return { perTick, perRun, saltDeficit, factors };
+};
+
+/**
+ * A roll that survives StrictMode. `processBatchTick` runs inside
+ * `setGameState(prev => ...)`, which React double-invokes, so a `Math.random()`
+ * in here fires twice for one game tick and the batch takes whichever answer the
+ * second pass produced — the same defect the inspector raid had, and the reason
+ * a stated probability would not be the one the player actually faced. Seeded on
+ * the batch and the tick, both invocations compute the identical answer, the
+ * updater stays pure, and a harness can reproduce any run exactly.
+ */
+export const seededRoll = (batchId: string, tick: number, salt: number): number => {
+  let h = 2166136261 ^ salt;
+  const s = `${batchId}:${tick}`;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return ((h >>> 0) % 100000) / 100000;
+};
+
 export const processBatchTick = (
     batch: Batch, 
     recipe: Recipe, 
@@ -1215,30 +1401,37 @@ export const processBatchTick = (
       riskFactor *= 1.6;                       // the danger zone; salt must cover this
   }
 
-  // Salinity Preservative Barrier Dynamics
+  // --- UNDER-SALTING IS A GAMBLE, NOT A DEATH SENTENCE ---
+  // This was a flat `safetyDecay += 2` per tick below 40% of target, which killed
+  // any under-salted batch in about forty ticks whatever the conditions. Salt is
+  // one hurdle among several now: the deficit sets the ODDS of a contamination
+  // bloom and the season, the weather, the vessel, the starter, the acidity and
+  // the substrate decide how long those odds are. See `contaminationRisk`.
+  // How many more ticks this batch has to survive, at its own rate — a slow
+  // ferment is exposed for longer, which is itself part of the risk.
+  const perTickProgress = Math.max(0.05, (100 / recipe.baseDurationSeconds) * speedModifier * genSpeedBuff);
+  const ticksLeft = Math.max(0, Math.round((recipe.peakWindowEnd - progress) / perTickProgress));
+  const risk = contaminationRisk(
+    recipe, newParams, newQuality, substrate, ingredients,
+    Math.min(100, hygiene + resilienceBuffer), currentMonth, weather,
+    batch.vesselId, controls.vent ?? 0, ticksLeft,
+  );
+  // Seeded on the batch and its progress, so StrictMode's second invocation of
+  // this updater computes the identical answer instead of rolling again.
+  const tickSeed = Math.round(progress * 100);
+  if (risk.perTick > 0 && seededRoll(batch.id, tickSeed, 0x5A17) < risk.perTick) {
+      // A bloom: a real event, not a bleed. Repeated ones still ruin a batch.
+      safetyDecay += 9 + 10 * risk.saltDeficit;
+      newQuality.funk = Math.min(100, newQuality.funk + 4);
+      if (!messages.includes('Spoilage bloom')) messages.push('Spoilage bloom');
+  }
+
+  // Salt that IS there still does its work on everything else.
   if (recipe.idealParams.salinity > 0) {
-      if (newParams.salinity < recipe.idealParams.salinity * 0.4) {
-          // Severely under-salted — unless the heat is carrying it instead, which
-          // is a legitimate method rather than a mistake.
-          //
-          // A chamber climbing toward a heat-preserving setpoint is a third case:
-          // the batch is passing through the danger zone rather than sitting in
-          // it. That is a real risk and a bounded one, so it decays slowly
-          // instead of not at all. Without this the modern low-salt route could
-          // never be reached, because the batch died during the warm-up.
-          const heatIsCarryingIt = newParams.temp >= 55;
-          const climbingToHeat = !heatIsCarryingIt && isIncubated && isPowerAvailable
-            && (controls.heat ?? recipe.idealParams.temp) >= 55;
-          if (!heatIsCarryingIt) safetyDecay += climbingToHeat ? 0.5 : 2;
-          if (Math.random() < 0.05 && !messages.includes('Under-salted: Pathogen Risk')) {
-              messages.push('Under-salted: Pathogen Risk');
-          }
+      if (newParams.salinity > recipe.idealParams.salinity * 1.8) {
+          riskFactor *= 0.1;                   // over-salted: safe, and slow
       } else if (newParams.salinity >= recipe.idealParams.salinity * 0.8) {
-          // Properly salted: Strong osmotic protection
-          riskFactor *= 0.35;
-      } else if (newParams.salinity > recipe.idealParams.salinity * 1.8) {
-          // Over-salted: Safe but slows enzymatic kinetics
-          riskFactor *= 0.1;
+          riskFactor *= 0.35;                  // properly salted: osmotic cover
       }
   }
 

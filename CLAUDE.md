@@ -1195,3 +1195,50 @@ count-equals-contents check is the regression test for this panel.
 
 Note the Codex lists `RECIPES` only, so a procedural recipe (`*_gen`) never
 appears on any shelf and cannot be used to test it.
+
+## Under-salting sets odds, it does not pass sentence
+`safetyDecay += 2` every tick below 40% of the salt target killed any under-salted
+batch in about forty ticks whatever the conditions — a low-salt kraut in a cold
+January cellar died exactly as fast as one in an August crock. The owner called
+this out: it should be a gamble on factual grounds. `contaminationRisk` is that
+gamble, and it is a pure function so the tick, the inspector and a harness all
+read the same number.
+
+- **The deficit is continuous and squared.** No cliff at 40%: 90% of target is
+  nearly as safe as 100%, and the curve only gets steep near the bottom.
+- **The room is the season and the week's weather, through TWO channels.** Heat
+  conducts through oak and glass as well as through an open crock, so warmth
+  couples nearly fully; what a lid keeps out is everything airborne, so the
+  damp channel is the one `vesselOpenness` gates. Gating both on the lid made the
+  season almost irrelevant, which was the opposite of the point.
+- **The other hurdles are real alternatives**, which keeps the "salt and heat are
+  alternative preservatives" rule intact: batch temperature (the danger zone, and
+  the two ways out of it), a live starter, a koji's citric acid, the acidity the
+  ferment has already built, the family (an anaerobic lacto brings its own
+  lactobacillus; a garum is raw fish and time), the substrate's protein and fat,
+  and bench hygiene.
+- **A hit is a BLOOM, not a bleed** — one event costing 9 + 10×deficit safety,
+  with a message. Several still ruin a batch; one does not.
+- **The roll is seeded on the batch id and the tick, never `Math.random`.**
+  `processBatchTick` runs inside `setGameState(prev => ...)`, which StrictMode
+  double-invokes, so a bare `Math.random()` fires twice per game tick and the
+  batch keeps whichever answer the second pass gave — the raid bug again, and it
+  would have made the stated odds roughly double the real ones. Every other
+  `Math.random()` still in that function has the same defect.
+- **The odds are shown.** `.spoil-odds` in the inspector prints the chance and
+  its four heaviest terms, worst first, because a risk the player cannot see is
+  noise rather than a decision. It is an instrument, so it is dark and monospaced.
+- A factor's NOTE must agree with the sign of its weight; "+25% — lean, and slow
+  to turn" was the first thing that read as broken.
+
+Measured (expected blooms against the number needed to spoil, colatura at half
+salt): January snow 0% lost, April 6%, July heatwave 67%, open koji tray in that
+heat 98%, sealed jar 61%. By deficit in a July heatwave: at target 0%, 15/25 33%,
+10/25 91%, no salt 100%. Same July, half salt: sauerkraut 0%, colatura 67%,
+colatura with a live starter 7%, colatura held at 60 C 0%, filthy bench 99%.
+A properly salted batch is safe even in a heatwave. Re-run `sim/spoil.ts` against
+that spread before touching any coefficient.
+
+A July heatwave and a July thunderstorm come out at exactly the same risk by
+opposite routes — hot and dry (thermal 5.25 x airborne 1.24) against warm and
+soaking (4.23 x 1.54). That is a coincidence of the numbers, not a bug.
