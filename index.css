@@ -739,26 +739,23 @@ input[type="range"].dial-slider::-moz-range-thumb {
 @media (max-width: 767px) { .inoc { width: 100%; height: 100%; border-radius: 0; } }
 
 /* ---------- Header ---------- */
-.inoc-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  padding: 16px 22px; border-bottom: 1px solid var(--line); flex-shrink: 0;
-  background: linear-gradient(180deg, #2a2117, #221a12);
-}
+/* The bench head is a STUDIO HEAD like every other dark screen — the markup was
+   already the house pattern (medal, kicker, title, round close) but the class was
+   never added to those rules, so it kept a brown gradient and unstyled type. The
+   look now lives with the others; only the layout of its own children is here. */
+.inoc-head { justify-content: space-between; }
 .inoc-head .ttl { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.inoc-head .ic {
-  width: 38px; height: 38px; border-radius: 10px; background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.inoc-head h1 { font-family: var(--f-name); font-size: 18px; margin: 0; font-weight: 600; letter-spacing: 0.01em; }
-.inoc-head .sub { font-size: 10.5px; color: var(--text-lo); margin-top: 3px; }
 .inoc-head .acts { display: flex; align-items: center; gap: 10px; }
 
+/* A 999px plum pill was the last of the old direction on this screen. */
 .protocol-btn {
-  display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; padding: 8px 13px; border-radius: 999px; border: 1px solid rgba(157, 139, 176, 0.4);
-  color: var(--plum); background: rgba(157, 139, 176, 0.08); cursor: pointer; transition: background 0.15s; white-space: nowrap;
+  display: flex; align-items: center; gap: 7px; font-family: var(--f-spec); font-size: 10.5px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 7px 13px; border-radius: 4px; border: 1px solid rgba(222, 186, 110, 0.32);
+  color: #cfae6e; background: rgba(0, 0, 0, 0.22); cursor: pointer;
+  transition: border-color 0.15s, color 0.15s; white-space: nowrap;
 }
-.protocol-btn:hover { background: rgba(157, 139, 176, 0.2); }
+.protocol-btn:hover { border-color: #e2c27a; color: #fff1cc; }
 
 /* ---------- Notice strip ---------- */
 .inoc-notice {
@@ -4117,7 +4114,7 @@ html, body {
    limewash for the people and the notices: the crew, toasts, the guide. Nested
    panels inside a slate screen darken the slate rather than repeat it.
    ========================================================================= */
-.wood-panel, .ledger, .hw-modal, .pressroom, .inoc-head, .protocol-pop,
+.wood-panel, .ledger, .hw-modal, .pressroom, .protocol-pop,
 .station.pick-pane, .scan-dock, .scan.floating {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.22)), var(--tex-slate, none) 0 0 / 512px 512px repeat, #26302c;
 }
@@ -4589,7 +4586,7 @@ html, body {
 /* The studio head. Supply and the Codex use `.studio-head`; the cellar, koji
    room, press, orders and crew heads already had the same shape (mark, kicker,
    title, close) and take the same look. */
-.studio-head, .pr-head, .ob-head, .cw-head {
+.studio-head, .pr-head, .ob-head, .cw-head, .inoc-head {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 13px 20px 12px; position: relative; flex-shrink: 0;
   background:
@@ -4600,7 +4597,7 @@ html, body {
   border-bottom: 1px solid #0b0a09;
 }
 /* a brass hairline instead of the engraved leaf and wheat rules */
-.studio-head::after, .pr-head::after, .ob-head::after, .cw-head::after {
+.studio-head::after, .pr-head::after, .ob-head::after, .cw-head::after, .inoc-head::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; top: auto; pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(222, 186, 110, 0.7) 14%, rgba(222, 186, 110, 0.7) 86%, transparent);
   -webkit-mask: none; mask: none; opacity: 1; transform: none; width: auto;
@@ -4616,11 +4613,11 @@ html, body {
 }
 .sh-medal .panel-mark img { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); }
 .sh-title { margin-right: auto; min-width: 0; }
-.studio-head .kicker, .pr-head .kicker, .ob-head .kicker, .cw-head .kicker {
+.studio-head .kicker, .pr-head .kicker, .ob-head .kicker, .cw-head .kicker, .inoc-head .kicker {
   display: block; font-family: var(--f-spec); font-size: 11px; font-weight: 600;
   letter-spacing: 0.2em; text-transform: uppercase; color: #cfae6e; margin: 0 0 1px;
 }
-.studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2 {
+.studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2, .inoc-head h2 {
   font-family: var(--f-name); font-size: 22px; font-weight: 600; line-height: 1.1;
   letter-spacing: 0.005em; color: var(--text-hi); margin: 0;
 }
@@ -4635,13 +4632,13 @@ html, body {
 .sh-plate .v small { font-size: 11px; font-weight: 600; color: #5d4521; }
 .sh-plate .v em { font-style: normal; font-size: 10px; margin-left: 5px; color: #4a2748; }
 /* one round close, brass-rimmed, on every dark head */
-.studio-head .close-stamp, .pr-head .close-stamp, .ob-head .close-stamp, .cw-head .close-stamp {
+.studio-head .close-stamp, .pr-head .close-stamp, .ob-head .close-stamp, .cw-head .close-stamp, .inoc-head .close-stamp {
   flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   border: 1px solid rgba(222, 186, 110, 0.55); color: #e2c27a;
   background: radial-gradient(circle at 50% 35%, #3a3430, #1a1715);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
 }
-.studio-head .close-stamp:hover, .pr-head .close-stamp:hover, .ob-head .close-stamp:hover, .cw-head .close-stamp:hover {
+.studio-head .close-stamp:hover, .pr-head .close-stamp:hover, .ob-head .close-stamp:hover, .cw-head .close-stamp:hover, .inoc-head .close-stamp:hover {
   border-color: #e2c27a; color: #fff1cc; filter: brightness(1.12);
 }
 /* the Codex panel no longer wears the ledger's ornaments */
@@ -4653,8 +4650,8 @@ html, body {
 }
 .sup-tab.active .tab-count { background: rgba(217, 164, 65, 0.25); color: var(--amber); }
 @media (max-width: 620px) {
-  .studio-head, .pr-head, .ob-head, .cw-head { padding: 10px 12px; gap: 10px; }
-  .studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2 { font-size: 19px; }
+  .studio-head, .pr-head, .ob-head, .cw-head, .inoc-head { padding: 10px 12px; gap: 10px; }
+  .studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2, .inoc-head h2 { font-size: 19px; }
   .sh-plates { order: 3; width: 100%; }
 }
 

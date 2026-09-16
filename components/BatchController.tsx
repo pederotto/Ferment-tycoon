@@ -646,7 +646,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
           <div className="acts">
             {logbook.length > 0 && (
               <button className="protocol-btn" onClick={() => setShowVintageLoader(!showVintageLoader)}>
-                <GameIcon name="books" size={13} color="var(--plum)" />
+                <GameIcon name="books" size={13} color="#cfae6e" />
                 Proven Protocols ({logbook.filter(l => l.rating >= 4).length})
               </button>
             )}
