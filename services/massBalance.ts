@@ -36,7 +36,13 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
    THE CHARGE
    ========================================================================= */
 
-/** Families whose grain or pulse goes in steamed or cooked, so a "dry" charge carries its cooking water. */
+/**
+ * Families whose grain or pulse goes in steamed or cooked. A koji bed, a tempeh
+ * or a natto charges grain and NO water — the steaming is implied, so that grain
+ * carries its cooking water. A moromi charges water on the hydration dial, and
+ * counting the beans as cooked as well would give that mash its water twice, so
+ * `chargeOf` only passes the recipe type through when nothing charged water.
+ */
 const COOKED_BASE = new Set<FermentType>([FermentType.KOJI, FermentType.MISO, FermentType.SHOYU]);
 
 /**
@@ -118,6 +124,8 @@ export const chargeOf = (
   ingredients: Ingredient[], quantities: Record<string, number> | undefined, recipe: Recipe
 ): Charge => {
   const c: Charge = { waterG: 0, saltG: 0, proteinG: 0, fatG: 0, sugarG: 0, starchG: 0, fibreG: 0, massG: 0, koji: false };
+  // Water on the charge means the grain went in dry and was hydrated here.
+  const charged = ingredients.some(i => i.id === 'water') ? undefined : recipe.type;
   for (const i of ingredients) {
     const m = quantities && quantities[i.id] !== undefined ? quantities[i.id] : i.mass;
     c.massG += m;
@@ -127,7 +135,7 @@ export const chargeOf = (
     if (/salt/.test(i.id)) { c.saltG += m; continue; }
     if (i.id === 'sugar') { c.sugarG += m; continue; }
     if (i.id === 'honey') { c.waterG += m * 0.18; c.sugarG += m * 0.8; c.fibreG += m * 0.02; continue; }
-    const w = moistureOf(i, recipe.type);
+    const w = moistureOf(i, charged);
     c.waterG += m * w;
     let dry = m * (1 - w);
     const h = i.hiddenStats;
@@ -135,7 +143,7 @@ export const chargeOf = (
     const nativeSalt = Math.min(dry * 0.9, m * clamp(h.nativeSalinity, 0, 10) * 0.012);
     c.saltG += nativeSalt; dry -= nativeSalt;
     // Cell wall for produce, bone/skin/connective tissue for flesh, bran and hull for grain.
-    const wall = isProduce(i) ? 6 : isAnimal(i) ? 2.5 : 2;
+    const wall = isProduce(i) ? 6 : isAnimal(i) ? 3.5 : 2;
     const total = h.proteinContent + h.fatContent + h.sugarContent + h.starchContent + wall;
     if (total <= 0) { c.fibreG += dry; continue; }
     c.proteinG += dry * h.proteinContent / total;
@@ -376,12 +384,14 @@ export const concentratedProfile = (batch: Batch, recipe: Recipe): FlavorProfile
 
 /**
  * Grams of liquid a gram of each solid still holds after pressing. Plant cell
- * wall is a sponge (pomace comes out of a cider press at about 70% moisture);
- * flesh and intact protein hold less; starch about its own weight; fat almost
- * none; salt crystals that never dissolved trap brine between them. A
+ * wall is a sponge (pomace leaves a cider press at about 70% moisture); a fish
+ * or meat residue is gelatinous and holds nearly as much, which is why a garum
+ * gives up half its mash and not three quarters; gelatinised starch binds about
+ * twice its weight; fat in flesh emulsifies into the paste rather than running
+ * off clear; salt crystals that never dissolved trap brine between them. A
  * centrifuge wrings solids harder than a press.
  */
-const HOLD = { fibreG: 2.8, proteinG: 1.4, starchG: 2.2, fatG: 0.7, salt: 1.0 };
+const HOLD = { fibreG: 2.8, proteinG: 2.0, starchG: 2.2, fatG: 1.2, salt: 1.0 };
 
 /* Whole pieces (a cabbage, a porcini) keep their cells shut and hold far more than
    a crushed fruit mash; a paste sits between. */

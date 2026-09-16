@@ -163,12 +163,6 @@ const BatchController: React.FC<BatchControllerProps> = ({
     selectedIngredients.some(i => i.id === 'water'),
   [selectedIngredients]);
 
-  // Salt mass required based on salinity slider
-  const requiredSaltMass = useMemo(() => {
-    if (!hasSalt || solidsMass === 0) return 0;
-    return solidsMass * (salinity / 100);
-  }, [hasSalt, solidsMass, salinity]);
-
   // Water mass required based on the hydration slider. solidsMass deliberately
   // excludes every ADDITIVE, so neither the salt nor the water we are about to
   // add feeds back into its own basis.
@@ -176,6 +170,33 @@ const BatchController: React.FC<BatchControllerProps> = ({
     if (!hasWater || solidsMass === 0) return 0;
     return solidsMass * (hydration / 100);
   }, [hasWater, solidsMass, hydration]);
+
+  /**
+   * SALT IS A SHARE OF THE MASH, NOT A BAKER'S PERCENTAGE.
+   *
+   * This was `solidsMass * salinity/100` — salt against the solids alone, the way
+   * a baker quotes it. Nothing else in the game read it that way. `params.salinity`
+   * goes straight into the safety model, the film growth, the critic and the
+   * tasting notes, and every one of them treats it as the salinity OF THE BATCH.
+   * So a moromi dialled to its 18% target was charged 18% of the beans, which is
+   * 8.3% of the mash once the brine is in, while the simulation went on believing
+   * it was at 18. Two numbers for one quantity, and the pressed shoyu came out at
+   * half the salt of the real thing.
+   *
+   * Salt is now `salinity`% of what comes out — solids plus water plus the salt
+   * itself — which is how a brine is quoted and what the fish:salt ratios in the
+   * recipe book actually mean: a colatura at 25% is one part salt to three of
+   * anchovy, and a moromi at 18% is the 22-23% brine that shoyu is made with.
+   *
+   * HYDRATION STAYS a percentage of the solids. That one really is a baker's
+   * percentage — it says how wet the substrate is made, and it has no other
+   * reader to disagree with.
+   */
+  const requiredSaltMass = useMemo(() => {
+    if (!hasSalt || solidsMass === 0) return 0;
+    const s = Math.max(0, Math.min(salinity, 45));
+    return (solidsMass + requiredWaterMass) * (s / (100 - s));
+  }, [hasSalt, solidsMass, requiredWaterMass, salinity]);
 
   /**
    * QUANTITIES — PER UNIT, NOT PER INGREDIENT.

@@ -2167,7 +2167,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Stir',
     // 18% against the substrate, held at cellar temperature. The brine is what
     // keeps a mash this wet safe for two years without any heat at all.
-    idealParams: { temp: 25, humidity: 60, salinity: 18 },
+    idealParams: { temp: 25, humidity: 60, salinity: 15 },
     idealFlavorProfile: { umami: 92, acidity: 40, funk: 55, sweetness: 20, safety: 100 },
     difficulty: 4
   },
@@ -2183,7 +2183,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 90,
     peakWindowEnd: 100,
     activeIntervention: 'Stir',
-    idealParams: { temp: 25, humidity: 60, salinity: 16 },
+    idealParams: { temp: 25, humidity: 60, salinity: 14 },
     idealFlavorProfile: { umami: 96, acidity: 28, funk: 58, sweetness: 12, safety: 100 },
     difficulty: 4
   },
