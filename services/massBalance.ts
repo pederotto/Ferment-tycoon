@@ -276,6 +276,24 @@ export const compositionOf = (batch: Batch, recipe: Recipe, ingredients: Ingredi
     undissolvedSaltG: 0,
     gasG: used * model.toGas + breath,
   };
+  // YEAST DIES IN ITS OWN ALCOHOL, and nothing here said so. `attenuation` caps
+  // how much sugar ferments but not what the result may reach, so a sugar-heavy
+  // must ran to 30% — a strength no fermentation gets to. Sake yeast is the
+  // toughest of these at around 20% (multiple parallel fermentation is why),
+  // wine and mead yeasts stop nearer 16, and the wild consortia in a kvass or a
+  // tepache give up far sooner. Sugar the yeast could not eat stays sugar,
+  // which is exactly why a stuck mead is sweet.
+  const tolerance = recipe.id === 'grain_sake' ? 20
+    : recipe.type === FermentType.ALCOHOL ? 16
+    : recipe.type === FermentType.KOMBUCHA ? 4 : 14;
+  const massNow = PARTS.reduce((a, p) => a + c[p], 0);
+  const ceiling = massNow * (tolerance / 100);
+  if (c.ethanolG > ceiling) {
+    // Everything the yeast could not get to is still sugar in the glass.
+    c.sugarG += (c.ethanolG - ceiling) / Math.max(0.01, model.toEthanol);
+    c.ethanolG = ceiling;
+  }
+
   // What a press or a centrifuge has already taken off.
   const removed = loss.removed ?? {};
   for (const p of PARTS) c[p] = Math.max(0, c[p] - (removed[p] ?? 0));
@@ -363,6 +381,20 @@ export const effectiveSalinity = (batch: Batch): number =>
  * also safer, because water activity falls. At factor 1 this is the batch's own
  * profile, so a sealed ferment scores exactly as before.
  */
+/**
+ * ALCOHOL, as a percentage of the batch by mass.
+ *
+ * Ethanol has been tracked in the composition since the mass balance was
+ * written — it decides what a pressed sake or a mead comes out at — but nothing
+ * upstream could see it. It is not one of the four flavour axes, so it cannot be
+ * scored; what it CAN do is what alcohol really does: preserve the thing, and
+ * change how it reads on the palate.
+ */
+export const alcoholPct = (batch: Batch, recipe: Recipe, ingredients: Ingredient[]): number => {
+  const c = compositionOf(batch, recipe, ingredients);
+  return c.massG > 0 ? clamp((c.ethanolG / c.massG) * 100, 0, 30) : 0;
+};
+
 export const concentratedProfile = (batch: Batch, recipe: Recipe): FlavorProfile => {
   const q = batch.quality;
   const e = concentrationFactor(batch) - 1;

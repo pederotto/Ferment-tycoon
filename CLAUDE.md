@@ -1302,3 +1302,63 @@ than guessing, and both larger than any number on the worksheet:
   of 94. `massBalance.enzymeScale` already knows fish break themselves down
   ("Fish and flesh break themselves down"); `getFlavorPotential` does not, and
   the two disagree.
+
+## Making the targets reachable (the flavour pipeline)
+The owner's 71 targets were unreachable because four things the game DESCRIBES
+were never simulated. All four are in `getFlavorPotential` and the tick.
+
+- **Flesh digests itself.** Cathepsins in fish and meat cut their own protein up
+  with no koji anywhere near them — the entire mechanism of a garum. Proteolysis
+  was `0.18 + protease/100 * 0.95` and a garum has no koji, so an anchovy got the
+  0.18 wild floor and capped at umami 16 against a target of 94. `isFlesh` adds
+  0.82. `massBalance.enzymeScale` has always returned 1 for a garum's protease;
+  the two models agree now. Colatura went from miss 113 / score 67 to **miss 42 /
+  score 88**, bottarga to miss 13.
+- **A culture grows wherever you put it.** `advanceEnzymes` was called only
+  inside `if (isKoji)`, so any ferment that charges SPORES rather than a finished
+  koji never developed a protease — and a moromi, doenjang, douchi and hatcho
+  miso are all built exactly that way. Soybeans capped at umami 18 against
+  targets in the nineties. Enzymes now grow in a mash too, at 0.45 of the rate of
+  an open bed. Moromi went from miss 128 / score 62 to **miss 36 / score 85**.
+  `getFlavorPotential` takes the DEVELOPED enzymes, not just the charged ones —
+  without that the growth is invisible to flavour.
+- **Acid is a fermentation product.** The only acid in the whole tick came from
+  surface film, one hardcoded rule for coconut vinegar, and `+0.05` past the
+  peak, so the three families DEFINED by acid could not make any: a sauerkraut
+  targeting 82 sat at 0. Acid is made from fermentable sugar and how much of it
+  becomes acid is `processModel.toAcid`, which the mass balance already states
+  per family — reused rather than re-invented. Sauerkraut now reaches **83**
+  against its 82. `ACID_SCALE` is the one tunable.
+- **Sugar is usually something you ADD, and something gets eaten.** Potential read
+  the SUBSTRATE alone, so the kilo of sugar in a cheong, the honey in a mead and
+  the sugar feeding a kombucha were invisible. Sugar and starch are summed over
+  everything in the vessel now, mass-weighted (protein and fat stay on the
+  substrate — averaging those over salt and water only dilutes them). And the
+  result is multiplied by `1 - attenuation * 0.85`, because a vinegar ferments
+  0.95 of its sugar away and a koji bed only 0.30. That one factor is why an
+  amazake is a syrup and a cider vinegar is bone dry.
+
+**Clamp the axes at the END of the tick.** They are 0-100 by definition and
+nothing held them there: katsuobushi, which loses 92% of its mass, ran to umami
+257 and an aged chili mash to acidity 127. Scoring is a sum of absolute
+distances, so an overshoot costs exactly what a shortfall does — 257 scores worse
+than making nothing. An earlier clamp is undone by whatever runs after it.
+
+Mean miss over all 71 went from about 130 to **85**, with 0 axes out of range.
+
+## Alcohol
+Ethanol was in the composition from the start — it decides what a pressed sake
+bottles at — and nothing upstream could see it. `alcoholPct` reads it off
+`compositionOf`, so there is one number, not two.
+
+- It is **not a flavour axis** and is not scored. Adding a fifth axis means 71
+  more numbers from the owner; ask before doing it.
+- It is **a preservative**, the fourth hurdle in `contaminationRisk` after salt,
+  heat and acid. Little establishes in a ferment that has made its own spirit.
+- It is **visible**: a `Strength` tasting note, which is why `TastingNote.facet`
+  gained a sixth value.
+- **Yeast dies in its own alcohol.** `attenuation` caps how much sugar ferments
+  but said nothing about what the result may REACH, so a sugar-heavy must ran to
+  30% ABV. Sake tops out near 20 (multiple parallel fermentation), other brews
+  16, a kombucha 4. Sugar the yeast could not eat stays sugar — which is exactly
+  why a stuck mead is sweet.

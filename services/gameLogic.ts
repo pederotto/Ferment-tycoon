@@ -12,8 +12,12 @@ import {
   SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
 
-import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, processModel, ProductForm } from './massBalance';
+import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, processModel, ProductForm, alcoholPct } from './massBalance';
 // --- GAMEPLAY CONSTANTS ---
+/* How much acid a unit of fermentable sugar becomes, on the 0-100 flavour
+   scale. Measured against the owner's targets, not guessed — see CLAUDE.md. */
+const ACID_SCALE = 21;
+
 const OPTIMAL_TEMP = 30; // The "Goldilocks" zone
 const DANGER_TEMP = 42;  // Where Stress begins
 // INCREASED INERTIA: Represents 5kg-10kg of mass. Temp moves much slower now.
@@ -893,6 +897,8 @@ export const contaminationRisk = (
   vesselId: string | undefined,
   vent: number,
   ticksRemaining: number,
+  /** Alcohol is the fourth preservative, after salt, heat and acid. */
+  alcohol = 0,
 ): ContaminationRisk => {
   const factors: { label: string; weight: number; note: string }[] = [];
   const push = (label: string, weight: number, note: string) => {
@@ -949,6 +955,13 @@ export const contaminationRisk = (
   const acidTerm = clamp(1 - (quality.acidity ?? 0) / 60, 0.18, 1);
   p *= acidTerm;
   push('Acidity ' + (quality.acidity ?? 0).toFixed(0), acidTerm, 'a ferment that has dropped its own pH defends itself');
+
+  // ALCOHOL IS A PRESERVATIVE. Salt, heat and acid were all in here and the one
+  // hurdle a brew actually has was not: nothing much establishes in a wine, and
+  // a fortified one is stable for years. Around 12% it is doing most of the work.
+  const alcoholTerm = clamp(1 - alcohol / 16, 0.2, 1);
+  p *= alcoholTerm;
+  push(`Alcohol ${alcohol.toFixed(1)}%`, alcoholTerm, 'little establishes in a ferment that has made its own spirit');
 
   const acidShield = getAcidProtection(ingredients);
   const shieldTerm = acidShield > 0 ? Math.max(0.3, 1 - acidShield / 40) : 1;
@@ -1362,6 +1375,28 @@ export const processBatchTick = (
     }
   }
 
+  // A CULTURE GROWS WHEREVER YOU PUT IT, not only on a koji tray.
+  // `advanceEnzymes` was called inside the `isKoji` branch alone, so any ferment
+  // that charges SPORES rather than a finished koji never developed a protease
+  // at all — and a moromi, a doenjang, a douchi and a hatcho miso are all built
+  // exactly that way: the mould is supposed to grow in the mash. Protease stayed
+  // at zero, so soybeans at protein 9 capped at umami 18 against targets in the
+  // eighties and nineties. It grows more slowly in a wet salted mash than on an
+  // open bed, which is what the 0.45 is.
+  if (!isKoji) {
+    const starterIng = ingredients.find(i => i.type === IngredientType.STARTER);
+    if (starterIng) {
+      const grown = advanceEnzymes(
+        enzymes, substrate, starterIng, newParams.temp, newParams.humidity, stress, progress / 100
+      );
+      enzymes = {
+        amylase: enzymes.amylase + (grown.amylase - enzymes.amylase) * 0.45,
+        protease: enzymes.protease + (grown.protease - enzymes.protease) * 0.45,
+        lipase: (enzymes.lipase ?? 0) + ((grown.lipase ?? 0) - (enzymes.lipase ?? 0)) * 0.45,
+      };
+    }
+  }
+
   // --- UNIVERSAL SPOILAGE LOGIC (Safety Decay) ---
   let safetyDecay = 0;
   let riskFactor = 1;
@@ -1411,10 +1446,11 @@ export const processBatchTick = (
   // ferment is exposed for longer, which is itself part of the risk.
   const perTickProgress = Math.max(0.05, (100 / recipe.baseDurationSeconds) * speedModifier * genSpeedBuff);
   const ticksLeft = Math.max(0, Math.round((recipe.peakWindowEnd - progress) / perTickProgress));
+  const abv = alcoholPct(batch, recipe, ingredients);
   const risk = contaminationRisk(
     recipe, newParams, newQuality, substrate, ingredients,
     Math.min(100, hygiene + resilienceBuffer), currentMonth, weather,
-    batch.vesselId, controls.vent ?? 0, ticksLeft,
+    batch.vesselId, controls.vent ?? 0, ticksLeft, abv,
   );
   // Seeded on the batch and its progress, so StrictMode's second invocation of
   // this updater computes the identical answer instead of rolling again.
@@ -1576,7 +1612,7 @@ export const processBatchTick = (
   // trickle (+0.05/tick) that moved the needle about 6 points over a whole batch
   // and left the outcome essentially equal to its starting value.
   const rdUmamiMult = activeStaff['rd'] ? 1.35 : 1.0;
-  const potential = getFlavorPotential(ingredients, concentration, batch.ingredientQuantities);
+  const potential = getFlavorPotential(ingredients, concentration, batch.ingredientQuantities, recipe, enzymes);
 
   // How well the batch is being run, 0..1. Enzymes stall when it is too cold and
   // denature when it is too hot, so this is a band around the recipe's ideal.
@@ -1599,7 +1635,11 @@ export const processBatchTick = (
       // Starch converts to sugar early, then the sugar gets eaten.
       newQuality.sweetness += (potential.sweetness - newQuality.sweetness) * convert * 0.6;
     }
-    if (progress >= peakStart) newQuality.acidity += 0.05;
+    // Acid converges on its own ceiling like every other axis. It used to be a
+    // flat +0.05 past the peak and nothing else, which is why nothing sour could
+    // become sour. Acidification is a little slower than proteolysis because the
+    // bacteria have to establish first, and it does not reverse.
+    newQuality.acidity += (potential.acidity - newQuality.acidity) * convert * 0.7;
   } else if (ageingBehaviour(recipe) === 'matures') {
     // The ferments defined by age keep improving past the window rather than
     // falling over: proteolysis continues slowly, sharp edges mellow, and the
@@ -1608,6 +1648,7 @@ export const processBatchTick = (
     const gain = convert * 0.35 * (1 - maturity);
     newQuality.umami += (potential.umami * 1.25 - newQuality.umami) * gain;
     newQuality.funk += (potential.funk * 1.1 - newQuality.funk) * gain * 0.7;
+    newQuality.acidity += (potential.acidity * 1.1 - newQuality.acidity) * gain * 0.6;
     // Acidity rounds off with time — the thing long ageing is actually for.
     if (newQuality.acidity > recipe.idealFlavorProfile.acidity) {
       newQuality.acidity -= 0.03;
@@ -1666,6 +1707,20 @@ export const processBatchTick = (
     prevProgress: batch.progress, progress, temp: newParams.temp, humidity: newParams.humidity, vent: ex.vent,
   });
   const yieldVolume = currentMassG({ ...batch, totalMass, massLoss }) / 1000;
+
+  // THE AXES ARE 0-100 BY DEFINITION, and nothing was holding them there. The
+  // potential is a raw product of substrate stats and concentration, so a
+  // katsuobushi — which loses 92% of its mass and concentrates what is left —
+  // ran to umami 257, and an aged chili mash to acidity 127. Scoring is a sum of
+  // absolute distances, so an overshoot costs exactly what a shortfall does: a
+  // 257 scores worse than making nothing at all. Clamped HERE, after every
+  // convergence and every recipe hook, because an earlier clamp is undone by
+  // whatever runs next.
+  newQuality.umami = clamp(newQuality.umami, 0, 100);
+  newQuality.acidity = clamp(newQuality.acidity, 0, 100);
+  newQuality.funk = clamp(newQuality.funk, 0, 100);
+  newQuality.sweetness = clamp(newQuality.sweetness, 0, 100);
+  newQuality.safety = clamp(newQuality.safety, 0, 100);
 
   return {
     ...batch,
@@ -1765,13 +1820,24 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
  * their own idealFlavorProfile from these same stats, so the goalposts moved
  * with the ball and every substrate scored roughly the same.
  */
+/** Flesh carries its own proteases and digests itself — the whole of a garum. */
+const isFlesh = (i: Ingredient): boolean => {
+  const t = `${i.id} ${i.tags?.join(' ') ?? ''}`;
+  return /fish|anchov|mackerel|herring|bonito|krill|shrimp|roe|pork|beef|meat|squid|scallop|yolk|egg/.test(t)
+    || (i.hiddenStats.proteinContent >= 6 && i.hiddenStats.fatContent >= 4 && i.hiddenStats.starchContent <= 1);
+};
+
 export const getFlavorPotential = (
   ingredients: Ingredient[],
   concentration: number,
-  quantities?: Record<string, number>
-): { umami: number; funk: number; sweetness: number } => {
+  quantities?: Record<string, number>,
+  /** The process decides how much of the fermentable sugar becomes acid. */
+  recipe?: Recipe,
+  /** What the batch has GROWN, which outranks what was charged. */
+  developed?: { amylase: number; protease: number; lipase?: number }
+): { umami: number; funk: number; sweetness: number; acidity: number } => {
   const sub = ingredients.find(i => i.type === IngredientType.SUBSTRATE) || ingredients[0];
-  if (!sub) return { umami: 0, funk: 0, sweetness: 0 };
+  if (!sub) return { umami: 0, funk: 0, sweetness: 0, acidity: 0 };
   const c = Math.max(0.15, concentration);
   const h = sub.hiddenStats;
 
@@ -1780,16 +1846,71 @@ export const getFlavorPotential = (
   // starch is not sweet until an amylase does. A rich substrate with no koji is
   // a missed opportunity; a strong koji on a poor substrate has nothing to work
   // on. Both halves have to be right.
-  const enz = getBatchEnzymes(ingredients, quantities);
+  // What was charged, or what the batch has since grown — whichever is stronger.
+  // A moromi charges spores and grows its own protease; reading the charge alone
+  // reported zero for the whole run.
+  const charged = getBatchEnzymes(ingredients, quantities);
+  const enz = developed
+    ? { amylase: Math.max(charged.amylase, developed.amylase),
+        protease: Math.max(charged.protease, developed.protease),
+        lipase: Math.max(charged.lipase ?? 0, developed.lipase ?? 0) }
+    : charged;
 
   // A floor of background activity: wild organisms and native enzymes do a
   // little of this on their own, which is how a plain lacto pickle works.
-  const proteolysis = 0.18 + (enz.protease / 100) * 0.95;
+  //
+  // AND FLESH DIGESTS ITSELF. Cathepsins in fish and meat cut their own protein
+  // up with no koji anywhere near them — that is the entire mechanism of a
+  // garum, and it was missing. Without it the only proteolysis an anchovy got
+  // was the 0.18 wild floor, capping it at umami 16 against a target of 94.
+  // `massBalance.enzymeScale` has always returned 1 for a garum's protease; the
+  // two models now agree.
+  const autolysis = isFlesh(sub) ? 0.82 : 0;
+  const proteolysis = 0.18 + autolysis + (enz.protease / 100) * 0.95;
   const saccharification = 0.15 + (enz.amylase / 100) * 1.0;
   // Lipolysis frees butyric, caproic and caprylic acids from fat. That is where
   // the sharp, pungent character of an aged dairy ferment or a cured roe comes
   // from — fatContent was tracked all along and only ever used for rancidity.
   const lipolysis = 0.1 + ((enz.lipase ?? 0) / 100) * 1.1;
+
+  // SUGAR IS OFTEN SOMETHING YOU ADD, NOT SOMETHING THE SUBSTRATE HAS.
+  // This read the substrate alone, so the kilo of sugar in a cheong, the honey
+  // in a mead and the sugar feeding a kombucha were all invisible: a cheong
+  // reached sweetness 8 against a target of 96. Sugar and starch are summed
+  // over everything in the vessel, weighted by how much of each went in. Protein
+  // and fat stay on the substrate — those are what the THING is, and averaging
+  // them over the salt and water would only dilute them.
+  let sugarW = 0, starchW = 0, mass = 0;
+  for (const i of ingredients) {
+    if (i.id === 'water' || /salt/.test(i.id)) continue;
+    const m = quantities && quantities[i.id] !== undefined ? quantities[i.id] : (i.mass ?? 1000);
+    sugarW += i.hiddenStats.sugarContent * m;
+    starchW += i.hiddenStats.starchContent * m;
+    mass += m;
+  }
+  const sugarAvail = mass > 0 ? sugarW / mass : h.sugarContent;
+  const starchAvail = mass > 0 ? starchW / mass : h.starchContent;
+
+  // ACID IS A FERMENTATION PRODUCT, and it had no source at all: the only acid
+  // in the whole tick came from surface film, one hardcoded rule for coconut
+  // vinegar, and a trickle past the peak. So the three families DEFINED by acid
+  // — lacto, vinegar, kombucha — could not make any, and a sauerkraut targeting
+  // 82 sat at 0. What acid is made FROM is fermentable sugar; how much of it
+  // becomes acid is a property of the process, and `processModel.toAcid` in the
+  // mass balance already says so for every family. Reuse it rather than invent a
+  // second answer the two modules can disagree about.
+  const fermentable = sugarAvail + starchAvail * saccharification * 0.7;
+  const model = recipe ? processModel(recipe) : undefined;
+  const toAcid = model?.toAcid ?? 0.3;
+  const acidity = fermentable * toAcid * ACID_SCALE * c;
+
+  // SUGAR GETS EATEN. Sweetness was a ceiling with nothing consuming it, so a
+  // vinegar and a kraut came out as sweet as the fruit that went in. What is
+  // left is what the organisms did not ferment, and `attenuation` in the mass
+  // balance already says how thorough each family is: a vinegar takes 0.95 of
+  // it, a kombucha half, a koji bed only 0.30 — which is exactly why an amazake
+  // is a syrup and a cider vinegar is bone dry.
+  const residual = 1 - (model?.attenuation ?? 0.5) * 0.85;
 
   return {
     umami: h.proteinContent * 11 * c * proteolysis,
@@ -1797,7 +1918,8 @@ export const getFlavorPotential = (
     // fat being taken apart.
     funk: (h.microbialDiversity * 9 + h.fatContent * 6 * lipolysis) * c,
     // Free sugar is already there; starch only counts once amylase reaches it.
-    sweetness: (h.sugarContent * 5 + h.starchContent * 7 * saccharification) * c,
+    sweetness: (sugarAvail * 9 + starchAvail * 7 * saccharification) * c * residual,
+    acidity,
   };
 };
 
@@ -2382,7 +2504,7 @@ export const calculateOverheads = (
    =========================================================================== */
 
 export interface TastingNote {
-  facet: 'Colour' | 'Aroma' | 'Palate' | 'Texture' | 'Finish';
+  facet: 'Colour' | 'Aroma' | 'Palate' | 'Texture' | 'Finish' | 'Strength';
   text: string;
 }
 
@@ -2634,6 +2756,19 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
     finish = 'Clean, and it fades quickly.';
   }
   notes.push({ facet: 'Finish', text: finish });
+
+  /* --- STRENGTH ----------------------------------------------------------
+     Alcohol is not one of the four axes, so it cannot be scored — but it is the
+     whole point of half the Alcoholic Brew family and it was invisible on the
+     card. It is read off the composition, the same number the press bottles. */
+  const abv = alcoholPct(batch, recipe, ings);
+  if (abv >= 0.8) {
+    notes.push({ facet: 'Strength', text:
+      abv >= 16 ? `${abv.toFixed(1)}% — fortified in all but name, and it carries heat into the finish.`
+      : abv >= 11 ? `${abv.toFixed(1)}% — wine strength, warming, and enough to keep it.`
+      : abv >= 5 ? `${abv.toFixed(1)}% — table strength, the alcohol supporting rather than leading.`
+      : `${abv.toFixed(1)}% — barely alcoholic, just enough prickle to know it is working.` });
+  }
 
   return notes;
 };
