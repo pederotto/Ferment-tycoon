@@ -1524,3 +1524,43 @@ outside the koji branch looked only for an `IngredientType.STARTER`, and a
 finished koji is typed SUBSTRATE — so a moromi or a tamari was frozen at whatever
 protease the koji arrived with. It keeps making protease for as long as the mash
 allows, which is why a tamari left a year is savoury and one left a week is not.
+
+## Salt stops the mould; time does the rest
+The owner's correction, and it overturns something written here a commit earlier.
+A koji put into brine DIES there. It secretes no further enzyme from the moment
+the salt goes in. What carries a moromi through a year is not a growing organism
+— it is the enzyme pool the koji ALREADY made, still working on the protein,
+plus what moves in behind it.
+
+- **Enzyme concentration is a RATE, not a ceiling.** `proteolysis` was linear in
+  protease, so a koji at 52 could free only 67% of the protein in the vessel
+  however long you left it, and a tamari stalled near umami 45 against 94. A
+  modest pool given a year gets through what a strong pool does in a month, so
+  extent saturates (`1 - exp(-e/26)`) instead of scaling.
+- **One recipe here covers two real stages.** A moromi charges spores AND salt,
+  because growing the koji and brining it are a single step in this game. So the
+  culture establishes through the first quarter of the run — that is the koji
+  stage, on its own clock and at a bed's full rate — and the pool is fixed after
+  it. Gating on salt alone killed moromi outright (umami 13).
+- **Secondary fermentation is most of what a long mash does.** Halophilic
+  lactobacillus and yeasts move in behind the enzymes and work for months,
+  souring the mash and taking most of the sugar. `attenuation` for the salted
+  families was set as if only the mould acted: SHOYU 0.30 → 0.62, MISO
+  0.25 → 0.55, with `toAcid` raised to match. A shoyu was sitting at acidity 6
+  against a target of 38.
+  **But a short miso is not a long one**: shiro miso is deliberately quick and
+  koji-heavy so the sugar survives, and the family's new attenuation ate it
+  (sweetness 74 → 25). It and yellow peaso carry `BY_RECIPE` overrides.
+- **Not every mould is Aspergillus.** `advanceEnzymes` produced a full koji's
+  output whatever was inoculated, so a tempeh — whose own description says it
+  "binds rather than digests, there is very little enzyme here" — freed as much
+  protein as a shoyu koji and ran to umami 99 against a target of 34. Rhizopus
+  knits (0.30), Bacillus is protease without amylase (0.75), surface moulds and
+  larvae are weaker still (0.45).
+- **A rate term on the umami convergence was tried and REMOVED.** It looked
+  principled — a short ferment should not finish — but measured worse across the
+  catalogue (mean 66 → 69, recipes over 90 13 → 16), because the saturating
+  extent curve already handles it. Do not re-add it without measuring.
+
+Measured across all 75: mean miss **66**, thirteen still over 90, down from about
+130 when the owner's targets first went in.

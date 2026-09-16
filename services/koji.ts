@@ -124,7 +124,18 @@ export const advanceEnzymes = (
   // Calibrated so a well-run bed develops roughly 110 units of total activity
   // over a full run. A strongly-biased strain therefore lands near 90/20 and a
   // balanced one near 55/55 — both meaningful, neither pinned to the cap.
-  const step = PEAK_ACTIVITY * 0.027 * rate * phase;
+  // NOT EVERY MOULD IS ASPERGILLUS. This produced a full koji's enzyme output
+  // whatever was inoculated, so a tempeh — whose own description says it "binds
+  // rather than digests, there is very little enzyme here" — freed as much
+  // protein as a shoyu koji and ran to umami 99 against a target of 34.
+  // Rhizopus knits; Bacillus is all protease and no amylase; wild air is weaker
+  // and slower than anything you pitch on purpose.
+  const power = !starter ? 1
+    : /rhizopus/.test(starter.id) ? 0.30
+    : /bacillus/.test(starter.id) ? 0.75
+    : /roqueforti|glaucus|larvae/.test(starter.id) ? 0.45
+    : 1;
+  const step = PEAK_ACTIVITY * 0.027 * rate * phase * power;
 
   // Lipase is induced by fat rather than steered between the other two, so it
   // rides on overall vigour and on what there is to work on.

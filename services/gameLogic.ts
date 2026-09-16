@@ -1468,22 +1468,39 @@ export const processBatchTick = (
   // eighties and nineties. It grows more slowly in a wet salted mash than on an
   // open bed, which is what the 0.45 is.
   if (!isKoji) {
-    // A LIVE KOJI IS AN ORGANISM, NOT AN INGREDIENT THAT SITS THERE. It keeps
-    // making protease for as long as the mash lets it, which is why a tamari
-    // left for a year is savoury and one left for a week is not. This looked
-    // only for a STARTER, and a finished koji is typed SUBSTRATE — so a moromi
-    // or a tamari was frozen at whatever protease the koji arrived with, and
-    // soybeans at protein 9 stalled around umami 45 against a target of 94.
-    const starterIng = ingredients.find(i => i.type === IngredientType.STARTER)
-      ?? ingredients.find(i => /koji|nuruk/.test(i.id) && !/spore/.test(i.id));
+    // SALT STOPS THE MOULD. A koji goes into brine and dies there — it makes no
+    // further enzyme from the moment the salt is in. What carries a moromi for a
+    // year is not a growing organism; it is the enzyme pool the koji ALREADY
+    // secreted, still working on the protein. (An earlier version let a live
+    // koji keep producing inside a salted mash, which is the wrong mechanism
+    // entirely — the owner corrected it.)
+    //
+    // But one recipe here covers two real stages: a moromi charges spores AND
+    // salt, because making the koji and brining it are a single step in this
+    // game. So the culture is allowed to establish through the first quarter of
+    // the run — that is the koji stage — and the pool is fixed after it.
+    // Unsalted ferments (tempeh, natto, meju, amazake) keep growing throughout.
+    const brined = (newParams.salinity ?? 0) >= 3;
+    const kojiStageOver = brined && progress > 25;
+    const starterIng = kojiStageOver ? undefined
+      : (ingredients.find(i => i.type === IngredientType.STARTER)
+         ?? ingredients.find(i => /koji|nuruk/.test(i.id) && !/spore/.test(i.id)));
     if (starterIng) {
+      // The koji stage is SHORT and it finishes: three days on a bed, to full
+      // strength, before any brine touches it. So inside that window the bed
+      // develops on its own clock (progress/25) and at a bed's full rate — it is
+      // a koji bed at that point, not a mash. An unsalted ferment has no such
+      // deadline and keeps creeping along at the slower mash rate all run.
+      const inKojiStage = brined;
+      const devFraction = inKojiStage ? Math.min(1, progress / 25) : progress / 100;
       const grown = advanceEnzymes(
-        enzymes, substrate, starterIng, newParams.temp, newParams.humidity, stress, progress / 100
+        enzymes, substrate, starterIng, newParams.temp, newParams.humidity, stress, devFraction
       );
+      const rate = inKojiStage ? 1 : 0.45;
       enzymes = {
-        amylase: enzymes.amylase + (grown.amylase - enzymes.amylase) * 0.45,
-        protease: enzymes.protease + (grown.protease - enzymes.protease) * 0.45,
-        lipase: (enzymes.lipase ?? 0) + ((grown.lipase ?? 0) - (enzymes.lipase ?? 0)) * 0.45,
+        amylase: enzymes.amylase + (grown.amylase - enzymes.amylase) * rate,
+        protease: enzymes.protease + (grown.protease - enzymes.protease) * rate,
+        lipase: (enzymes.lipase ?? 0) + ((grown.lipase ?? 0) - (enzymes.lipase ?? 0)) * rate,
       };
     }
   }
@@ -2032,8 +2049,21 @@ export const getFlavorPotential = (
   const microbes = Math.max(h.microbialDiversity, starterMicrobes, wildBloom);
 
   const autolysis = isFlesh(sub) ? 0.82 : 0;
-  const proteolysis = 0.18 + autolysis + (enz.protease / 100) * 0.95;
-  const saccharification = 0.15 + (enz.amylase / 100) * 1.0;
+  // ENZYME STRENGTH IS A RATE, NOT A CEILING.
+  //
+  // This was linear in enzyme concentration, so a koji at protease 52 could
+  // free only 67% of the protein in the vessel NO MATTER HOW LONG you left it,
+  // and a tamari stalled near umami 45 against a target of 94. That is not how
+  // hydrolysis works: a modest pool of protease given a year gets through
+  // essentially everything a strong pool gets through in a month. Concentration
+  // decides how FAST, and the tick's `convert` is where speed belongs.
+  //
+  // Salt stops the mould making any more, so the pool is fixed at what went into
+  // the mash and time does the rest — which is exactly why a moromi is left for
+  // a year and why the one left a week is thin.
+  const reach = (e: number, k: number) => 1 - Math.exp(-Math.max(0, e) / k);
+  const proteolysis = 0.18 + autolysis + 0.95 * reach(enz.protease, 26);
+  const saccharification = 0.15 + 1.0 * reach(enz.amylase, 26);
   // Lipolysis frees butyric, caproic and caprylic acids from fat. That is where
   // the sharp, pungent character of an aged dairy ferment or a cured roe comes
   // from — fatContent was tracked all along and only ever used for rancidity.

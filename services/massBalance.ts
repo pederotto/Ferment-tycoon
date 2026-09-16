@@ -181,8 +181,8 @@ export interface ProcessModel {
 const BY_TYPE: Record<FermentType, ProcessModel> = {
   [FermentType.LACTO]:    { dry: 0.02, proteolysis: 0.12, amylolysis: 0.05, attenuation: 0.85, toEthanol: 0.02, toAcid: 0.88, toGas: 0.10, respiration: 0,    form: 'solid' },
   [FermentType.KOJI]:     { dry: 0.14, proteolysis: 0.30, amylolysis: 0.35, attenuation: 0.30, toEthanol: 0,    toAcid: 0.05, toGas: 0.95, respiration: 0.12, form: 'bed' },
-  [FermentType.MISO]:     { dry: 0.03, proteolysis: 0.60, amylolysis: 0.70, attenuation: 0.25, toEthanol: 0.20, toAcid: 0.30, toGas: 0.50, respiration: 0,    form: 'paste' },
-  [FermentType.SHOYU]:    { dry: 0.04, proteolysis: 0.80, amylolysis: 0.75, attenuation: 0.30, toEthanol: 0.25, toAcid: 0.30, toGas: 0.45, respiration: 0,    form: 'liquid' },
+  [FermentType.MISO]:     { dry: 0.03, proteolysis: 0.60, amylolysis: 0.70, attenuation: 0.55, toEthanol: 0.20, toAcid: 0.45, toGas: 0.35, respiration: 0,    form: 'paste' },
+  [FermentType.SHOYU]:    { dry: 0.04, proteolysis: 0.80, amylolysis: 0.75, attenuation: 0.62, toEthanol: 0.25, toAcid: 0.45, toGas: 0.30, respiration: 0,    form: 'liquid' },
   [FermentType.GARUM]:    { dry: 0.06, proteolysis: 0.85, amylolysis: 0.05, attenuation: 0.20, toEthanol: 0,    toAcid: 0.50, toGas: 0.50, respiration: 0,    form: 'liquid' },
   [FermentType.VINEGAR]:  { dry: 0.06, proteolysis: 0.05, amylolysis: 0.05, attenuation: 0.95, toEthanol: 0.02, toAcid: 0.60, toGas: 0.38, respiration: 0,    form: 'liquid' },
   [FermentType.BLACK]:    { dry: 0.40, proteolysis: 0.10, amylolysis: 0.10, attenuation: 0.35, toEthanol: 0,    toAcid: 0.15, toGas: 0.25, toSolids: 0.60, respiration: 0, form: 'dried' },
@@ -191,7 +191,13 @@ const BY_TYPE: Record<FermentType, ProcessModel> = {
   [FermentType.KOMBUCHA]: { dry: 0.04, proteolysis: 0.03, amylolysis: 0,    attenuation: 0.50, toEthanol: 0.10, toAcid: 0.45, toGas: 0.45, respiration: 0,    form: 'liquid' },
 };
 
-/* Recipes that are not their family's average: cures that are mostly the water
+/* SECONDARY FERMENTATION IS MOST OF WHAT A LONG MASH DOES. A moromi is not
+   finished when the koji's enzymes are: halophilic lactobacillus and yeasts move
+   in behind them and work for months, souring it and taking most of the sugar.
+   Attenuation for the salted mashes was set as if only the mould acted, which
+   left a shoyu at acidity 6 against a target of 38 and far too sweet.
+
+   Recipes that are not their family's average: cures that are mostly the water
    they lose, drinks and seasonings filed under koji, syrups filed as brews. */
 const BY_RECIPE: Record<string, Partial<ProcessModel>> = {
   bottarga:      { dry: 0.62, proteolysis: 0.15, form: 'dried' },
@@ -208,6 +214,11 @@ const BY_RECIPE: Record<string, Partial<ProcessModel>> = {
   ricotta_forte: { dry: 0.05, proteolysis: 0.30, form: 'paste' },
   cultured_butter: { dry: 0.02, form: 'paste' },
   chili_mash:    { form: 'paste' },
+  /* A shiro miso is deliberately SHORT and koji-heavy so the sugar survives —
+     that is the whole point of a white miso, and the family's long-ferment
+     attenuation ate it. */
+  shiro_miso:    { attenuation: 0.18, toAcid: 0.25 },
+  yellow_peaso:  { attenuation: 0.30, toAcid: 0.35 },
   /* Openly WILD brews: no pitched yeast, so lactic acid bacteria work alongside
      whatever yeast lands and the result is sour as well as alcoholic. A pitched
      wine or mead is not like this, which is why it is per-recipe and not a
