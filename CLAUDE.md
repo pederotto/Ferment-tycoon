@@ -1422,3 +1422,33 @@ are substring tests; a kojiBase substrate means a koji IS the substrate; a
 competent player adds sugar where the process needs it and the matrix allows):
 mean miss **~130 → 69**, recipes missing by more than 90 down to **16**, mean
 score **71 → 77**, nothing out of the 0-100 range.
+
+## Any animal protein is a garum; any plant protein is an amino sauce
+The owner's rule, and the resolver now states it. Every garum was a NAMED entry —
+anchovies, mackerel, herring — so a pork belly, a bonito, a tray of egg yolks or
+a sack of dried scallops under salt fell through to the lacto rule and became a
+pickle. Garum is not a fish recipe: it is what protein does under salt while its
+own proteases take it apart. The plant-protein version needs a koji to supply the
+protease the plant has not got, and that is an amino sauce. One mechanism, two
+names, decided by where the protein came from.
+
+- Both are PROCEDURAL rules and sit FIRST in that chain, because the lacto rule
+  would otherwise swallow anything salted in a jar or an onggi.
+- **`isFlesh` decides which**, so a plant marker wins over the numeric test. The
+  differential caught "Hazelnuts Garum" and "Soybeans Garum" — a hazelnut and an
+  aged soybean are both high-protein, high-fat and low-starch, which is exactly
+  what the numeric fallback looks for. A plant is never flesh however rich it is.
+- Dairy counts as animal protein, so a milk garum is reachable. The named dairy
+  recipes (ricotta forte, blue cheese) match first and are unaffected.
+
+**Differential test, 86,450 combinations** (every substrate x every reagent set of
+up to three x every buyable vessel, working tree against HEAD in a git worktree):
+3,783 moved, **no named recipe lost and no named recipe moved** — the criterion
+this file already sets. Moves are off Bio-Sludge, or off a generated lacto onto a
+generated garum. 15 animal proteins now make garums and 25 plant proteins make
+amino sauces.
+
+**`barley_koji` is TYPED as a substrate but used as a reagent.** Building the
+differential's reagent pool by type silently dropped every koji combination —
+a quarter of the matrix — and made the amino rule look like dead code. Build that
+pool from explicit ids.

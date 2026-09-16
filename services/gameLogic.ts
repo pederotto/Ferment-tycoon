@@ -108,6 +108,59 @@ export const resolveRecipeFromMatrix = (
   // If no specific recipe matches, apply chemical logic to generate a generic one.
 
   if (sub) {
+      // A0. GARUM, AND ITS PLANT-PROTEIN COUSIN.
+      //
+      // Every garum in the game was a NAMED entry — anchovies, mackerel, herring
+      // — so a pork belly, a bonito, a scallop or a tray of egg yolks under salt
+      // fell through to the lacto rule and became a pickle. But garum is not a
+      // fish recipe, it is what protein does under salt while its own proteases
+      // take it apart: any animal protein makes one. The plant-protein version
+      // is the same process needing a koji to supply the protease the plant does
+      // not have, and that is an amino sauce — a pulse amino, a shoyu. One
+      // mechanism, two names, decided by what the protein came from.
+      //
+      // Placed FIRST in the procedural chain because the lacto rule would
+      // otherwise swallow anything salted in a jar or an onggi.
+      const proteinRich = sub.hiddenStats.proteinContent >= 5;
+      const drySalted = hasSalt && !hasSugar;
+      const garumVessel = vesselId !== 'koji_tray' && vesselId !== 'koji_room_bed';
+      if (proteinRich && drySalted && garumVessel && isFlesh(sub)) {
+          return {
+              id: `garum_${sub.id}_gen`,
+              name: `${sub.name.split(' ').pop()} Garum`,
+              type: FermentType.GARUM,
+              description: `${sub.name} broken down under salt by its own proteases. Any animal protein will do this — the fish are only the famous ones.`,
+              requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
+              outputIngredientId: `garum_${sub.id}`,
+              requiredVesselId: vesselId,
+              baseDurationSeconds: 240,
+              peakWindowStart: 88,
+              peakWindowEnd: 100,
+              activeIntervention: 'Clean',
+              idealParams: { temp: hasKoji ? 55 : 30, humidity: 60, salinity: hasKoji ? 6 : 20 },
+              idealFlavorProfile: { umami: 92, acidity: 14, funk: 62, sweetness: 4, safety: 100 },
+              difficulty: 3,
+          };
+      }
+      if (proteinRich && drySalted && garumVessel && hasKoji && !isFlesh(sub)) {
+          return {
+              id: `amino_${sub.id}_gen`,
+              name: `${sub.name.split(' ').pop()} Amino Sauce`,
+              type: FermentType.SHOYU,
+              description: `${sub.name} under salt with a koji to lend it the protease it has not got. The same process as a garum, on a protein that cannot take itself apart.`,
+              requiredIngredients: { substrate: true, starter: 'barley_koji', additive: 'salt' },
+              outputIngredientId: `amino_${sub.id}`,
+              requiredVesselId: vesselId,
+              baseDurationSeconds: 250,
+              peakWindowStart: 88,
+              peakWindowEnd: 100,
+              activeIntervention: 'Stir',
+              idealParams: { temp: 25, humidity: 60, salinity: 13 },
+              idealFlavorProfile: { umami: 74, acidity: 28, funk: 44, sweetness: 30, safety: 100 },
+              difficulty: 3,
+          };
+      }
+
       // A. LACTO-FERMENTATION RULE
       // Logic: Substrate + Salt + Anaerobic Vessel + NO Koji = Lacto
       // UPDATED: Now allows Water (Brine)
@@ -1851,11 +1904,22 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
  * their own idealFlavorProfile from these same stats, so the goalposts moved
  * with the ball and every substrate scored roughly the same.
  */
-/** Flesh carries its own proteases and digests itself — the whole of a garum. */
+/**
+ * Flesh carries its own proteases and digests itself — the whole of a garum, and
+ * the line between a garum and its plant-protein cousin the amino sauce.
+ *
+ * The numeric fallback alone was too loose: a hazelnut and an aged soybean are
+ * both high-protein, high-fat and low-starch, so the differential test caught
+ * them being offered as "Hazelnuts Garum" and "Soybeans Garum". A plant is never
+ * flesh however rich it is, so plant markers are checked FIRST and win.
+ */
+const PLANT_MARKERS = /bean|soy|pea\b|peas|lentil|chickpea|nut|hazel|almond|walnut|seed|grain|barley|wheat|rice|corn|oat|rye|spelt|einkorn|emmer|kamut|freekeh|tea|petal|needle|mushroom|cep|oyster|maitake|shimeji|enoki|nameko|truffle/;
+const FLESH_MARKERS = /fish|anchov|mackerel|herring|bonito|krill|shrimp|roe|pork|beef|lamb|meat|belly|squid|scallop|yolk|egg|eel|tuna|bluefin|milk|cream|larvae/;
 const isFlesh = (i: Ingredient): boolean => {
-  const t = `${i.id} ${i.tags?.join(' ') ?? ''}`;
-  return /fish|anchov|mackerel|herring|bonito|krill|shrimp|roe|pork|beef|meat|squid|scallop|yolk|egg/.test(t)
-    || (i.hiddenStats.proteinContent >= 6 && i.hiddenStats.fatContent >= 4 && i.hiddenStats.starchContent <= 1);
+  const t = `${i.id} ${i.name} ${i.tags?.join(' ') ?? ''}`.toLowerCase();
+  if (PLANT_MARKERS.test(t)) return false;
+  if (FLESH_MARKERS.test(t) || (i.tags ?? []).includes('SEAFOOD')) return true;
+  return i.hiddenStats.proteinContent >= 6 && i.hiddenStats.fatContent >= 4 && i.hiddenStats.starchContent <= 1;
 };
 
 export const getFlavorPotential = (
