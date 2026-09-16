@@ -1267,9 +1267,21 @@ export const processBatchTick = (
       // player is holding right now. This is the whole point of a koji run: you
       // are not waiting out a timer, you are deciding what the koji will be FOR.
       const starterIng = ingredients.find(i => i.type === IngredientType.STARTER);
-      enzymes = advanceEnzymes(
+      const grown = advanceEnzymes(
         enzymes, substrate, starterIng, newParams.temp, newParams.humidity, stress, progress / 100
       );
+      // WILD INOCULATION IS WEAKER THAN A PITCHED ONE. A meju is bricks hung in
+      // the air to catch whatever lands, and it was getting exactly the enzyme
+      // strength of a deliberately sporulated bed — so soybeans at protein 9 ran
+      // to umami 100 against a target of 64, savourier than the hatcho miso that
+      // is made by ageing a meju for years. What lands on its own is a mixed,
+      // slower population; you are not choosing the organism.
+      const wild = !starterIng ? 0.55 : 1;
+      enzymes = wild === 1 ? grown : {
+        amylase: grown.amylase * wild,
+        protease: grown.protease * wild,
+        lipase: (grown.lipase ?? 0) * wild,
+      };
 
       // 6. PROGRESSION
       if (stress < 90 && newParams.humidity > 30) {
@@ -1456,7 +1468,14 @@ export const processBatchTick = (
   // eighties and nineties. It grows more slowly in a wet salted mash than on an
   // open bed, which is what the 0.45 is.
   if (!isKoji) {
-    const starterIng = ingredients.find(i => i.type === IngredientType.STARTER);
+    // A LIVE KOJI IS AN ORGANISM, NOT AN INGREDIENT THAT SITS THERE. It keeps
+    // making protease for as long as the mash lets it, which is why a tamari
+    // left for a year is savoury and one left for a week is not. This looked
+    // only for a STARTER, and a finished koji is typed SUBSTRATE — so a moromi
+    // or a tamari was frozen at whatever protease the koji arrived with, and
+    // soybeans at protein 9 stalled around umami 45 against a target of 94.
+    const starterIng = ingredients.find(i => i.type === IngredientType.STARTER)
+      ?? ingredients.find(i => /koji|nuruk/.test(i.id) && !/spore/.test(i.id));
     if (starterIng) {
       const grown = advanceEnzymes(
         enzymes, substrate, starterIng, newParams.temp, newParams.humidity, stress, progress / 100
@@ -2001,7 +2020,16 @@ export const getFlavorPotential = (
   const starterMicrobes = Math.max(0, ...ingredients
     .filter(i => i.type === IngredientType.STARTER)
     .map(i => i.hiddenStats.microbialDiversity));
-  const microbes = Math.max(h.microbialDiversity, starterMicrobes);
+  // WILD INOCULATION CUTS BOTH WAYS. A meju catches whatever is in the air, so
+  // it gets weaker, slower enzymes than a pitched bed (handled in the tick) but
+  // a far more MIXED population — which is the whole reason every house's
+  // doenjang tastes different, and why its funk target is 78 while a clean
+  // barley koji's is 18. Read off the substrate alone it sat at 33.
+  const pitched = ingredients.some(i => i.type === IngredientType.STARTER)
+    || ingredients.some(i => /koji|nuruk|scoby/.test(i.id) && !/spore/.test(i.id));
+  const wildBloom = !pitched && recipe
+    && (recipe.type === FermentType.KOJI || recipe.type === FermentType.MISO) ? 8 : 0;
+  const microbes = Math.max(h.microbialDiversity, starterMicrobes, wildBloom);
 
   const autolysis = isFlesh(sub) ? 0.82 : 0;
   const proteolysis = 0.18 + autolysis + (enz.protease / 100) * 0.95;
@@ -2018,7 +2046,7 @@ export const getFlavorPotential = (
   // over everything in the vessel, weighted by how much of each went in. Protein
   // and fat stay on the substrate — those are what the THING is, and averaging
   // them over the salt and water would only dilute them.
-  let sugarW = 0, starchW = 0, umamiW = 0, acidW = 0, mass = 0;
+  let sugarW = 0, starchW = 0, umamiW = 0, acidW = 0, proteinW = 0, fatW = 0, mass = 0;
   for (const i of ingredients) {
     if (i.id === 'water' || /salt/.test(i.id)) continue;
     const m = quantities && quantities[i.id] !== undefined ? quantities[i.id] : (i.mass ?? 1000);
@@ -2026,6 +2054,8 @@ export const getFlavorPotential = (
     starchW += i.hiddenStats.starchContent * m;
     umamiW += (i.hiddenStats.innateUmami ?? 0) * m;
     acidW += (i.hiddenStats.innateAcidity ?? 0) * m;
+    proteinW += i.hiddenStats.proteinContent * m;
+    fatW += i.hiddenStats.fatContent * m;
     mass += m;
   }
   const sugarAvail = mass > 0 ? sugarW / mass : h.sugarContent;
@@ -2034,6 +2064,13 @@ export const getFlavorPotential = (
   // enzyme: the free glutamate in a tomato or a cep, the citric acid in a yuzu.
   const innateUmami = mass > 0 ? umamiW / mass : (h.innateUmami ?? 0);
   const innateAcidity = mass > 0 ? acidW / mass : (h.innateAcidity ?? 0);
+  // PROTEIN IS NOT ONLY THE SUBSTRATE'S EITHER. A rose garum is petals with
+  // almost no protein and a KOJI carrying plenty; reading the substrate alone
+  // gave it umami 4 against a target of 42, because the koji doing the work was
+  // not counted as something to work ON. Water and salt are skipped, so nothing
+  // is diluted by them.
+  const proteinAvail = mass > 0 ? proteinW / mass : h.proteinContent;
+  const fatAvail = mass > 0 ? fatW / mass : h.fatContent;
 
   // ACID IS A FERMENTATION PRODUCT, and it had no source at all: the only acid
   // in the whole tick came from surface film, one hardcoded rule for coconut
@@ -2063,14 +2100,14 @@ export const getFlavorPotential = (
   const residual = 1 - (model?.attenuation ?? 0.5) * 0.85;
 
   return {
-    umami: (h.proteinContent * 11 * proteolysis + innateUmami * 9) * c,
+    umami: (proteinAvail * 11 * proteolysis + innateUmami * 9) * c,
     // Funk comes from two places: the wild life already in the substrate, and
     // fat being taken apart.
     // Wild population only counts to the extent that something is actually
     // working. A cheong is sugar drawing juice out of pine needles and nothing
     // ferments in it, yet it was scored on the needles' microbes and came out
     // funkier than a blue cheese.
-    funk: (microbes * 10.5 * (0.55 + 0.45 * (model?.attenuation ?? 0.6)) + h.fatContent * 6 * lipolysis) * c,
+    funk: (microbes * 10.5 * (0.55 + 0.45 * (model?.attenuation ?? 0.6)) + fatAvail * 6 * lipolysis) * c,
     // Free sugar is already there; starch only counts once amylase reaches it.
     sweetness: (sugarAvail * 9 + starchAvail * 7 * saccharification) * c * residual,
     acidity,

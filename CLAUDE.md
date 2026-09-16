@@ -1493,3 +1493,34 @@ amazake reached about three quarters and a koji bed less. Same defect as the
 sporulation window — the timer deciding the outcome instead of the process.
 Against progress every ferment arrives at its peak having become itself, and a
 long one is long because it is slow, not because it ends up different.
+
+## The last four, and what they each turned out to be
+- **`tears_garum` was a harness fault, twice over.** Its substrate is `any`, so
+  the PLAYER picks and the harness was picking barley; and the `koji` token means
+  LIVE koji, never spores, which the harness got wrong so it was charging a
+  koji recipe with no koji at all. On a protein substrate with real koji: miss
+  161 → 47, score 89. Nothing in the game was broken.
+- **`ponzu` needed two real things.** A finished amino sauce carries its
+  glutamate ALREADY FREE — that is what finished means — so it is `innateUmami`,
+  not protein waiting for a protease. And **protein is not only the substrate's**:
+  potential read `h.proteinContent` alone, so the shoyu a ponzu is steeped in,
+  and the koji in a rose garum, counted for nothing. Both are mass-weighted over
+  everything but water and salt now. Miss 122 → 72, score 81.
+- **`meju` was getting a deliberate koji's enzymes from wild inoculation.** It is
+  bricks hung in the air to catch whatever lands, and it ran to umami 100 against
+  a target of 64 — savourier than the hatcho miso you make by ageing a meju for
+  years. **Wild inoculation cuts both ways**: weaker, slower enzymes (0.55 of a
+  pitched bed) and a far MORE MIXED population, which is why every house's
+  doenjang differs and why its funk target is 78 against a clean koji's 18.
+  Miss 113 → 85, score 68 → 83.
+- **`rose_garum` is a RATIO question, not a bug.** Rose petals carry protein 1;
+  all of its umami is the koji's. Measured: petals-heavy (3:1) gives umami 8,
+  balanced 18, koji-heavy (6:1) **39** against a target of 42. The recipe is
+  reachable — it is a koji extraction that happens to be flavoured with roses,
+  not a rose ferment. Left as is; the dial is the player's.
+
+**A live koji is an organism, not an ingredient that sits there.** Enzyme growth
+outside the koji branch looked only for an `IngredientType.STARTER`, and a
+finished koji is typed SUBSTRATE — so a moromi or a tamari was frozen at whatever
+protease the koji arrived with. It keeps making protease for as long as the mash
+allows, which is why a tamari left a year is savoury and one left a week is not.

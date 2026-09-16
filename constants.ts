@@ -1285,7 +1285,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['flavor'],
         supplierId: 'in_house',
         tierRequired: 0,
-        hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 10, microbialDiversity: 5, fatContent: 0, proteinContent: 8 },
+        hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 10, microbialDiversity: 5, fatContent: 0, proteinContent: 8, innateUmami: 9 },
         mass: 1000,
         unitDisplay: 'ml'
     },
