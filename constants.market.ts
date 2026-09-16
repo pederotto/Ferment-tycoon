@@ -56,59 +56,59 @@ const fruit = (
 export const FRUIT: Ingredient[] = [
   // --- off the forager's van ---
   fruit('haskap', 'Haskap Berries', FORAGE_SUPPLIER.id, 22, 78, [5, 6],             // Jun-Jul
-    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 1, innateAcidity: 5 },
     'Honeyberry, off a boreal honeysuckle. The first fruit of the year, weeks ahead of the strawberries, and tart enough to carry a ferment on its own.',
     ['fruit_mead', 'fruit_kombucha', 'brined_fruit']),
 
   fruit('cloudberries', 'Cloudberries', FORAGE_SUPPLIER.id, 58, 90, [6, 7],         // Jul-Aug
-    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 1, innateAcidity: 5 },
     'Three weeks on a bog, and the pickers do not say where. Amber, musky, and priced like it.',
     ['fruit_mead', 'brined_fruit'], 2),
 
   fruit('sea_buckthorn', 'Sea Buckthorn', FORAGE_SUPPLIER.id, 26, 84, [8, 9, 10],   // Sep-Nov
-    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 2, proteinContent: 1 },
+    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 2, proteinContent: 1, innateAcidity: 9 },
     'Stripped off the thorns after the first frost. The only fruit on the van with oil in it — which means it is the only one that can turn rancid.',
     ['fruit_vinegar', 'fruit_kombucha']),
 
   fruit('white_strawberry', 'Alpine White Strawberry', FORAGE_SUPPLIER.id, 30, 82, [5, 6, 7], // Jun-Aug
-    { sugarContent: 8, starchContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 0 },
+    { sugarContent: 8, starchContent: 0, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 0, innateAcidity: 4 },
     'Fraises des bois, the pale kind, from the woodland edge. More sugar than anything else here, so it makes the strongest ferment and the shortest window.',
     ['fruit_mead', 'fruit_kombucha', 'country_wine'], 2),
 
   // --- grown, from Prime's produce side ---
   fruit('pineberry', 'Pineberries', PRIME, 24, 76, [5, 6],                          // Jun-Jul
-    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0 },
+    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 0, innateAcidity: 4 },
     'A cultivated white strawberry with red seeds, named for the faint pineapple in it. Fragile — it ferments before you have decided to.',
     ['brined_fruit', 'fruit_kombucha']),
 
   fruit('black_sapote', 'Black Sapote', PRIME, 20, 72, [11, 0, 1, 2],               // Dec-Mar
-    { sugarContent: 6, starchContent: 1, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 6, starchContent: 1, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1, innateAcidity: 1 },
     'Green outside, black inside. It tastes of very little until it is so ripe it looks spoiled — and then of chocolate pudding.',
     ['country_wine', 'fruit_kombucha']),
 
   fruit('finger_limes', 'Finger Limes', PRIME, 60, 88, [11, 0, 1, 2, 3, 4],         // Dec-May
-    { sugarContent: 2, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 2, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1, innateAcidity: 9 },
     'Citrus caviar: cut one and the juice spills out as beads. From the Australian rainforest, so its season is our winter.',
     ['ponzu', 'brined_fruit'], 2),
 
   // --- shipped, from Silk Road ---
   fruit('yuzu', 'Yuzu', SILK, 34, 86, [10, 11, 0],                                  // Nov-Jan
-    { sugarContent: 3, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 3, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1, innateAcidity: 9 },
     'Seedy, knobbly and sour, picked in the cold months. The aroma is worth more than the juice, and the aroma is in the peel.',
     ['ponzu', 'fruit_vinegar'], 2),
 
   fruit('calamansi', 'Calamansi Limes', SILK, 18, 74, [7, 8, 9, 10],                // Aug-Nov
-    { sugarContent: 3, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 3, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1, innateAcidity: 9 },
     'The Philippine lime — orange inside a green skin, and sourer than either. Cheap, and the workhorse of the citrus shelf.',
     ['ponzu', 'brined_fruit']),
 
   fruit('buddhas_hand', "Buddha's Hand", SILK, 26, 80, [10, 11, 0],                 // Nov-Jan
-    { sugarContent: 1, starchContent: 0, nativeSalinity: 0, microbialDiversity: 3, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 1, starchContent: 0, nativeSalinity: 0, microbialDiversity: 3, fatContent: 0, proteinContent: 1, innateAcidity: 8 },
     'A citron with no flesh and no juice — fingers of pith and zest. It is the scent you ferment, never the fruit.',
     ['ponzu']),
 
   fruit('akebi', 'Akebi', SILK, 32, 78, [8, 9],                                     // Sep-Oct
-    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1, innateAcidity: 3 },
     'A purple pod off a Japanese mountain vine that splits itself open when it is ripe. The pulp is sweet and bland; the skin is bitter, and is the part worth keeping.',
     ['brined_fruit', 'country_wine'], 2),
 ];
@@ -215,6 +215,7 @@ export const MARKET_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 18, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 2, acidity: 64, funk: 30, sweetness: 62, safety: 98 },
+    targetAbv: 12,
     difficulty: 3,
   },
   {
@@ -230,6 +231,7 @@ export const MARKET_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 18, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 2, acidity: 58, funk: 34, sweetness: 38, safety: 98 },
+    targetAbv: 11,
     difficulty: 2,
   },
   {
@@ -245,6 +247,7 @@ export const MARKET_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 65, salinity: 0 },
     idealFlavorProfile: { umami: 4, acidity: 92, funk: 38, sweetness: 16, safety: 100 },
+    targetAbv: 0.3,
     difficulty: 3,
   },
   {
@@ -260,6 +263,7 @@ export const MARKET_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 4, acidity: 84, funk: 44, sweetness: 36, safety: 98 },
+    targetAbv: 1,
     difficulty: 2,
   },
   {
@@ -324,6 +328,7 @@ export const MARKET_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 22, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 2, acidity: 68, funk: 26, sweetness: 48, safety: 98 },
+    targetAbv: 1.5,
     difficulty: 1,
   },
 ];

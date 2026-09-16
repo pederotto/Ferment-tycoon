@@ -16,7 +16,7 @@ import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, proces
 // --- GAMEPLAY CONSTANTS ---
 /* How much acid a unit of fermentable sugar becomes, on the 0-100 flavour
    scale. Measured against the owner's targets, not guessed — see CLAUDE.md. */
-const ACID_SCALE = 21;
+const ACID_SCALE = 25;
 
 const OPTIMAL_TEMP = 30; // The "Goldilocks" zone
 const DANGER_TEMP = 42;  // Where Stress begins
@@ -1543,8 +1543,15 @@ export const processBatchTick = (
   }
 
   // 6. Ancient Garum (Gamble)
+  // The comment said "2% per tick -> roughly 30% over the duration". Over a
+  // 200-tick run 2% a tick is a 98% chance, so the one recipe sold as a gamble
+  // was a near-certainty and could never be made. Solved for the 30% it claims,
+  // and seeded like every other roll because this runs inside a state updater
+  // that StrictMode invokes twice.
   if (recipe.id === 'ancient_garum') {
-      if (Math.random() < 0.02) { // 2% chance per tick to go bad -> roughly 30% over duration
+      const ticks = Math.max(1, recipe.baseDurationSeconds);
+      const perTick = 1 - Math.pow(0.70, 1 / ticks);
+      if (seededRoll(batch.id, Math.round(progress * 100), 0xB10) < perTick) {
           safetyDecay += 50;
           if (!messages.includes("BIO-HAZARD EVENT")) messages.push("BIO-HAZARD EVENT");
       }
@@ -1750,7 +1757,10 @@ export const processBatchTick = (
 };
 
 export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?: Record<StaffRoleType, boolean>): number => {
-  if (recipe.type === FermentType.FAIL || batch.status === 'spoiled') return 0;
+  // Only the SLUDGE is worthless. This gated the whole Bio-Hazard TYPE, which
+  // also holds Primordial Garum — a deliberate, profiled, high-value gamble that
+  // could therefore never score above zero however well it ran.
+  if (recipe.id === 'bio_sludge' || batch.status === 'spoiled') return 0;
   
   // Scored on the flavour as it now is: reduced batches are more intense, so an
   // over-dried or over-reduced one overshoots its target (services/massBalance.ts).
@@ -1772,14 +1782,35 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
   const diff = Math.abs(q.umami - t.umami) + Math.abs(q.acidity - t.acidity) + 
                Math.abs(q.funk - t.funk) + Math.abs(q.sweetness - t.sweetness);
   
-  let score = Math.max(0, 100 - (diff / 3)) + clarityBonus;
+  // ALCOHOL, where the recipe is supposed to have some. It is a physical spec
+  // rather than a flavour, so it lives on the recipe as `targetAbv` instead of
+  // becoming a fifth axis that all 71 would have to carry — and it is scored
+  // only for the ferments that declare one. A sake that comes out at 4% is not
+  // a sake, and nothing in the four axes could say so.
+  let abvMiss = 0;
+  if (recipe.targetAbv !== undefined) {
+    const ings = batch.inputIngredientIds
+      .map(id => INGREDIENTS.find(i => i.id === id)).filter(Boolean) as Ingredient[];
+    if (ings.length) abvMiss = Math.min(40, Math.abs(alcoholPct(batch, recipe, ings) - recipe.targetAbv) * 2.5);
+  }
+
+  let score = Math.max(0, 100 - ((diff + abvMiss) / 3)) + clarityBonus;
   
   if (activeStaff?.rd) score += 5;
   if (activeStaff?.chef) score += 3; // Sous Chef refinement
 
-  // Penalize low safety heavily
-  if (q.safety < 50) score = 0;
-  else if (q.safety < 90) score *= (q.safety / 100);
+  // SAFETY IS SCORED AGAINST WHAT THIS FERMENT IS SUPPOSED TO BE.
+  // A flat floor of 50 and a flat `safety/100` multiplier meant the two recipes
+  // that are DELIBERATELY dangerous could never be made well: casu marzu targets
+  // safety 10 and primordial garum 50, so a perfect example scored zero, or a
+  // tenth of what it earned. The owner had to raise casu marzu to 52 as a
+  // workaround; it is back to the honest 10. A normal recipe targets 100 and
+  // behaves exactly as before.
+  const safetyTarget = Math.max(1, t.safety ?? 100);
+  const safetyFloor = Math.min(50, safetyTarget - 25);
+  const safetyWarn = Math.min(90, safetyTarget - 8);
+  if (q.safety < safetyFloor) score = 0;
+  else if (q.safety < safetyWarn) score *= clamp(q.safety / safetyTarget, 0, 1);
 
   // Progress & Peak Window Dynamics
   const isPeak = batch.progress >= recipe.peakWindowStart && batch.progress <= recipe.peakWindowEnd;
@@ -1865,6 +1896,18 @@ export const getFlavorPotential = (
   // was the 0.18 wild floor, capping it at umami 16 against a target of 94.
   // `massBalance.enzymeScale` has always returned 1 for a garum's protease; the
   // two models now agree.
+  // THE CULTURE YOU DELIBERATELY ADD IS THE BIGGEST THING IN THE JAR, and funk
+  // read the SUBSTRATE's wild population only. Bacillus natto carries a
+  // diversity of 9 and soybeans a 3, so a natto — a ferment that is nothing but
+  // that bacillus — was scored on the beans and reached funk 19 against a target
+  // of 94. Same for the Penicillium in a blue cheese and the larvae in a casu
+  // marzu. The stronger of the two wins: you cannot make a ferment less funky by
+  // inoculating it with something tame.
+  const starterMicrobes = Math.max(0, ...ingredients
+    .filter(i => i.type === IngredientType.STARTER)
+    .map(i => i.hiddenStats.microbialDiversity));
+  const microbes = Math.max(h.microbialDiversity, starterMicrobes);
+
   const autolysis = isFlesh(sub) ? 0.82 : 0;
   const proteolysis = 0.18 + autolysis + (enz.protease / 100) * 0.95;
   const saccharification = 0.15 + (enz.amylase / 100) * 1.0;
@@ -1880,16 +1923,22 @@ export const getFlavorPotential = (
   // over everything in the vessel, weighted by how much of each went in. Protein
   // and fat stay on the substrate — those are what the THING is, and averaging
   // them over the salt and water would only dilute them.
-  let sugarW = 0, starchW = 0, mass = 0;
+  let sugarW = 0, starchW = 0, umamiW = 0, acidW = 0, mass = 0;
   for (const i of ingredients) {
     if (i.id === 'water' || /salt/.test(i.id)) continue;
     const m = quantities && quantities[i.id] !== undefined ? quantities[i.id] : (i.mass ?? 1000);
     sugarW += i.hiddenStats.sugarContent * m;
     starchW += i.hiddenStats.starchContent * m;
+    umamiW += (i.hiddenStats.innateUmami ?? 0) * m;
+    acidW += (i.hiddenStats.innateAcidity ?? 0) * m;
     mass += m;
   }
   const sugarAvail = mass > 0 ? sugarW / mass : h.sugarContent;
   const starchAvail = mass > 0 ? starchW / mass : h.starchContent;
+  // Savour and sourness that are simply THERE, needing no organism and no
+  // enzyme: the free glutamate in a tomato or a cep, the citric acid in a yuzu.
+  const innateUmami = mass > 0 ? umamiW / mass : (h.innateUmami ?? 0);
+  const innateAcidity = mass > 0 ? acidW / mass : (h.innateAcidity ?? 0);
 
   // ACID IS A FERMENTATION PRODUCT, and it had no source at all: the only acid
   // in the whole tick came from surface film, one hardcoded rule for coconut
@@ -1901,8 +1950,14 @@ export const getFlavorPotential = (
   // second answer the two modules can disagree about.
   const fermentable = sugarAvail + starchAvail * saccharification * 0.7;
   const model = recipe ? processModel(recipe) : undefined;
-  const toAcid = model?.toAcid ?? 0.3;
-  const acidity = fermentable * toAcid * ACID_SCALE * c;
+  // Only the sugar that actually FERMENTS can become acid, and `attenuation`
+  // says how much of it does. Without that term a garum — which ferments barely
+  // a fifth of what is in it — came out at acidity 100 against a target of 14,
+  // because `toAcid` alone is the share of the FERMENTED part, not of the whole.
+  const toAcid = (model?.toAcid ?? 0.3) * (model?.attenuation ?? 0.5);
+  // Fermented acid, PLUS the acid the fruit arrived with. A wine's sharpness is
+  // the grape's, not the yeast's, and a ponzu is sour because a yuzu is.
+  const acidity = (fermentable * toAcid * ACID_SCALE + innateAcidity * 9) * c;
 
   // SUGAR GETS EATEN. Sweetness was a ceiling with nothing consuming it, so a
   // vinegar and a kraut came out as sweet as the fruit that went in. What is
@@ -1913,10 +1968,14 @@ export const getFlavorPotential = (
   const residual = 1 - (model?.attenuation ?? 0.5) * 0.85;
 
   return {
-    umami: h.proteinContent * 11 * c * proteolysis,
+    umami: (h.proteinContent * 11 * proteolysis + innateUmami * 9) * c,
     // Funk comes from two places: the wild life already in the substrate, and
     // fat being taken apart.
-    funk: (h.microbialDiversity * 9 + h.fatContent * 6 * lipolysis) * c,
+    // Wild population only counts to the extent that something is actually
+    // working. A cheong is sugar drawing juice out of pine needles and nothing
+    // ferments in it, yet it was scored on the needles' microbes and came out
+    // funkier than a blue cheese.
+    funk: (microbes * 10.5 * (0.55 + 0.45 * (model?.attenuation ?? 0.6)) + h.fatContent * 6 * lipolysis) * c,
     // Free sugar is already there; starch only counts once amylase reaches it.
     sweetness: (sugarAvail * 9 + starchAvail * 7 * saccharification) * c * residual,
     acidity,

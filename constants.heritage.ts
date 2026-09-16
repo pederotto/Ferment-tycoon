@@ -209,52 +209,52 @@ const tomato = (
 
 export const TOMATOES: Ingredient[] = [
   tomato('cuore_di_bue', 'Cuore di Bue', 9, 74, [6, 7, 8],                    // Jul-Sep
-    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2 },
+    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 5 },
     'Oxheart. Heart-shaped, meaty and nearly seedless — more flesh per kilo than anything else in the crate.',
     ['lacto_tomato', 'tomato_amino']),
 
   tomato('brandywine', 'Brandywine', 12, 82, [7, 8],                          // Aug-Sep
-    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2 },
+    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 5 },
     'A pink beefsteak from the 1880s, late to ripen and worth it. The one people mean when they say tomatoes used to taste of something.',
     ['lacto_tomato', 'tomato_kombucha']),
 
   tomato('black_krim', 'Black Krim', 13, 80, [6, 7, 8],                       // Jul-Sep
-    { sugarContent: 5, starchContent: 0, nativeSalinity: 1, microbialDiversity: 5, fatContent: 0, proteinContent: 2 },
+    { sugarContent: 5, starchContent: 0, nativeSalinity: 1, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 7, innateAcidity: 4 },
     'From the Crimea, dark as a bruise, with a salty edge — the story is the seaside soil, and whatever the reason, it shows in a ferment.',
     ['tomato_garum', 'lacto_tomato']),
 
   tomato('green_zebra', 'Green Zebra', 11, 76, [6, 7, 8, 9],                  // Jul-Oct
-    { sugarContent: 3, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2 },
+    { sugarContent: 3, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 5, innateAcidity: 7 },
     'Bred in the 1980s rather than handed down, so strictly it is no heirloom. Green-striped and sharp, and the sharpness survives a ferment.',
     ['tomato_vinegar', 'lacto_tomato']),
 
   tomato('cherokee_purple', 'Cherokee Purple', 14, 82, [7, 8],                // Aug-Sep
-    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2 },
+    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 4 },
     'A dusky purple beefsteak said to come from the Cherokee. Sweet, a little smoky, and soft enough to bruise if you look at it.',
     ['tomato_amino', 'tomato_garum']),
 
   tomato('san_marzano', 'San Marzano Nano', 10, 80, [7, 8],                   // Aug-Sep
-    { sugarContent: 4, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 3 },
+    { sugarContent: 4, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 3, innateUmami: 6, innateAcidity: 5 },
     'The sauce tomato — thick walls, few seeds, little water — in its dwarf form. More solids per kilo than any other here, and the solids are where the savour is.',
     ['tomato_garum', 'tomato_amino']),
 
   tomato('costoluto_genovese', 'Costoluto Genovese', 11, 76, [6, 7, 8],       // Jul-Sep
-    { sugarContent: 4, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2 },
+    { sugarContent: 4, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 5 },
     'Deeply ribbed and Ligurian, grown for the pot rather than the plate. Sharp, and it holds its acid through a long ferment.',
     ['tomato_vinegar', 'lacto_tomato']),
 
   tomato('white_beauty', 'White Beauty', 14, 72, [7, 8],                      // Aug-Sep
-    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 4, fatContent: 0, proteinContent: 1, innateUmami: 5, innateAcidity: 3 },
     'Ivory all the way through and hardly acid at all. Sweet and mild — and a low-acid substrate is exactly the one that needs its salt measured.',
     ['tomato_kombucha']),
 
   tomato('striped_german', 'Striped German', 13, 78, [7, 8, 9],               // Aug-Oct
-    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
+    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1, innateUmami: 5, innateAcidity: 3 },
     'Red and yellow marbled right through, enormous and fruity. Like most bicolours, all sugar and not much acid.',
     ['tomato_kombucha', 'tomato_vinegar']),
 
   tomato('paul_robeson', 'Paul Robeson', 16, 86, [7, 8],                      // Aug-Sep
-    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2 },
+    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 4 },
     'A Russian black tomato named for the singer. Earthy and dark, and sweeter than it looks.',
     ['tomato_amino', 'lacto_tomato'], 2),
 ];
@@ -304,6 +304,7 @@ export const HERITAGE_RECIPES: Recipe[] = [
     activeIntervention: 'Stir',
     idealParams: { temp: 14, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 42, acidity: 40, funk: 36, sweetness: 32, safety: 98 },
+    targetAbv: 16,
     difficulty: 4,
   },
   {
@@ -319,6 +320,7 @@ export const HERITAGE_RECIPES: Recipe[] = [
     activeIntervention: 'Stir',
     idealParams: { temp: 26, humidity: 65, salinity: 0 },
     idealFlavorProfile: { umami: 20, acidity: 64, funk: 58, sweetness: 24, safety: 94 },
+    targetAbv: 4,
     difficulty: 2,
   },
   {
@@ -424,6 +426,7 @@ export const HERITAGE_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 62, acidity: 78, funk: 44, sweetness: 28, safety: 98 },
+    targetAbv: 1,
     difficulty: 2,
   },
   {
@@ -439,6 +442,7 @@ export const HERITAGE_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 65, salinity: 0 },
     idealFlavorProfile: { umami: 48, acidity: 88, funk: 36, sweetness: 18, safety: 100 },
+    targetAbv: 0.3,
     difficulty: 3,
   },
 ];

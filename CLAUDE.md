@@ -1362,3 +1362,63 @@ bottles at — and nothing upstream could see it. `alcoholPct` reads it off
   30% ABV. Sake tops out near 20 (multiple parallel fermentation), other brews
   16, a kombucha 4. Sugar the yeast could not eat stays sugar — which is exactly
   why a stuck mead is sweet.
+
+## Innate savour and innate sourness (HiddenStats)
+Two optional stats, because two things are simply PRESENT in an ingredient and
+need no organism and no enzyme to appear:
+
+- **`innateUmami`** — free glutamate and nucleotides. A cep, a ripe heirloom
+  tomato and a dried scallop are savoury raw. Umami read `proteinContent` alone,
+  which is protein a protease still has to cut up, so every mushroom ferment
+  capped far under its target (mushroom garum 13 against 88).
+- **`innateAcidity`** — how sour the raw thing is. A wine's sharpness is the
+  fruit's, not the yeast's; a ponzu is sour because a yuzu is. With no term for
+  it, ponzu could reach acidity 0 against a target of 76.
+
+Both are on the 0-10 scale of every other hidden stat and default to 0, so an
+ingredient without them behaves exactly as before. **Ingredients are built two
+ways** — object literals with `id:` in `constants.ts`, and FACTORY CALLS
+(`fruit('yuzu', …)`) in `constants.market.ts` and friends — so a scripted edit
+keyed on `id: '…'` silently misses two thirds of the pantry.
+
+## Other things measurement turned up
+- **Funk read the substrate's wild population only.** Bacillus natto carries a
+  diversity of 9 and soybeans a 3, so a natto — a ferment that is nothing but
+  that bacillus — was scored on the beans. The stronger of substrate and STARTER
+  wins now; you cannot make a ferment less funky by inoculating it.
+- **Funk is damped by how much is actually fermenting.** A cheong is sugar
+  drawing juice out of pine needles and nothing ferments in it, yet it scored on
+  the needles' microbes and came out funkier than a blue cheese.
+- **Only fermented sugar makes acid.** `toAcid` is the share of the FERMENTED
+  part, so it must be multiplied by `attenuation`. Without that a garum, which
+  ferments barely a fifth of itself, reached acidity 100 against a target of 14.
+- **A wild brew sours.** `ALCOHOL.toAcid` was 0, so a makgeolli, chicha, kvass
+  and tepache — all mixed ferments where lactic bacteria work alongside the
+  yeast — could not be sour. The family gets a little; those four get their own
+  entries. A pitched wine or mead is not like this, which is why it is per-recipe.
+- **Safety is scored against the recipe's own target.** A flat floor of 50 and a
+  flat `safety/100` multiplier meant the two deliberately dangerous recipes could
+  never be made well. Casu marzu is back to its honest target of 10.
+- **Only the SLUDGE is worthless.** `calculateCriticScore` returned 0 for the
+  whole Bio-Hazard TYPE, which also holds Primordial Garum — a profiled,
+  high-value gamble that could therefore never score. Gated on `bio_sludge` now;
+  that recipe went from score 0 to 89.
+- **`ancient_garum`'s "30% chance" was 98%.** 2% per tick over a 200-tick run.
+  Solved for the 30% it advertises, and seeded like every other roll.
+- **`black_apple` accepted only GREEN PLUMS** while being called Black Apple —
+  the owner found it profiling the catalogue. Blackening is one process on a firm
+  acidic fruit, so it is a `oneOf` of apples and plums named "Blackened Fruit".
+  The id stays: it is load-bearing in the matrix, the books and the product sheet.
+
+## Alcohol is a spec, not a fifth axis
+`Recipe.targetAbv` is optional and only the ferments that are supposed to make
+alcohol declare one; `calculateCriticScore` scores the miss only for those. A
+fifth `FlavorProfile` axis would have made all 71 recipes carry a number that is
+zero for most of them, and would have needed 71 more decisions from the owner.
+A sake at 4% is not a sake and nothing in the four axes could say so; this can.
+
+**Measured across all 71, charged the way the RESOLVER matches** (requires-tokens
+are substring tests; a kojiBase substrate means a koji IS the substrate; a
+competent player adds sugar where the process needs it and the matrix allows):
+mean miss **~130 → 69**, recipes missing by more than 90 down to **16**, mean
+score **71 → 77**, nothing out of the 0-100 range.

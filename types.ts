@@ -30,6 +30,19 @@ export interface HiddenStats {
   microbialDiversity: number; 
   fatContent: number; 
   proteinContent: number;      // what protease converts into glutamate/umami
+  /**
+   * Free glutamate and nucleotides ALREADY in the thing, needing no enzyme.
+   * A ripe tomato, a cep and a dried scallop are savoury raw; that is a
+   * different quantity from protein a protease has to cut up first, and
+   * reading only `proteinContent` capped every mushroom ferment far under.
+   */
+  innateUmami?: number;
+  /**
+   * How sour the raw thing is, before anything ferments. A citrus, a green
+   * plum and a sea buckthorn arrive acidic — a wine's sharpness is the fruit's,
+   * not the yeast's — and with no term for it a ponzu could reach acidity 0.
+   */
+  innateAcidity?: number;
 }
 
 /**
@@ -225,6 +238,15 @@ export interface Recipe {
   };
 
   idealFlavorProfile: FlavorProfile;
+
+  /**
+   * What this should come out at, % alcohol by mass. Only the ferments that are
+   * SUPPOSED to make alcohol declare one, and only those are scored on it —
+   * alcohol is a spec, not a flavour axis, so it does not belong in the profile
+   * that all 71 recipes carry. A sake at 4% is not a sake, and nothing in
+   * umami/acidity/funk/sweetness could ever say so.
+   */
+  targetAbv?: number;
   difficulty: number; 
 }
 

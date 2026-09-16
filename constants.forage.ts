@@ -124,21 +124,21 @@ export const FORAGED_MUSHROOMS: Ingredient[] = [
   forage(
     'enoki', 'Enoki', 9, 62,
     [10, 11, 0, 1, 2],                                  // Nov-Mar
-    { sugarContent: 2, starchContent: 1, nativeSalinity: 0, microbialDiversity: 3, fatContent: 0, proteinContent: 4 },
+    { sugarContent: 2, starchContent: 1, nativeSalinity: 0, microbialDiversity: 3, fatContent: 0, proteinContent: 4, innateUmami: 4 },
     'The winter fungus. Fruits in the cold and tastes of very little — which is the point: it carries whatever you ferment it with.',
     ['lacto_mushroom', 'mushroom_vinegar'],
   ),
   forage(
     'pink_oyster', 'Pink Oyster', 12, 66,
     [5, 6, 7, 8],                                       // Jun-Sep
-    { sugarContent: 2, starchContent: 1, nativeSalinity: 0, microbialDiversity: 5, fatContent: 1, proteinContent: 6 },
+    { sugarContent: 2, starchContent: 1, nativeSalinity: 0, microbialDiversity: 5, fatContent: 1, proteinContent: 6, innateUmami: 5 },
     'A hot-weather species that will not fruit below eighteen degrees. Meaty, faintly of bacon, and it goes over in three days.',
     ['mushroom_miso', 'lacto_mushroom'],
   ),
   forage(
     'blue_oyster', 'Blue Oyster', 14, 70,
     [9, 10, 11, 0, 1, 2],                               // Oct-Mar
-    { sugarContent: 1, starchContent: 1, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 6 },
+    { sugarContent: 1, starchContent: 1, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 6, innateUmami: 5 },
     'The cold-weather oyster. Denser than the pink and faintly of aniseed; the cool months are when it is worth having.',
     ['mushroom_miso', 'mushroom_shoyu'],
   ),
@@ -147,28 +147,28 @@ export const FORAGED_MUSHROOMS: Ingredient[] = [
   forage(
     'king_stropharia', 'King Stropharia', 18, 72,
     [4, 5, 6, 7, 8, 9],                                 // May-Oct
-    { sugarContent: 2, starchContent: 3, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 5 },
+    { sugarContent: 2, starchContent: 3, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 5, innateUmami: 5 },
     'Wine cap. Grows in wood chip, eats like a potato and carries more starch than any other mushroom here — the one that rewards a sweet koji.',
     ['mushroom_miso', 'mushroom_shoyu'],
   ),
   forage(
     'shimeji', 'Shimeji', 20, 74,
     [8, 9, 10, 11],                                     // Sep-Dec
-    { sugarContent: 1, starchContent: 1, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 6 },
+    { sugarContent: 1, starchContent: 1, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 6, innateUmami: 5 },
     'Beech mushroom. Unpleasantly bitter raw and nutty once it is cooked or cured — the bitterness is the thing fermentation takes away.',
     ['mushroom_miso', 'mushroom_garum'],
   ),
   forage(
     'nameko', 'Nameko', 24, 78,
     [9, 10, 11, 0, 1],                                  // Oct-Feb
-    { sugarContent: 3, starchContent: 2, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 5 },
+    { sugarContent: 3, starchContent: 2, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 5, innateUmami: 5 },
     'Comes up under a gelatinous coat that never quite washes off. Glutamate-rich, and the slime holds the brine against the cap.',
     ['mushroom_miso', 'lacto_mushroom'],
   ),
   forage(
     'black_poplar', 'Black Poplar', 28, 80,
     [2, 3, 4, 8, 9, 10],                                // Mar-May and Sep-Nov
-    { sugarContent: 1, starchContent: 2, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 7 },
+    { sugarContent: 1, starchContent: 2, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 7, innateUmami: 5 },
     'Pioppino. Twice a year on poplar and willow stumps, spring and autumn. Firm enough to hold its shape through a long ferment.',
     ['mushroom_shoyu', 'mushroom_garum'],
   ),
@@ -177,7 +177,7 @@ export const FORAGED_MUSHROOMS: Ingredient[] = [
   forage(
     'lions_mane', "Lion's Mane", 32, 84,
     [8, 9, 10],                                         // Sep-Nov
-    { sugarContent: 3, starchContent: 2, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 5 },
+    { sugarContent: 3, starchContent: 2, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 5, innateUmami: 5 },
     'A white beard on a wounded beech. Sweeter than any other mushroom here and startlingly like crab — a substrate that wants a light hand.',
     ['mushroom_miso', 'mushroom_vinegar'],
     2,
@@ -185,7 +185,7 @@ export const FORAGED_MUSHROOMS: Ingredient[] = [
   forage(
     'maitake', 'Maitake', 46, 88,
     [8, 9, 10],                                         // Sep-Nov
-    { sugarContent: 1, starchContent: 1, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 8 },
+    { sugarContent: 1, starchContent: 1, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 8, innateUmami: 7 },
     'Hen of the woods, at the foot of the same oak every autumn for thirty years. The most protein of any mushroom on this shelf, and it shows.',
     ['mushroom_garum', 'mushroom_shoyu'],
     2,
@@ -193,7 +193,7 @@ export const FORAGED_MUSHROOMS: Ingredient[] = [
   forage(
     'cordyceps', 'Cordyceps', 95, 90,
     ALL_YEAR,                                           // grown in a jar; no season
-    { sugarContent: 2, starchContent: 1, nativeSalinity: 0, microbialDiversity: 2, fatContent: 0, proteinContent: 7 },
+    { sugarContent: 2, starchContent: 1, nativeSalinity: 0, microbialDiversity: 2, fatContent: 0, proteinContent: 7, innateUmami: 6 },
     'Grown on grain in a sealed jar rather than found, so it comes in clean and comes in all year. You pay for both.',
     ['mushroom_garum'],
     3,
@@ -291,6 +291,7 @@ export const FORAGE_RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 65, salinity: 0 },
     idealFlavorProfile: { umami: 46, acidity: 88, funk: 44, sweetness: 12, safety: 100 },
+    targetAbv: 0.3,
     difficulty: 3,
   },
 ];

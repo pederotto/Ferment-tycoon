@@ -199,7 +199,7 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   { recipeId: 'lacto_ceps',    substrate: { kind: 'is', id: 'ceps' },        requires: ['salt'],          vesselId: 'mason_jar' },
   { recipeId: 'rose_garum',    substrate: { kind: 'is', id: 'rose_petals' }, requires: ['koji', 'water'], vesselId: 'incubator' },
   { recipeId: 'black_garlic',  substrate: { kind: 'is', id: 'garlic_bulbs' },   requires: [], forbids: ['salt'], vesselId: 'incubator' },
-  { recipeId: 'black_apple',   substrate: { kind: 'is', id: 'plums' },          requires: [], forbids: ['salt', 'sugar'], vesselId: 'incubator' },
+  { recipeId: 'black_apple',   substrate: { kind: 'oneOf', ids: ['apples', 'plums'], label: 'Cider apples or green plums' }, requires: [], forbids: ['salt', 'sugar'], vesselId: 'incubator' },
   { recipeId: 'yellow_peaso',  substrate: { kind: 'is', id: 'yellow_peas' }, requires: ['barley_koji', 'salt'], vesselId: 'mason_jar' },
 
   { recipeId: 'tears_garum',   substrate: { kind: 'any' },               requires: ['tears', 'koji', 'salt'], vesselId: 'incubator' },
@@ -810,7 +810,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso', 'shoyu'],
         supplierId: 'asia_import',
         tierRequired: 0,
-        hiddenStats: { starchContent: 2, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 3, fatContent: 4, proteinContent: 9 },
+        hiddenStats: { starchContent: 2, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 3, fatContent: 4, proteinContent: 9, innateUmami: 2 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -825,7 +825,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso'],
         supplierId: 'asia_import',
         tierRequired: 2,
-        hiddenStats: { starchContent: 2, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 4, fatContent: 5, proteinContent: 9 },
+        hiddenStats: { starchContent: 2, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 4, fatContent: 5, proteinContent: 9, innateUmami: 2 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -855,7 +855,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['lacto', 'cheese'],
         supplierId: 'prime',
         tierRequired: 2,
-        hiddenStats: { starchContent: 0, sugarContent: 5, nativeSalinity: 1, microbialDiversity: 8, fatContent: 8, proteinContent: 6 },
+        hiddenStats: { starchContent: 0, sugarContent: 5, nativeSalinity: 1, microbialDiversity: 8, fatContent: 8, proteinContent: 6, innateUmami: 1, innateAcidity: 2 },
         mass: 1000,
         unitDisplay: 'ml',
         tags: ['HIGH_RISK']
@@ -871,7 +871,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['garum'],
         supplierId: 'prime',
         tierRequired: 1,
-        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 2, microbialDiversity: 6, fatContent: 7, proteinContent: 8 },
+        hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 2, microbialDiversity: 6, fatContent: 7, proteinContent: 8, innateUmami: 4 },
         mass: 1000,
         unitDisplay: 'g',
         tags: ['SEAFOOD']
@@ -903,7 +903,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['curing'],
         supplierId: 'prime',
         tierRequired: 3,
-        hiddenStats: { starchContent: 0, sugarContent: 1, nativeSalinity: 2, microbialDiversity: 4, fatContent: 8, proteinContent: 9 },
+        hiddenStats: { starchContent: 0, sugarContent: 1, nativeSalinity: 2, microbialDiversity: 4, fatContent: 8, proteinContent: 9, innateUmami: 6 },
         mass: 500,
         unitDisplay: 'g',
         tags: ['SEAFOOD', 'HIGH_RISK']
@@ -919,7 +919,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['amino_paste'],
         supplierId: 'prime',
         tierRequired: 4,
-        hiddenStats: { starchContent: 0, sugarContent: 4, nativeSalinity: 3, microbialDiversity: 2, fatContent: 2, proteinContent: 10 },
+        hiddenStats: { starchContent: 0, sugarContent: 4, nativeSalinity: 3, microbialDiversity: 2, fatContent: 2, proteinContent: 10, innateUmami: 9 },
         mass: 500,
         unitDisplay: 'g',
         tags: ['SEAFOOD']
@@ -935,7 +935,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['lacto', 'shoyu'],
         supplierId: 'nordic',
         tierRequired: 3,
-        hiddenStats: { starchContent: 1, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 5 },
+        hiddenStats: { starchContent: 1, sugarContent: 3, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 5, innateUmami: 8 },
         mass: 500,
         unitDisplay: 'g'
     },
@@ -950,7 +950,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['lacto', 'vinegar'],
         supplierId: 'nordic',
         tierRequired: 0,
-        hiddenStats: { starchContent: 1, sugarContent: 6, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1 },
+        hiddenStats: { starchContent: 1, sugarContent: 6, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 1, innateAcidity: 8 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -980,7 +980,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['black'],
         supplierId: 'asia_import',
         tierRequired: 1,
-        hiddenStats: { starchContent: 3, sugarContent: 7, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 4 },
+        hiddenStats: { starchContent: 3, sugarContent: 7, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 4, innateUmami: 3 },
         mass: 1000,
         unitDisplay: 'g'
     },
@@ -1010,7 +1010,7 @@ export const INGREDIENTS: Ingredient[] = [
         idealFor: ['miso'],
         supplierId: 'asia_import',
         tierRequired: 2,
-        hiddenStats: { starchContent: 0, sugarContent: 1, nativeSalinity: 3, microbialDiversity: 8, fatContent: 4, proteinContent: 9 },
+        hiddenStats: { starchContent: 0, sugarContent: 1, nativeSalinity: 3, microbialDiversity: 8, fatContent: 4, proteinContent: 9, innateUmami: 5 },
         mass: 1000,
         unitDisplay: 'g',
         tags: ['SEAFOOD']
@@ -1541,7 +1541,7 @@ const NEW_SUBSTRATES: Ingredient[] = [
     baseCost: 48, currency: 'money', quality: 92,
     description: 'Lean, dense and almost fat-free — which is what lets it dry to something like wood.',
     idealFor: ['katsuobushi'], supplierId: 'prime', tierRequired: 3,
-    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 1, microbialDiversity: 3, fatContent: 1, proteinContent: 12 },
+    hiddenStats: { starchContent: 0, sugarContent: 0, nativeSalinity: 1, microbialDiversity: 3, fatContent: 1, proteinContent: 12, innateUmami: 6 },
     mass: 1000, unitDisplay: 'kg', tags: ['SEAFOOD'],
   },
   {
@@ -1568,7 +1568,7 @@ const KOMBUCHA_KIT: Ingredient[] = [
     baseCost: 9, currency: 'money', quality: 80,
     description: 'Brewed strong. The tannins feed the culture as much as the sugar does — herbal infusions alone will starve it.',
     idealFor: ['kombucha'], supplierId: 'asia_import', tierRequired: 0,
-    hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 1, fatContent: 0, proteinContent: 0 },
+    hiddenStats: { starchContent: 0, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 1, fatContent: 0, proteinContent: 0, innateUmami: 1, innateAcidity: 1 },
     mass: 1000, unitDisplay: 'ml',
   },
 ];
@@ -1578,7 +1578,7 @@ const PATHWAY_SUBSTRATES: Ingredient[] = [
     baseCost: 18, currency: 'money', quality: 82,
     description: 'Almost pure butterfat. Nothing else in the pantry gives lipase this much to work on.',
     idealFor: ['lacto'], supplierId: 'prime', tierRequired: 1,
-    hiddenStats: { starchContent: 0, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 4, fatContent: 10, proteinContent: 3 },
+    hiddenStats: { starchContent: 0, sugarContent: 4, nativeSalinity: 0, microbialDiversity: 4, fatContent: 10, proteinContent: 3, innateUmami: 1, innateAcidity: 2 },
     mass: 1000, unitDisplay: 'ml' },
   { id: 'hazelnuts', name: 'Toasted Hazelnuts', type: IngredientType.SUBSTRATE,
     baseCost: 42, currency: 'money', quality: 88,
@@ -1596,13 +1596,13 @@ const PATHWAY_SUBSTRATES: Ingredient[] = [
     baseCost: 8, currency: 'money', quality: 70,
     description: 'The parts you would throw away. The yeast you need is already living on the skin.',
     idealFor: ['tepache'], supplierId: 'asia_import', tierRequired: 0,
-    hiddenStats: { starchContent: 1, sugarContent: 9, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 1 },
+    hiddenStats: { starchContent: 1, sugarContent: 9, nativeSalinity: 0, microbialDiversity: 8, fatContent: 0, proteinContent: 1, innateUmami: 1, innateAcidity: 6 },
     mass: 1000, unitDisplay: 'kg' },
   { id: 'apples', name: 'Cider Apples', type: IngredientType.SUBSTRATE,
     baseCost: 7, currency: 'money', quality: 76,
     description: 'Pressed for must. Sharp, tannic and full of the sugar two successive organisms want.',
     idealFor: ['vinegar'], supplierId: 'nordic', tierRequired: 0,
-    hiddenStats: { starchContent: 1, sugarContent: 8, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 1 },
+    hiddenStats: { starchContent: 1, sugarContent: 8, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 1, innateAcidity: 5 },
     mass: 1000, unitDisplay: 'kg' },
 ];
 
@@ -1736,7 +1736,7 @@ const HIGH_TIER: Ingredient[] = [
     idealFor: ['lacto', 'miso'],
     supplierId: 'nordic',
     tierRequired: 4,
-    hiddenStats: { starchContent: 1, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 8 },
+    hiddenStats: { starchContent: 1, sugarContent: 2, nativeSalinity: 0, microbialDiversity: 7, fatContent: 1, proteinContent: 8, innateUmami: 7 },
     mass: 1000, unitDisplay: 'kg',
   },
 ];
@@ -2134,6 +2134,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 20, humidity: 50, salinity: 0 },
     idealFlavorProfile: { umami: 0, acidity: 18, funk: 8, sweetness: 96, safety: 100 },
+    targetAbv: 0.5,
     difficulty: 1
   },
   {
@@ -2267,6 +2268,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Stir',
     idealParams: { temp: 28, humidity: 70, salinity: 0 },
     idealFlavorProfile: { umami: 12, acidity: 90, funk: 32, sweetness: 12, safety: 100 },
+    targetAbv: 0.4,
     difficulty: 2
   },
 
@@ -2321,10 +2323,14 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: 'black_apple',
-    name: 'Black Apple',
+    /* Named "Black Apple" while the matrix only ever accepted GREEN PLUMS — the
+       owner spotted it profiling the catalogue. Blackening is one process on a
+       firm acidic fruit, so it takes either now and the name says so. The id
+       stays: it is load-bearing in the matrix, the books and the product sheet. */
+    name: 'Blackened Fruit',
     type: FermentType.BLACK,
-    description: 'Maillard Reaction. Not fermentation. Pure chemistry. Needs High Temp + High Humidity.',
-    requiredIngredients: { substrate: true, starter: null, additive: null }, // Garlic or Fruit
+    description: 'Maillard reaction, not fermentation — no microbe survives this. Weeks of gentle humid heat turn a firm acidic fruit black, soft and balsamic. Apples or green plums.',
+    requiredIngredients: { substrate: true, starter: null, additive: null },
     outputIngredientId: 'black_apple',
     requiredVesselId: 'incubator',
     baseDurationSeconds: 200,
@@ -2398,7 +2404,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Mix',
     idealParams: { temp: 25, humidity: 60, salinity: 5 },
-    idealFlavorProfile: { umami: 88, acidity: 68, funk: 100, sweetness: 0, safety: 52 },
+    idealFlavorProfile: { umami: 88, acidity: 68, funk: 100, sweetness: 0, safety: 10 },
     difficulty: 4
   },
 
@@ -2528,6 +2534,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Stir',
     idealParams: { temp: 25, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 28, acidity: 52, funk: 42, sweetness: 40, safety: 98 },
+    targetAbv: 6.5,
     difficulty: 3
   },
   {
@@ -2705,6 +2712,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Clean',
     idealParams: { temp: 20, humidity: 55, salinity: 0 },
     idealFlavorProfile: { umami: 2, acidity: 48, funk: 8, sweetness: 95, safety: 100 },
+    targetAbv: 0.5,
     difficulty: 2
   },
   {
@@ -2720,6 +2728,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 26, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 2, acidity: 60, funk: 34, sweetness: 58, safety: 96 },
+    targetAbv: 2,
     difficulty: 1
   },
 
@@ -2739,6 +2748,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 65, salinity: 0 },
     idealFlavorProfile: { umami: 6, acidity: 92, funk: 34, sweetness: 14, safety: 100 },
+    targetAbv: 0.3,
     difficulty: 3
   },
   {
@@ -2788,6 +2798,7 @@ export const RECIPES: Recipe[] = [
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 60, salinity: 0 },
     idealFlavorProfile: { umami: 12, acidity: 78, funk: 36, sweetness: 32, safety: 99 },
+    targetAbv: 1,
     difficulty: 2
   },
   {

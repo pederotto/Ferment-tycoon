@@ -187,7 +187,7 @@ const BY_TYPE: Record<FermentType, ProcessModel> = {
   [FermentType.VINEGAR]:  { dry: 0.06, proteolysis: 0.05, amylolysis: 0.05, attenuation: 0.95, toEthanol: 0.02, toAcid: 0.60, toGas: 0.38, respiration: 0,    form: 'liquid' },
   [FermentType.BLACK]:    { dry: 0.40, proteolysis: 0.10, amylolysis: 0.10, attenuation: 0.35, toEthanol: 0,    toAcid: 0.15, toGas: 0.25, toSolids: 0.60, respiration: 0, form: 'dried' },
   [FermentType.FAIL]:     { dry: 0.03, proteolysis: 0.40, amylolysis: 0.20, attenuation: 0.50, toEthanol: 0.10, toAcid: 0.40, toGas: 0.50, respiration: 0,    form: 'paste' },
-  [FermentType.ALCOHOL]:  { dry: 0.01, proteolysis: 0.10, amylolysis: 0.90, attenuation: 0.92, toEthanol: 0.51, toAcid: 0,    toGas: 0.49, respiration: 0,    form: 'liquid' },
+  [FermentType.ALCOHOL]:  { dry: 0.01, proteolysis: 0.10, amylolysis: 0.90, attenuation: 0.92, toEthanol: 0.46, toAcid: 0.08, toGas: 0.46, respiration: 0,    form: 'liquid' },
   [FermentType.KOMBUCHA]: { dry: 0.04, proteolysis: 0.03, amylolysis: 0,    attenuation: 0.50, toEthanol: 0.10, toAcid: 0.45, toGas: 0.45, respiration: 0,    form: 'liquid' },
 };
 
@@ -208,6 +208,14 @@ const BY_RECIPE: Record<string, Partial<ProcessModel>> = {
   ricotta_forte: { dry: 0.05, proteolysis: 0.30, form: 'paste' },
   cultured_butter: { dry: 0.02, form: 'paste' },
   chili_mash:    { form: 'paste' },
+  /* Openly WILD brews: no pitched yeast, so lactic acid bacteria work alongside
+     whatever yeast lands and the result is sour as well as alcoholic. A pitched
+     wine or mead is not like this, which is why it is per-recipe and not a
+     family default. */
+  makgeolli:     { toEthanol: 0.34, toAcid: 0.30, toGas: 0.36 },
+  corn_chicha:   { toEthanol: 0.30, toAcid: 0.36, toGas: 0.34 },
+  berry_kvass:   { attenuation: 0.55, toEthanol: 0.22, toAcid: 0.42, toGas: 0.36 },
+  tepache:       { attenuation: 0.60, toEthanol: 0.28, toAcid: 0.36, toGas: 0.36 },
   nukazuke:      { dry: 0.08 },
   tempeh:        { dry: 0.06, proteolysis: 0.25, form: 'solid' },
   natto:         { dry: 0.03, proteolysis: 0.35, attenuation: 0.2, form: 'solid' },
