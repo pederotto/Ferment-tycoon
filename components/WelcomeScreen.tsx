@@ -24,7 +24,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onContinue, save
             <div className="grain" />
 
             <div className="welcome-card">
-                <span className="crest-mark"><img src={CREST} alt="" aria-hidden="true" /></span>
+                <span className="crest-mark sh-medal"><img src={CREST} alt="" aria-hidden="true" /></span>
                 <div className="kicker">Atelier &amp; Culture House</div>
                 <h1 className="title slab">FERMENTA <span className="accent">TYCOON</span></h1>
                 <p className="tagline">
@@ -43,7 +43,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onContinue, save
                     <div className="ledger-line">
                         <div className="ic"><GameIcon name="archives" size={16} color="#8a9a6b" /></div>
                         <div>
-                            <div className="t">The Lab</div>
+                            <div className="t">The Studio</div>
                             <div className="d">Grow the bench, hire staff, and automate the parts you've mastered.</div>
                         </div>
                     </div>
@@ -75,7 +75,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onContinue, save
                         <ArrowRightIcon size={16} />
                     </button>
                 )}
-                <div className="stamp-line">Est. Y1 &middot; Physics Engine Active</div>
             </div>
         </div>
     );
