@@ -2019,7 +2019,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Stir',
     idealParams: { temp: 20, humidity: 60, salinity: 25 },
-    idealFlavorProfile: { umami: 95, acidity: 10, funk: 30, sweetness: 5, safety: 100 },
+    idealFlavorProfile: { umami: 94, acidity: 10, funk: 36, sweetness: 4, safety: 100 },
     difficulty: 3
   },
   {
@@ -2035,7 +2035,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Flip',
     idealParams: { temp: 15, humidity: 30, salinity: 15 }, // Needs LOW humidity
-    idealFlavorProfile: { umami: 85, acidity: 5, funk: 40, sweetness: 10, safety: 95 },
+    idealFlavorProfile: { umami: 80, acidity: 4, funk: 38, sweetness: 6, safety: 98 },
     difficulty: 2
   },
   {
@@ -2051,7 +2051,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Stir',
     idealParams: { temp: 18, humidity: 70, salinity: 5 },
-    idealFlavorProfile: { umami: 60, acidity: 70, funk: 90, sweetness: 10, safety: 80 },
+    idealFlavorProfile: { umami: 68, acidity: 68, funk: 88, sweetness: 6, safety: 85 },
     difficulty: 4
   },
   {
@@ -2067,7 +2067,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Skim',
     idealParams: { temp: 40, humidity: 50, salinity: 20 }, // Roman quick-garum: 40C / 20% salt
-    idealFlavorProfile: { umami: 100, acidity: 15, funk: 80, sweetness: 0, safety: 95 },
+    idealFlavorProfile: { umami: 96, acidity: 14, funk: 78, sweetness: 2, safety: 98 },
     difficulty: 2
   },
 
@@ -2085,7 +2085,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Stir', // Daily stir
     idealParams: { temp: 22, humidity: 60, salinity: 12 },
-    idealFlavorProfile: { umami: 85, acidity: 25, funk: 60, sweetness: 15, safety: 100 },
+    idealFlavorProfile: { umami: 82, acidity: 24, funk: 64, sweetness: 14, safety: 100 },
     difficulty: 3
   },
   {
@@ -2101,7 +2101,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Clean',
     idealParams: { temp: 25, humidity: 65, salinity: 12 },
-    idealFlavorProfile: { umami: 90, acidity: 10, funk: 75, sweetness: 5, safety: 100 },
+    idealFlavorProfile: { umami: 84, acidity: 12, funk: 72, sweetness: 8, safety: 100 },
     difficulty: 2
   },
   {
@@ -2117,7 +2117,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 90,
     activeIntervention: 'Stir',
     idealParams: { temp: 20, humidity: 55, salinity: 8 },
-    idealFlavorProfile: { umami: 70, acidity: 20, funk: 30, sweetness: 70, safety: 100 },
+    idealFlavorProfile: { umami: 60, acidity: 18, funk: 32, sweetness: 66, safety: 100 },
     difficulty: 2
   },
   {
@@ -2133,7 +2133,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 20, humidity: 50, salinity: 0 },
-    idealFlavorProfile: { umami: 0, acidity: 20, funk: 10, sweetness: 100, safety: 100 },
+    idealFlavorProfile: { umami: 0, acidity: 18, funk: 8, sweetness: 96, safety: 100 },
     difficulty: 1
   },
   {
@@ -2168,7 +2168,7 @@ export const RECIPES: Recipe[] = [
     // 18% against the substrate, held at cellar temperature. The brine is what
     // keeps a mash this wet safe for two years without any heat at all.
     idealParams: { temp: 25, humidity: 60, salinity: 15 },
-    idealFlavorProfile: { umami: 92, acidity: 40, funk: 55, sweetness: 20, safety: 100 },
+    idealFlavorProfile: { umami: 88, acidity: 38, funk: 48, sweetness: 24, safety: 100 },
     difficulty: 4
   },
   {
@@ -2184,7 +2184,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Stir',
     idealParams: { temp: 25, humidity: 60, salinity: 14 },
-    idealFlavorProfile: { umami: 96, acidity: 28, funk: 58, sweetness: 12, safety: 100 },
+    idealFlavorProfile: { umami: 94, acidity: 26, funk: 52, sweetness: 10, safety: 100 },
     difficulty: 4
   },
   {
@@ -2200,7 +2200,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 20, humidity: 50, salinity: 10 },
-    idealFlavorProfile: { umami: 95, acidity: 30, funk: 60, sweetness: 5, safety: 100 },
+    idealFlavorProfile: { umami: 92, acidity: 28, funk: 58, sweetness: 6, safety: 100 },
     difficulty: 4
   },
   {
@@ -2216,7 +2216,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Clean',
     idealParams: { temp: 28, humidity: 60, salinity: 5 },
-    idealFlavorProfile: { umami: 60, acidity: 5, funk: 10, sweetness: 80, safety: 100 },
+    idealFlavorProfile: { umami: 52, acidity: 8, funk: 12, sweetness: 74, safety: 98 },
     difficulty: 1
   },
 
@@ -2234,7 +2234,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Stir',
     idealParams: { temp: 30, humidity: 70, salinity: 25 },
-    idealFlavorProfile: { umami: 95, acidity: 20, funk: 90, sweetness: 5, safety: 100 },
+    idealFlavorProfile: { umami: 94, acidity: 16, funk: 74, sweetness: 4, safety: 100 },
     difficulty: 1
   },
   {
@@ -2250,7 +2250,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Ventilate', // Needs air
     idealParams: { temp: 30, humidity: 60, salinity: 20 },
-    idealFlavorProfile: { umami: 90, acidity: 20, funk: 85, sweetness: 10, safety: 100 },
+    idealFlavorProfile: { umami: 88, acidity: 14, funk: 86, sweetness: 8, safety: 100 },
     difficulty: 2
   },
   {
@@ -2266,7 +2266,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Stir',
     idealParams: { temp: 28, humidity: 70, salinity: 0 },
-    idealFlavorProfile: { umami: 10, acidity: 90, funk: 30, sweetness: 10, safety: 100 },
+    idealFlavorProfile: { umami: 12, acidity: 90, funk: 32, sweetness: 12, safety: 100 },
     difficulty: 2
   },
 
@@ -2284,7 +2284,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Stir',
     idealParams: { temp: 60, humidity: 20, salinity: 0 }, // Low humidity
-    idealFlavorProfile: { umami: 100, acidity: 10, funk: 40, sweetness: 80, safety: 90 },
+    idealFlavorProfile: { umami: 100, acidity: 10, funk: 42, sweetness: 78, safety: 98 },
     difficulty: 4
   },
   {
@@ -2300,7 +2300,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 90,
     activeIntervention: 'Clean',
     idealParams: { temp: 20, humidity: 95, salinity: 2 }, // High humidity
-    idealFlavorProfile: { umami: 80, acidity: 60, funk: 30, sweetness: 10, safety: 95 },
+    idealFlavorProfile: { umami: 76, acidity: 62, funk: 28, sweetness: 12, safety: 98 },
     difficulty: 2
   },
   {
@@ -2316,7 +2316,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Stir',
     idealParams: { temp: 60, humidity: 50, salinity: 0 },
-    idealFlavorProfile: { umami: 70, acidity: 40, funk: 10, sweetness: 60, safety: 90 },
+    idealFlavorProfile: { umami: 42, acidity: 30, funk: 12, sweetness: 68, safety: 95 },
     difficulty: 3
   },
   {
@@ -2332,7 +2332,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 60, humidity: 80, salinity: 0 },
-    idealFlavorProfile: { umami: 70, acidity: 40, funk: 20, sweetness: 80, safety: 100 },
+    idealFlavorProfile: { umami: 20, acidity: 62, funk: 20, sweetness: 74, safety: 100 },
     difficulty: 2
   },
   {
@@ -2348,7 +2348,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Clean',
     idealParams: { temp: 20, humidity: 55, salinity: 6 },
-    idealFlavorProfile: { umami: 60, acidity: 20, funk: 20, sweetness: 50, safety: 100 },
+    idealFlavorProfile: { umami: 58, acidity: 18, funk: 22, sweetness: 52, safety: 100 },
     difficulty: 1
   },
 
@@ -2366,7 +2366,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Skim',
     idealParams: { temp: 37, humidity: 60, salinity: 9 }, // Body temp
-    idealFlavorProfile: { umami: 100, acidity: 10, funk: 10, sweetness: 20, safety: 80 },
+    idealFlavorProfile: { umami: 88, acidity: 14, funk: 18, sweetness: 16, safety: 92 },
     difficulty: 5
   },
   {
@@ -2382,7 +2382,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Flip',
     idealParams: { temp: 30, humidity: 80, salinity: 15 },
-    idealFlavorProfile: { umami: 100, acidity: 50, funk: 100, sweetness: 100, safety: 50 },
+    idealFlavorProfile: { umami: 100, acidity: 42, funk: 100, sweetness: 6, safety: 50 },
     difficulty: 5
   },
   {
@@ -2398,7 +2398,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Mix',
     idealParams: { temp: 25, humidity: 60, salinity: 5 },
-    idealFlavorProfile: { umami: 90, acidity: 80, funk: 100, sweetness: 0, safety: 10 },
+    idealFlavorProfile: { umami: 88, acidity: 68, funk: 100, sweetness: 0, safety: 52 },
     difficulty: 4
   },
 
@@ -2416,7 +2416,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 100,
     activeIntervention: 'Flip',
     idealParams: { temp: 34, humidity: 80, salinity: 0 },
-    idealFlavorProfile: { umami: 40, acidity: 10, funk: 20, sweetness: 60, safety: 100 },
+    idealFlavorProfile: { umami: 20, acidity: 8, funk: 18, sweetness: 48, safety: 100 },
     difficulty: 1
   },
   {
@@ -2432,7 +2432,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Stir',
     idealParams: { temp: 25, humidity: 60, salinity: 12 },
-    idealFlavorProfile: { umami: 75, acidity: 20, funk: 30, sweetness: 60, safety: 100 },
+    idealFlavorProfile: { umami: 52, acidity: 22, funk: 26, sweetness: 54, safety: 100 },
     difficulty: 1
   },
   {
@@ -2448,7 +2448,7 @@ export const RECIPES: Recipe[] = [
     peakWindowEnd: 95,
     activeIntervention: 'Stir',
     idealParams: { temp: 55, humidity: 70, salinity: 0 },
-    idealFlavorProfile: { umami: 20, acidity: 10, funk: 10, sweetness: 95, safety: 100 },
+    idealFlavorProfile: { umami: 14, acidity: 6, funk: 8, sweetness: 96, safety: 100 },
     difficulty: 1
   },
 
@@ -2467,7 +2467,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 85, peakWindowEnd: 96,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 31, humidity: 75, salinity: 0 },
-    idealFlavorProfile: { umami: 45, acidity: 10, funk: 35, sweetness: 10, safety: 100 },
+    idealFlavorProfile: { umami: 34, acidity: 22, funk: 24, sweetness: 8, safety: 98 },
     difficulty: 2
   },
   {
@@ -2482,7 +2482,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 88, peakWindowEnd: 100,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 40, humidity: 95, salinity: 0 },
-    idealFlavorProfile: { umami: 80, acidity: 15, funk: 85, sweetness: 5, safety: 95 },
+    idealFlavorProfile: { umami: 82, acidity: 5, funk: 94, sweetness: 4, safety: 98 },
     difficulty: 3
   },
   {
@@ -2497,7 +2497,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 88, peakWindowEnd: 100,
     activeIntervention: 'Flip',
     idealParams: { temp: 22, humidity: 65, salinity: 0 },
-    idealFlavorProfile: { umami: 70, acidity: 20, funk: 75, sweetness: 8, safety: 88 },
+    idealFlavorProfile: { umami: 64, acidity: 22, funk: 78, sweetness: 5, safety: 94 },
     difficulty: 4
   },
   {
@@ -2512,7 +2512,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 90, peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 24, humidity: 55, salinity: 16 },
-    idealFlavorProfile: { umami: 90, acidity: 25, funk: 70, sweetness: 12, safety: 100 },
+    idealFlavorProfile: { umami: 88, acidity: 24, funk: 74, sweetness: 10, safety: 100 },
     difficulty: 4
   },
   {
@@ -2527,7 +2527,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 80, peakWindowEnd: 94,
     activeIntervention: 'Stir',
     idealParams: { temp: 25, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 25, acidity: 55, funk: 40, sweetness: 60, safety: 95 },
+    idealFlavorProfile: { umami: 28, acidity: 52, funk: 42, sweetness: 40, safety: 98 },
     difficulty: 3
   },
   {
@@ -2542,7 +2542,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 82, peakWindowEnd: 95,
     activeIntervention: 'Stir',
     idealParams: { temp: 22, humidity: 60, salinity: 8 },
-    idealFlavorProfile: { umami: 40, acidity: 70, funk: 45, sweetness: 15, safety: 96 },
+    idealFlavorProfile: { umami: 42, acidity: 68, funk: 46, sweetness: 14, safety: 98 },
     difficulty: 2
   },
   {
@@ -2557,7 +2557,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 92, peakWindowEnd: 100,
     activeIntervention: 'Flip',
     idealParams: { temp: 26, humidity: 35, salinity: 4 },
-    idealFlavorProfile: { umami: 100, acidity: 5, funk: 55, sweetness: 5, safety: 100 },
+    idealFlavorProfile: { umami: 96, acidity: 6, funk: 46, sweetness: 2, safety: 100 },
     difficulty: 5
   },
 
@@ -2576,7 +2576,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 85, peakWindowEnd: 98,
     activeIntervention: 'Clean',
     idealParams: { temp: 18, humidity: 60, salinity: 2 },
-    idealFlavorProfile: { umami: 20, acidity: 85, funk: 25, sweetness: 20, safety: 100 },
+    idealFlavorProfile: { umami: 18, acidity: 82, funk: 22, sweetness: 16, safety: 100 },
     difficulty: 1
   },
   {
@@ -2591,7 +2591,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 82, peakWindowEnd: 96,
     activeIntervention: 'Clean',
     idealParams: { temp: 8, humidity: 65, salinity: 3 },
-    idealFlavorProfile: { umami: 45, acidity: 75, funk: 55, sweetness: 20, safety: 98 },
+    idealFlavorProfile: { umami: 48, acidity: 72, funk: 54, sweetness: 22, safety: 98 },
     difficulty: 2
   },
   {
@@ -2606,7 +2606,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 90, peakWindowEnd: 100,
     activeIntervention: 'Flip',
     idealParams: { temp: 13, humidity: 75, salinity: 3 },
-    idealFlavorProfile: { umami: 75, acidity: 25, funk: 60, sweetness: 5, safety: 92 },
+    idealFlavorProfile: { umami: 72, acidity: 22, funk: 48, sweetness: 4, safety: 95 },
     difficulty: 4
   },
   {
@@ -2621,7 +2621,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 88, peakWindowEnd: 100,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 11, humidity: 92, salinity: 4 },
-    idealFlavorProfile: { umami: 70, acidity: 40, funk: 95, sweetness: 5, safety: 90 },
+    idealFlavorProfile: { umami: 74, acidity: 42, funk: 92, sweetness: 4, safety: 95 },
     difficulty: 4
   },
   {
@@ -2636,7 +2636,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 86, peakWindowEnd: 100,
     activeIntervention: 'Skim',
     idealParams: { temp: 16, humidity: 60, salinity: 6 },
-    idealFlavorProfile: { umami: 85, acidity: 60, funk: 100, sweetness: 0, safety: 72 },
+    idealFlavorProfile: { umami: 82, acidity: 52, funk: 100, sweetness: 0, safety: 72 },
     difficulty: 5
   },
 
@@ -2655,7 +2655,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 80, peakWindowEnd: 94,
     activeIntervention: 'Stir',
     idealParams: { temp: 21, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 30, acidity: 60, funk: 45, sweetness: 20, safety: 98 },
+    idealFlavorProfile: { umami: 22, acidity: 58, funk: 32, sweetness: 22, safety: 98 },
     difficulty: 2
   },
   {
@@ -2670,7 +2670,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 88, peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 20, humidity: 55, salinity: 8 },
-    idealFlavorProfile: { umami: 70, acidity: 20, funk: 60, sweetness: 25, safety: 100 },
+    idealFlavorProfile: { umami: 64, acidity: 18, funk: 44, sweetness: 34, safety: 100 },
     difficulty: 3
   },
   {
@@ -2685,7 +2685,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 88, peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 6, humidity: 55, salinity: 10 },
-    idealFlavorProfile: { umami: 88, acidity: 10, funk: 40, sweetness: 15, safety: 100 },
+    idealFlavorProfile: { umami: 85, acidity: 12, funk: 32, sweetness: 20, safety: 100 },
     difficulty: 3
   },
 
@@ -2704,7 +2704,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 86, peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 20, humidity: 55, salinity: 0 },
-    idealFlavorProfile: { umami: 5, acidity: 45, funk: 10, sweetness: 95, safety: 100 },
+    idealFlavorProfile: { umami: 2, acidity: 48, funk: 8, sweetness: 95, safety: 100 },
     difficulty: 2
   },
   {
@@ -2719,7 +2719,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 76, peakWindowEnd: 90,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 26, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 10, acidity: 60, funk: 35, sweetness: 65, safety: 96 },
+    idealFlavorProfile: { umami: 2, acidity: 60, funk: 34, sweetness: 58, safety: 96 },
     difficulty: 1
   },
 
@@ -2738,7 +2738,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 84, peakWindowEnd: 100,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 65, salinity: 0 },
-    idealFlavorProfile: { umami: 15, acidity: 92, funk: 35, sweetness: 15, safety: 100 },
+    idealFlavorProfile: { umami: 6, acidity: 92, funk: 34, sweetness: 14, safety: 100 },
     difficulty: 3
   },
   {
@@ -2753,7 +2753,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 88, peakWindowEnd: 100,
     activeIntervention: 'Stir',
     idealParams: { temp: 22, humidity: 60, salinity: 9 },
-    idealFlavorProfile: { umami: 30, acidity: 80, funk: 55, sweetness: 25, safety: 100 },
+    idealFlavorProfile: { umami: 32, acidity: 78, funk: 52, sweetness: 18, safety: 100 },
     difficulty: 3
   },
 
@@ -2772,7 +2772,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 90, peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 60, humidity: 80, salinity: 0 },
-    idealFlavorProfile: { umami: 55, acidity: 25, funk: 30, sweetness: 85, safety: 100 },
+    idealFlavorProfile: { umami: 56, acidity: 26, funk: 24, sweetness: 86, safety: 100 },
     difficulty: 3
   },
   {
@@ -2787,7 +2787,7 @@ export const RECIPES: Recipe[] = [
     peakWindowStart: 78, peakWindowEnd: 92,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 15, acidity: 78, funk: 40, sweetness: 35, safety: 98 },
+    idealFlavorProfile: { umami: 12, acidity: 78, funk: 36, sweetness: 32, safety: 99 },
     difficulty: 2
   },
   {

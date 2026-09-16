@@ -214,7 +214,7 @@ export const MARKET_RECIPES: Recipe[] = [
     peakWindowStart: 82, peakWindowEnd: 100,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 18, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 10, acidity: 55, funk: 35, sweetness: 70, safety: 98 },
+    idealFlavorProfile: { umami: 2, acidity: 64, funk: 30, sweetness: 62, safety: 98 },
     difficulty: 3,
   },
   {
@@ -229,7 +229,7 @@ export const MARKET_RECIPES: Recipe[] = [
     peakWindowStart: 80, peakWindowEnd: 96,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 18, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 8, acidity: 50, funk: 35, sweetness: 55, safety: 98 },
+    idealFlavorProfile: { umami: 2, acidity: 58, funk: 34, sweetness: 38, safety: 98 },
     difficulty: 2,
   },
   {
@@ -244,7 +244,7 @@ export const MARKET_RECIPES: Recipe[] = [
     peakWindowStart: 84, peakWindowEnd: 100,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 65, salinity: 0 },
-    idealFlavorProfile: { umami: 15, acidity: 92, funk: 40, sweetness: 18, safety: 100 },
+    idealFlavorProfile: { umami: 4, acidity: 92, funk: 38, sweetness: 16, safety: 100 },
     difficulty: 3,
   },
   {
@@ -259,7 +259,7 @@ export const MARKET_RECIPES: Recipe[] = [
     peakWindowStart: 78, peakWindowEnd: 92,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 12, acidity: 80, funk: 45, sweetness: 40, safety: 98 },
+    idealFlavorProfile: { umami: 4, acidity: 84, funk: 44, sweetness: 36, safety: 98 },
     difficulty: 2,
   },
   {
@@ -278,7 +278,7 @@ export const MARKET_RECIPES: Recipe[] = [
     // four for four. At 0 it was run 432 times across every month and weather,
     // heatwaves included, and none spoiled.
     idealParams: { temp: 18, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 60, acidity: 70, funk: 25, sweetness: 25, safety: 100 },
+    idealFlavorProfile: { umami: 56, acidity: 76, funk: 22, sweetness: 28, safety: 100 },
     difficulty: 2,
   },
   {
@@ -293,7 +293,7 @@ export const MARKET_RECIPES: Recipe[] = [
     peakWindowStart: 78, peakWindowEnd: 94,
     activeIntervention: 'Clean',
     idealParams: { temp: 19, humidity: 60, salinity: 3 },
-    idealFlavorProfile: { umami: 25, acidity: 82, funk: 40, sweetness: 35, safety: 98 },
+    idealFlavorProfile: { umami: 6, acidity: 80, funk: 34, sweetness: 30, safety: 98 },
     difficulty: 2,
   },
   {
@@ -308,7 +308,7 @@ export const MARKET_RECIPES: Recipe[] = [
     peakWindowStart: 78, peakWindowEnd: 94,
     activeIntervention: 'Clean',
     idealParams: { temp: 19, humidity: 60, salinity: 5 },
-    idealFlavorProfile: { umami: 20, acidity: 85, funk: 30, sweetness: 15, safety: 98 },
+    idealFlavorProfile: { umami: 6, acidity: 86, funk: 26, sweetness: 14, safety: 98 },
     difficulty: 2,
   },
   {
@@ -323,7 +323,7 @@ export const MARKET_RECIPES: Recipe[] = [
     peakWindowStart: 74, peakWindowEnd: 90,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 22, humidity: 60, salinity: 0 },
-    idealFlavorProfile: { umami: 8, acidity: 68, funk: 30, sweetness: 50, safety: 98 },
+    idealFlavorProfile: { umami: 2, acidity: 68, funk: 26, sweetness: 48, safety: 98 },
     difficulty: 1,
   },
 ];

@@ -230,7 +230,7 @@ export const FORAGE_RECIPES: Recipe[] = [
     peakWindowStart: 86, peakWindowEnd: 100,
     activeIntervention: 'Clean',
     idealParams: { temp: 22, humidity: 60, salinity: 7 },
-    idealFlavorProfile: { umami: 82, acidity: 20, funk: 55, sweetness: 25, safety: 100 },
+    idealFlavorProfile: { umami: 80, acidity: 20, funk: 50, sweetness: 24, safety: 100 },
     difficulty: 3,
   },
   {
@@ -245,7 +245,7 @@ export const FORAGE_RECIPES: Recipe[] = [
     peakWindowStart: 88, peakWindowEnd: 100,
     activeIntervention: 'Stir',
     idealParams: { temp: 24, humidity: 65, salinity: 13 },
-    idealFlavorProfile: { umami: 90, acidity: 30, funk: 60, sweetness: 20, safety: 100 },
+    idealFlavorProfile: { umami: 86, acidity: 28, funk: 54, sweetness: 18, safety: 100 },
     difficulty: 4,
   },
   {
@@ -260,7 +260,7 @@ export const FORAGE_RECIPES: Recipe[] = [
     peakWindowStart: 84, peakWindowEnd: 100,
     activeIntervention: 'Stir',
     idealParams: { temp: 60, humidity: 70, salinity: 4 },
-    idealFlavorProfile: { umami: 95, acidity: 25, funk: 50, sweetness: 15, safety: 96 },
+    idealFlavorProfile: { umami: 88, acidity: 22, funk: 38, sweetness: 24, safety: 98 },
     difficulty: 4,
   },
   {
@@ -275,7 +275,7 @@ export const FORAGE_RECIPES: Recipe[] = [
     peakWindowStart: 78, peakWindowEnd: 94,
     activeIntervention: 'Clean',
     idealParams: { temp: 20, humidity: 60, salinity: 2 },
-    idealFlavorProfile: { umami: 45, acidity: 78, funk: 45, sweetness: 15, safety: 98 },
+    idealFlavorProfile: { umami: 52, acidity: 74, funk: 42, sweetness: 12, safety: 98 },
     difficulty: 2,
   },
   {
@@ -290,7 +290,7 @@ export const FORAGE_RECIPES: Recipe[] = [
     peakWindowStart: 84, peakWindowEnd: 100,
     activeIntervention: 'Ventilate',
     idealParams: { temp: 24, humidity: 65, salinity: 0 },
-    idealFlavorProfile: { umami: 40, acidity: 90, funk: 40, sweetness: 12, safety: 100 },
+    idealFlavorProfile: { umami: 46, acidity: 88, funk: 44, sweetness: 12, safety: 100 },
     difficulty: 3,
   },
 ];

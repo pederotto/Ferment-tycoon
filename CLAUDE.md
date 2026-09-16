@@ -1273,3 +1273,32 @@ independent of the flavour numbers.
   fix.
 
 Checked over all 72 recipes: 0 with no colour, 0 non-liquids that pour.
+
+## The flavour targets are the owner's (all 71)
+Every `idealFlavorProfile` in `constants.ts`, `constants.forage.ts`,
+`constants.heritage.ts` and `constants.market.ts` was rewritten from the owner's
+own worksheet. Do not adjust one to make a recipe easier to score — the number is
+a statement about what the ferment tastes like, and if a batch cannot reach it
+the fault is in the simulation, not the target.
+
+Two things the recipes live in four files, not one: `id: 'barley_koji'` matches
+an INGREDIENT before it matches the recipe, so a scripted edit keyed on the id
+alone hits the wrong block.
+
+**Measured after applying them: a perfectly-run batch at ideal conditions misses
+its target by 46-192 points.** Two structural gaps, both found by reading rather
+than guessing, and both larger than any number on the worksheet:
+
+- **Acidity is not produced by fermentation.** The only sources are
+  `surfaceFilm * 0.0035`, a hardcoded `+0.2` for `coconut_vin`, and `+0.05` a
+  tick past the peak. There is no lactic or acetic acidification anywhere, so
+  every LACTO, VINEGAR and KOMBUCHA recipe — the three families DEFINED by
+  acidity — tops out near zero against targets of 60-92. A sauerkraut targets 82
+  and reaches 0.
+- **Flesh does not autolyse in `getFlavorPotential`.** Umami is
+  `protein * 11 * concentration * proteolysis`, and `proteolysis` is only
+  `0.18 + protease/100 * 0.95` — the 0.18 floor is all a garum gets, because
+  there is no koji in one. Anchovies therefore cap at umami 16 against a target
+  of 94. `massBalance.enzymeScale` already knows fish break themselves down
+  ("Fish and flesh break themselves down"); `getFlavorPotential` does not, and
+  the two disagree.
