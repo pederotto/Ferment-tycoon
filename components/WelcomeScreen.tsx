@@ -2,7 +2,8 @@
 import React from 'react';
 import GameIcon from './GameIcon';
 import { ScienceIcon, LabLedgerIcon, MarketLedgerIcon, ArrowRightIcon } from './icons';
-import { KEY_ART, KEY_ART_TALL, CREST } from './titleArt';
+import { CREST } from './titleArt';
+import { LAB_PLATE } from './labPlate';
 
 interface WelcomeScreenProps {
     onStart: () => void;
@@ -16,10 +17,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onContinue, save
         <div
             onClick={hasSave ? undefined : onStart}
             className={`welcome-scene fixed inset-0 z-[100] flex items-center justify-center p-4 select-none overflow-hidden ${hasSave ? '' : 'cursor-pointer'}`}
-            /* The painting is the background; the type is set over it in the
-               game's own faces. Portrait windows get the taller cut — same
-               room, recomposed, rather than the wide one cropped to a slot. */
-            style={{ ['--art' as string]: `url(${KEY_ART})`, ['--art-tall' as string]: `url(${KEY_ART_TALL})` }}
+            /* THE TITLE SCREEN SHOWS THE HOUSE THE GAME IS ACTUALLY SET IN.
+               `KEY_ART` was a dim brown cottage larder painted before the rooms
+               were restored, so the first thing anyone saw was the one building
+               the game no longer has. It is the workshop plate until a title
+               painting exists — same hand, same camera, same restored farmhouse
+               as the room you are about to stand in, and 127 KB lighter than
+               carrying two paintings nobody else uses. `cover` takes the
+               portrait crop, so there is no second cut to keep in step. */
+            style={{ ['--art' as string]: `url(${LAB_PLATE})`, ['--art-tall' as string]: `url(${LAB_PLATE})` }}
         >
             <div className="grain" />
 

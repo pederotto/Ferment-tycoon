@@ -5047,10 +5047,12 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .welcome-alt:hover { color: #e2c27a; border-color: rgba(222, 186, 110, 0.7); }
 .save-line { color: #cfae6e; letter-spacing: 0.04em; }
 
-/* the vignette sat as deep as the old painting needed; a restored studio is a
-   lit room, so the card carries the contrast instead of the scrim */
+/* The vignette was sunk as deep as the OLD painting needed — a dim brown larder
+   that had to be pushed further down to read behind type. The workshop plate is
+   a lit, pale room, so the same scrim buried it. The card is opaque enough to
+   carry its own contrast; the scrim only has to keep the edges from competing. */
 .welcome-scene::before {
-  background: radial-gradient(ellipse 80% 70% at 50% 48%, rgba(18, 16, 14, 0.38), rgba(18, 16, 14, 0.88) 100%);
+  background: radial-gradient(ellipse 84% 76% at 50% 46%, rgba(18, 16, 14, 0.14), rgba(18, 16, 14, 0.72) 100%);
 }
 
 /* --------------------------------------------------------------------------

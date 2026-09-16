@@ -1166,7 +1166,9 @@ Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
 ## The title screen
 - The card is the studio's own language, like every other dark screen: charcoal plaster edged in black steel with a brass hairline along the top, the crest in the same brass-ringed medallion as every panel mark (`.sh-medal`), rows separated by brass hairlines rather than boxed in rules, 4px radii, and the primary action as a brass plate. It was the last screen still wearing the old direction — an 18px rounded brown card with an amber pill — and its overrides live at the END of `index.css`, because `.welcome-card` is declared twice earlier.
 - No "Physics Engine Active" stamp: the same rule as every other dark screen, which carries no watermark or Rev footer.
-- **`KEY_ART` / `KEY_ART_TALL` are still the OLD building** — a dim brown cottage larder with a beamed ceiling and hanging chillies, painted before the rooms were restored. They need repainting to the farmhouse-studio direction (lime plaster, pale oak, black steel, brass, concealed light) at 16:9 and 9:16, from the same hand and camera as the room plates.
+- **The background is `LAB_PLATE`, the workshop itself.** `KEY_ART` / `KEY_ART_TALL` were a dim brown cottage larder painted before the rooms were restored, so the first thing anyone saw was the one building the game no longer has. They are deleted (170 KB of source, ~127 KB of picture) and the title screen shows the restored workshop until a title painting exists — same hand, same camera, same house. `background-size: cover` takes the portrait crop, so there is no second cut to keep in step.
+- **A scrim is tuned to its picture.** The vignette was sunk deep enough to hold type over the dark larder, and that same scrim buried the pale, lit workshop. If the plate changes, re-tune `.welcome-scene::before`.
+- A bespoke title painting is still wanted: 16:9 and 9:16, the restored farmhouse seen from the entrance hall through into the workshop, edges furnished and the middle left calm for the card.
 
 ## "Discovered" meant three different things in the Codex
 The owner reported that a book's recipes never showed under Discovered. Three
