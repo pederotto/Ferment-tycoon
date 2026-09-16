@@ -1244,3 +1244,31 @@ that spread before touching any coefficient.
 A July heatwave and a July thunderstorm come out at exactly the same risk by
 opposite routes — hot and dry (thermal 5.25 x airborne 1.24) against warm and
 soaking (4.23 x 1.54). That is a coincidence of the numbers, not a bug.
+
+## Tasting notes: three faults of one kind
+All three were the generator asserting something absolute where the thing it was
+describing is relative. The owner reported the notes reading wrong; these are
+independent of the flavour numbers.
+
+- **A missing key in a `Partial` record fails silently.** `FAMILY_COLOUR` had no
+  ALCOHOL or KOMBUCHA entry and the colour note is skipped when the family is
+  absent, so every brew, wine, mead, kvass, tepache, chicha and kombucha printed
+  notes with NO COLOUR LINE AT ALL. Both families added, plus FAIL.
+- **The lead verb is the FORM, not the family.** It was "Pours" for everything
+  but koji: a miso paste does not pour, black garlic does not pour, tempeh and
+  natto are cakes. `COLOUR_LEAD` is keyed on `processModel(recipe).form` — the
+  same source of truth the mass balance uses, so a recipe cannot be a liquid to
+  one and a cake to the other.
+- **FAMILY is a PROCESS bucket, not an appearance one.** Miso/Paste holds
+  bottarga, katsuobushi, salumi, blue cheese, cultured butter and casu marzu,
+  none of which is "the brown of wet clay". `RECIPE_COLOUR` overrides those;
+  the family stays the fallback.
+- **"Spoiled" has to be relative to the target.** `q.safety < 60` described a
+  PERFECT example as rotten for every recipe whose target safety is under 60 —
+  casu marzu targets 10 and primordial garum 50, and both are deliberately
+  dangerous. It is `Math.min(60, target - 25)` now, so a normal recipe (target
+  100) keeps the old 60 and a casu marzu on its number is correct rather than
+  grey and weeping. `generateCriticFeedback` had the same flat test and the same
+  fix.
+
+Checked over all 72 recipes: 0 with no colour, 0 non-liquids that pour.

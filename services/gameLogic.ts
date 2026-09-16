@@ -12,7 +12,7 @@ import {
   SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
 
-import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness } from './massBalance';
+import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, processModel, ProductForm } from './massBalance';
 // --- GAMEPLAY CONSTANTS ---
 const OPTIMAL_TEMP = 30; // The "Goldilocks" zone
 const DANGER_TEMP = 42;  // Where Stress begins
@@ -2407,6 +2407,23 @@ const sentence = (parts: string[]): string => {
 };
 
 /** House vocabulary per family. Real terms of art, not adjectives at random. */
+/**
+ * COLOUR BY FAMILY, AND THE THREE WAYS THAT WENT WRONG.
+ *
+ * 1. ALCOHOL and KOMBUCHA had no entry, and the colour note is skipped when the
+ *    family is missing — so every brew, wine, mead, kvass, tepache, chicha and
+ *    kombucha in the game printed tasting notes with NO COLOUR LINE AT ALL.
+ *    A missing key in a `Partial` record fails silently; that is the whole bug.
+ * 2. The lead verb was "Pours" for everything but koji. A miso paste does not
+ *    pour, black garlic does not pour, and tempeh and natto are cakes. The verb
+ *    comes off `processModel(recipe).form` now — the same source of truth the
+ *    mass balance uses, so a recipe cannot be a liquid to one and a cake to the
+ *    other.
+ * 3. FAMILY is a PROCESS bucket, not an appearance one. Miso/Paste holds
+ *    bottarga, katsuobushi, salumi, blue cheese and cultured butter, none of
+ *    which is the brown of wet clay. Those get their own entry; the family
+ *    remains the fallback.
+ */
 const FAMILY_COLOUR: Partial<Record<FermentType, string[]>> = {
   [FermentType.GARUM]: ['a clear amber', 'the colour of weak tea', 'a deep russet'],
   [FermentType.SHOYU]: ['near-black with a red edge', 'dark mahogany', 'black until you tilt it'],
@@ -2415,6 +2432,42 @@ const FAMILY_COLOUR: Partial<Record<FermentType, string[]>> = {
   [FermentType.VINEGAR]: ['bright and slightly hazy', 'clear gold', 'cloudy, with the mother suspended'],
   [FermentType.LACTO]: ['dulled from raw, brine gone milky', 'olive-drab, as it should be', 'still bright under a cloudy brine'],
   [FermentType.BLACK]: ['gone entirely black, glossy', 'black and slightly tacky', 'jet, with a bloom of sugar on the cut'],
+  [FermentType.ALCOHOL]: ['hazy straw, still working', 'cloudy ivory with a bead on it', 'pale gold, the lees settled out'],
+  [FermentType.KOMBUCHA]: ['tea-brown and faintly cloudy', 'bright amber with the mother suspended', 'the colour of strong tea, hazed'],
+  [FermentType.FAIL]: ['a colour nothing edible has', 'grey-green and separating', 'slick, dark, and moving slightly'],
+};
+
+/** Where the family's own colour would be plainly wrong for the thing itself. */
+const RECIPE_COLOUR: Record<string, string[]> = {
+  bottarga:        ['deep amber, translucent at the edge when you slice it', 'the orange of dried apricot, waxed hard'],
+  katsuobushi:     ['the red-brown of old wood, and almost as hard', 'dark rosewood, with a bloom of mould on the outside'],
+  salumi:          ['dark red marbled with clean white fat', 'brick-red under a dusting of white mould'],
+  shio_tamago:     ['a deep translucent orange, cured firm', 'amber, dense, and glossy on the cut'],
+  blue_cheese:     ['ivory shot through with blue-green veining', 'pale cream, marbled with grey-blue'],
+  casu_marzu:      ['pale cream gone soft and weeping', 'ivory, slumped, and unmistakably alive'],
+  cultured_butter: ['pale yellow, dense and cool', 'the yellow of spring butter'],
+  ricotta_forte:   ['dead white and glossy', 'white, smooth, and slicked with oil'],
+  tempeh:          ['bound in dense white mycelium, the beans showing through', 'a firm white cake, grey where the spores have set'],
+  natto:           ['dull brown beans under a grey sheen of threads', 'brown, glossy, and webbed when you lift the spoon'],
+  meju:            ['a dark crusted brick, grey-white with whatever landed on it', 'brown-black outside, paler where it cracks'],
+  douchi:          ['near-black, wrinkled, and slick', 'black beans gone soft and glossy'],
+  nukazuke:        ['dulled by the bran bed, still bright at the core', 'olive under a coat of damp rice bran'],
+  amazake:         ['an opaque, milky white', 'thick and white, the grains still visible'],
+  shio_koji:       ['a loose ivory porridge', 'pale cream, thick, and slightly grainy'],
+  cheong:          ['a clear heavy syrup, pale gold', 'thick, bright, and barely moving'],
+  maesil_cheong:   ['pale green-gold and syrup-thick', 'clear, heavy, faintly green'],
+  scallop_fudge:   ['dark treacle-brown, thick and glossy', 'near-black, and tacky on the spoon'],
+  black_garlic:    ['jet, glossy, and soft to the point of spreadable', 'gone entirely black, with a sugar bloom on the cut'],
+};
+
+/* A paste does not pour and a cake does not. The lead verb comes off the form
+   the mass balance already assigns, so the two cannot disagree. */
+const COLOUR_LEAD: Record<ProductForm, string> = {
+  liquid: 'Pours',
+  paste:  'Sits in the crock,',
+  solid:  'Cuts',
+  bed:    'Comes up',
+  dried:  'Cuts',
 };
 
 export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[] => {
@@ -2435,22 +2488,28 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
   const even = batch.evenness ?? 100;
   const under = batch.progress < recipe.peakWindowStart;
   const over = batch.progress > recipe.peakWindowEnd + 20;
-  const spoiled = batch.status === 'spoiled' || q.safety < 60;
+  // SPOILED IS RELATIVE TO WHAT THIS FERMENT IS SUPPOSED TO BE. A flat `< 60`
+  // meant every recipe whose TARGET safety is below 60 described a perfect
+  // example as rotten: casu marzu targets 10 and primordial garum 50, and both
+  // are deliberately dangerous. A casu marzu sitting exactly on its target is
+  // not spoiled, it is correct. Normal recipes (target 100) keep the old 60.
+  const spoiled = batch.status === 'spoiled'
+    || q.safety < Math.min(60, (t.safety ?? 100) - 25);
 
   // How far each axis landed from where this recipe wanted it, so the notes talk
   // about THIS ferment rather than about high or low numbers in the abstract.
   const rel = (actual: number, target: number) => target <= 0 ? 0 : actual / target;
 
   /* --- COLOUR ------------------------------------------------------------ */
-  const baseColour = FAMILY_COLOUR[recipe.type];
+  const baseColour = RECIPE_COLOUR[recipe.id] ?? FAMILY_COLOUR[recipe.type];
   if (spoiled) {
     notes.push({ facet: 'Colour', text: pickFrom([
       'Grey at the edges and weeping. Whatever this was, it is not that now.',
       'Dull, separated, with a slick on top. It has gone over.',
     ], id + 'col') });
   } else if (baseColour) {
-    let text = `Pours ${pickFrom(baseColour, id + 'col')}`;
-    if (recipe.type === FermentType.KOJI) text = `Comes up ${pickFrom(baseColour, id + 'col')}`;
+    const lead = COLOUR_LEAD[processModel(recipe).form] ?? 'Pours';
+    let text = `${lead} ${pickFrom(baseColour, id + 'col')}`;
     if (under) text += ', paler than it should be for the age';
     else if (over) text += ', darker than the window wanted';
     if (film > 40 && !filmIsTheCulture(recipe)) text += ', with a skin you can lift off in one piece';
@@ -2680,8 +2739,12 @@ export const generateCriticFeedback = (batch: Batch, recipe: Recipe): string[] =
     // --- 4. GENERAL FEEDBACK ---
 
     // 1. SAFETY
-    if (q.safety < 60) feedback.push("CRITICAL: Contamination detected. Unsafe for consumption.");
-    else if (q.safety < 90) feedback.push("Warning: Slight off-flavors detected. Check hygiene.");
+    // Same rule as the tasting notes: a ferment that is meant to be dangerous is
+    // not "contaminated" for hitting the number it was aiming at.
+    const safetyFloor = Math.min(60, (recipe.idealFlavorProfile.safety ?? 100) - 25);
+    const safetyWarn = Math.min(90, (recipe.idealFlavorProfile.safety ?? 100) - 8);
+    if (q.safety < safetyFloor) feedback.push("CRITICAL: Contamination detected. Unsafe for consumption.");
+    else if (q.safety < safetyWarn) feedback.push("Warning: Slight off-flavors detected. Check hygiene.");
 
     // 2. PROGRESS
     if (batch.progress < recipe.peakWindowStart) feedback.push("Under-developed. Fermentation stopped too early.");
