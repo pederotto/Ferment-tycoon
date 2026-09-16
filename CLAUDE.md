@@ -1167,3 +1167,31 @@ Cmd/Ctrl+Shift+D does not work — Chrome claims it for "Bookmark all tabs".
 - The card is the studio's own language, like every other dark screen: charcoal plaster edged in black steel with a brass hairline along the top, the crest in the same brass-ringed medallion as every panel mark (`.sh-medal`), rows separated by brass hairlines rather than boxed in rules, 4px radii, and the primary action as a brass plate. It was the last screen still wearing the old direction — an 18px rounded brown card with an amber pill — and its overrides live at the END of `index.css`, because `.welcome-card` is declared twice earlier.
 - No "Physics Engine Active" stamp: the same rule as every other dark screen, which carries no watermark or Rev footer.
 - **`KEY_ART` / `KEY_ART_TALL` are still the OLD building** — a dim brown cottage larder with a beamed ceiling and hanging chillies, painted before the rooms were restored. They need repainting to the farmhouse-studio direction (lime plaster, pale oak, black steel, brass, concealed light) at 16:9 and 9:16, from the same hand and camera as the room plates.
+
+## "Discovered" meant three different things in the Codex
+The owner reported that a book's recipes never showed under Discovered. Three
+defects, all from one word being reused for three different sets:
+
+- **The shelf chip's count had no branch of its own.** The count ternary ran
+  `all → cooked → book → else unknown`, with nothing for `discovered`, so that
+  chip fell through and displayed the **unknown** count. It advertised 68 and its
+  shelf held 0. **Every shelf needs its own branch**; a ternary chain with a
+  catch-all else silently mislabels any id you forget.
+- **The word collided.** The head plate's "Discovered" counts `analyzedRecipeIds`
+  (what you have cooked, with `+N` for book-only); the shelf filtered
+  `discoveredRecipeIds`, which App.tsx writes ONLY when you produce something you
+  had *not* read first. So a player who had just bought a book looked under the
+  one word that specifically excludes books. The shelf takes the card badge's own
+  words now — **"Found it yourself"** — and "Discovered" appears once, on the plate.
+- **The "Found it yourself" badge was unreachable.** `discoveredRecipeIds` is
+  written in the same updater as `analyzedRecipeIds` (App.tsx ~1321 and ~1686), so
+  it is always a SUBSET of it, and the badge chain tested `isAnalyzed` first —
+  "Analyzed" won every time. The more specific fact goes first.
+
+Measured in the browser after the fix, with The Bench Primer bought and nothing
+cooked: Everything 71, Found it yourself 0, Cooked 0, In the book 3, Unknown 68 —
+and every chip's count equals the number of cards its shelf renders. That
+count-equals-contents check is the regression test for this panel.
+
+Note the Codex lists `RECIPES` only, so a procedural recipe (`*_gen`) never
+appears on any shelf and cannot be used to test it.

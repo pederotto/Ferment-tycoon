@@ -98,8 +98,9 @@ const BatchController: React.FC<BatchControllerProps> = ({
   const [temp, setTemp] = useState(20);
   const [humidity, setHumidity] = useState(50);
   const [salinity, setSalinity] = useState(0);
-  // Water is titrated as a % of solids mass, exactly as salt is, instead of being
-  // dropped in as fixed 1L blocks that silently ate vessel capacity.
+  // Water is titrated as a % of the solids mass — a baker's percentage — instead
+  // of being dropped in as fixed 1L blocks that silently ate vessel capacity.
+  // Salt is NOT: it is a share of the finished mash. See `requiredSaltMass`.
   const [hydration, setHydration] = useState(DEFAULT_HYDRATION);
   // Cleared once the player moves the dial, so the recipe's suggested mash never
   // overwrites a deliberate choice.
@@ -968,7 +969,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
                       step="0.5"
                       value={salinity}
                       onChange={(e) => setSalinity(Number(e.target.value))}
-                      aria-label="Salinity as a percentage of solids"
+                      aria-label="Salinity as a percentage of the finished mash"
                     />
                     <div className="kv">
                       <span className="k">Salt to weigh out</span>

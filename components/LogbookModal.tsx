@@ -150,14 +150,20 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
           <div className="shelf-row">
             {([
               { id: 'all', label: 'Everything' },
-              { id: 'discovered', label: 'Discovered' },
+              { id: 'discovered', label: 'Found it yourself' },
               { id: 'cooked', label: 'Cooked' },
               { id: 'book', label: 'In the book' },
               { id: 'unknown', label: 'Unknown' },
             ] as const).map(sh => {
               const n = RECIPES.filter(r => r.id !== 'bio_sludge' && (() => {
                 const k = getRecipeKnowledge(r.id, unlockedRecipes, analyzedRecipeIds, ownedBookIds);
-                return sh.id === 'all' ? true : sh.id === 'cooked' ? k === 'analyzed' : sh.id === 'book' ? k === 'known' : k === 'unknown';
+                // Every shelf needs its own branch. Without one for 'discovered' this
+                // fell through to `k === 'unknown'`, so that chip counted the recipes
+                // you have NOT met — it promised fifty and the shelf held three.
+                return sh.id === 'all' ? true :
+                  sh.id === 'discovered' ? discoveredRecipeIds.includes(r.id) :
+                  sh.id === 'cooked' ? k === 'analyzed' :
+                  sh.id === 'book' ? k === 'known' : k === 'unknown';
               })()).length;
               return (
                 <button
@@ -226,13 +232,13 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
                           {(() => { const era = eraForRecipe(recipe.id); return era ? (
                             <span className="era-tag" title={`${era.title} · ${era.years}`}>{era.title}</span>
                           ) : null; })()}
-                          {isAnalyzed ? (
-                            <span className="status-chip ready" style={{ background: 'rgba(138,154,107,0.15)', color: 'var(--moss)' }}>
-                              <CheckCircle2 size={10} /> Analyzed
-                            </span>
-                          ) : discoveredRecipeIds.includes(recipe.id) ? (
+                          {discoveredRecipeIds.includes(recipe.id) ? (
                             <span className="status-chip" style={{ background: 'rgba(217,164,65,0.15)', color: 'var(--amber)' }}>
                               <GameIcon name="sparkle" size={10} /> Found it yourself
+                            </span>
+                          ) : isAnalyzed ? (
+                            <span className="status-chip ready" style={{ background: 'rgba(138,154,107,0.15)', color: 'var(--moss)' }}>
+                              <CheckCircle2 size={10} /> Analyzed
                             </span>
                           ) : knowledge === 'known' ? (
                             <span className="status-chip" style={{ background: 'rgba(157,139,176,0.15)', color: 'var(--plum)' }}>
