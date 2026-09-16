@@ -241,6 +241,16 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   ...HERITAGE_MATRIX,
   ...MARKET_MATRIX,
 
+  /* KOJI GROWS ON ALMOST ANYTHING, NOT ONLY GRAIN.
+     Aspergillus takes a pork loin, a mushroom, a cabbage heart or an oily fillet
+     as readily as it takes barley, and what it makes of each is a different
+     food. These sit above the catch-all so the SUBSTRATE decides the output
+     instead of everything becoming barley koji. */
+  { recipeId: 'koji_pork_loin',     substrate: { kind: 'is', id: 'pork_belly' }, requires: ['spores'], forbids: ['water', 'koji'], vesselId: 'koji_tray' },
+  { recipeId: 'koji_mackerel_cure', substrate: { kind: 'is', id: 'mackerel' },   requires: ['spores', 'salt'], forbids: ['water'], vesselId: 'koji_tray' },
+  { recipeId: 'koji_lions_mane',    substrate: { kind: 'is', id: 'lions_mane' }, requires: ['spores'], forbids: ['salt', 'water'], vesselId: 'koji_tray' },
+  { recipeId: 'koji_root_pastrami', substrate: { kind: 'oneOf', ids: ['beetroot', 'white_cabbage', 'napa_cabbage'], label: 'A beetroot or a firm cabbage heart' }, requires: ['spores'], forbids: ['salt', 'water'], vesselId: 'koji_tray' },
+
   // Catch-all: anything sporulated on a tray becomes koji. Must stay last.
   { recipeId: 'barley_koji', substrate: { kind: 'present' }, requires: ['spores'], vesselId: 'koji_tray' },
 ];
@@ -1521,6 +1531,15 @@ const NEW_SUBSTRATES: Ingredient[] = [
     mass: 1000, unitDisplay: 'kg',
   },
   {
+    id: 'beetroot', name: 'Beetroot', type: IngredientType.SUBSTRATE,
+    baseCost: 5, currency: 'money', quality: 72,
+    description: 'Dense, sweet and earthy, and firm enough to hold its shape through a cure. Sugar beet is the sweetest thing that grows in a cold field.',
+    idealFor: ['koji_root_pastrami', 'lacto'], supplierId: 'nordic', tierRequired: 0,
+    season: [6, 7, 8, 9, 10],
+    hiddenStats: { starchContent: 4, sugarContent: 8, nativeSalinity: 0, microbialDiversity: 6, fatContent: 0, proteinContent: 2, innateUmami: 2 },
+    mass: 1000, unitDisplay: 'kg',
+  },
+  {
     id: 'pork_belly', name: 'Pork Belly', type: IngredientType.SUBSTRATE,
     baseCost: 55, currency: 'money', quality: 84,
     description: 'Fat and lean in layers. Cured and hung, the fat carries everything the culture makes.',
@@ -2409,6 +2428,72 @@ export const RECIPES: Recipe[] = [
   },
 
   // --- UTILITY / GENERIC ---
+  {
+    id: 'koji_pork_loin',
+    name: 'Koji Cured Pork',
+    type: FermentType.KOJI,
+    description: 'Whole pork muscle dusted with spores in damp warmth. A white pelt takes the surface and drives months of dry-curing proteolysis into two days.',
+    requiredIngredients: { substrate: true, starter: 'koji_spores', additive: null },
+    outputIngredientId: 'koji_pork',
+    requiredVesselId: 'koji_tray',
+    baseDurationSeconds: 60,
+    peakWindowStart: 85,
+    peakWindowEnd: 98,
+    activeIntervention: 'Flip',
+    idealParams: { temp: 32, humidity: 85, salinity: 0 },
+    idealFlavorProfile: { umami: 78, acidity: 14, funk: 38, sweetness: 22, safety: 96 },
+    difficulty: 3
+  },
+  {
+    id: 'koji_mackerel_cure',
+    name: 'Koji-Cured Mackerel',
+    type: FermentType.KOJI,
+    description: 'Salt-drained oily fillets dusted with spores. The surface colonises before anything else can, and the enzymes turn the flesh into sea ham.',
+    requiredIngredients: { substrate: true, starter: 'koji_spores', additive: 'salt' },
+    outputIngredientId: 'koji_mackerel',
+    requiredVesselId: 'koji_tray',
+    baseDurationSeconds: 55,
+    peakWindowStart: 85,
+    peakWindowEnd: 98,
+    activeIntervention: 'Flip',
+    idealParams: { temp: 22, humidity: 70, salinity: 4 },
+    idealFlavorProfile: { umami: 88, acidity: 16, funk: 44, sweetness: 18, safety: 96 },
+    difficulty: 3
+  },
+  {
+    id: 'koji_lions_mane',
+    name: "Koji-Bloomed Lion's Mane",
+    type: FermentType.KOJI,
+    description: "Fungus on fungus. The koji knits into the mushroom's own spines and digests its chitin into sweet, lobster-like amino sugars.",
+    requiredIngredients: { substrate: true, starter: 'koji_spores', additive: null },
+    outputIngredientId: 'koji_lions_mane',
+    requiredVesselId: 'koji_tray',
+    baseDurationSeconds: 50,
+    peakWindowStart: 82,
+    peakWindowEnd: 96,
+    activeIntervention: 'Flip',
+    idealParams: { temp: 30, humidity: 80, salinity: 0 },
+    idealFlavorProfile: { umami: 72, acidity: 10, funk: 28, sweetness: 44, safety: 98 },
+    difficulty: 2
+  },
+  {
+    id: 'koji_root_pastrami',
+    name: 'Koji Vegetable Charcuterie',
+    type: FermentType.KOJI,
+    /* The owner asked for a root and there was none in the pantry, so a beetroot
+       was added for it. A cabbage heart still works and is the cheap route. */
+    description: 'A roasted beetroot — or a firm cabbage heart — dusted with spores. The koji knits a rind around it and draws the water out until it slices like cold bresaola.',
+    requiredIngredients: { substrate: true, starter: 'koji_spores', additive: null },
+    outputIngredientId: 'koji_root',
+    requiredVesselId: 'koji_tray',
+    baseDurationSeconds: 55,
+    peakWindowStart: 84,
+    peakWindowEnd: 98,
+    activeIntervention: 'Flip',
+    idealParams: { temp: 30, humidity: 85, salinity: 0 },
+    idealFlavorProfile: { umami: 48, acidity: 22, funk: 32, sweetness: 62, safety: 98 },
+    difficulty: 2
+  },
   {
     id: 'barley_koji',
     name: 'Barley Koji',

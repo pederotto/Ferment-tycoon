@@ -1452,3 +1452,44 @@ amino sauces.
 differential's reagent pool by type silently dropped every koji combination —
 a quarter of the matrix — and made the amino rule look like dead code. Build that
 pool from explicit ids.
+
+## Koji grows on almost anything, with a different output each time
+The catch-all — anything sporulated on a tray — turned EVERY substrate into
+barley koji, which is the same complaint this file already makes about einkorn.
+Four named entries sit above it so the substrate decides what you get: a pork
+loin, an oily mackerel fillet, a lion's mane and a beetroot (added for this; a
+cabbage heart is the cheap route). Grains still fall through to `barley_koji`
+and heritage grains to `heritage_koji`, both untouched.
+
+Differential-tested over 86,450 combinations: 102 moved, all of them off the
+catch-all onto the four new recipes, and `barley_koji` is still reachable.
+
+**A fifth was asked for and NOT added: a koji-pelted corn cob.** Corn plus spores
+on a tray is already `heritage_koji`, and there is no ingredient that tells a
+whole cob from cracked corn — so the entry could only sit above heritage_koji and
+shadow a named recipe, which this file forbids. It needs its own substrate first.
+
+## Three ways a batch could not progress at all
+All three were invisible because flavour developed on a batch whose progress was
+frozen, so it looked slow rather than broken. Tying development to progress is
+what exposed them.
+
+- **`temp > 10` gated ALL progress**, and two named recipes are held below that
+  by their own ideal: kimchi ferments at 8 C and shio-tamago at 6. Held exactly
+  where their recipe says, both sat at progress 0 forever while printing "Too
+  cold to develop" at the correct temperature. Cold is slow, not stopped, and
+  the warning now fires where it is true — far below what THIS ferment wants,
+  not below an absolute ten degrees.
+- **The koji branch's `speedMult` is `1 + (temp - 30) / 20`**, which is exactly
+  zero at 10 C and negative below. Floored.
+- **Casu marzu's `progress *= 0.1` multiplied CUMULATIVE progress**, so a clean
+  bench did not slow the larvae, it drove the batch backwards every tick and
+  pinned it near zero. Only the gain is damped now.
+
+## Character develops with progress, not with ticks
+`convert` was a flat 0.035 per tick, so how far a ferment got depended on its
+`baseDurationSeconds`: a 400-tick colatura converged completely while a 45-tick
+amazake reached about three quarters and a koji bed less. Same defect as the
+sporulation window — the timer deciding the outcome instead of the process.
+Against progress every ferment arrives at its peak having become itself, and a
+long one is long because it is slow, not because it ends up different.

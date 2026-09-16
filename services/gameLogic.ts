@@ -1273,7 +1273,13 @@ export const processBatchTick = (
 
       // 6. PROGRESSION
       if (stress < 90 && newParams.humidity > 30) {
-          const speedMult = 1 + ((newParams.temp - 30) / 20);
+          // COLD IS SLOW, NOT STOPPED. This was `1 + (temp - 30) / 20`, which is
+          // exactly ZERO at 10 C and NEGATIVE below it — so every recipe held
+          // cold could never progress at all. Kimchi sits at 8 C, shio-tamago at
+          // 6, blue cheese at 11 and salumi at 13: four named recipes that could
+          // not be finished, and the whole point of the cellar is holding things
+          // cold. A ferment near freezing crawls; it does not stand still.
+          const speedMult = Math.max(0.12, 1 + ((newParams.temp - 30) / 20));
           const baseGrowth = (100 / recipe.baseDurationSeconds);
           progress += (baseGrowth * speedMult * speedModifier * genSpeedBuff);
       }
@@ -1355,9 +1361,24 @@ export const processBatchTick = (
       surfaceWater = Math.max(0, Math.min(100, surfaceWater + ex.surfaceDelta));
 
       // 3. Temperature-Dependent Progress
-      if (newParams.temp > 10 && newParams.temp < 65) {
+      //
+      // COLD IS SLOW, NOT STOPPED. This required `temp > 10` to make any
+      // progress at all, and two named recipes are held BELOW that by their own
+      // ideal: kimchi ferments at 8 C and shio-tamago at 6. Both were therefore
+      // impossible — held exactly where the recipe says to hold them, they sat
+      // at progress 0 forever and printed "Too cold to develop" at the correct
+      // temperature. A cold ferment crawls, which is the entire reason anyone
+      // ferments cold; it does not stand still.
+      if (newParams.temp < 65) {
            const tempOptimality = 1 - (Math.abs(newParams.temp - recipe.idealParams.temp) / 50);
-           progress += (100 / recipe.baseDurationSeconds) * speedModifier * genSpeedBuff * Math.max(0.1, tempOptimality);
+           const cold = newParams.temp >= 10 ? 1 : Math.max(0.12, 1 - (10 - newParams.temp) / 12);
+           progress += (100 / recipe.baseDurationSeconds) * speedModifier * genSpeedBuff * Math.max(0.1, tempOptimality) * cold;
+           // The warning belongs where it is TRUE: far below what this ferment
+           // wants, not below an absolute ten degrees.
+           if (newParams.temp < recipe.idealParams.temp - 8 && newParams.temp < 12
+               && !messages.includes('Too cold to develop')) {
+               messages.push('Too cold to develop');
+           }
       } else if (newParams.temp >= 65) {
            // Enzymes are proteins and they denature. Past 65 C nothing further
            // happens, ever — which is a legitimate outcome but a baffling one to
@@ -1366,8 +1387,6 @@ export const processBatchTick = (
            if (!messages.includes('Enzymes denatured — too hot to develop further')) {
                messages.push('Enzymes denatured — too hot to develop further');
            }
-      } else if (newParams.temp <= 10 && !messages.includes('Too cold to develop')) {
-           messages.push('Too cold to develop');
       }
   }
 
@@ -1557,7 +1576,10 @@ export const processBatchTick = (
   if (recipe.id === 'casu_marzu') {
       // Must be dirty to feed larvae
       if (hygiene > 50) {
-          progress *= 0.1; // Slows down
+          // This multiplied CUMULATIVE progress, so a clean bench did not merely
+          // slow the larvae — it drove the batch backwards every tick and pinned
+          // it near zero forever. Only the gain is damped.
+          progress = batch.progress + (progress - batch.progress) * 0.1;
           if (Math.random() < 0.05 && !messages.includes("Larvae Starving")) messages.push("Larvae Starving (Too Clean!)");
       }
   }
@@ -1686,7 +1708,16 @@ export const processBatchTick = (
     ? 1
     : Math.max(0.25, 1 - Math.abs(newParams.salinity - idealSal) / (idealSal * 1.6));
 
-  const convert = 0.035 * processQuality * salFactor;
+  // CHARACTER DEVELOPS WITH PROGRESS, NOT WITH TICKS.
+  // This was a flat 0.035 per tick, so how far a ferment got depended on its
+  // `baseDurationSeconds`: a colatura runs 400 ticks and converged completely,
+  // while a 45-tick amazake reached about three quarters of what it could be and
+  // a koji bed less. That is the same defect the sporulation window had — the
+  // timer deciding the outcome instead of the process. Against progress, every
+  // ferment arrives at its peak having become itself, and a long one is long
+  // because it is slow, not because it ends up different.
+  const progressDelta = Math.max(0, progress - batch.progress);
+  const convert = (progressDelta / 100) * 3.0 * processQuality * salFactor;
 
   if (progress <= effectivePeakEnd) {
     newQuality.umami += (potential.umami * rdUmamiMult - newQuality.umami) * convert;
