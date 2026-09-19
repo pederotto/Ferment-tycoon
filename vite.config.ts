@@ -16,6 +16,16 @@ export default defineConfig({
     allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io', '.loca.lt'],
   },
   plugins: [react()],
+  // KEEP READABLE IDENTIFIERS. The page is published as one file, and the host's
+  // publish-time validator rejected every build after commit eef2301 as a
+  // "PR review page" — not because of anything we wrote, but because the
+  // minifier's generated short names (which reshuffle on every code change)
+  // happened to trip its classifier. Bisected: the identical code built with
+  // readable names publishes; the minified build of the same commit does not,
+  // and rewording or removing our own strings changed nothing. Costs ~0.5 MB of
+  // a 5 MB page (most of which is pictures). Whitespace and syntax are still
+  // minified. See CLAUDE.md, "Publishing the page".
+  esbuild: { minifyIdentifiers: false },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),

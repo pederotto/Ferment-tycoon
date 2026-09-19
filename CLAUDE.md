@@ -1564,3 +1564,38 @@ plus what moves in behind it.
 
 Measured across all 75: mean miss **66**, thirteen still over 90, down from about
 130 when the owner's targets first went in.
+
+## Publishing the page
+The game ships as ONE page on claude.ai. Three things about that page, each
+learned by breaking it:
+
+- **Upload content only.** The host wraps every upload in its own
+  `<!doctype html><head><body>` skeleton, so the file is: a `<title>` (read from
+  the first 8 KB), the Google Fonts `<link>`, `<style>`, `<div id="root"></div>`,
+  `<script type="module">`. A packager that reused a DOWNLOADED page as its
+  template double-wrapped everything and cut out the `#root` that sat between
+  `</style>` and `<script>` — so `index.tsx` threw "Could not find root element"
+  and three published versions showed only the background. Assert `#root` is
+  present and precedes the script before every publish.
+- **Keep the Google Fonts link.** It is the one font host the artifact CSP
+  admits. The old inliner handled only `<script>` and `<link rel=stylesheet
+  crossorigin>` and silently dropped it, so the published game rendered on
+  fallback fonts for its entire life — the five-faces rule above never reached a
+  player. Check `document.fonts` after a local load.
+- **Readable identifiers (`esbuild.minifyIdentifiers: false` in vite.config).**
+  Every build after commit `eef2301` was rejected with "This page carries the
+  artifact-pr-review machinery … too large for a review page". Bisected, with
+  controls: the minified bundle of that commit fails; the SAME code built with
+  readable names publishes; the previous commit's minified bundle publishes;
+  cutting half out of the passing bundle still publishes while cutting either
+  half out of the failing one does not. Rewording or removing our own strings
+  changed nothing. The minifier's short names reshuffle on every code change
+  and some arrangement of them trips the host's classifier. Below ~300 KB the
+  error changes type (it complains about a missing "approve control"), so a
+  byte-level bisection cannot be trusted past that point and no single name is
+  proven. Readable names cost ~0.5 MB of a 5.5 MB page and remove the lottery.
+
+Check a packaged page before publishing by serving it locally (a throwaway
+`python3 -m http.server` preview entry) and confirming `#root` has children,
+`.welcome-card` exists, no console errors, and the faces are in
+`document.fonts`. Then publish to the same URL.
