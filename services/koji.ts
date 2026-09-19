@@ -132,7 +132,7 @@ export const advanceEnzymes = (
   // and slower than anything you pitch on purpose.
   const power = !starter ? 1
     : /rhizopus/.test(starter.id) ? 0.30
-    : /bacillus/.test(starter.id) ? 0.75
+    : /bacillus/.test(starter.id) ? 1.3   // a protease powerhouse: natto is proteolysed in a day
     : /roqueforti|glaucus|larvae/.test(starter.id) ? 0.45
     : 1;
   const step = PEAK_ACTIVITY * 0.027 * rate * phase * power;

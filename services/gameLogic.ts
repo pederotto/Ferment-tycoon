@@ -12,11 +12,23 @@ import {
   SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
 
-import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, processModel, ProductForm, alcoholPct } from './massBalance';
+import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, processModel, ProductForm, alcoholPct, chargeOf, alcoholTolerance } from './massBalance';
 // --- GAMEPLAY CONSTANTS ---
 /* How much acid a unit of fermentable sugar becomes, on the 0-100 flavour
    scale. Measured against the owner's targets, not guessed — see CLAUDE.md. */
 const ACID_SCALE = 25;
+
+/* Perceived sweetness and sourness of a LIQUID, from what is dissolved in it.
+   Taste saturates — a 40% syrup is not twice as sweet as a 20% one — so each is
+   a saturating curve of the concentration in the liquid phase, in % by mass.
+   Calibrated against the owner's targets over every liquid recipe (sim). */
+const LIQUID_SWEET_K = 13;
+const LIQUID_SOUR_K = 1.35;
+
+/* How strongly a long, warm age darkens a paste or a sauce (Maillard): the share
+   of its reactive sugar-and-amino pool traded from sweetness into depth. Swept
+   against every recipe in the catalogue (sim), not fitted to one. */
+const AGEING_MAILLARD = 0.45;
 
 const OPTIMAL_TEMP = 30; // The "Goldilocks" zone
 const DANGER_TEMP = 42;  // Where Stress begins
@@ -1486,6 +1498,14 @@ export const processBatchTick = (
       : (ingredients.find(i => i.type === IngredientType.STARTER)
          ?? ingredients.find(i => /koji|nuruk/.test(i.id) && !/spore/.test(i.id)));
     if (starterIng) {
+      // Start from the enzymes the charge BROUGHT, never from nothing. A new batch
+      // has no enzymes field; growing it from zero left a sake or a miso charged
+      // with a good koji reading amylase 5, and the mass balance — which trusts
+      // what the batch has grown — then left most of its starch unconverted.
+      if (!enzymes) {
+        const brought = getBatchEnzymes(ingredients, batch.ingredientQuantities);
+        enzymes = { amylase: brought.amylase, protease: brought.protease, lipase: brought.lipase ?? 0 };
+      }
       // The koji stage is SHORT and it finishes: three days on a bed, to full
       // strength, before any brine touches it. So inside that window the bed
       // develops on its own clock (progress/25) and at a bed's full rate — it is
@@ -2044,8 +2064,10 @@ export const getFlavorPotential = (
   // barley koji's is 18. Read off the substrate alone it sat at 33.
   const pitched = ingredients.some(i => i.type === IngredientType.STARTER)
     || ingredients.some(i => /koji|nuruk|scoby/.test(i.id) && !/spore/.test(i.id));
-  const wildBloom = !pitched && recipe
-    && (recipe.type === FermentType.KOJI || recipe.type === FermentType.MISO) ? 8 : 0;
+  // A KOJI-type bed caught from the air (meju). Not the Miso/Paste bucket: that
+  // family also holds salumi, bottarga and bagoong, which are salted and hung,
+  // never bloomed — gating on it gave a salumi meju's wild funk (92 vs 48).
+  const wildBloom = !pitched && recipe && recipe.type === FermentType.KOJI ? 8 : 0;
   const microbes = Math.max(h.microbialDiversity, starterMicrobes, wildBloom);
 
   const autolysis = isFlesh(sub) ? 0.82 : 0;
@@ -2061,7 +2083,17 @@ export const getFlavorPotential = (
   // Salt stops the mould making any more, so the pool is fixed at what went into
   // the mash and time does the rest — which is exactly why a moromi is left for
   // a year and why the one left a week is thin.
-  const reach = (e: number, k: number) => 1 - Math.exp(-Math.max(0, e) / k);
+  //
+  // ...AND TIME IS THE OTHER HALF OF IT. Extent is enzyme activity INTEGRATED
+  // over time, not enzyme strength alone: saturating on strength let a 55-second
+  // tempeh and a 60-second white miso break their protein down as far as a
+  // year-old moromi (umami 70 against 34, 94 against 52). A weak pool given a
+  // year goes far; a strong one given three days goes some way; a weak one given
+  // two days barely starts. Duration is the process's own length, so a long
+  // ferment is unchanged (it saturates regardless) and only the short ones lose
+  // the depth they never had time to build.
+  const time = recipe ? Math.max(0.3, Math.min(2.5, recipe.baseDurationSeconds / 120)) : 1;
+  const reach = (e: number, k: number) => 1 - Math.exp(-Math.max(0, e) * time / k);
   const proteolysis = 0.18 + autolysis + 0.95 * reach(enz.protease, 26);
   const saccharification = 0.15 + 1.0 * reach(enz.amylase, 26);
   // Lipolysis frees butyric, caproic and caprylic acids from fat. That is where
@@ -2129,19 +2161,145 @@ export const getFlavorPotential = (
   // is a syrup and a cider vinegar is bone dry.
   const residual = 1 - (model?.attenuation ?? 0.5) * 0.85;
 
-  return {
-    umami: (proteinAvail * 11 * proteolysis + innateUmami * 9) * c,
-    // Funk comes from two places: the wild life already in the substrate, and
-    // fat being taken apart.
-    // Wild population only counts to the extent that something is actually
-    // working. A cheong is sugar drawing juice out of pine needles and nothing
-    // ferments in it, yet it was scored on the needles' microbes and came out
-    // funkier than a blue cheese.
-    funk: (microbes * 10.5 * (0.55 + 0.45 * (model?.attenuation ?? 0.6)) + fatAvail * 6 * lipolysis) * c,
-    // Free sugar is already there; starch only counts once amylase reaches it.
-    sweetness: (sugarAvail * 9 + starchAvail * 7 * saccharification) * c * residual,
-    acidity,
-  };
+  // A DRINK IS ITS LIQUID. For a liquid product, sweetness and sourness are how
+  // much sugar and acid are dissolved in the liquid you actually taste — and the
+  // mass balance already knows that in grams. The index average above treats
+  // water as diluting the taste and averages over solids that are strained out:
+  // a realistic kombucha (mostly water) came out tasting of nothing, and a
+  // cheong — pine needles and sugar 1:1, whose syrup is 43% sugar — reached
+  // sweetness 34 because three kilos of needles were averaged into the "sugar".
+  // Pastes and solids are eaten whole, so they keep the index model.
+  // A BRINE TOO WEAK TO PRESERVE lets bacteria ferment the protein itself.
+  // Every acid in this model came from sugar, and fish has none — so a
+  // surströmming, whose whole identity is a 6% brine that does NOT stop the
+  // bacteria, came out at acidity 0 and half its funk. Below about 15% salt, with
+  // no heat and no koji to out-compete them, anaerobes turn amino acids into
+  // propionic, butyric and acetic acid and hydrogen sulphide. A proper garum's
+  // 20-25% salt shuts it off, which is exactly why a colatura is clean and a
+  // surströmming clears a room. It is the GARUM family (protein under salt)
+  // whatever its form — surströmming is eaten as fillets, not poured.
+  let bacterial = 0;
+  if (recipe && recipe.type === FermentType.GARUM && recipe.idealParams.temp < 45
+      && !ingredients.some(i => /koji/.test(i.id) && !/spore/.test(i.id))) {
+    const ch0 = chargeOf(ingredients, quantities, recipe);
+    const w0 = Math.max(1, ch0.waterG);
+    const s0 = Math.min(ch0.saltG, 0.357 * w0);
+    const saltPct0 = (s0 / (w0 + s0)) * 100;
+    bacterial = proteinAvail * Math.max(0, 1 - saltPct0 / 15);
+  }
+  const bacterialFunk = bacterial * 12;
+
+  let sweetness = (sugarAvail * 9 + starchAvail * 7 * saccharification) * c * residual;
+  let liquidAcidity = model?.form === 'liquid' ? acidity : acidity + bacterial * 15 * c;
+  let liquidSaltPct = -1;
+  if (recipe && model?.form === 'liquid') {
+    const ch = chargeOf(ingredients, quantities, recipe);
+    const available = ch.sugarG + ch.starchG * saccharification * 0.7;
+    // Fermentation stops where the yeast dies, and the sugar it could not reach
+    // is still in the glass (the same tolerance the composition model applies).
+    const etohCap = (alcoholTolerance(recipe) / 100) * ch.massG / Math.max(0.01, model.toEthanol);
+    const fermented = Math.min(available * model.attenuation, etohCap);
+    const left = Math.max(0, available - fermented * 0.85);
+    const water = Math.max(1, ch.waterG);
+    const sugarPct = (left / (water + left)) * 100;
+    // Acid the fruit arrived with dissolves into its own juice: a citrus at the
+    // top of the scale is about 6% acid.
+    let innateAcidG = 0;
+    for (const i of ingredients) {
+      if (i.id === 'water' || /salt/.test(i.id)) continue;
+      const m = quantities && quantities[i.id] !== undefined ? quantities[i.id] : (i.mass ?? 1000);
+      innateAcidG += ((i.hiddenStats.innateAcidity ?? 0) / 10) * 0.06 * m;
+    }
+    let acidPct = ((fermented * model.toAcid + innateAcidG) / (water + available)) * 100;
+    // SALT MASKS SOURNESS AND SWEETNESS. The same 1% of acid is loudly sour in an
+    // unsalted kombucha and barely there in a shoyu at 16% salt — a real mixture
+    // suppression, and without it every shoyu read as sour as a vinegar. Only the
+    // salt the water can hold counts; the rest sits undissolved.
+    const dissolvedSalt = Math.min(ch.saltG, 0.357 * water);
+    const saltPct = (dissolvedSalt / (water + dissolvedSalt)) * 100;
+    const masking = 1 / (1 + saltPct / 14);
+    liquidSaltPct = saltPct;
+    // A BRINE TOO WEAK TO PRESERVE lets bacteria ferment the protein itself.
+    // Every acid here came from sugar, and fish has none — so a surströmming,
+    // whose whole identity is a 6% brine that does NOT stop the bacteria, came out
+    // at acidity 0 and a fraction of its funk. Below about 15% salt, with no heat
+    // and no koji to out-compete them, anaerobes turn amino acids into propionic,
+    // butyric and acetic acid and hydrogen sulphide. A proper garum's 20-25% salt
+    // shuts this off, which is exactly why a colatura is clean and a surströmming
+    // clears a room.
+    acidPct += bacterial * 0.4;
+    sweetness = 100 * (1 - Math.exp(-sugarPct / LIQUID_SWEET_K)) * masking;
+    liquidAcidity = 100 * (1 - Math.exp(-acidPct / LIQUID_SOUR_K)) * masking;
+  }
+
+  let umami = (proteinAvail * 11 * proteolysis + innateUmami * 9) * c;
+  // Funk comes from two places: the wild life already in the substrate, and
+  // fat being taken apart. Wild population only counts to the extent that
+  // something is actually working — a cheong is sugar drawing juice out of pine
+  // needles, nothing ferments in it, and it came out funkier than a blue cheese.
+  let funk = (microbes * 10.5 * (0.55 + 0.45 * (model?.attenuation ?? 0.6)) + fatAvail * 6 * lipolysis) * c
+    + bacterialFunk;
+
+  // TIME DARKENS. Over a long age the reducing sugars and the amino acids the
+  // enzymes freed react with each other — the Maillard reaction, slowly, at
+  // cellar temperature — and a paste or a sauce trades sweetness for depth:
+  // darker, rounder, roasted, "aged". Measured across the catalogue, every long
+  // maturing paste and sauce came out short of its funk (-17 to -44) and most too
+  // sweet, while the one short white miso was the opposite — exactly the
+  // signature of a time-driven reaction the model did not have. It needs BOTH
+  // reactants (a fish garum has no sugar to brown), grows with how long the
+  // process runs, and is faster warm. Blackening is the same chemistry pushed to
+  // its conclusion at 60 C and has its own branch below.
+  if (recipe && recipe.type !== FermentType.BLACK && ageingBehaviour(recipe) === 'matures') {
+    const age = Math.max(0, Math.min(1, (recipe.baseDurationSeconds - 80) / 180));
+    const warmth = Math.max(0.3, Math.min(1.3, 0.5 + (recipe.idealParams.temp - 10) / 30));
+    const reactive = Math.min(1, Math.min(sugarAvail + starchAvail * saccharification, proteinAvail * 1.5) / 5);
+    const m = AGEING_MAILLARD * age * warmth * reactive;
+    sweetness *= 1 - 0.7 * m;
+    funk += m * 60 * c;
+    umami += m * 20 * c;
+  }
+
+  // BLACKENING IS CHEMISTRY, NOT FERMENTATION. The family's own description
+  // says every microbe is dead at 60 C, yet it was given microbial funk and a
+  // microbe's appetite for its sugar. What weeks of humid heat actually do:
+  // hydrolyse fructans and starch into sugar with no enzyme at all (the heat and
+  // the fruit's own acid do it), then react those reducing sugars with amino
+  // acids — the Maillard reaction — into dark melanoidins that taste savoury,
+  // balsamic and roasted. So: sterile, fully hydrolysed, and whatever reacts is
+  // bounded by the scarcer of sugar and amino acid.
+  if (recipe && recipe.type === FermentType.BLACK) {
+    const pool = sugarAvail + starchAvail * 0.9;
+    const maillard = Math.min(pool, proteinAvail * 2) * 0.5;
+    sweetness = (pool - maillard * 0.4) * 9 * c;
+    umami += maillard * 6 * c;
+    funk = maillard * 3.5 * c;                        // roasted, not rotten
+    // A very sweet thing tastes less sour than its acid says: sugar masks sourness
+    // the way salt does in a brine.
+    liquidAcidity = (innateAcidity * 9 + maillard * 3.5) * c / (1 + sweetness / 150);
+  }
+
+  // DISSOLVED GLUTAMATE IS TASTED IN THE LIQUID too, like the sugar and the acid
+  // above. Perception compresses dilution (taste follows a power law), so a
+  // drink's savour falls off far more gently than its solids fraction: a tomato
+  // kombucha scaled by `c` alone lost almost all of the tomato it is made from.
+  if (recipe && model?.form === 'liquid' && c < 1) umami *= Math.pow(c, 0.4) / c;
+
+  const starterIds = ingredients.filter(i => i.type === IngredientType.STARTER).map(i => i.id).join(' ');
+  // A BLUE MOULD EATS THE ACID. Penicillium roqueforti consumes lactic acid as it
+  // ripens — a blue cheese goes from about pH 4.6 to 6 — which is the defining
+  // chemistry of every mould-ripened cheese. The lactose was being taken all the
+  // way to acid and left there: acidity 100 against a target of 42.
+  if (/roqueforti|penicill/.test(starterIds)) liquidAcidity *= 0.45;
+  // BACILLUS DEAMINATES. Natto's funk is ammonia, cut from the amino acids by the
+  // same bacterium that freed them, and that ammonia is why natto is ALKALINE
+  // (target acidity 5). Funk rises with what was broken down; acid falls away.
+  if (/bacillus/.test(starterIds)) {
+    funk += proteinAvail * proteolysis * 3.2 * c;
+    liquidAcidity *= 0.2;
+  }
+
+  return { umami, funk, sweetness, acidity: liquidAcidity };
 };
 
 export const generateInitialQuality = (ingredients: Ingredient[]): FlavorProfile => {

@@ -120,6 +120,13 @@ interface Charge { waterG: number; saltG: number; proteinG: number; fatG: number
  * depends on what it is: produce is mostly wall once the water is out, a grain
  * or pulse a little, flesh very little.
  */
+/** The strength at which this ferment's yeast gives up (% by mass). Sake yeast is
+    the toughest (multiple parallel fermentation); a kombucha's barely starts. */
+export const alcoholTolerance = (recipe: Recipe): number =>
+  recipe.id === 'grain_sake' ? 20
+    : recipe.type === FermentType.ALCOHOL ? 16
+    : recipe.type === FermentType.KOMBUCHA ? 4 : 14;
+
 export const chargeOf = (
   ingredients: Ingredient[], quantities: Record<string, number> | undefined, recipe: Recipe
 ): Charge => {
@@ -182,7 +189,7 @@ const BY_TYPE: Record<FermentType, ProcessModel> = {
   [FermentType.LACTO]:    { dry: 0.02, proteolysis: 0.12, amylolysis: 0.05, attenuation: 0.85, toEthanol: 0.02, toAcid: 0.88, toGas: 0.10, respiration: 0,    form: 'solid' },
   [FermentType.KOJI]:     { dry: 0.14, proteolysis: 0.30, amylolysis: 0.35, attenuation: 0.30, toEthanol: 0,    toAcid: 0.05, toGas: 0.95, respiration: 0.12, form: 'bed' },
   [FermentType.MISO]:     { dry: 0.03, proteolysis: 0.60, amylolysis: 0.70, attenuation: 0.55, toEthanol: 0.20, toAcid: 0.45, toGas: 0.35, respiration: 0,    form: 'paste' },
-  [FermentType.SHOYU]:    { dry: 0.04, proteolysis: 0.80, amylolysis: 0.75, attenuation: 0.62, toEthanol: 0.25, toAcid: 0.45, toGas: 0.30, respiration: 0,    form: 'liquid' },
+  [FermentType.SHOYU]:    { dry: 0.04, proteolysis: 0.80, amylolysis: 0.75, attenuation: 0.63, toEthanol: 0.42, toAcid: 0.18, toGas: 0.40, respiration: 0,    form: 'liquid' },
   [FermentType.GARUM]:    { dry: 0.06, proteolysis: 0.85, amylolysis: 0.05, attenuation: 0.20, toEthanol: 0,    toAcid: 0.50, toGas: 0.50, respiration: 0,    form: 'liquid' },
   [FermentType.VINEGAR]:  { dry: 0.06, proteolysis: 0.05, amylolysis: 0.05, attenuation: 0.95, toEthanol: 0.02, toAcid: 0.60, toGas: 0.38, respiration: 0,    form: 'liquid' },
   [FermentType.BLACK]:    { dry: 0.40, proteolysis: 0.10, amylolysis: 0.10, attenuation: 0.35, toEthanol: 0,    toAcid: 0.15, toGas: 0.25, toSolids: 0.60, respiration: 0, form: 'dried' },
@@ -191,7 +198,13 @@ const BY_TYPE: Record<FermentType, ProcessModel> = {
   [FermentType.KOMBUCHA]: { dry: 0.04, proteolysis: 0.03, amylolysis: 0,    attenuation: 0.50, toEthanol: 0.10, toAcid: 0.45, toGas: 0.45, respiration: 0,    form: 'liquid' },
 };
 
-/* SECONDARY FERMENTATION IS MOST OF WHAT A LONG MASH DOES. A moromi is not
+/* SHOYU's split is set off what a pressed raw shoyu actually carries — about 1%
+   lactic acid, 2-4% sugar, 2-3% alcohol — and conserves mass: the CO2 is what
+   the alcohol releases (glucose splits about 51/49), not more. An earlier split
+   sent 53% of the fermented sugar off as gas, which emptied the liquid phase and
+   dropped a moromi's press from 66% to 28%.
+
+   SECONDARY FERMENTATION IS MOST OF WHAT A LONG MASH DOES. A moromi is not
    finished when the koji's enzymes are: halophilic lactobacillus and yeasts move
    in behind them and work for months, souring it and taking most of the sugar.
    Attenuation for the salted mashes was set as if only the mould acted, which
@@ -218,6 +231,13 @@ const BY_RECIPE: Record<string, Partial<ProcessModel>> = {
      that is the whole point of a white miso, and the family's long-ferment
      attenuation ate it. */
   shiro_miso:    { attenuation: 0.18, toAcid: 0.25 },
+  /* Gochujang is a SWEET paste — rice starch taken to sugar and held there by
+     salt and a short ferment. The long-miso souring took it to acidity 68 against
+     a target of 18. */
+  gochujang:     { attenuation: 0.20, toAcid: 0.18 },
+  /* "An amylase miso: sweet rather than savoury" — its own description. Same
+     shape as the white miso: kept short so the corn's sugar survives. */
+  corn_miso:     { attenuation: 0.22, toAcid: 0.20 },
   yellow_peaso:  { attenuation: 0.30, toAcid: 0.35 },
   /* Openly WILD brews: no pitched yeast, so lactic acid bacteria work alongside
      whatever yeast lands and the result is sour as well as alcoholic. A pitched
@@ -254,7 +274,23 @@ export const vesselOpenness = (vesselId: string | undefined, vent: number): numb
 /** Enzyme strength behind the breakdown: the batch's own koji where it has one, else the family's native activity. */
 const enzymeScale = (batch: Batch, charge: Charge, kind: 'protease' | 'amylase', recipe: Recipe): number => {
   const e = batch.enzymes?.[kind];
-  if (e !== undefined && charge.koji) return clamp(e / 70, 0.2, 1.3);
+  // What the batch GREW, whether it was charged a finished koji or grew one from
+  // spores in its own koji stage. This read the enzymes only when a finished koji
+  // was charged, so a moromi — built from spores — was assumed to have a flat 0.6
+  // while the flavour model had grown it a protease of 95: the two modules
+  // disagreed, the mash kept its protein intact, and intact protein held the
+  // liquid back in the press (a moromi pressed 29% against a real 55-80%).
+  const grew = e !== undefined && ((batch.enzymes?.protease ?? 0) + (batch.enzymes?.amylase ?? 0)) > 10;
+  // EXTENT IS ENZYME x TIME, AND IT SATURATES — the same rule the flavour model
+  // follows, so the two cannot disagree. This was `e / 70`, linear in strength:
+  // a sake's koji at amylase 20 could convert a quarter of the grain's starch
+  // however many weeks the mash ran, and the unconverted starch held the liquid
+  // back (a sake pressed 22%). Strength sets how fast; the process's own length
+  // decides how far that gets.
+  if (e !== undefined && (charge.koji || grew)) {
+    const t = clamp(recipe.baseDurationSeconds / 120, 0.3, 2.5);
+    return clamp(1.3 * (1 - Math.exp(-e * t / 30)), 0.2, 1.3);
+  }
   // Fish and flesh break themselves down; a brew's amylase comes from its koji or nuruk.
   if (kind === 'protease' && recipe.type === FermentType.GARUM) return 1;
   if (charge.koji) return 0.8;
@@ -302,9 +338,7 @@ export const compositionOf = (batch: Batch, recipe: Recipe, ingredients: Ingredi
   // wine and mead yeasts stop nearer 16, and the wild consortia in a kvass or a
   // tepache give up far sooner. Sugar the yeast could not eat stays sugar,
   // which is exactly why a stuck mead is sweet.
-  const tolerance = recipe.id === 'grain_sake' ? 20
-    : recipe.type === FermentType.ALCOHOL ? 16
-    : recipe.type === FermentType.KOMBUCHA ? 4 : 14;
+  const tolerance = alcoholTolerance(recipe);
   const massNow = PARTS.reduce((a, p) => a + c[p], 0);
   const ceiling = massNow * (tolerance / 100);
   if (c.ethanolG > ceiling) {

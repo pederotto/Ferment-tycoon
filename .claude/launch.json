@@ -6,6 +6,18 @@
       "runtimeExecutable": "./node_modules/.bin/vite",
       "runtimeArgs": [],
       "port": 3000
+    },
+    {
+      "name": "artifact-check",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4173",
+        "--directory",
+        "dist/artifact"
+      ],
+      "port": 4173
     }
   ]
 }

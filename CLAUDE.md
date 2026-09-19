@@ -1595,7 +1595,76 @@ learned by breaking it:
   byte-level bisection cannot be trusted past that point and no single name is
   proven. Readable names cost ~0.5 MB of a 5.5 MB page and remove the lottery.
 
-Check a packaged page before publishing by serving it locally (a throwaway
-`python3 -m http.server` preview entry) and confirming `#root` has children,
-`.welcome-card` exists, no console errors, and the faces are in
-`document.fonts`. Then publish to the same URL.
+**`npm run package`** builds and folds the page into `dist/artifact/index.html`
+with `scripts/package_artifact.py`, which asserts `#root`, the fonts link and no
+wrapper tags — it lives in the repo because the ad-hoc packager that caused both
+bugs above was rewritten from memory each session. Before publishing, start the
+`artifact-check` preview (it serves `dist/artifact`), confirm the title card
+renders, `document.fonts` holds the faces, and a batch ticks at 8x with nothing
+after a `console.error` marker. Then publish to the same URL.
+
+
+## A drink is its liquid (and the rest of the last flavour round)
+Mean miss over all 75 recipes, charged the way a competent player charges each
+kind of ferment and scored on the profile the CRITIC scores (after drying has
+concentrated it): **~130 when the owner's targets went in → 51, none over 90.**
+
+- **Taste the liquid.** For `form === 'liquid'`, sweetness and sourness are the
+  concentrations of sugar and acid DISSOLVED IN THE LIQUID, in grams from
+  `chargeOf`, through a saturating perceptual curve (`LIQUID_SWEET_K`,
+  `LIQUID_SOUR_K`). The index model treated water as diluting the taste and
+  averaged over solids that are strained out: a realistic kombucha — mostly
+  water — tasted of nothing, and a 1:1 cheong, whose syrup is 43% sugar,
+  reached sweetness 34 because the needles were averaged in. Pastes and solids
+  are eaten whole and keep the index model. Umami in a liquid takes a power-law
+  (c^0.4) rather than linear dilution for the same reason.
+- **Salt masks sourness and sweetness** (`1 / (1 + salt%/14)` of the liquid's
+  dissolved salt). The same 1% acid is loud in unsalted kombucha and quiet in a
+  16% shoyu; without it every shoyu read as sour as a vinegar.
+- **Shoyu's split is what raw shoyu carries**: attenuation 0.63, toEthanol 0.42,
+  toAcid 0.18, toGas 0.40 (CO2 is what the alcohol releases, ~51/49, not more).
+  A moromi now presses 67% at 17.7% salt, 1.3% acid, 4.8% sugar, 2.9% alcohol.
+- **Weak brine lets bacteria ferment the protein.** Garum-family, below ~15%
+  salt, no heat, no koji: amino acids become propionic/butyric/acetic acid and
+  H2S — acid and funk from PROTEIN, the only route for a fish that has no sugar.
+  Surströmming went from acidity 0 to 28 and funk 54 to 74. It applies whatever
+  the form (surströmming is modelled as solid fillets).
+- **Blackening is chemistry.** Sterile (no microbial funk), fructans and starch
+  hydrolysed by heat alone, and the Maillard reaction bounded by the scarcer of
+  sugar and amino acid — sweetness kept, umami and balsamic acid gained, a sweet
+  thing's acid masked by its sugar. Black apple 92 → 46, black garlic 72 → 54.
+- **Time darkens** (`AGEING_MAILLARD`, swept, 0.45). Every long maturing paste
+  and sauce was short on funk (-17 to -44) and too sweet while the short white
+  miso was the opposite — the signature of a time-driven reaction. It grows with
+  the process's length and warmth and needs both reactants.
+- **Extent is enzyme x time, and it saturates — in BOTH models.** Strength sets
+  how fast; the process's own length sets how far. Saturating on strength alone
+  let a 55-second tempeh break down its protein as far as a year-old moromi;
+  scaling linearly in the mass balance let a sake's koji convert only a quarter
+  of the grain's starch however long the mash ran.
+- **A blue mould eats the acid** (P. roqueforti deacidifies ripening cheese, pH
+  4.6 → 6). **Bacillus deaminates**: natto's funk is ammonia, which is also why
+  natto is alkaline. Bacillus is a protease powerhouse (1.3), not a weak mould.
+- **The wild-bloom funk is KOJI-type only.** Gating it on Miso/Paste too handed
+  salumi, bottarga and bagoong — salted and hung, never bloomed — a meju's wild
+  funk (salumi 92 against 48).
+- **The mass balance reads the enzymes the batch GREW**, not only a charged koji
+  (a moromi grows its own from spores), and growth is SEEDED from what the charge
+  brought — growing from zero left a sake charged with good koji at amylase 5.
+- Short, sweet pastes (shiro miso, gochujang, corn miso) carry `BY_RECIPE`
+  overrides so the long-miso souring does not reach them.
+
+Harness lessons, each of which produced a false failure first:
+- Charge salt at the recipe's salinity with the BENCH formula, never a flat kilo
+  (surströmming is a 6% brine, not 25%).
+- A `/koji/` quantity rule matches `koji_spores`: a kilo of spores has no
+  composition stats, so the mass balance counts it all as fibre and a moromi
+  "pressed" 29%.
+- A drink is charged as a drink (tea is a pinch, water is the bulk); a white
+  miso is koji-heavy by definition; a tomato kombucha is fed the fruit's own
+  water. A new batch has NO enzymes field — start the harness the same way.
+
+Still apart from target, with causes known: rose garum is a koji extraction and
+wants a koji-heavy charge; kimchi's umami target assumes the fish sauce its
+matrix entry does not take; corn chicha's open-pot funk; einkorn sake presses
+41% where rice presses 62% (documented above — sake rice is polished for this).
