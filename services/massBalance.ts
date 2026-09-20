@@ -238,6 +238,13 @@ const BY_RECIPE: Record<string, Partial<ProcessModel>> = {
   /* "An amylase miso: sweet rather than savoury" — its own description. Same
      shape as the white miso: kept short so the corn's sugar survives. */
   corn_miso:     { attenuation: 0.22, toAcid: 0.20 },
+  /* THE 60 C GARUMS ARE ENZYMATIC, NOT MICROBIAL. Held at sixty, nothing
+     establishes — that is the whole point of the modern route, and why the salt
+     there is for flavour rather than safety. The family's attenuation assumed
+     microbes eating the sugar, which soured a rose garum (acidity 52 against 30)
+     and dried it out (sweetness 40 against 68). The koji's enzymes still work;
+     nothing ferments what they free. */
+  rose_garum:    { attenuation: 0.05, toAcid: 0.10 },
   yellow_peaso:  { attenuation: 0.30, toAcid: 0.35 },
   /* Openly WILD brews: no pitched yeast, so lactic acid bacteria work alongside
      whatever yeast lands and the result is sour as well as alcoholic. A pitched
@@ -478,6 +485,14 @@ export const concentratedProfile = (batch: Batch, recipe: Recipe): FlavorProfile
  */
 const HOLD = { fibreG: 2.8, proteinG: 2.0, starchG: 2.2, fatG: 1.2, salt: 1.0 };
 
+/* Some things are pressed HARD. A sake moromi goes into a fune or a bag press
+   under real pressure and the cake comes out as dry sheets of kasu; a colatura
+   is drawn off by gravity through a hole. The general retention is a gravity-
+   and-cloth number, so the recipes that are genuinely squeezed carry a factor.
+   Without it a sake on a whole heritage grain — bran and all — pressed 41%
+   against a real 45-85%. */
+const PRESSED_HARD: Record<string, number> = { grain_sake: 0.7, makgeolli: 0.85 };
+
 /* Whole pieces (a cabbage, a porcini) keep their cells shut and hold far more than
    a crushed fruit mash; a paste sits between. */
 const WHOLE_PIECES: Record<ProductForm, number> = { solid: 2.5, paste: 1.2, liquid: 1, bed: 1, dried: 1 };
@@ -572,8 +587,9 @@ export const planSeparation = (
   };
 
   const pieces = WHOLE_PIECES[processModel(recipe).form] ?? 1;
+  const squeeze = PRESSED_HARD[recipe.id] ?? 1;
   const held = (solidsScale: number) =>
-    solidsScale * (HOLD.fibreG * pieces * c.fibreG + HOLD.proteinG * c.proteinG + HOLD.starchG * c.starchG + HOLD.fatG * c.fatG + HOLD.salt * c.undissolvedSaltG);
+    solidsScale * squeeze * (HOLD.fibreG * pieces * c.fibreG + HOLD.proteinG * c.proteinG + HOLD.starchG * c.starchG + HOLD.fatG * c.fatG + HOLD.salt * c.undissolvedSaltG);
   // What leaves a share of the liquid phase takes of each dissolved component.
   const liquidTake = (share: number): Partial<Record<Part, number>> => ({
     waterG: c.waterG * share, saltG: dissolvedSalt * share, aminoG: c.aminoG * share,

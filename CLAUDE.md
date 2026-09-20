@@ -1668,3 +1668,60 @@ Still apart from target, with causes known: rose garum is a koji extraction and
 wants a koji-heavy charge; kimchi's umami target assumes the fish sauce its
 matrix entry does not take; corn chicha's open-pot funk; einkorn sake presses
 41% where rice presses 62% (documented above — sake rice is polished for this).
+
+## Four things the general model cannot see
+Four recipes stayed short of the owner's targets for reasons that are true of
+the real food and invisible to a model that only reads the charge. They are
+declared together at the top of `gameLogic.ts` rather than hidden as conditions
+further down, because each is a statement about the food, not a fudge factor.
+
+- **`AROMATIC_INFUSION` — an aromatic is infused and strained, not body.** Rose
+  petals flavour a garum; the KOJI is its substrate and does all the work.
+  Weighed as body in the mass-weighted composition, 300 g of petals diluted
+  1 kg of koji and umami came out 19 against a target of 42 unless the player
+  charged six parts koji to one of petals. Skipped in the body loop alongside
+  water and salt.
+- **`IMPLIED_SEASONING` — some recipes name only their headline reagents.**
+  Kimchi's yangnyeom is not just chili: it carries jeotgal or fish sauce, and a
+  pear and a rice porridge. The matrix asks for chili and salt, so that savour
+  and sweetness had nowhere to come from (umami 2 against 48). Rose garum takes
+  its acidity here for a different reason — see below.
+- **`SPONTANEOUS_BREWS` — a wild brew catches its population like a meju.**
+  `wildBloom` was gated on `FermentType.KOJI`, so a chicha with "no starter at
+  all, the oldest way there is" was scored on the corn's own microbes.
+- **`PRESSED_HARD` (massBalance) — some things are squeezed, most are drained.**
+  A sake moromi goes into a fune and the kasu comes out as dry sheets; a
+  colatura runs through a hole under gravity. The general retention is a
+  gravity-and-cloth number, so sake on a whole heritage grain pressed 41%
+  against a real 45–85%.
+
+Two more of the same kind, found while measuring these:
+
+- **A 60 °C garum is ENZYMATIC, not microbial.** Nothing is alive at that
+  temperature — that is the whole point of the modern route, and why its salt is
+  for flavour rather than safety. The Garum family's `attenuation` assumed
+  microbes eating the sugar, which soured a rose garum to acidity 52 against 30
+  and dried it to sweetness 40 against 68. `BY_RECIPE` gives it 0.05/0.10: the
+  koji's enzymes still work, nothing ferments what they free. Its brightness is
+  the flower's own, and no hidden stat carries "aromatic acidity", so it is
+  declared.
+- **Aroma rides in the liquid, the same as savour.** The liquid model compresses
+  dilution for umami (`c^0.4`) because taste follows a power law; funk was still
+  scaled straight down by the solids fraction, so a chicha that is four parts
+  water was an open-pot spontaneous brew smelling of nothing (funk 14 against
+  58). Both axes take the compression now.
+
+**Tried and reverted: "koji makes citric acid above 50 °C."** It would have
+supplied the rose garum's acidity from the model rather than by declaration, but
+the mould is long dead at that temperature, and crediting it soured the amazake
+held at the same heat to acidity 64 against a target of 6.
+
+Measured after: rose garum miss 85 → 28 (score 90), kimchi 77 → 37 (85),
+corn chicha 81 → 45 (84), sake press 41% → 53% and miss 65 → 60. Catalogue-wide,
+mean miss 49 over 75 recipes, none over 90, and 24 of 24 mass/press checks in
+their practice bands.
+
+**The press bands in the harness are PRACTICE ranges, not invented ones.** Two
+bands written for the koji-extraction garums were guesses at what a number
+should be, and a guessed band is not a test — it fails the code for disagreeing
+with the guess. If there is no real figure for a process, do not check it.

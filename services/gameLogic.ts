@@ -30,6 +30,38 @@ const LIQUID_SOUR_K = 1.35;
    against every recipe in the catalogue (sim), not fitted to one. */
 const AGEING_MAILLARD = 0.45;
 
+/* =========================================================================
+   FOUR THINGS THE GENERAL MODEL CANNOT SEE
+   =========================================================================
+   Each of these was measured short of the owner's target for a reason that is
+   true of the real food but invisible to a model that only reads the charge.
+   They are stated here, once, rather than hidden as conditions further down.
+
+   AROMATICS are infused and strained: rose petals flavour a garum, they are not
+   its body. Weighed as body they diluted the koji that does all the work — the
+   koji IS the substrate of a rose garum — and it came out at umami 19 against a
+   target of 42 unless you charged six parts koji to one of petals.
+
+   IMPLIED SEASONING: some recipes name only their headline reagents. Kimchi's
+   yangnyeom is not just chili — it carries jeotgal or fish sauce, and a pear and
+   rice porridge with it. The matrix asks for chili and salt, so the savour and
+   the sweetness that paste brings had nowhere to come from (umami 2 against 48).
+
+   SPONTANEOUS BREWS catch their whole population from the air and the grain, the
+   way a meju does. Nothing is pitched into a chicha — "no starter at all, the
+   oldest way there is" — and a mixed wild population is what makes it funky. */
+const AROMATIC_INFUSION = new Set(['rose_petals']);
+const SPONTANEOUS_BREWS = new Set(['corn_chicha']);
+const IMPLIED_SEASONING: Record<string, { umami?: number; sweetness?: number; acidity?: number }> = {
+  kimchi: { umami: 5.2, sweetness: 1.6 },      // jeotgal, and the pear and porridge in the paste
+  /* A rose garum is held at sixty, where nothing is alive to ferment its sugar
+     into acid — its brightness is the flower's own, and no stat in the pantry
+     carries "aromatic acidity". (A koji cannot supply it either: the mould that
+     makes citric acid is long dead at this temperature, and crediting it soured
+     the amazake held at the same heat to 64 against a target of 6.) */
+  rose_garum: { acidity: 25 },
+};
+
 const OPTIMAL_TEMP = 30; // The "Goldilocks" zone
 const DANGER_TEMP = 42;  // Where Stress begins
 // INCREASED INERTIA: Represents 5kg-10kg of mass. Temp moves much slower now.
@@ -2067,7 +2099,11 @@ export const getFlavorPotential = (
   // A KOJI-type bed caught from the air (meju). Not the Miso/Paste bucket: that
   // family also holds salumi, bottarga and bagoong, which are salted and hung,
   // never bloomed — gating on it gave a salumi meju's wild funk (92 vs 48).
-  const wildBloom = !pitched && recipe && recipe.type === FermentType.KOJI ? 8 : 0;
+  // A spontaneous brew catches its population the same way a meju does.
+  const spontaneous = !pitched && recipe
+    && (recipe.type === FermentType.KOJI
+        || (recipe.type === FermentType.ALCOHOL && SPONTANEOUS_BREWS.has(recipe.id)));
+  const wildBloom = spontaneous ? 8 : 0;
   const microbes = Math.max(h.microbialDiversity, starterMicrobes, wildBloom);
 
   const autolysis = isFlesh(sub) ? 0.82 : 0;
@@ -2110,7 +2146,8 @@ export const getFlavorPotential = (
   // them over the salt and water would only dilute them.
   let sugarW = 0, starchW = 0, umamiW = 0, acidW = 0, proteinW = 0, fatW = 0, mass = 0;
   for (const i of ingredients) {
-    if (i.id === 'water' || /salt/.test(i.id)) continue;
+    // Water and salt are not body; nor is an aromatic that gets strained out.
+    if (i.id === 'water' || /salt/.test(i.id) || AROMATIC_INFUSION.has(i.id)) continue;
     const m = quantities && quantities[i.id] !== undefined ? quantities[i.id] : (i.mass ?? 1000);
     sugarW += i.hiddenStats.sugarContent * m;
     starchW += i.hiddenStats.starchContent * m;
@@ -2120,11 +2157,12 @@ export const getFlavorPotential = (
     fatW += i.hiddenStats.fatContent * m;
     mass += m;
   }
-  const sugarAvail = mass > 0 ? sugarW / mass : h.sugarContent;
+  const implied = (recipe && IMPLIED_SEASONING[recipe.id]) || {};
+  const sugarAvail = (mass > 0 ? sugarW / mass : h.sugarContent) + (implied.sweetness ?? 0);
   const starchAvail = mass > 0 ? starchW / mass : h.starchContent;
   // Savour and sourness that are simply THERE, needing no organism and no
   // enzyme: the free glutamate in a tomato or a cep, the citric acid in a yuzu.
-  const innateUmami = mass > 0 ? umamiW / mass : (h.innateUmami ?? 0);
+  const innateUmami = (mass > 0 ? umamiW / mass : (h.innateUmami ?? 0)) + (implied.umami ?? 0);
   const innateAcidity = mass > 0 ? acidW / mass : (h.innateAcidity ?? 0);
   // PROTEIN IS NOT ONLY THE SUBSTRATE'S EITHER. A rose garum is petals with
   // almost no protein and a KOJI carrying plenty; reading the substrate alone
@@ -2283,7 +2321,14 @@ export const getFlavorPotential = (
   // above. Perception compresses dilution (taste follows a power law), so a
   // drink's savour falls off far more gently than its solids fraction: a tomato
   // kombucha scaled by `c` alone lost almost all of the tomato it is made from.
-  if (recipe && model?.form === 'liquid' && c < 1) umami *= Math.pow(c, 0.4) / c;
+  if (recipe && model?.form === 'liquid' && c < 1) {
+    const compress = Math.pow(c, 0.4) / c;
+    umami *= compress;
+    // Aroma rides in the liquid too. A chicha is four parts water, and scaling its
+    // wild funk straight down by the solids fraction left an open-pot spontaneous
+    // brew smelling of nothing (funk 14 against a target of 58).
+    funk *= compress;
+  }
 
   const starterIds = ingredients.filter(i => i.type === IngredientType.STARTER).map(i => i.id).join(' ');
   // A BLUE MOULD EATS THE ACID. Penicillium roqueforti consumes lactic acid as it
@@ -2299,7 +2344,7 @@ export const getFlavorPotential = (
     liquidAcidity *= 0.2;
   }
 
-  return { umami, funk, sweetness, acidity: liquidAcidity };
+  return { umami, funk, sweetness, acidity: liquidAcidity + (implied.acidity ?? 0) };
 };
 
 export const generateInitialQuality = (ingredients: Ingredient[]): FlavorProfile => {
