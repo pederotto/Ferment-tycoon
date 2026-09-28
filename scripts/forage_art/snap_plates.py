@@ -41,6 +41,12 @@ SOURCES = {
     'ai7n02': ('top_field', ORDER),
     't1yf76': ('walled_garden', ORDER),
     'tt4gcw': ('orangery', ['summer', 'spring', 'autumn', 'winter_snow']),  # no clear winter came
+    # the second batch; a sixth image in a set is a sprite sheet, not a plate
+    'r92u4r': ('hen_run', ORDER),
+    'wzj3y2': ('worm_shed', ORDER),
+    'cy615i': ('pine_plantation', ORDER),
+    'xxfz5j': ('wild_map', ORDER),
+    'hp0qrm': ('farm_map', ['winter', 'winter_snow', 'summer']),   # no spring or autumn came
 }
 
 W, H = 480, 268
@@ -49,7 +55,7 @@ CX = 0.95 + np.arange(W) * PITCH
 CY = 0.82 + np.arange(H) * PITCH
 
 
-def snap(path: str) -> Image.Image:
+def snap(path: str, palette: bool = True) -> Image.Image:
     a = np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
     if a.shape[:2] != (768, 1376):
         raise ValueError(f'{path}: expected 1376x768, got {a.shape[1]}x{a.shape[0]}')
@@ -59,7 +65,9 @@ def snap(path: str) -> Image.Image:
     n = np.median(st, axis=0)
     n = np.concatenate([n[:1], n, n[-1:]], axis=0)          # 268 -> 270, a true 16:9
     im = Image.fromarray(np.clip(n + 0.5, 0, 255).astype(np.uint8))
-    return im.quantize(colors=64, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    # A sprite sheet keeps its colours: a palette cut on a sheet that is mostly
+    # magenta spends its colours on the ground and tints every sprite.
+    return im.quantize(colors=64, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) if palette else im
 
 
 def index(path: str) -> int:

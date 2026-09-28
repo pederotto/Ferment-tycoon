@@ -492,6 +492,29 @@ export const FARM_TOOLS: FarmTool[] = [
    --------------------------------------------------------------------------- */
 export const VAN_WHOLESALE = 0.4;
 export const VAN_RECOVERY = 0.35;          // share of the gap to 1 recovered each week
+/* -----------------------------------------------------------------------------
+   BIODYNAMIC: no synthetic sprays, no bought-in feed, living soil, heirloom seed
+   The label is earned per bed and per tree: a year clean of synthetic sprays
+   and bought manure (the conversion — land comes to you farmed conventionally,
+   so the year starts the day you buy it), and soil life of 60 or more at the
+   harvest, which the soil lab's compost, castings and IMO build. Every seed in
+   the game is an heirloom or a landrace, so non-GMO is given.
+   --------------------------------------------------------------------------- */
+export const BIO_CONVERSION_DAYS = 336;
+export const BIO_LIFE_MIN = 60;
+/** What a synthetic spray clears at once and keeps off for a fortnight: pests, fungi and weeds. Not frost, birds, boar or the soil diseases. */
+export const SPRAYABLE = new Set(['weeds', 'slugs', 'whites', 'flea', 'blight', 'whitefly', 'tuta', 'aphids', 'blackfly', 'chocolate_spot', 'pea_moth', 'mildew', 'ascochyta', 'rust', 'grain_rust', 'botrytis', 'borer', 'blackspot', 'codling', 'scab', 'plum_moth', 'brown_rot', 'scale']);
+export const SPRAY_DAYS = 14;
+/** Dollars of spray per square metre; a tree takes as much as 10 m². */
+export const SPRAY_COST_M2 = 0.12;
+
+/* THE MARKET FOR WHAT YOU GROW. Home-grown sells over the van's wholesale; a
+   biodynamic label sells for a great deal more, but the buyers who pay for it
+   are few, so the premium saturates fast and recovers weekly. */
+export const HOME_GROWN_PREMIUM = 1.25;
+export const BIO_VAN_PREMIUM = 1.6;
+export const BIO_APPETITE_KG = 6;
+
 export const PRODUCE_CLASS: Record<string, { label: string; appetiteKg: number }> = {
   tomato: { label: 'Tomatoes', appetiteKg: 14 },
   chili: { label: 'Chili', appetiteKg: 3 },

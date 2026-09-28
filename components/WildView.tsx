@@ -1,7 +1,7 @@
 import React from 'react';
 import { GameState } from '../types';
 import { GroundId } from '../types.farm';
-import { WILD, WILD_ORDER, LOOKALIKES, GROUNDS, GROUND_ORDER, STATE_WORDS, signalsFor } from '../constants.wild';
+import { WILD, WILD_ORDER, LOOKALIKES, GROUNDS, GROUND_ORDER, STATE_WORDS, signalsFor, MAP_PINS } from '../constants.wild';
 import { INGREDIENTS } from '../constants';
 import { ActionResult } from '../services/estate';
 import {
@@ -10,7 +10,7 @@ import {
 } from '../services/wild';
 import { CalendarDate, DayWeather, formatDuration, absoluteDay } from '../services/climate';
 import { MONTH_NAMES } from '../constants.forage';
-import { WILD_TILES, tileRect } from './EstateScene';
+import { WILD_TILES, tileRect, wildMapPainted } from './EstateScene';
 import { FACILITIES } from '../constants.farm';
 
 /* =============================================================================
@@ -30,6 +30,33 @@ const monthsLabel = (m: number[]) => (m.length ? (m.length === 1 ? MONTH_NAMES[m
 /* --- the overlay: pins on a ground, postcards on the map --- */
 export const WildHits: React.FC<{ state: GameState; place: GroundId | 'wild_map'; date: CalendarDate; wx: DayWeather; size: [number, number]; onGo: (p: any) => void; act: Act; owned: Record<string, boolean> }> = ({ state, place, date, wx, size, onGo, act, owned }) => {
   const [W, H] = size;
+  if (place === 'wild_map' && wildMapPainted()) {
+    // Pins on the painted map: every ground, the salt pans, and the way home.
+    const r = 9;
+    const pins = [...GROUND_ORDER.map(g => ({ id: g as string, label: `${GROUNDS[g].name} · ${formatDuration(walkTo(state, g))}`, name: g === 'bog' && !wildOf(state).bogFound ? 'The Moss ?' : GROUNDS[g].name, locked: false })),
+      { id: 'salt_pans', label: FACILITIES.salt_pans.name + (owned.salt_pans ? '' : ' (buy it from the farm ledger)'), name: 'The Salt Pans', locked: !owned.salt_pans },
+      { id: 'farm_map', label: 'Home to the farm', name: 'The Farm', locked: false }];
+    return (
+      <svg className="estate-hits" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        {pins.map(pn => {
+          const at = MAP_PINS[pn.id === 'farm_map' ? 'farm' : pn.id];
+          if (!at) return null;
+          const go = () => !pn.locked && onGo(pn.id);
+          const right = at[0] > W - 90;
+          return (
+            <g key={pn.id} role="button" tabIndex={pn.locked ? -1 : 0} aria-label={pn.label} className={`wild-pin map${pn.locked ? ' read' : ''}`}
+              onClick={go} onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && !pn.locked) { e.preventDefault(); go(); } }}>
+              <title>{pn.label}</title>
+              <circle cx={at[0]} cy={at[1]} r={r * 1.8} className="hit" />
+              <circle cx={at[0]} cy={at[1]} r={r} className="ring" />
+              <circle cx={at[0]} cy={at[1]} r={r * 0.32} className="dot" />
+              <text x={right ? at[0] - r - 3 : at[0] + r + 3} y={at[1] + 3} textAnchor={right ? 'end' : 'start'} className="wild-map-label">{pn.name}</text>
+            </g>
+          );
+        })}
+      </svg>
+    );
+  }
   if (place === 'wild_map') {
     return (
       <svg className="estate-hits" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">

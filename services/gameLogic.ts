@@ -2771,6 +2771,36 @@ export interface OfferContext {
  * What one buyer will pay for this batch. Returns money OR renown depending on
  * how the buyer settles up; the other field is always 0.
  */
+/* -----------------------------------------------------------------------------
+   PROVENANCE: home-grown and biodynamic
+   The share of what went into a batch (by unit, leaving out salt, water, sugar,
+   starters and tools — the commodities every recipe shares) that was grown on
+   the estate, and the share that carried the biodynamic label. Home-grown is
+   worth up to a fifth more; biodynamic up to nine-tenths more, but its buyers
+   are few: every sale takes some of the premium away, and it comes back at the
+   market's weekly rate. Scarce, and priced like it.
+   --------------------------------------------------------------------------- */
+export const LABEL_DEMAND_KEY = 'label:biodynamic';
+export const HOME_GROWN_SALE_PREMIUM = 0.2;
+export const BIO_SALE_PREMIUM = 0.9;
+export const BIO_SALE_HIT = 0.3;
+const COMMODITY = /salt|water|sugar|molasses|vinegar/;
+export const provenanceOf = (batch: Batch): { estate: number; bio: number } => {
+  let counted = 0, estate = 0, bio = 0;
+  for (const id of batch.inputIngredientIds ?? []) {
+    const i = findIngredient(id);
+    if (!i || i.type === IngredientType.TOOL || i.type === IngredientType.STARTER || COMMODITY.test(i.legitCounterpartId ?? id)) continue;
+    counted++;
+    if (i.tags?.includes('ESTATE')) estate++;
+    if (i.tags?.includes('BIODYNAMIC')) bio++;
+  }
+  return counted ? { estate: estate / counted, bio: bio / counted } : { estate: 0, bio: 0 };
+};
+export const labelPremium = (batch: Batch, marketDemand?: Record<string, number>): number => {
+  const p = provenanceOf(batch);
+  return 1 + HOME_GROWN_SALE_PREMIUM * p.estate + BIO_SALE_PREMIUM * p.bio * (marketDemand?.[LABEL_DEMAND_KEY] ?? 1);
+};
+
 export const calculateOffer = (
   batch: Batch,
   recipe: Recipe,
@@ -2814,8 +2844,12 @@ export const calculateOffer = (
   // Age commands a price of its own, on top of what it does to the score.
   const ageMult = 1 + AGEING_VALUE_BONUS * getMaturity(batch, recipe);
 
+  // What it was made from: home-grown sells over the odds, biodynamic far over
+  // them while its few buyers last (see labelPremium).
+  const labelMult = labelPremium(batch, marketDemand);
+
   const money = Math.floor(
-    50 * recipe.difficulty * (score / 50) * yieldMult * buyer.priceMultiplier * standingBonus * chefMultiplier * demand * ageMult
+    50 * recipe.difficulty * (score / 50) * yieldMult * buyer.priceMultiplier * standingBonus * chefMultiplier * demand * ageMult * labelMult
   );
   return { money: Math.max(0, money), renown: 0 };
 };

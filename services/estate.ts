@@ -4,6 +4,7 @@ import {
 } from '../types.farm';
 import {
   FACILITIES, CROPS, FAMILIES, TREE_SPECS, PROBLEMS, FARM_TOOLS, VAN_WHOLESALE, VAN_RECOVERY, PRODUCE_CLASS, produceClassOf, FACILITY_ORDER,
+  BIO_CONVERSION_DAYS, BIO_LIFE_MIN, SPRAYABLE, SPRAY_DAYS, SPRAY_COST_M2, HOME_GROWN_PREMIUM, BIO_VAN_PREMIUM, BIO_APPETITE_KG,
 } from '../constants.farm';
 import { makeCandidate } from './crew';
 import { INGREDIENTS } from '../constants';
@@ -43,9 +44,10 @@ export const newFacility = (id: FacilityId, day: number, month: number): Facilit
   const spec = FACILITIES[id];
   const f: FacilityState = {
     id, boughtDay: day,
-    plots: (spec.plots ?? []).map(p => ({ id: p.id, label: p.label, areaM2: p.areaM2, water: 60, fertility: 55, life: 45, history: [] })),
+    // Land comes farmed conventionally: the conversion year starts today.
+    plots: (spec.plots ?? []).map(p => ({ id: p.id, label: p.label, areaM2: p.areaM2, water: 60, fertility: 55, life: 45, history: [], sprayedDay: day })),
     trees: (spec.trees ?? []).map(t => ({
-      id: t.id, cropId: t.cropId, label: t.label, age: t.age, health: 85, bloom: 0, set: 0, fruitKg: 0, ripeKg: 0,
+      id: t.id, cropId: t.cropId, label: t.label, age: t.age, health: 85, bloom: 0, set: 0, fruitKg: 0, ripeKg: 0, sprayedDay: day,
       pickedKg: 0, lostKg: 0, pickedQ: 0, lastCropKg: 0, flavour: 0, flavourDays: 0, gdd: 0,
       problems: [], treated: {}, cover: {}, potted: t.potted,
     })),
@@ -74,7 +76,22 @@ const BASE = (id: string): Ingredient | undefined => INGREDIENTS.find(i => i.id 
 /** Round to a band so a season's picks become a handful of pantry items, not hundreds. */
 export const qualityBand = (q: number): number => Math.round(clamp(q, 20, 100) / 2) * 2;
 
-export const produceId = (baseId: string, q: number): string => `${baseId}__q${qualityBand(q)}`;
+export const produceId = (baseId: string, q: number, bio = false): string => `${baseId}__q${qualityBand(q)}${bio ? '__bio' : ''}`;
+/** Carries the biodynamic label. */
+export const isBio = (id: string): boolean => id.endsWith('__bio');
+
+/** A bed earns the label: a year clean of sprays and bought feed, and a living soil. */
+export const bedIsBiodynamic = (plot: Plot, day: number, boughtDay: number): boolean =>
+  day - (plot.sprayedDay ?? boughtDay) >= BIO_CONVERSION_DAYS && day - (plot.boughtFeedDay ?? -1e9) >= BIO_CONVERSION_DAYS && plot.life >= BIO_LIFE_MIN;
+/** A tree earns it with a year clean of sprays. */
+export const treeIsBiodynamic = (tree: Tree, day: number, boughtDay: number): boolean => day - (tree.sprayedDay ?? boughtDay) >= BIO_CONVERSION_DAYS;
+/** Why a bed is not (yet) biodynamic, for the ledger; null if it is. */
+export const bioBlocker = (plot: Plot, day: number, boughtDay: number): string | null => {
+  const clean = day - Math.max(plot.sprayedDay ?? boughtDay, plot.boughtFeedDay ?? -1e9);
+  if (clean < BIO_CONVERSION_DAYS) return `in conversion, ${BIO_CONVERSION_DAYS - clean} days to go`;
+  if (plot.life < BIO_LIFE_MIN) return `soil life ${Math.round(plot.life)}, needs ${BIO_LIFE_MIN}`;
+  return null;
+};
 export const baseOfProduce = (id: string): string => id.split('__q')[0];
 /** Something grown here for the kitchen — not a soil product, which carries the same grade suffix. */
 export const isEstateProduce = (id: string): boolean => id.includes('__q') && !SOIL_PRODUCT_IDS.includes(baseOfProduce(id));
@@ -85,7 +102,7 @@ export const isEstateProduce = (id: string): boolean => id.includes('__q') && !S
  * terroir cap, and its stats are nudged by how it was grown: a sun-ripened
  * tomato is sweeter and more savoury than the van's, a neglected one thinner.
  */
-export const makeProduce = (baseId: string, q: number): Ingredient | null => {
+export const makeProduce = (baseId: string, q: number, bio = false): Ingredient | null => {
   const base = BASE(baseId);
   if (!base) return null;
   const band = qualityBand(q);
@@ -99,23 +116,23 @@ export const makeProduce = (baseId: string, q: number): Ingredient | null => {
   else hs.sugarContent = nudge(hs.sugarContent, d / 12);
   return {
     ...base,
-    id: produceId(baseId, q),
-    name: `${base.name} · estate`,
+    id: produceId(baseId, q, bio),
+    name: `${base.name} · estate${bio ? ', biodynamic' : ''}`,
     quality: band,
     supplierId: ESTATE_SUPPLIER,
     tierRequired: 0,
     season: undefined,
     legitCounterpartId: baseId,
     hiddenStats: hs,
-    tags: Array.from(new Set([...(base.tags ?? []), 'ESTATE'])),
-    description: `${base.description} Grown here, graded ${band}${d > 0 ? ` — ${d} above the van’s` : d < 0 ? ` — ${-d} below the van’s` : ''}.`,
+    tags: Array.from(new Set([...(base.tags ?? []), 'ESTATE', ...(bio ? ['BIODYNAMIC'] : [])])),
+    description: `${base.description} Grown here, graded ${band}${d > 0 ? ` — ${d} above the van’s` : d < 0 ? ` — ${-d} below the van’s` : ''}.${bio ? ' Biodynamic: no synthetic sprays, no bought feed, a living soil and heirloom seed.' : ''}`,
   };
 };
 
 /** Put kilos of produce into the pantry as whole units, carrying the remainder. */
-export const storeProduce = (state: GameState, baseId: string, kg: number, q: number): GameState => {
+export const storeProduce = (state: GameState, baseId: string, kg: number, q: number, bio = false): GameState => {
   if (kg <= 0) return state;
-  const p = makeProduce(baseId, q);
+  const p = makeProduce(baseId, q, bio);
   if (!p) return state;
   const est = state.estate as Estate;
   const carry = { ...(est.carry ?? {}) };
@@ -146,8 +163,12 @@ export const vanUnitPrice = (state: GameState, itemId: string): number => {
   const cls = produceClassOf(base.id);
   const demand = state.estate?.vanDemand[cls] ?? 1;
   const qMult = 0.7 + 0.3 * (item.quality / Math.max(1, base.quality));
-  return Math.max(0, base.baseCost * VAN_WHOLESALE * demand * qMult);
+  return Math.max(0, base.baseCost * VAN_WHOLESALE * demand * qMult * labelMult(state, itemId));
 };
+
+/** Home-grown sells over wholesale; biodynamic sells for a great deal more while its few buyers last. */
+const labelMult = (state: GameState, itemId: string, bioDemand = state.estate?.vanDemand['biodynamic'] ?? 1): number =>
+  !isEstateProduce(itemId) ? 1 : HOME_GROWN_PREMIUM * (isBio(itemId) ? 1 + BIO_VAN_PREMIUM * bioDemand : 1);
 
 /** Sell units at the gate. Each kilo sold pushes that class's price down; it recovers weekly. */
 export const sellToVan = (state: GameState, itemId: string, units: number): { state: GameState; paid: number } => {
@@ -160,12 +181,15 @@ export const sellToVan = (state: GameState, itemId: string, units: number): { st
   const unitKg = base.mass / 1000;
   const est = state.estate;
   let demand = est.vanDemand[cls] ?? 1;
+  let bioDemand = est.vanDemand.biodynamic ?? 1;
   let paid = 0;
   const item = state.customIngredients.find(i => i.id === itemId) ?? base;
   const qMult = 0.7 + 0.3 * (item.quality / Math.max(1, base.quality));
+  const bio = isBio(itemId);
   for (let i = 0; i < n; i++) {
-    paid += base.baseCost * VAN_WHOLESALE * demand * qMult;
+    paid += base.baseCost * VAN_WHOLESALE * demand * qMult * labelMult(state, itemId, bioDemand);
     demand *= Math.exp(-unitKg / appetite);
+    if (bio) bioDemand *= Math.exp(-unitKg / BIO_APPETITE_KG);
   }
   paid = Math.round(paid * 100) / 100;
   const ledger = { ...est.ledger };
@@ -176,7 +200,7 @@ export const sellToVan = (state: GameState, itemId: string, units: number): { st
       ...state,
       money: state.money + paid,
       inventory: { ...state.inventory, [itemId]: have - n },
-      estate: { ...est, vanDemand: { ...est.vanDemand, [cls]: Math.max(0.05, demand) }, ledger },
+      estate: { ...est, vanDemand: { ...est.vanDemand, [cls]: Math.max(0.05, demand), ...(bio ? { biodynamic: Math.max(0.05, bioDemand) } : {}) }, ledger },
     },
     paid,
   };
@@ -243,7 +267,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
   let money = 0;
   let est: Estate = { ...est0, wetStreak, dryStreak, lastDay: day };
 
-  const produce: { id: string; kg: number; q: number }[] = [];
+  const produce: { id: string; kg: number; q: number; bio?: boolean }[] = [];
   // Waste and soil products in and out of the pantry, and grades to mint.
   const pan = pantryOf(state);
   const mints: [string, number][] = [];
@@ -289,6 +313,14 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
       // Standing orders, if there is someone to carry them out.
       if (orders.water && !f.kit.drip && fid !== 'top_field' && plot.water < 35 && act('water' + plot.id)) plot = { ...plot, water: 82 };
       let next: Planting = plot.planting!;
+      // The conventional way, if you have asked for it: one spray clears every
+      // pest, fungus and weed and keeps them off a fortnight — and the bed
+      // starts its conversion year again.
+      if (orders.spray && next.problems.some(p => SPRAYABLE.has(p.id)) && act('spray' + plot.id)) {
+        next = { ...next, problems: next.problems.filter(p => !SPRAYABLE.has(p.id)), treated: { ...next.treated, chem: day + SPRAY_DAYS } };
+        plot = { ...plot, sprayedDay: day };
+        money -= sprayCost(plot.areaM2);
+      }
       if (orders.pests || orders.weed) {
         const seen = next.problems.map(p => ({ ...p, seen: true }));
         const keep = seen.filter(p => {
@@ -313,7 +345,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
           plot = r2.plot; next = r2.planting ?? next;
           pantryPut(pan, lot.id, -doseKg(lot, plot.areaM2));
         } else {
-          plot = { ...plot, fertility: clamp(plot.fertility + MANURE.fertility, 0, 100), life: clamp(plot.life + MANURE.life, 0, 100) };
+          plot = { ...plot, fertility: clamp(plot.fertility + MANURE.fertility, 0, 100), life: clamp(plot.life + MANURE.life, 0, 100), boughtFeedDay: day };
           money -= manureCost(plot.areaM2);
         }
       }
@@ -324,7 +356,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
         if (due && !grain) {
           const res = pickPlanting(next, BASE(next.cropId)?.quality ?? 70);
           next = res.planting;
-          if (res.kg > 0) { produce.push({ id: next.cropId, kg: res.kg, q: res.quality }); report.picked[next.cropId] = (report.picked[next.cropId] ?? 0) + res.kg; }
+          if (res.kg > 0) { produce.push({ id: next.cropId, kg: res.kg, q: res.quality, bio: bedIsBiodynamic(plot, day, f.boughtDay) }); report.picked[next.cropId] = (report.picked[next.cropId] ?? 0) + res.kg; }
         }
       }
       return { ...plot, planting: next };
@@ -335,6 +367,10 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
       const r = treeDay(t0, fid, ctx);
       let tree = r.tree;
       r.events.forEach(t => log(report.notes, day, t, t.includes('frost') || t.includes('Frost') ? 'warn' : 'info', fid));
+      if (orders.spray && tree.problems.some(p => SPRAYABLE.has(p.id)) && act('tspray' + tree.id)) {
+        tree = { ...tree, problems: tree.problems.filter(p => !SPRAYABLE.has(p.id)), treated: { ...tree.treated, chem: day + SPRAY_DAYS }, sprayedDay: day };
+        money -= sprayCost(10);
+      }
       if (orders.pests && tree.problems.length) tree = { ...tree, problems: tree.problems.filter(p => !act('tfix' + p.id + tree.id)) };
       // The orchardist prunes in the dead of winter and thins in June.
       if (orders.train && hand) {
@@ -349,7 +385,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
       if (orders.pick && tree.ripeKg > 0.05 && act('tpick' + tree.id)) {
         const res = pickTree(tree, BASE(tree.cropId)?.quality ?? 70);
         tree = res.tree;
-        if (res.kg > 0) { produce.push({ id: tree.cropId, kg: res.kg, q: res.quality }); report.picked[tree.cropId] = (report.picked[tree.cropId] ?? 0) + res.kg; }
+        if (res.kg > 0) { produce.push({ id: tree.cropId, kg: res.kg, q: res.quality, bio: treeIsBiodynamic(tree, day, f.boughtDay) }); report.picked[tree.cropId] = (report.picked[tree.cropId] ?? 0) + res.kg; }
       }
       return tree;
     });
@@ -453,7 +489,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
   state = { ...state, inventory: pan.inventory, estate: { ...est, carry: pan.carry }, money: state.money + money };
   for (const [base, grade] of mints) state = mintSoilProduct(state, base, grade).state;
   report.spent = -money;
-  for (const p of produce) state = storeProduce(state, p.id, p.kg, p.q);
+  for (const p of produce) state = storeProduce(state, p.id, p.kg, p.q, !!p.bio);
   return { state, report };
 };
 
@@ -793,19 +829,47 @@ export const applyToPlots = (state: GameState, fid: FacilityId, plotIds: string[
 
 const findName = (id: string): string => SOIL_PRODUCT_INGREDIENTS.find(i => i.id === id)?.name ?? BASE(id)?.name ?? id;
 
+export const sprayCost = (areaM2: number) => Math.max(3, Math.round(areaM2 * SPRAY_COST_M2));
+
+/**
+ * The conventional fix: a synthetic spray over the selected beds and trees.
+ * It clears every pest, fungus and weed at once and keeps them off for a
+ * fortnight, for a few dollars and a few minutes — and it costs the label:
+ * that bed or tree starts its year of conversion again.
+ */
+export const sprayPlots = (state: GameState, fid: FacilityId, ids: string[], day: number): ActionResult => {
+  const f = state.estate.facilities[fid];
+  if (!f) return fail(state, 'Not yours.');
+  let cost = 0, minutes = 0, n = 0;
+  const plots = f.plots.map(p => {
+    if (!ids.includes(p.id) || !p.planting) return p;
+    n++; cost += sprayCost(p.areaM2); minutes += p.areaM2 > 100 ? 45 : 8;
+    return { ...p, sprayedDay: day, planting: { ...p.planting, problems: p.planting.problems.filter(x => !SPRAYABLE.has(x.id)), treated: { ...p.planting.treated, chem: day + SPRAY_DAYS } } };
+  });
+  const trees = f.trees.map(t => {
+    if (!ids.includes(t.id)) return t;
+    n++; cost += sprayCost(10); minutes += 10;
+    return { ...t, sprayedDay: day, problems: t.problems.filter(x => !SPRAYABLE.has(x.id)), treated: { ...t.treated, chem: day + SPRAY_DAYS } };
+  });
+  if (n === 0) return fail(state, 'Nothing there to spray.');
+  if (state.money < cost) return fail(state, `The spray for that is $${cost}.`);
+  return { state: { ...withFacility(state, fid, { ...f, plots, trees }), money: state.money - cost }, minutes, message: `Sprayed ${n} ${n > 1 ? 'places' : 'place'} ($${cost}). Clean for a fortnight; the biodynamic year starts again.`, ok: true };
+};
+
 /** Pick what is ripe on the given plots and trees. Minutes follow the kilos. */
 export const pickHere = (state: GameState, fid: FacilityId, ids: string[]): ActionResult => {
   const f = state.estate.facilities[fid];
   if (!f) return fail(state, 'Not yours.');
   let minutes = 0;
-  const got: { id: string; kg: number; q: number }[] = [];
+  const today = absoluteDay(state as unknown as CalendarDate);
+  const got: { id: string; kg: number; q: number; bio: boolean }[] = [];
   const plots = f.plots.map(p => {
     const pl = p.planting;
     if (!ids.includes(p.id) || !pl || pl.ripeKg <= 0.05) return p;
     const fam = FAMILIES[CROPS[pl.cropId].family];
     const r = pickPlanting(pl, BASE(pl.cropId)?.quality ?? 70);
     if (r.kg <= 0) return p;
-    got.push({ id: pl.cropId, kg: r.kg, q: r.quality });
+    got.push({ id: pl.cropId, kg: r.kg, q: r.quality, bio: bedIsBiodynamic(p, today, f.boughtDay) });
     if (fam.pickKgH > 0) minutes += (r.kg / fam.pickKgH) * 60;
     else minutes += f.kit.scythe ? 360 : 540;   // a strip of grain by hand: cut, stook, thresh
     return { ...p, planting: r.planting };
@@ -813,16 +877,17 @@ export const pickHere = (state: GameState, fid: FacilityId, ids: string[]): Acti
   const trees = f.trees.map(t => {
     if (!ids.includes(t.id) || t.ripeKg <= 0.05) return t;
     const r = pickTree(t, BASE(t.cropId)?.quality ?? 70);
-    got.push({ id: t.cropId, kg: r.kg, q: r.quality });
+    got.push({ id: t.cropId, kg: r.kg, q: r.quality, bio: treeIsBiodynamic(t, today, f.boughtDay) });
     minutes += (r.kg / (TREE_SPECS[t.cropId].pickKgH * (f.kit.ladder ? 2 : 1))) * 60;
     return r.tree;
   });
   if (got.length === 0) return fail(state, 'Nothing ripe there.');
   let next = withFacility(state, fid, { ...f, plots, trees });
-  for (const g of got) next = storeProduce(next, g.id, g.kg, g.q);
+  for (const g of got) next = storeProduce(next, g.id, g.kg, g.q, g.bio);
   const kg = got.reduce((a, g) => a + g.kg, 0);
   const q = got.reduce((a, g) => a + g.kg * g.q, 0) / Math.max(0.001, kg);
-  return { state: next, minutes: Math.max(5, Math.round(minutes)), message: `Picked ${kg.toFixed(1)} kg, graded ${Math.round(q)}.`, ok: true };
+  const bioKg = got.filter(g => g.bio).reduce((a, g) => a + g.kg, 0);
+  return { state: next, minutes: Math.max(5, Math.round(minutes)), message: `Picked ${kg.toFixed(1)} kg, graded ${Math.round(q)}${bioKg > 0 ? bioKg >= kg - 0.01 ? ', biodynamic' : `, ${bioKg.toFixed(1)} kg of it biodynamic` : ''}.`, ok: true };
 };
 
 /** Pay a contractor to cut and thresh a strip: half an hour and money, instead of a day. */
@@ -900,7 +965,9 @@ export const hiveAction = (state: GameState, kind: 'inspect' | 'feed' | 'varroa'
 };
 
 /* --- The hens --- */
-export const henAction = (state: GameState, kind: 'eggs' | 'shut' | 'clean' | 'feed' | 'larvae'): ActionResult => {
+/** Point-of-lay pullets, bought in pairs: hens are flock birds and one alone pines. */
+export const PULLET_COST = 22; export const RUN_CAPACITY = 12;
+export const henAction = (state: GameState, kind: 'eggs' | 'shut' | 'clean' | 'feed' | 'larvae' | 'pullets'): ActionResult => {
   const f = state.estate.facilities.hen_run;
   if (!f?.hens) return fail(state, 'No hens.');
   let run = { ...f.hens };
@@ -915,6 +982,13 @@ export const henAction = (state: GameState, kind: 'eggs' | 'shut' | 'clean' | 'f
     run = { ...run, eggs: 0 }; minutes = 5;
   } else if (kind === 'shut') { run = { ...run, doorShut: true }; minutes = 3; message = 'Shut them in for the night.'; }
   else if (kind === 'clean') { run = { ...run, mites: 5 }; minutes = 40; message = 'Mucked out and dusted the perches.'; }
+  else if (kind === 'pullets') {
+    const n = Math.min(2, RUN_CAPACITY - run.hens);
+    if (n <= 0) return fail(state, `The coop holds ${RUN_CAPACITY}.`);
+    if (state.money < n * PULLET_COST) return fail(state, `A pullet is $${PULLET_COST}.`);
+    run = { ...run, hens: run.hens + n }; minutes = 30; message = `${n} point-of-lay pullets into the run. They will settle in a few days.`;
+    next = { ...next, money: next.money - n * PULLET_COST };
+  }
   else if (kind === 'feed') {
     if (state.money < 18) return fail(state, 'A sack of layers is $18.');
     run = { ...run, feedKg: run.feedKg + 25 }; minutes = 5; message = 'A new sack in the bin.';

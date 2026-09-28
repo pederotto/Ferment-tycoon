@@ -5255,6 +5255,15 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
   font-family: var(--f-spec); font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft);
 }
 .el-bed .mk.bad { color: var(--stamp-bad); border-color: rgba(156, 68, 41, 0.5); }
+.el-bed .mk.bio { color: #fbf3de; background: #3b5429; border-color: #3b5429; }
+.el-bed .mk.faint { color: var(--ink-faint); text-transform: none; letter-spacing: 0; font-weight: 500; }
+.estate .mini-btn.warn { color: #f0b89a; border-color: rgba(208, 103, 63, 0.6); }
+.estate .mini-btn.warn:hover:not(:disabled) { color: #ffd7c2; border-color: #d0673f; }
+/* Provenance on the batch label: a printed stamp, the green of the season line. */
+.label-plate .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.label-plate .prov-stamp { padding: 1px 6px; border: 1.5px solid #3b5429; border-radius: 2px; font-family: var(--f-spec); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #3b5429; }
+.label-plate .prov-stamp.bio { background: #3b5429; color: #fbf3de; }
+.label-plate .prov-note { font-family: var(--f-spec); font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .el-actions { margin-top: 8px; padding: 9px; border-radius: 4px; border: 1px solid rgba(222, 186, 110, 0.28); background: rgba(0, 0, 0, 0.3); }
 .el-actions .row { display: flex; flex-wrap: wrap; gap: 6px; }
 .el-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; font-size: 13px; color: var(--text-mid); }
@@ -5336,6 +5345,7 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .wild-tile.unowned { cursor: default; }
 .wild-tile-label { font-family: var(--f-spec); font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; fill: #f3dca0; pointer-events: none; }
 .wild-tile.unowned .wild-tile-label { fill: rgba(243, 220, 160, 0.55); }
+.wild-map-label { font-family: var(--f-spec); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; fill: #fff4d2; paint-order: stroke; stroke: rgba(20, 14, 8, 0.85); stroke-width: 3px; pointer-events: none; }
 
 .wild-grounds, .wild-guide { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
 .wild-grounds .wg, .wild-guide .wcard { display: flex; flex-direction: column; gap: 5px; padding: 9px 10px 10px; }

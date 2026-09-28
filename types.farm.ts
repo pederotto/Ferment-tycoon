@@ -98,6 +98,11 @@ export interface Plot {
   planting?: Planting;
   /** A cover crop sown to rest and feed the plot through winter. */
   greenManure?: { sownDay: number; kind: 'clover' | 'phacelia' | 'rye_vetch' };
+  /** Last day a synthetic spray went on (or the day the land was bought: the
+      previous owner's sprays count). A year clean is the conversion period. */
+  sprayedDay?: number;
+  /** Last day bought-in manure went on. Biodynamic feeds only from its own farm. */
+  boughtFeedDay?: number;
 }
 
 /** A fruit tree, bush or potted citrus. */
@@ -105,6 +110,8 @@ export interface Tree {
   id: string;
   cropId: string;
   label: string;
+  /** Last synthetic spray (or the day the orchard was bought). */
+  sprayedDay?: number;
   /** Years old. A young tree crops lightly and a standard in its prime heavily. */
   age: number;
   health: number;
@@ -220,9 +227,9 @@ export interface StandingOrders {
   train?: boolean;          // pinch and tie tomatoes weekly
   bees?: boolean;           // inspect, feed, stop swarms
   hens?: boolean;           // collect eggs, shut the coop at dusk
+  spray?: boolean;          // spray pests and weeds instead of fixing by hand (loses the biodynamic label)
 }
 
-/** Soil-lab products held for the farm, in kg or litres (1 kg ≈ 1 L here). */
 
 /** What happened on the estate yesterday, for the morning note. */
 export interface EstateLogEntry {

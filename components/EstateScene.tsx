@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { EstateState, FacilityId, Plot, Tree, GroundId } from '../types.farm';
 import { GROUNDS, GROUND_ORDER } from '../constants.wild';
 import { CROPS, FAMILIES, TREE_SPECS } from '../constants.farm';
-import { ESTATE_PLATES, ESTATE_GEOM, CROP_SPRITES } from './estatePlates';
+import { ESTATE_PLATES, ESTATE_GEOM, CROP_SPRITES, CROP_STAGES, CROP_EXTRA, StageSprite } from './estatePlates';
 import { DayWeather, sunTimes, roll } from '../services/climate';
 import { flyingDay } from '../services/livestock';
 
@@ -31,6 +31,8 @@ export type ScenePlace = FacilityId | 'farm_map' | 'wild_map' | GroundId;
 export const isGround = (p: string): p is GroundId => !!GROUNDS[p as GroundId];
 /** The wild map's postcards: every ground, and the salt pans, which are on the coast. */
 export const WILD_TILES: (GroundId | 'salt_pans')[] = [...GROUND_ORDER, 'salt_pans'];
+/** Whether the wild map is the owner's painting (pins) or the postcard board (tiles). */
+export const wildMapPainted = (): boolean => !!ESTATE_PLATES['wild_map:summer'];
 export const tileRect = (i: number): number[] => { const c = i % 4, r = Math.floor(i / 4); return [c * 120 + 4, r * 90 + 4, c * 120 + 116, r * 90 + 86]; };
 
 /** The grid this place's plate is on. */
@@ -157,6 +159,7 @@ const frame = (
   hens: { x: number; y: number; tx: number; ty: number; c: string }[], still: boolean, redraw: () => void,
 ) => {
   const [W, H] = sceneSize(p.place);
+  wake = redraw;
   // Resizing a canvas resets its context, smoothing included.
   if (ctx.canvas.width !== W || ctx.canvas.height !== H) { ctx.canvas.width = W; ctx.canvas.height = H; }
   ctx.imageSmoothingEnabled = false;
@@ -191,9 +194,66 @@ const stageFrac = (pl: Plot['planting']) => {
   return pl.gdd / spec.gddToRipe;
 };
 
+/* --- the owner's crop sprites -------------------------------------------------
+   Seven stages a family, from the crop sheets. No two plants in a bed are the
+   same: each is seeded with its own size, a mirror, a small offset from its
+   place in the row, and its own pace — some a few days ahead of the bed, some
+   behind — so a bed comes into flower and ripens unevenly, the way one does,
+   instead of in lockstep. */
+const SPRITE_SET: Record<string, string> = {
+  brassica: 'cabbage', napa: 'cabbage', allium: 'garlic', tomato: 'tomato', chili: 'chili', strawberry: 'strawberry',
+  rose: 'rose', corn: 'corn', bean: 'bean', fava: 'pea', pea: 'pea', chickpea: 'pea', lentil: 'pea',
+};
+/** How tall the ripe plant stands at scale 1, in scene pixels (cabbage and strawberry by their spread). */
+const SPRITE_TALL: Record<string, number> = { tomato: 46, bean: 38, pea: 16, corn: 50, chili: 15, rose: 16, cabbage: 11, garlic: 12, strawberry: 8 };
+const TOMATO_COLOUR: Record<string, string> = {
+  cuore_di_bue: 'red', brandywine: 'pink', black_krim: 'black', green_zebra: 'green', cherokee_purple: 'plum',
+  san_marzano: 'red', costoluto_genovese: 'red', white_beauty: 'cream', striped_german: 'orange', paul_robeson: 'black',
+};
+let wake: () => void = () => {};
+/** The stage a single plant shows, with its own pace folded in. */
+const plantStage = (f: number, jit: number, ripe: boolean, over: boolean, dead: boolean): number => {
+  if (dead || over) return 6;
+  const fj = f * (1 + jit);
+  if (ripe) return fj >= 0.97 ? 5 : 4;
+  return fj < 0.05 ? 0 : fj < 0.2 ? 1 : fj < 0.45 ? 2 : fj < 0.64 ? 3 : 4;
+};
+/** The owner's rows are not all in growth order, and not every row ends in a dead plant.
+ *  Tomato flowers come before green fruit; garlic's last two cells are lifted bulbs, which
+ *  never stand in a bed; a rose dies back to bare canes; a pea has no dead cell of its own. */
+const STAGE_MAP: Record<string, number[]> = { tomato: [0, 1, 3, 2, 4, 5, 6], garlic: [0, 1, 2, 3, 4, 4, 4] };
+const DEAD_SPRITE: Record<string, [string, number]> = { pea: ['bean', 6], rose: ['rose', 0], garlic: ['garlic', 4] };
+
+const drawCropSprite = (ctx: CanvasRenderingContext2D, cropId: string, f: number, x: number, y: number, scale: number, ripe: boolean, over: boolean, dead: boolean, seed: number): boolean => {
+  const fam = CROPS[cropId]?.family;
+  const set = fam ? SPRITE_SET[fam] : undefined;
+  const stages = set ? CROP_STAGES[set] : undefined;
+  if (!set || !stages) return false;
+  const r = (k: number) => roll('plant', cropId, seed, k);
+  const st = plantStage(f, (r(0) - 0.5) * 0.2, ripe, over, dead);
+  const dm = dead ? DEAD_SPRITE[set] : undefined;
+  let sp: StageSprite | undefined = dm ? CROP_STAGES[dm[0]]?.[dm[1]] : stages[STAGE_MAP[set]?.[st] ?? st];
+  if (st === 5 && set === 'tomato') sp = CROP_EXTRA[`tomato_ripe-${TOMATO_COLOUR[cropId] ?? 'red'}`] ?? sp;
+  if (st === 5 && cropId === 'pineberry') sp = CROP_EXTRA.pineberry_ripe ?? sp;
+  if (!sp) return false;
+  const im = img(sp.src, wake);
+  if (!im.complete || !im.width) return true;
+  const ref = stages[5] ?? sp;
+  const k = (SPRITE_TALL[set] / ref.h) * scale * (0.86 + r(1) * 0.28);
+  const w = sp.w * k, h = sp.h * k;
+  const px0 = Math.round(x + (r(2) - 0.5) * 2 * scale), py0 = Math.round(y + (r(3) - 0.5) * 1.5 * scale);
+  ctx.save();
+  if (dead) ctx.globalAlpha = 0.7;
+  if (r(4) < 0.5) { ctx.translate(px0, 0); ctx.scale(-1, 1); ctx.translate(-px0, 0); }
+  ctx.drawImage(im, Math.round(px0 - w / 2), Math.round(py0 - h), Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
+  ctx.restore();
+  return true;
+};
+
 const drawPlant = (ctx: CanvasRenderingContext2D, cropId: string, f: number, x: number, y: number, scale: number, ripe: boolean, over: boolean, dead: boolean, fruit: number, seed: number) => {
   const fam = FAMILIES[CROPS[cropId]?.family];
   if (!fam) return;
+  if (drawCropSprite(ctx, cropId, f, x, y, scale, ripe, over, dead, seed)) return;
   const leaf = dead ? '#5a4a30' : over ? '#8a7a40' : '#4e8a34';
   const leaf2 = dead ? '#3a3020' : over ? '#6a5a30' : '#3a6a28';
   if (f < 0.05) { px(ctx, x, y, '#5a8a34'); return; }
@@ -302,7 +362,9 @@ const drawGarden = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: n
       const v = depthV(q, (yy + 0.5) / rows, g.horizon ?? -20);
       for (let xx = 0; xx < cols; xx++) {
         const [x, y] = qAt(q, (xx + 0.5) / cols, v);
-        drawPlant(ctx, pl.cropId, f, x, y, depthScale(g, y), pl.stage === 'ripe', pl.stage === 'over' || pl.stage === 'spent', pl.stage === 'dead', perPlant, xx * 7 + yy * 3);
+        // A sick bed has gaps where plants failed.
+        if (roll('gap', plot.id, xx, yy) > 0.35 + pl.health / 100 * 0.7) continue;
+        drawPlant(ctx, pl.cropId, f, x, y, depthScale(g, y), pl.stage === 'ripe', pl.stage === 'over' || pl.stage === 'spent', pl.stage === 'dead', perPlant, bed * 97 + xx * 7 + yy * 3);
       }
     }
   });
@@ -328,6 +390,10 @@ const drawTunnel = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: n
     const h = Math.round((tall ? 44 : fam.id === 'chili' ? 16 : 8) * sc * Math.min(1, 0.15 + f));
     const leaf = dead ? '#5a4a30' : pl.stage === 'spent' ? '#7a6a3a' : '#4e8a34';
     const leaf2 = dead ? '#3a3020' : pl.stage === 'spent' ? '#5a4a28' : '#3a6a28';
+    if (drawCropSprite(ctx, pl.cropId, f, x, y + 1, sc, pl.stage === 'ripe', pl.stage === 'over' || pl.stage === 'spent', dead, k + plots.indexOf(plot) * 17)) {
+      if (pl.problems.some(q => q.id === 'whitefly') && (t + k) % 5 < 2) px(ctx, x + 3 * sc, y - h - 2, '#f4f4f4');
+      continue;
+    }
     if (tall) {
       const X = Math.round(x), Y = Math.round(y), w = Math.max(1, Math.round(sc * 0.6));
       ctx.fillStyle = dead ? '#4a3a24' : '#3e6a2a'; ctx.fillRect(X, Y - h, w, h);
@@ -399,7 +465,23 @@ const drawField = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: nu
         y += Math.max(1.5, rowM * m * m * FORESHORTEN);
       }
     };
-    if (fam.id === 'wintergrain' || fam.id === 'springgrain') {
+    const tiles = CROP_STAGES.grain;
+    if ((fam.id === 'wintergrain' || fam.id === 'springgrain') && tiles) {
+      // Patches off the owner's sheet, stamped across each row a metre and a
+      // bit wide, each a touch ahead or behind its neighbour.
+      rowsBy(0.55, (y, x0, x1, m) => {
+        const tw = Math.max(3, 1.4 * m);
+        for (let x = x0 - tw * 0.3 + ((y * 7) % 5); x < x1; x += tw * 0.72) {
+          const seed = Math.round(x) * 131 + y;
+          const st = plantStage(f, (roll('grain', seed) - 0.5) * 0.14, ripe, over, dead);
+          const sp = tiles[st];
+          const im = sp && img(sp.src, wake);
+          if (!im || !im.complete || !im.width) continue;
+          const k = tw / sp.w, hh = sp.h * k * (0.9 + roll('gh', seed) * 0.2);
+          ctx.drawImage(im, Math.round(x), Math.round(y - hh), Math.max(1, Math.round(tw)), Math.max(1, Math.round(hh)));
+        }
+      });
+    } else if (fam.id === 'wintergrain' || fam.id === 'springgrain') {
       const tall = 1.0 * Math.min(1, 0.2 + f);
       const cc = dead ? '#6a5a3a' : over ? '#8a6a3a' : f < 0.72 ? '#5a8a34' : ripe ? '#d8b860' : '#a8a84a';
       const ear = ripe || over ? '#e8c870' : '#b8b860';
@@ -411,6 +493,11 @@ const drawField = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: nu
           ctx.fillStyle = cc; ctx.fillRect(Math.round(x), y - hh - jit, 1, hh + jit);
           if (f > 0.62 && !dead) { ctx.fillStyle = ear; ctx.fillRect(Math.round(x), y - hh - jit - Math.max(1, Math.round(m * 0.08)), 1, Math.max(1, Math.round(m * 0.08))); }
         }
+      });
+    } else if (fam.id === 'corn' && CROP_STAGES.corn) {
+      rowsBy(0.75, (y, x0, x1, m) => {
+        const dx = Math.max(3, Math.round(0.7 * m));
+        for (let x = x0 + (y % 3); x < x1; x += dx) drawCropSprite(ctx, pl.cropId, f, x, y, 2.2 * m / 50, ripe, over, dead, Math.round(x) * 31 + y);
       });
     } else if (fam.id === 'corn') {
       const cols = CORN_COL[pl.cropId] ?? ['#e8c040'];
@@ -431,9 +518,25 @@ const drawField = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: nu
       });
     } else {
       // pulses and garlic in the field: low rows
+      // The field is a long view: a pea sprite there is a few pixels of detail
+      // and a row of them reads as static, so pulses are drawn as rows.
       rowsBy(0.45, (y, x0, x1, m) => {
-        const dx = Math.max(3, Math.round(0.3 * m));
-        for (let x = x0 + (y % 3); x < x1; x += dx) drawPlant(ctx, pl.cropId, f, x, y, Math.max(0.4, m * 0.09), ripe, over, dead, 0, Math.round(x));
+        // A row closing over as the crop grows: two
+        // greens, then flowers, then pods, then straw.
+        const grow = Math.min(1, f);
+        const hh = Math.max(1, Math.round(m * 0.35 * (0.25 + grow)));
+        const cw = Math.max(1, Math.round(m * 0.18 * (0.3 + grow)));
+        const step = Math.max(2, Math.round(cw * 1.3));
+        const c1 = dead ? '#5a4a30' : ripe || over ? '#a88a50' : '#4e7a2e';
+        const c2 = dead ? '#46391f' : ripe || over ? '#c8a860' : '#6a9a3a';
+        const fl = pl.cropId === 'broad_beans' ? '#f0f0e8' : pl.cropId.includes('chick') ? '#e8e0f0' : '#b89ad8';
+        for (let x = x0 + (y % 3); x < x1; x += step) {
+          const X = Math.round(x), r = roll('pulse', X, y);
+          const h = Math.max(1, hh + (r < 0.3 ? -1 : r > 0.8 ? 1 : 0));
+          ctx.fillStyle = c1; ctx.fillRect(X, y - h, cw, h);
+          ctx.fillStyle = c2; ctx.fillRect(X + (r < 0.5 ? 0 : cw - 1), y - h, 1, Math.max(1, h - 1));
+          if (!dead && !ripe && !over && f > 0.42 && f < 0.7 && r > 0.55) px(ctx, X + (cw >> 1), y - h, fl);
+        }
       });
     }
   });
@@ -504,6 +607,48 @@ const drawHives = (ctx: CanvasRenderingContext2D, hives: NonNullable<EstateState
   });
 };
 
+/** A hen at the painting's scale, about as tall as the waterer's body: a 9x9 template
+ *  at 2 px a cell, facing right, mirrored to face left. */
+const HEN = [
+  '......c..',
+  '.....HHc.',
+  '.....HHb.',
+  'T....HH..',
+  'TT.BBBB..',
+  'TBBWWWBB.',
+  '.BBWWWBB.',
+  '..BBBBB..',
+  '...l.l...',
+];
+const HEN_PECK = [
+  '.........',
+  '.........',
+  '.........',
+  'T........',
+  'TT.BBBBc.',
+  'TBBWWWBHc',
+  '.BBWWWBHb',
+  '..BBBBB..',
+  '...l.l...',
+];
+const shade = (hex: string, k: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v: number) => Math.max(0, Math.min(255, Math.round(v * k)));
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+};
+const drawHen = (ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, c: string, peck: boolean) => {
+  const S = 2, T = peck ? HEN_PECK : HEN;
+  const col: Record<string, string> = { c: '#c8282a', H: c, B: c, W: shade(c, 0.78), T: shade(c, 0.6), b: '#e8a030', l: '#d89030' };
+  ctx.fillStyle = 'rgba(40,28,16,0.28)'; ctx.fillRect(x - 7, y - 1, 14, 2);
+  for (let r = 0; r < T.length; r++) for (let k = 0; k < T[r].length; k++) {
+    const ch = T[r][k];
+    if (ch === '.') continue;
+    ctx.fillStyle = col[ch];
+    const cx = dir > 0 ? k : 8 - k;
+    ctx.fillRect(x + (cx - 4) * S, y - (9 - r) * S, S, S);
+  }
+};
+
 const drawHens = (ctx: CanvasRenderingContext2D, run: NonNullable<EstateState['facilities']['hen_run']>['hens'], hens: { x: number; y: number; tx: number; ty: number; c: string }[], t: number, still: boolean) => {
   const g = ESTATE_GEOM.hen_run;
   const R = g.run;
@@ -515,13 +660,15 @@ const drawHens = (ctx: CanvasRenderingContext2D, run: NonNullable<EstateState['f
       if (!h.tx || Math.hypot(h.tx - h.x, h.ty - h.y) < 2) { h.tx = R[0] + 6 + roll('htx', i, t) * (R[2] - R[0] - 12); h.ty = R[1] + 10 + roll('hty', i, t) * (R[3] - R[1] - 12); }
       h.x += Math.sign(h.tx - h.x); h.y += Math.sign(h.ty - h.y) * 0.5;
     }
-    const x = Math.round(h.x), y = Math.round(h.y), dir = h.tx < h.x ? -1 : 1;
-    ctx.fillStyle = h.c; ctx.fillRect(x - 3, y - 4, 6, 4); ctx.fillRect(x + dir * 3, y - 6, 2, 3);
-    px(ctx, x + dir * 4, y - 7, '#d82a2a'); px(ctx, x + dir * 5, y - 5, '#e8a030'); px(ctx, x - 1, y, '#e8a030'); px(ctx, x + 1, y, '#e8a030');
   });
-  // eggs waiting in the nest box
-  const nest = g.nest;
-  for (let k = 0; k < Math.min(8, run!.eggs); k++) { ctx.fillStyle = k % 3 ? '#f2ead8' : '#d8b88a'; ctx.fillRect(nest[0] - 8 + (k % 4) * 3, nest[1] + 6 - Math.floor(k / 4) * 2, 2, 2); }
+  // Far hens first, so a near one stands in front of them.
+  [...hens.keys()].sort((a, b) => hens[a].y - hens[b].y).forEach(i => {
+    const h = hens[i];
+    const x = Math.round(h.x), y = Math.round(h.y), dir = h.tx < h.x ? -1 : 1;
+    // Pecking: the head drops for a few frames now and then.
+    const peck = !still && roll('peck', i, Math.floor(t / 6)) < 0.25;
+    drawHen(ctx, x, y, dir, h.c, peck);
+  });
 };
 
 const drawPans = (ctx: CanvasRenderingContext2D, pans: NonNullable<EstateState['facilities']['salt_pans']>['pans'], t: number) => {
@@ -592,6 +739,13 @@ const drawGround = (ctx: CanvasRenderingContext2D, p: Props, redraw: () => void)
 
 /** The wild map, until a painted one comes: a board of postcards cut from each ground's own plate. */
 const drawWildMap = (ctx: CanvasRenderingContext2D, p: Props, redraw: () => void) => {
+  // The owner's painted map, when it is there; the postcards otherwise.
+  const key = plateKey('wild_map', p.month, p.wx, p.weekType);
+  if (ESTATE_PLATES[key]) {
+    const im = img(ESTATE_PLATES[key], redraw);
+    if (im.complete && im.width) ctx.drawImage(im, 0, 0);
+    return;
+  }
   ctx.fillStyle = '#211a12'; ctx.fillRect(0, 0, 480, 270);
   WILD_TILES.forEach((g, i) => {
     const R = tileRect(i);

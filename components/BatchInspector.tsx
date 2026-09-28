@@ -11,7 +11,7 @@ import RunTrace from './RunTrace';
 import SpeedControl from './SpeedControl';
 import { SoilPanel, SoilHarvest } from './SoilPanel';
 import { isSoilRecipe, SOIL_KINDS } from '../services/soil';
-import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour , sporulation, sporeYield, describeSporulation, contaminationRisk } from '../services/gameLogic';
+import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour , sporulation, sporeYield, describeSporulation, contaminationRisk, provenanceOf, labelPremium, LABEL_DEMAND_KEY } from '../services/gameLogic';
 import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS , SPORULATION_START } from '../constants';
 import { CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon, LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon } from './icons';
 
@@ -566,6 +566,19 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   : 'Lineage: Founder Culture'}
               {isSpoiled ? ' · Bio-Hazard' : isInPeakWindow ? ' · Peak Harvest Window' : batch.progress >= 100 ? ' · Mature / Ready' : ''}
             </div>
+            {(() => {
+              // Provenance, printed on the label: it is what the buyer pays for.
+              const p = provenanceOf(batch);
+              if (p.estate <= 0) return null;
+              const prem = Math.round((labelPremium(batch, gameState?.marketDemand) - 1) * 100);
+              return (
+                <div className="prov">
+                  {p.bio > 0 ? <span className="prov-stamp bio">Biodynamic{p.bio < 0.99 ? ` · ${Math.round(p.bio * 100)}%` : ''}</span> : null}
+                  <span className="prov-stamp">Home-grown{p.estate < 0.99 ? ` · ${Math.round(p.estate * 100)}%` : ''}</span>
+                  <span className="prov-note">+{prem}% at market{p.bio > 0 && (gameState?.marketDemand?.[LABEL_DEMAND_KEY] ?? 1) < 0.9 ? ', the biodynamic buyers thinning' : ''}</span>
+                </div>
+              );
+            })()}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* The clock, where you are actually watching the ferment. Speeding

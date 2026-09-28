@@ -1,5 +1,5 @@
 import { Planting, Plot, Tree, CropStage, ActiveProblem, FacilityId, CropCover } from '../types.farm';
-import { FAMILIES, CROPS, TREE_SPECS, FACILITIES, PROBLEMS, CropFamily, CropSpec } from '../constants.farm';
+import { FAMILIES, CROPS, TREE_SPECS, FACILITIES, PROBLEMS, SPRAYABLE, CropFamily, CropSpec } from '../constants.farm';
 import { DayWeather, roll } from './climate';
 
 /* =============================================================================
@@ -189,6 +189,7 @@ export const problemOdds = (id: string, pl: Planting, plot: Plot, facility: Faci
 
 /** A problem does nothing on a plot that has the thing that stops it. */
 export const isStopped = (id: string, pl: { cover: CropCover; treated: Record<string, number> }, kit: Record<string, boolean>, day: number): boolean => {
+  if (SPRAYABLE.has(id) && (pl.treated.chem ?? -1) >= day) return true;   // a synthetic spray keeps it off for a fortnight
   const by = PROBLEMS[id]?.stoppedBy ?? [];
   return by.some(k => !!(pl.cover as Record<string, boolean | undefined>)[k] || !!kit[k] || (pl.treated[k] ?? -1) >= day);
 };
@@ -568,7 +569,7 @@ export const treeDay = (treeIn: Tree, facility: FacilityId, ctx: DayCtx): { tree
     if (ctx.dryStreak > 18 && !FACILITIES[facility].covered) tree.fruitKg *= 0.997;
     for (const id of spec.problems) {
       if (tree.problems.some(p => p.id === id)) continue;
-      const stopped = (PROBLEMS[id]?.stoppedBy ?? []).some(k => !!ctx.kit[k] || (tree.treated[k] ?? -1) >= ctx.day);
+      const stopped = (SPRAYABLE.has(id) && (tree.treated.chem ?? -1) >= ctx.day) || (PROBLEMS[id]?.stoppedBy ?? []).some(k => !!ctx.kit[k] || (tree.treated[k] ?? -1) >= ctx.day);
       if (stopped) continue;
       let odds = 0;
       if (id === 'codling') odds = ctx.month >= 5 && ctx.month <= 7 ? 0.02 : 0;

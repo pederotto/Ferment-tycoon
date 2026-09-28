@@ -6,8 +6,8 @@ import type { GroundId, WildKind } from './types.farm';
    Ported from the Understory prototype. Seasons are game months (0 = January).
    `n` is how many pieces a find carries at full patch vigour and `piece` the
    kilos of a prime one. The lookalikes are real, and so are their tells.
-   Coordinates (`at`) are on each ground's own plate: the owner's paintings at
-   480x270, the pine plantation's placeholder at 384x216.
+   Coordinates (`at`) are on each ground's own plate: the owner's paintings, all
+   at 480x270.
    ============================================================================= */
 
 export interface WildSpec { season: number[]; piece: number; n: [number, number]; kind: WildKind; note?: string }
@@ -162,11 +162,11 @@ export const signalsFor = (gid: GroundId, c: SignalCtx): Signal[] => {
       { id: 'knoll', at: [440, 186], label: 'A heather knoll', text: 'Too dry: cloudberry keeps its roots wet and its crown out of the water.' },
       { id: 'pools', at: [300, 214], label: 'The pools', text: 'Black water, deeper than it looks.' }];
     case 'pine_plantation': return [
-      find('pine_needles', [104, 140], 'Young pines at the ride edge', 'Soft, bright tips on the young trees at the edge of the ride.', 'Dark old needles, hard and bitter. The soft tips come in April.'),
-      { id: 'yew', at: [322, 122], label: 'The dark tree by the wall', clue: 'under', clueFor: ['pine_needles'], text: s === 'autumn' ? 'A yew, hung with red berries. Every part of it but the red flesh is poison, and the birds carry its seed into the pines. Look at a twig: flat needles, two pale stripes beneath.' : 'An old yew by the wall, darker than anything round it. Look at a twig: flat single needles with two pale stripes beneath. Remember that stripe.' },
-      { id: 'stump', at: [200, 190], label: 'A stump weeping resin', text: 'Resin on a cut stump, sticky and loud with the smell of pine.' },
-      { id: 'cones', at: [180, 166], label: 'Cones on the ride', text: 'Cones stripped to the core. A red squirrel, or crossbills.' },
-      { id: 'crossbill', at: [70, 58], label: 'A red bird high up', text: 'A crossbill, twisting seeds out of a cone.' }];
+      find('pine_needles', [132, 206], 'Young pines at the ride edge', 'Soft, bright tips on the young trees at the edge of the ride.', 'Dark old needles, hard and bitter. The soft tips come in April.'),
+      { id: 'yew', at: [392, 128], label: 'The dark tree by the wall', clue: 'under', clueFor: ['pine_needles'], text: s === 'autumn' ? 'A yew, hung with red berries. Every part of it but the red flesh is poison, and the birds carry its seed into the pines. Look at a twig: flat needles, two pale stripes beneath.' : 'An old yew by the wall, darker than anything round it. Look at a twig: flat single needles with two pale stripes beneath. Remember that stripe.' },
+      { id: 'stump', at: [56, 188], label: 'A stump weeping resin', text: 'Resin on a cut stump, sticky and loud with the smell of pine.' },
+      { id: 'cones', at: [300, 178], label: 'Cones under the pines', text: 'Cones stripped to the core. A red squirrel, or crossbills.' },
+      { id: 'crossbill', at: [104, 42], label: 'A red bird high up', text: 'A crossbill, twisting seeds out of a cone.' }];
     case 'hazel_coppice': return [
       { id: 'stool', at: [130, 150], label: 'The big hazel stool', kind: 'find', species: 'hazelnuts', nuts: true },
       { id: 'shells', at: [196, 200], label: 'Split shells on a stump', clue: 'squirrels', text: m >= 6 && m <= 9 ? 'Shells split cleanly in half: grey squirrels. They take them green. Whatever you leave past mid-September is theirs.' : 'Old shells, last year’s.' },
@@ -181,4 +181,11 @@ export const signalsFor = (gid: GroundId, c: SignalCtx): Signal[] => {
       { id: 'seal', at: [214, 168], label: 'A head in the water', text: 'A grey seal. It knows where the fish are too.' }];
   }
   return [];
+};
+
+/** Where each ground (and the salt pans, and the way home) is on the painted estate map. */
+export const MAP_PINS: Record<string, [number, number]> = {
+  bog: [62, 42], hazel_coppice: [40, 132], beech_hanger: [182, 112], chip_track: [96, 160], home_oak: [232, 204],
+  hedgerow: [60, 232], river_poplars: [322, 104], pine_plantation: [340, 42], coast_thorn: [410, 88],
+  salt_pans: [420, 142], harbour: [440, 236], farm: [262, 130],
 };

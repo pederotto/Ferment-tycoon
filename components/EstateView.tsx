@@ -2,14 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GameState, CrewMember } from '../types';
 import { FacilityId, FacilityState, Plot, Tree, StandingOrders, Hive } from '../types.farm';
 import {
-  FACILITIES, FACILITY_ORDER, CROPS, FAMILIES, TREE_SPECS, PROBLEMS, FARM_TOOLS, PRODUCE_CLASS, produceClassOf,
+  FACILITIES, FACILITY_ORDER, CROPS, FAMILIES, TREE_SPECS, PROBLEMS, FARM_TOOLS, PRODUCE_CLASS, produceClassOf, BIO_CONVERSION_DAYS, SPRAYABLE,
 } from '../constants.farm';
 import {
   ActionResult, walkRows, groupedProblems, fixProblem, waterPlots, plantPlots, clearPlots, coverPlots, trainPlots,
-  applyToPlots, pickHere, contractHarvest, pruneTrees, thinTrees, hiveAction, henAction, panAction, shedAction,
+  applyToPlots, pickHere, contractHarvest, pruneTrees, thinTrees, hiveAction, henAction, isBio, panAction, shedAction, PULLET_COST, RUN_CAPACITY,
   stoveAction, saveSeed, buyFacility, buyTool, setOrder, sellToVan, vanUnitPrice, isEstateProduce, baseOfProduce,
   plotQualityNow, treeQualityNow, baseIngredient, ROLE_FOR, farmRolesFor,
-  pantryOf, pantryKg, soilLots, doseKg, treatmentName, WET_WASTE,
+  pantryOf, pantryKg, soilLots, doseKg, treatmentName, WET_WASTE, bioBlocker, treeIsBiodynamic, sprayPlots, sprayCost,
 } from '../services/estate';
 import { hiveNeeds, YOLKS_PER_UNIT } from '../services/livestock';
 import { SOIL_EFFECTS, SOIL_PRODUCT_INGREDIENTS, WASTE_IDS, WASTE_INGREDIENTS } from '../constants.soil';
@@ -317,7 +317,7 @@ const MapLedger: React.FC<{ state: GameState; onGo: (p: ScenePlace) => void; act
                 return (
                   <li key={id}>
                     <Sprite id={id} size="tiny" />
-                    <span className="nm">{base?.name}<small> · graded {item?.quality}</small></span>
+                    <span className="nm">{base?.name}{isBio(id) && <span className="mk bio">biodynamic</span>}<small> · graded {item?.quality}</small></span>
                     <span className="n mono">{n}×{base ? base.unitDisplay === 'kg' || base.mass >= 1000 ? `${base.mass / 1000} kg` : `${base.mass} g` : ''}</span>
                     <span className={`pr${demand < 0.6 ? ' glut' : ''}`} title={demand < 0.6 ? `The van has had its fill of ${PRODUCE_CLASS[cls]?.label.toLowerCase()} this week.` : ''}>${price.toFixed(2)}</span>
                     <button className="mini-btn" onClick={() => act(s2 => { const r = sellToVan(s2, id, 1); return { state: r.state, minutes: 2, ok: r.paid > 0, message: `Sold one to the van for $${r.paid.toFixed(2)}.` }; })}>Sell 1</button>
@@ -375,13 +375,14 @@ const ORDER_WORDS: Partial<Record<keyof StandingOrders, string>> = {
   water: 'Water beds that are drying out', weed: 'Hoe and weed on sight', pests: 'Deal with pests and disease as they are seen',
   pick: 'Pick whatever is ripe', protect: 'Fleece against frost; keep the stove in', feed: 'Feed a bed that runs low',
   train: 'Pinch out tomatoes; prune and thin the trees', bees: 'Inspect, feed, treat and take the honey', hens: 'Eggs, feed, the coop door, the mites',
+  spray: 'Spray pests and weeds instead — quick and cheap, and no biodynamic label for a year',
 };
 const ORDERS_FOR: Record<FacilityId, (keyof StandingOrders)[]> = {
-  walled_garden: ['water', 'weed', 'pests', 'pick', 'protect', 'feed'],
-  polytunnel: ['water', 'weed', 'pests', 'pick', 'train', 'protect', 'feed'],
-  top_field: ['weed', 'pests', 'pick', 'protect', 'feed'],
-  orchard: ['pests', 'pick', 'train'],
-  orangery: ['pests', 'pick', 'protect'],
+  walled_garden: ['water', 'weed', 'pests', 'pick', 'protect', 'feed', 'spray'],
+  polytunnel: ['water', 'weed', 'pests', 'pick', 'train', 'protect', 'feed', 'spray'],
+  top_field: ['weed', 'pests', 'pick', 'protect', 'feed', 'spray'],
+  orchard: ['pests', 'pick', 'train', 'spray'],
+  orangery: ['pests', 'pick', 'protect', 'spray'],
   hives: ['bees'], hen_run: ['hens'], worm_shed: ['feed'], salt_pans: [],
 };
 
@@ -463,7 +464,7 @@ const PlaceLedger: React.FC<PlaceProps> = (p) => {
         <section className="el-sect">
           <h3>{f.id === 'orangery' ? 'The pots' : 'The trees'}{sel.length > 0 && <button className="linkish" onClick={() => setSel([])}>clear selection</button>}</h3>
           <ul className="el-beds">
-            {f.trees.map(t => <TreeCard key={t.id} tree={t} on={sel.includes(t.id)} onToggle={() => p.toggle(t.id)} />)}
+            {f.trees.map(t => <TreeCard key={t.id} tree={t} f={f} day={day} on={sel.includes(t.id)} onToggle={() => p.toggle(t.id)} />)}
           </ul>
           {selectedTrees.length > 0 && <TreeActions {...p} trees={selectedTrees} />}
           {f.id === 'orangery' && (
@@ -555,7 +556,9 @@ const BedCard: React.FC<{ plot: Plot; f: FacilityState; day: number; on: boolean
             {pl.cover.net && <span className="mk">netted</span>}
             {pl.cover.fleece && <span className="mk">fleece</span>}
             {(pl.trainedUntil ?? -1) >= day && <span className="mk">trained</span>}
-            {entriesOf<number>(pl.treated).filter(([, until]) => until >= day).map(([k]) => <span key={k} className="mk">{treatmentName(k)}</span>)}
+            <BioMark plot={plot} f={f} day={day} />
+            {(pl.treated.chem ?? -1) >= day && <span className="mk bad">sprayed</span>}
+            {entriesOf<number>(pl.treated).filter(([k, until]) => until >= day && k !== 'chem').map(([k]) => <span key={k} className="mk">{treatmentName(k)}</span>)}
             {(pl.line ?? 0) > 0 && <span className="mk">seed line {pl.line}</span>}
             {pl.problems.filter(x => x.seen).map(x => <span key={x.id} className="mk bad">{PROBLEMS[x.id]?.label}</span>)}
           </div>
@@ -565,6 +568,7 @@ const BedCard: React.FC<{ plot: Plot; f: FacilityState; day: number; on: boolean
           <Gauge label="Water" v={plot.water} warnBelow={20} />
           <Gauge label="Feed" v={plot.fertility} warnBelow={30} />
           <Gauge label="Life" v={plot.life} warnBelow={25} />
+          <span className="marks"><BioMark plot={plot} f={f} day={day} /></span>
           {plot.history[0] && <span className="faint hist">last: {FAMILIES[plot.history[0] as keyof typeof FAMILIES]?.label.toLowerCase() ?? plot.history[0]}</span>}
         </div>
       )}
@@ -596,6 +600,10 @@ const BedActions: React.FC<PlaceProps & { plots: Plot[]; empty: Plot[]; focus: P
         {growing.length > 0 && f.kit.fleece && <button className="mini-btn" onClick={() => act(s => coverPlots(s, f.id, growing.map(x => x.id), 'fleece'))}>{growing.every(x => x.planting!.cover.fleece) ? 'Fold fleece' : 'Fleece'}</button>}
         {tomatoes.length > 0 && <button className="mini-btn" onClick={() => act(s => trainPlots(s, f.id, tomatoes.map(x => x.id), day))}>Pinch out and tie in</button>}
         <button className="mini-btn" onClick={() => p.setFeeding(!p.feeding)}>Feed…</button>
+        {growing.some(x => x.planting!.problems.some(q => SPRAYABLE.has(q.id))) && (
+          <button className="mini-btn warn" title="Clears pests, fungus and weeds at once and keeps them off a fortnight. The bed starts its biodynamic year again."
+            onClick={() => act(s => sprayPlots(s, f.id, growing.map(x => x.id), day))}>Spray · ${growing.reduce((a, x) => a + sprayCost(x.areaM2), 0)} · loses the label</button>
+        )}
         {finished.length > 0 && <button className="mini-btn" onClick={() => act(s => clearPlots(s, f.id, finished.map(x => x.id)))}>Clear</button>}
         {canSeed && <button className="mini-btn" onClick={() => act(s => saveSeed(s, f.id, focus!.id))}>Save seed</button>}
         {empty.length > 0 && <button className="mini-btn gold" onClick={() => p.setPlanting(!p.planting)}>Plant…</button>}
@@ -635,7 +643,13 @@ const BedActions: React.FC<PlaceProps & { plots: Plot[]; empty: Plot[]; focus: P
 };
 
 /* --- a tree as a label --- */
-const TreeCard: React.FC<{ tree: Tree; on: boolean; onToggle: () => void }> = ({ tree, on, onToggle }) => {
+/** The label, or what stands between this bed and it. */
+const BioMark: React.FC<{ plot: Plot; f: FacilityState; day: number }> = ({ plot, f, day }) => {
+  const why = bioBlocker(plot, day, f.boughtDay);
+  return why ? <span className="mk faint" title="Biodynamic needs a year with no synthetic spray and no bought feed, and soil life of 60">not biodynamic: {why}</span> : <span className="mk bio" title="No synthetic sprays, no bought feed, a living soil, heirloom seed">biodynamic</span>;
+};
+
+const TreeCard: React.FC<{ tree: Tree; f: FacilityState; day: number; on: boolean; onToggle: () => void }> = ({ tree, f, day, on, onToggle }) => {
   const spec = TREE_SPECS[tree.cropId];
   const base = baseIngredient(tree.cropId);
   const hanging = tree.fruitKg + tree.ripeKg;
@@ -654,6 +668,8 @@ const TreeCard: React.FC<{ tree: Tree; on: boolean; onToggle: () => void }> = ({
       <div className="marks">
         {tree.prunedYear !== undefined && <span className="mk">pruned {tree.prunedYear === undefined ? '' : ''}</span>}
         {tree.thinnedYear !== undefined && <span className="mk">thinned</span>}
+        {treeIsBiodynamic(tree, day, f.boughtDay) ? <span className="mk bio">biodynamic</span> : <span className="mk faint">in conversion, {BIO_CONVERSION_DAYS - (day - (tree.sprayedDay ?? f.boughtDay))} days to go</span>}
+        {(tree.treated.chem ?? -1) >= day && <span className="mk bad">sprayed</span>}
         {tree.problems.filter(x => x.seen).map(x => <span key={x.id} className="mk bad">{PROBLEMS[x.id]?.label}</span>)}
       </div>
     </li>
@@ -672,6 +688,7 @@ const TreeActions: React.FC<PlaceProps & { trees: Tree[] }> = (p) => {
         <button className="mini-btn" disabled={!winter} title={winter ? '' : 'December to February, while the sap is down'} onClick={() => act(s => pruneTrees(s, f.id, ids, date))}>Winter prune</button>
         {date.month >= 5 && date.month <= 7 && <button className="mini-btn" onClick={() => act(s => pruneTrees(s, f.id, ids, date, true))}>Summer prune</button>}
         {date.month >= 4 && date.month <= 6 && trees.some(t => t.fruitKg > 0) && <button className="mini-btn" onClick={() => act(s => thinTrees(s, f.id, ids, date))}>Thin the fruit</button>}
+        {trees.some(t => t.problems.some(q => SPRAYABLE.has(q.id))) && <button className="mini-btn warn" title="Clears pests and fungus at once. The tree starts its biodynamic year again." onClick={() => act(s => sprayPlots(s, f.id, ids, day))}>Spray · ${trees.length * sprayCost(10)} · loses the label</button>}
         {store.map(l => <button key={l.id} className="mini-btn" onClick={() => act(s => applyToPlots(s, f.id, ids, l.id, day))}>{soilName(l.base)} · {l.grade}</button>)}
       </div>
     </div>
@@ -731,6 +748,7 @@ const HenPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
         <button className="mini-btn gold" disabled={r.eggs === 0} onClick={() => act(s => henAction(s, 'eggs'))}>Collect the eggs</button>
         {!f.kit.auto_door && <button className="mini-btn" onClick={() => act(s => henAction(s, 'shut'), { dark: true })}>Shut them in for the night</button>}
         <button className="mini-btn" onClick={() => act(s => henAction(s, 'feed'))}>A sack of feed · $18</button>
+        {r.hens < RUN_CAPACITY && <button className={`mini-btn${r.hens === 0 ? ' gold' : ''}`} onClick={() => act(s => henAction(s, 'pullets'))}>{RUN_CAPACITY - r.hens >= 2 ? 'Two pullets' : 'A pullet'} · ${Math.min(2, RUN_CAPACITY - r.hens) * PULLET_COST}</button>}
         {r.mites > 30 && <button className="mini-btn" onClick={() => act(s => henAction(s, 'clean'))}>Muck out</button>}
         {shedLarvae > 0.4 && <button className="mini-btn gold" onClick={() => act(s => henAction(s, 'larvae'))}>Larvae from the shed · {shedLarvae.toFixed(1)} kg</button>}
       </div></div>

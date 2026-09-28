@@ -9,7 +9,7 @@ import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { inSeason, nextInSeason, MONTH_NAMES } from './constants.forage';
 import { isAgitatedFerment, filmsOver, filmIsTheCulture } from './services/gameLogic';
-import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, isFlesh, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY, isContrabandBatch } from './services/gameLogic';
+import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, isFlesh, provenanceOf, LABEL_DEMAND_KEY, BIO_SALE_HIT, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY, isContrabandBatch } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage , sporePotency } from './services/koji';
 import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect, noStaff } from './services/crew';
 import { registerCustomIngredients, findIngredient } from './services/ingredientRegistry';
@@ -1823,9 +1823,15 @@ export default function App() {
     setGameState(prev => ({
       ...prev,
       recipeMastery: mastery.next,
-      marketDemand: soldType && demandHit > 0
-        ? { ...prev.marketDemand, [soldType]: Math.max(DEMAND_FLOOR, (prev.marketDemand[soldType] ?? 1) - demandHit) }
-        : prev.marketDemand,
+      marketDemand: (() => {
+        let md = soldType && demandHit > 0
+          ? { ...prev.marketDemand, [soldType]: Math.max(DEMAND_FLOOR, (prev.marketDemand[soldType] ?? 1) - demandHit) }
+          : prev.marketDemand;
+        // The few buyers who pay for biodynamic have had some: the premium thins, and recovers weekly.
+        const bio = provenanceOf(batch).bio;
+        if (bio > 0 && !isSporulation) md = { ...md, [LABEL_DEMAND_KEY]: Math.max(DEMAND_FLOOR, (md[LABEL_DEMAND_KEY] ?? 1) - BIO_SALE_HIT * bio) };
+        return md;
+      })(),
       money: prev.money + moneyGain,
       renown: prev.renown + renownGain, // ADD RENOWN HERE
       batches: prev.batches.filter(b => b.id !== batch.id),
