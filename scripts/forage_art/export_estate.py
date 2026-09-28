@@ -166,6 +166,20 @@ PAINTED_GEOM = {
             [[18, 82], [64, 82], [284, 270], [50, 270]],
         ],
     },
+    'hives': {
+        # each painted hive: [centre x, foot y, roof-top y, width], near hives bigger
+        'size': PAINTED_SIZE,
+        'hives': [[159, 170, 114, 50], [258, 188, 116, 62], [384, 208, 122, 76]],
+    },
+    'salt_pans': {
+        # each pan's floor as a quad (TL, TR, BR, BL), far to near, in perspective
+        'size': PAINTED_SIZE,
+        'pans': [
+            [[145, 123], [312, 123], [328, 139], [126, 139]],
+            [[118, 145], [332, 145], [358, 170], [84, 170]],
+            [[76, 182], [380, 182], [448, 238], [22, 238]],
+        ],
+    },
     'orchard': {
         # canopy ellipses (cx, cy, rx, ry), measured off the painted summer plate; the
         # akebi's is the top of its pergola. Blossom and fruit are drawn into these.

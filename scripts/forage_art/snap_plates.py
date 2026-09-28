@@ -50,6 +50,11 @@ SOURCES = {
     'hp0qrm': ('farm_map', ['winter', 'winter_snow', 'summer', None, None, 'autumn', 'spring']),
     # the third batch: (5)-(9) are copies of the first five
     'vyipot': ('orchard', ORDER),
+    's37h7u': ('hives', ORDER),
+    # salt pans came out of order; (4) is the parts sheet, and the clear winter came alone.
+    # d3issl was an earlier composition and zf0kp0 two drained-pan variants, kept aside.
+    '5rdeey': ('salt_pans', ['winter_snow', 'autumn', 'summer', 'spring', None]),
+    'x7wgou': ('salt_pans', ['winter']),
 }
 
 W, H = 480, 268

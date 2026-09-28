@@ -1816,3 +1816,11 @@ with the guess. If there is no real figure for a process, do not check it.
 - The farm map's spring and autumn came as `hp0qrm (5)` and `(6)`; `SOURCES` entries may be `None` to skip copies and sheets in a numbered set. Checked against summer by shift search (best offset 0,0) and by drawing the hit rectangles on them.
 - Farm roles take their faces from `farmFaceSheet.ts` (two per role, cut from `8zo50a` by `cut_faces.py`), as the koji keeper takes the indigo four. A veil is mesh, so the magenta behind it came through lilac; pale magenta-tinted pixels are set to their own grey.
 - Not used, and why: `3lgfas` is smooth illustration on a ruled grid with no farm tool on it (its "mister" is not a pump sprayer); `fxom2f` is twelve townsfolk (fisherman, captain, crier, monk, innkeeper...) with no role in the game yet — they would suit vendors or the market.
+
+## The apiary and the salt pans, painted
+- **Hives** are `[centre x, foot y, roof-top y, width]` per painted hive, nearer hives bigger. The hive is in the picture, so only its state is drawn: bees circling its own landing board (a third of the way up from the foot), density by colony strength, and a shadow over a dead colony. Supers are not drawn on a painted hive; the panel carries them.
+- **Pans** are quads in perspective, far to near. Brine fills the floor in a colour that follows its strength, from the parts sheet's swatches: sea blue at 35 g/l, grey as it concentrates, amber near 300 g/l, which is what real pans do as salt-loving algae bloom. Crust speckles, flor glints on a still day, a cover darkens the pan.
+- `5rdeey` came out of season order and its fifth image is the parts sheet; the clear winter came alone as `x7wgou`. `d3issl` (an earlier composition) and `zf0kp0` (drained brown pans, with and without the tree by the hut) are kept aside.
+
+## Birds on a bed
+- A flock is drawn as birds, not blocks: sparrows at the grain, crows, pigeons, each sized by its own depth. Most of a flock is on the ground hopping and pecking; a few at a time lift off in an arc, wings beating, and land somewhere new. The old version was three black rectangles scaled up on the field strip and swaying, which the owner saw as "a weird blob moving in the middle of the top field".

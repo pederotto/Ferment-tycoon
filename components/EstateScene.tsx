@@ -293,6 +293,46 @@ const drawPlant = (ctx: CanvasRenderingContext2D, cropId: string, f: number, x: 
   }
 };
 
+/** A flock on a bed: most of it on the ground hopping and pecking, a few birds at a time
+ *  lifting off and landing again somewhere else. Each bird is sized by its own depth. */
+const BIRD: Record<string, { n: number; body: string; dark: string; beak: string; size: number }> = {
+  birds_grain: { n: 12, body: '#8a6a44', dark: '#5a4028', beak: '#c8a870', size: 0.7 },   // sparrows
+  crows:       { n: 4,  body: '#16161c', dark: '#08080c', beak: '#3a3a40', size: 1.2 },
+  pigeons:     { n: 3,  body: '#8a8e9a', dark: '#5a5e6a', beak: '#d8b0a0', size: 1.0 },
+};
+const drawFlock = (ctx: CanvasRenderingContext2D, q: Quad, g: any, t: number, seed: number, b: { n: number; body: string; dark: string; beak: string; size: number }) => {
+  for (let k = 0; k < b.n; k++) {
+    const r = (j: number) => roll('flock', seed, k, j);
+    const cycle = 240 + r(1) * 160;
+    const ph = ((t + r(2) * cycle) % cycle) / cycle;         // 0..1 through this bird's cycle
+    const hopTo = Math.floor((t + r(2) * cycle) / cycle);     // a new spot after every flight
+    const u = 0.1 + roll('fu', seed, k, hopTo) * 0.8, v = 0.15 + roll('fv', seed, k, hopTo) * 0.75;
+    const [gx, gy] = qAt(q, u, v);
+    const s = Math.max(1, Math.round(depthScale(g, gy) * b.size));
+    const dir = roll('fd', seed, k, hopTo) < 0.5 ? -1 : 1;
+    if (ph < 0.86) {
+      // on the ground: a hop now and then, the head down to peck
+      const hop = (t + k * 7) % 23 === 0 ? s : 0;
+      const peck = (t + k * 5) % 17 < 4;
+      const x = Math.round(gx + Math.sin((t + k * 11) / 40) * 2 * s), y = Math.round(gy) - hop;
+      ctx.fillStyle = 'rgba(30,24,14,0.25)'; ctx.fillRect(x - s, Math.round(gy) + 1, 3 * s, 1);
+      ctx.fillStyle = b.body; ctx.fillRect(x - s, y - 2 * s, 3 * s, 2 * s);
+      ctx.fillStyle = b.dark; ctx.fillRect(x - s - dir * s, y - 2 * s, s, s);           // tail
+      const hx = x + dir * 2 * s, hy = peck ? y - s : y - 3 * s;
+      ctx.fillStyle = b.body; ctx.fillRect(hx - (dir < 0 ? 0 : 0), hy, s, s);          // head
+      ctx.fillStyle = b.beak; ctx.fillRect(hx + dir * s, hy + (peck ? s - 1 : Math.floor(s / 2)), Math.max(1, Math.ceil(s / 2)), 1);
+    } else {
+      // in the air: up and over in an arc, wings beating
+      const a = (ph - 0.86) / 0.14;
+      const x = Math.round(gx + dir * a * 30 * s), y = Math.round(gy - Math.sin(a * Math.PI) * 18 * s - 2 * s);
+      const up = (t + k) % 4 < 2;
+      ctx.fillStyle = b.body; ctx.fillRect(x, y, 2 * s, s);
+      ctx.fillStyle = b.dark;
+      ctx.fillRect(x - s, y + (up ? -s : s), s, s); ctx.fillRect(x + 2 * s, y + (up ? -s : s), s, s);
+    }
+  }
+};
+
 /** What the season and the problems have laid over a bed, drawn on its quad. */
 const drawBedExtras = (ctx: CanvasRenderingContext2D, q: Quad, plot: Plot, t: number, seed: number, g: any) => {
   const pl = plot.planting;
@@ -310,9 +350,8 @@ const drawBedExtras = (ctx: CanvasRenderingContext2D, q: Quad, plot: Plot, t: nu
   for (const pr of pl.problems) {
     if (pr.id === 'weeds') for (let k = 0; k < n(26); k++) { const [x, y] = P(k + 300); ctx.fillStyle = k % 2 ? '#7ab83a' : '#5a9a2a'; ctx.fillRect(Math.round(x), Math.round(y) - sc + 1, 1, sc); }
     if (pr.id === 'whites') for (let k = 0; k < 4; k++) { const [x0, y0] = qAt(q, ((t * (1 + k) * 0.01 + k * 0.3) % 1), 0); const by = y0 - 5 * sc + Math.sin(t / 3 + k) * 3; px(ctx, x0, by, '#f6f6f0'); px(ctx, x0 + 1, by - (t % 2), '#f6f6f0'); }
-    if (pr.id === 'pigeons') for (let k = 0; k < 2; k++) { const [x, y] = qAt(q, 0.25 + k * 0.4, 0.3); ctx.fillStyle = '#7a7e88'; ctx.fillRect(Math.round(x), Math.round(y), 3 * sc, 2 * sc); px(ctx, x + 3 * sc, y, '#a8a8b0'); }
     if (pr.id === 'slugs') for (let k = 0; k < n(5); k++) { const [x, y] = P(k + 500); ctx.fillStyle = 'rgba(220,230,235,0.75)'; ctx.fillRect(Math.round(x), Math.round(y), 4 * sc, 1); }
-    if (pr.id === 'crows' || pr.id === 'birds_grain') for (let k = 0; k < 3; k++) { const [x, y] = qAt(q, 0.2 + k * 0.28, 0.25 + k * 0.2); ctx.fillStyle = '#141418'; ctx.fillRect(Math.round(x + Math.sin(t / 4 + k) * 2), Math.round(y), 3 * sc, 2 * sc); }
+    if (pr.id === 'pigeons' || pr.id === 'crows' || pr.id === 'birds_grain') drawFlock(ctx, q, g, t, seed, BIRD[pr.id]);
     if (pr.id === 'blight' || pr.id === 'rust' || pr.id === 'chocolate_spot' || pr.id === 'ascochyta' || pr.id === 'blackspot') for (let k = 0; k < n(10); k++) { const [x, y] = P(k + 700); px(ctx, x, y, pr.id === 'rust' ? '#c8702a' : '#5a3a1a'); }
   }
   const lift = 8 * sc;
@@ -595,6 +634,25 @@ const drawHives = (ctx: CanvasRenderingContext2D, hives: NonNullable<EstateState
   hives!.forEach((h, i) => {
     const at = g.hives[i];
     if (!at) return;
+    // A painted hive is [centre x, foot y, roof-top y, width]: the hive is in the picture, so
+    // only its state is drawn — bees round its own entrance, a shadow over a dead colony.
+    if (at.length >= 4) {
+      const [cx, foot, top, w] = at;
+      const hgt = foot - top;
+      if (!h.alive) { ctx.fillStyle = 'rgba(20,16,12,0.35)'; ctx.fillRect(Math.round(cx - w / 2), Math.round(top + hgt * 0.25), Math.round(w), Math.round(hgt * 0.55)); return; }
+      if (!flying || still) return;
+      const ey = foot - hgt * 0.36;                           // the landing board
+      const n = Math.round(8 + 14 * h.strength);
+      const reach = w * 0.9;
+      for (let b = 0; b < n; b++) {
+        const q = t * (0.16 + (b % 5) * 0.03) + b * 1.7;
+        const r2 = 4 + ((b * 7) % 10) / 10 * reach;
+        const bx = cx + Math.cos(q) * r2, by = ey - 4 + Math.sin(q * 1.7) * r2 * 0.45;
+        px(ctx, bx, by, (t + b) % 2 ? '#e8c030' : '#2a2014');
+        if (w > 60) px(ctx, bx + 1, by, '#2a2014');
+      }
+      return;
+    }
     // supers stacked on top for the honey they are carrying
     const supers = Math.min(3, Math.floor(h.surplus / 7));
     for (let s = 0; s < supers; s++) { ctx.fillStyle = s % 2 ? '#e8e2cc' : '#f4eedc'; ctx.fillRect(at[0] - 11, at[1] - 34 - s * 6, 22, 6); ctx.fillStyle = '#8a8272'; ctx.fillRect(at[0] - 11, at[1] - 29 - s * 6, 22, 1); }
@@ -653,6 +711,28 @@ const drawPans = (ctx: CanvasRenderingContext2D, pans: NonNullable<EstateState['
   pans!.forEach((pan, i) => {
     const R = g.pans[i];
     if (!R) return;
+    // A painted pan is a quad in perspective: brine fills its floor in a colour that follows
+    // its strength (sea blue, greying as it concentrates, amber near saturation, as real pans
+    // go when the salt-loving algae bloom), crust speckles it, flor glints on a still day.
+    if (Array.isArray(R[0])) {
+      const q = R as unknown as Quad;
+      const shape = () => { ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); for (let c = 1; c < 4; c++) ctx.lineTo(q[c][0], q[c][1]); ctx.closePath(); };
+      if (pan.brineMm > 0.5) {
+        const k = Math.min(1, Math.max(0, (pan.gPerL - 35) / (300 - 35)));
+        const [c0, c1] = k < 0.5 ? [[0, 140, 205], [160, 176, 192]] : [[160, 176, 192], [222, 155, 74]];
+        const u = k < 0.5 ? k * 2 : (k - 0.5) * 2;
+        const col = c0.map((v, j) => Math.round(v + (c1[j] - v) * u));
+        ctx.fillStyle = `rgba(${col.join(',')},${Math.min(0.8, 0.3 + pan.brineMm / 60)})`; shape(); ctx.fill();
+        // a glint along the far edge
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(Math.round(q[0][0] + 4), Math.round(q[0][1] + 1), Math.round(q[1][0] - q[0][0] - 8), 1);
+      }
+      const crust = Math.min(1, pan.crustKg / 12);
+      const areaPx = (q[1][0] - q[0][0] + q[2][0] - q[3][0]) / 2 * (q[3][1] - q[0][1]);
+      for (let k = 0; k < Math.round(areaPx * 0.35 * crust); k++) { const [x, y] = qAt(q, roll('pc', i, k), roll('pd', i, k)); px(ctx, x, y, k % 4 ? '#f2f0ea' : '#dcd8cc'); }
+      if (pan.florKg > 0.05 && (t % 10) < 5) for (let f = 0; f < Math.min(20, pan.florKg * 24); f++) { const [x, y] = qAt(q, roll('fl', i, f), roll('fm', i, f) * 0.5); px(ctx, x, y, '#ffffff'); }
+      if (pan.covered) { ctx.fillStyle = 'rgba(52,62,58,0.72)'; shape(); ctx.fill(); }
+      return;
+    }
     const w = R[2] - R[0], h = R[3] - R[1];
     if (pan.brineMm > 0.5) { ctx.fillStyle = `rgba(110,150,170,${Math.min(0.85, 0.25 + pan.brineMm / 50)})`; ctx.fillRect(R[0], R[1], w, h); }
     const crust = Math.min(1, pan.crustKg / 12);
