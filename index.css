@@ -5578,14 +5578,16 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
   background: #0b0907; container-type: size;
 }
 .estate-scene { width: min(100cqw, calc(100cqh * 16 / 9)); height: auto; }
+.estate-foot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; flex-direction: column; align-items: flex-start; pointer-events: none; }
+.estate-foot > .estate-daybar { pointer-events: auto; }
 .estate-daybar {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  align-self: stretch;
   background: linear-gradient(180deg, rgba(8, 6, 4, 0.55), rgba(8, 6, 4, 0.82));
   backdrop-filter: blur(3px);
 }
 .estate-daybar .mini-btn.on { border-color: #e2c27a; color: #fff1cc; }
 .estate-log {
-  position: absolute; left: 12px; bottom: 56px; z-index: 3; max-width: min(520px, 60%);
+  margin: 0 0 6px 12px; max-width: min(520px, 60%);
   padding: 7px 11px; border-radius: 4px; pointer-events: none;
   background: rgba(8, 6, 4, 0.68); color: var(--text-mid);
 }
@@ -5606,3 +5608,38 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .estate .estate-pop-close { position: sticky; top: -6px; align-self: flex-end; width: 30px; height: 30px; margin: -6px -6px -44px 0; z-index: 2; background: rgba(12, 10, 8, 0.75); }
 .estate-pop-more { display: block; margin-top: 10px; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; color: #e2c27a; font: inherit; font-size: 12.5px; text-decoration: underline; }
 .estate-pop > .estate-pop-close + * h3:first-child, .estate-pop > .estate-pop-close + * > :first-child { padding-right: 34px; }
+
+/* A wild sign answers beside itself: a small card off the pin, flipped to stay
+   inside the picture (`.to-left` past 55% across, `.up` below halfway), so the
+   rest of the ground and its other signs stay in view. It is ONE soft sheet of
+   paper — the owner found a dark box holding a second card harsh — with type
+   sized to be read at a glance, and it fades in rather than snapping. */
+.sign-callout {
+  position: absolute; z-index: 4; width: min(340px, 46%); max-height: 60%;
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  transform: translate(20px, -20px); padding: 14px 16px 15px;
+  border: 0; border-radius: 12px;
+  background: rgba(244, 236, 218, 0.95);
+  box-shadow: 0 10px 34px rgba(20, 12, 4, 0.28), 0 1px 3px rgba(20, 12, 4, 0.18);
+  color: #4a3b28; font-size: 14.5px;
+  animation: sign-callout-in 0.18s ease-out;
+}
+@keyframes sign-callout-in { from { opacity: 0; scale: 0.97; } to { opacity: 1; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .sign-callout { animation: none; } }
+.sign-callout.to-left { transform: translate(calc(-100% - 20px), -20px); }
+.sign-callout.up { transform: translate(20px, calc(-100% + 20px)); }
+.sign-callout.to-left.up { transform: translate(calc(-100% - 20px), calc(-100% + 20px)); }
+.sign-callout .el-sect { margin: 0; }
+.sign-callout .wild-journal { margin: 0; padding: 0; }
+.sign-callout .wild-journal .wj,
+.sign-callout .wild-journal .wj.clue,
+.sign-callout .wild-journal .wj.find { padding: 0 22px 0 0; background: none; box-shadow: none; opacity: 1; gap: 6px; }
+.sign-callout .wild-journal .wj b { font-size: 16.5px; line-height: 1.25; color: #2e2215; }
+.sign-callout .wild-journal .wj p { font-size: 14.5px; line-height: 1.55; color: #4a3b28; }
+.sign-callout .wild-exam.label-plate { background: none; box-shadow: none; border: 0; padding: 0; }
+.sign-callout .mini-btn { margin-top: 4px; }
+.estate .sign-callout .sc-close {
+  position: sticky; top: -6px; float: right; width: 24px; height: 24px; margin: -6px -8px 0 6px; z-index: 2;
+  border: 0; background: rgba(74, 59, 40, 0.08); color: #6b5638;
+}
+.estate .sign-callout .sc-close:hover { background: rgba(74, 59, 40, 0.16); color: #2e2215; }

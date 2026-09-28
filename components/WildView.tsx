@@ -28,7 +28,7 @@ const quiet = (fn: (s: GameState) => GameState) => (s: GameState): ActionResult 
 const monthsLabel = (m: number[]) => (m.length ? (m.length === 1 ? MONTH_NAMES[m[0]].slice(0, 3) : `${MONTH_NAMES[m[0]].slice(0, 3)}–${MONTH_NAMES[m[m.length - 1]].slice(0, 3)}`) : 'all year');
 
 /* --- the overlay: pins on a ground, postcards on the map --- */
-export const WildHits: React.FC<{ state: GameState; place: GroundId | 'wild_map'; date: CalendarDate; wx: DayWeather; size: [number, number]; onGo: (p: any) => void; act: Act; owned: Record<string, boolean> }> = ({ state, place, date, wx, size, onGo, act, owned }) => {
+export const WildHits: React.FC<{ state: GameState; place: GroundId | 'wild_map'; date: CalendarDate; wx: DayWeather; size: [number, number]; onGo: (p: any) => void; act: Act; owned: Record<string, boolean>; onSign?: (at: [number, number]) => void }> = ({ state, place, date, wx, size, onGo, act, owned, onSign }) => {
   const [W, H] = size;
   if (place === 'wild_map' && wildMapPainted()) {
     // Pins on the painted map: every ground, the salt pans, and the way home.
@@ -86,10 +86,12 @@ export const WildHits: React.FC<{ state: GameState; place: GroundId | 'wild_map'
         const fi = v?.finds.findIndex(f => f.sid === sg.id) ?? -1;
         const open = fi >= 0 && !v!.finds[fi].done;
         const r = W > 400 ? 9 : 7;
-        const onPick = () => (open ? act(s => examine(s, fi, date, wx)) : !read ? act(s => lookAt(s, sg.id, date, wx)) : undefined);
+        // `onSign` puts the answer beside the sign: the card opens on a seen sign
+        // too, so its entry can be read again without the journal.
+        const onPick = () => { onSign?.([sg.at[0] / W, sg.at[1] / H]); return open ? act(s => examine(s, fi, date, wx)) : !read ? act(s => lookAt(s, sg.id, date, wx)) : undefined; };
         const label = `${sg.label}${read ? (open ? ' — pick it up' : ' — seen') : ` — look · ${LOOK_MINUTES} min`}`;
         return (
-          <g key={sg.id} role="button" tabIndex={read && !open ? -1 : 0} aria-label={label}
+          <g key={sg.id} role="button" tabIndex={0} aria-label={label}
             className={`wild-pin${read ? ' read' : ''}${open ? ' open' : ''}`}
             onClick={onPick} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(); } }}>
             <title>{label}</title>
@@ -195,22 +197,39 @@ export const GroundLedger: React.FC<{ state: GameState; ground: GroundId; date: 
         <section className="el-sect">
           <h3>What you have seen</h3>
           <ol className="wild-journal">
-            {[...visit.log].reverse().map((e, i) => {
-              const f = e.find !== undefined ? visit.finds[e.find] : undefined;
-              return (
-                <li key={i} className={`wj ${e.kind}`}>
-                  <b>{e.label}</b>
-                  <p>{e.text}</p>
-                  {f && !f.done && !visit.spec && !visit.pick && <button className="mini-btn gold" onClick={() => act(s => examine(s, e.find!, date, wx))}>Pick it up</button>}
-                  {e.kind === 'lay' && (wildOf(state).bedAt === undefined || wildOf(state).bedAt === null) && <button className="mini-btn gold" onClick={() => act(s => layBed(s, absoluteDay(date)))}>Lay a wine-cap bed · $35 · 1 h 30</button>}
-                </li>
-              );
-            })}
+            {[...visit.log].reverse().map((e, i) => <JournalEntry key={i} state={state} visit={visit} e={e} date={date} wx={wx} act={act} />)}
           </ol>
         </section>
       )}
     </>
   );
+};
+
+/* One line of the day's journal, with whatever it lets you do next. */
+const JournalEntry: React.FC<{ state: GameState; visit: NonNullable<ReturnType<typeof wildOf>['visit']>; e: NonNullable<ReturnType<typeof wildOf>['visit']>['log'][number]; date: CalendarDate; wx: DayWeather; act: Act }> = ({ state, visit, e, date, wx, act }) => {
+  const f = e.find !== undefined ? visit.finds[e.find] : undefined;
+  return (
+    <li className={`wj ${e.kind}`}>
+      <b>{e.label}</b>
+      <p>{e.text}</p>
+      {f && !f.done && !visit.spec && !visit.pick && <button className="mini-btn gold" onClick={() => act(s => examine(s, e.find!, date, wx))}>Pick it up</button>}
+      {e.kind === 'lay' && (wildOf(state).bedAt === undefined || wildOf(state).bedAt === null) && <button className="mini-btn gold" onClick={() => act(s => layBed(s, absoluteDay(date)))}>Lay a wine-cap bed · $35 · 1 h 30</button>}
+    </li>
+  );
+};
+
+/* THE ANSWER BESIDE THE SIGN. A look opened the whole journal as a panel down
+   one side, which covered a third of the ground and the signs under it. This
+   is the one thing the click asked about: the picking or the examining if one
+   is under way, otherwise the newest entry in the journal. */
+export const SignCallout: React.FC<{ state: GameState; ground: GroundId; date: CalendarDate; wx: DayWeather; act: Act }> = ({ state, ground, date, wx, act }) => {
+  const v = wildOf(state).visit;
+  const visit = v && v.ground === ground && v.day === absoluteDay(date) ? v : undefined;
+  if (!visit) return null;
+  if (visit.pick) return <PickPanel state={state} date={date} act={act} />;
+  if (visit.spec) return <ExaminePanel state={state} date={date} wx={wx} act={act} />;
+  const e = visit.log[visit.log.length - 1];
+  return e ? <ol className="wild-journal"><JournalEntry state={state} visit={visit} e={e} date={date} wx={wx} act={act} /></ol> : null;
 };
 
 const ExaminePanel: React.FC<{ state: GameState; date: CalendarDate; wx: DayWeather; act: Act }> = ({ state, date, wx, act }) => {

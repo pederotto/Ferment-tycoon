@@ -24,7 +24,7 @@ import {
 } from '../services/climate';
 import { MONTH_NAMES, seasonLabel } from '../constants.forage';
 import EstateScene, { ScenePlace, sceneSize, asQuad, treeGeom, potGeom, isGround } from './EstateScene';
-import { WildHits, WildMapLedger, GroundLedger } from './WildView';
+import { WildHits, WildMapLedger, GroundLedger, SignCallout } from './WildView';
 import { GROUNDS } from '../constants.wild';
 import { ESTATE_GEOM, ESTATE_PLATES, CROP_SPRITES } from './estatePlates';
 import { CloseIcon } from './icons';
@@ -112,21 +112,23 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
   // `popLeft` puts it on the far side of the picture from what was clicked.
   const [pop, setPop] = useState<string | null>(null);
   const [popLeft, setPopLeft] = useState(false);
-  const openPop = (what: string, atX = 0.5) => { setPop(what); setPopLeft(atX > 0.55); };
-  const closePop = () => { setPop(null); setSel([]); setPlanting(false); setFeeding(false); };
+  const openPop = (what: string, atX = 0.5) => { setPop(what); setPopLeft(atX > 0.55); setCallout(null); };
+  const closePop = () => { setPop(null); setSel([]); setPlanting(false); setFeeding(false); setCallout(null); };
+  // In the wild a sign answers beside itself (x, y as fractions of the picture).
+  const [callout, setCallout] = useState<[number, number] | null>(null);
 
   const body = useRef<HTMLDivElement>(null);
   // A new place starts at the top: its picture, not halfway down the last one's ledger.
   useEffect(() => {
-    setSel([]); setPlanting(false); setFeeding(false); setPop(null);
+    setSel([]); setPlanting(false); setFeeding(false); setPop(null); setCallout(null);
     body.current?.scrollTo(0, 0);
     body.current?.querySelectorAll('.estate-ledger, .estate-stage').forEach(e => e.scrollTo(0, 0));
   }, [place]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (pop) closePop(); else if (isGround(place)) onGo('wild_map'); else if (place !== 'farm_map') onGo('farm_map'); else onClose(); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (pop || callout) closePop(); else if (isGround(place)) onGo('wild_map'); else if (place !== 'farm_map') onGo('farm_map'); else onClose(); } };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [place, onGo, onClose, pop]);
+  }, [place, onGo, onClose, pop, callout]);
 
   const owned = useMemo(() => Object.fromEntries(Object.keys(est.facilities).map(k => [k, true])) as Partial<Record<FacilityId, boolean>>, [est.facilities]);
   const title = place === 'farm_map' ? 'The Farm' : place === 'wild_map' ? 'The Wild' : isGround(place) ? GROUNDS[place].name : FACILITIES[place as FacilityId].name;
@@ -160,7 +162,7 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
           {/* A click anywhere on the picture that is not on a thing closes the pop-up;
               a click on another thing moves it there instead. */}
           <div className="estate-stage" onClick={e => {
-            if (pop && !(e.target as Element).closest('.estate-hit, .wild-pin, button, [role="button"], a, input, select')) closePop();
+            if ((pop || callout) && !(e.target as Element).closest('.sign-callout, .estate-hit, .wild-pin, button, [role="button"], a, input, select')) closePop();
           }}>
             <div className="estate-scene">
               <EstateScene
@@ -169,7 +171,8 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
               />
               {wild
                 ? <WildHits state={state} place={place as any} date={date} wx={wx} size={sceneSize(place)} onGo={onGo}
-                            act={(fn, o) => { openPop('ledger'); act(fn, o); }} owned={owned as Record<string, boolean>} />
+                            act={act} owned={owned as Record<string, boolean>}
+                            onSign={at => { setPop(null); setCallout(at); }} />
                 : <HitAreas place={place} f={f} owned={owned} sel={sel} onPick={(id, atX) => {
                   if (place === 'farm_map') return openPop(id, atX);
                   openPop('ledger', atX);
@@ -180,7 +183,23 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
                   }
                   toggle(id);
                 }} />}
+              {callout && isGround(place) && (
+                <div className={`sign-callout${callout[0] > 0.55 ? ' to-left' : ''}${callout[1] > 0.5 ? ' up' : ''}`}
+                     style={{ left: `${callout[0] * 100}%`, top: `${callout[1] * 100}%` }}
+                     role="dialog" aria-label="What you found">
+                  <button className="close-stamp sc-close" onClick={closePop} aria-label="Close" title="Close"><CloseIcon size={10} /></button>
+                  <SignCallout state={state} ground={place as any} date={date} wx={wx} act={act} />
+                </div>
+              )}
             </div>
+            {/* The foot of the picture: the day's log stacked on the day bar, so a bar
+                that wraps pushes the log up rather than printing under it. */}
+            <div className="estate-foot">
+            {log.length > 0 && (
+              <ol className="estate-log mono" aria-label="Today">
+                {log.slice(-5).map((l, i) => <li key={i}><span>{l.at}</span> {l.text}</li>)}
+              </ol>
+            )}
             <div className="estate-daybar">
               <span className="wx">
                 <b>{wx.label}</b> · {Math.round(wx.tMin)}–{Math.round(wx.tMax)} °C{wx.rainMm > 0.5 ? ` · ${wx.rainMm.toFixed(0)} mm` : ''} · {state.weather.description}
@@ -197,11 +216,7 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
                 ? <button className="mini-btn gold" onClick={() => onWait(((sun.sunrise - state.minute) + 1440) % 1440)}>Wait for the light ({formatClock(sun.sunrise)})</button>
                 : <button className="mini-btn" onClick={() => onWait(60)} title="Let an hour pass: the bench works on">Wait an hour</button>}
             </div>
-            {log.length > 0 && (
-              <ol className="estate-log mono" aria-label="Today">
-                {log.slice(-5).map((l, i) => <li key={i}><span>{l.at}</span> {l.text}</li>)}
-              </ol>
-            )}
+            </div>
           </div>
 
           {pop && (
