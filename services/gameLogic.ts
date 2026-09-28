@@ -82,6 +82,11 @@ export const getRecipeForBatch = (batch: Batch): Recipe => {
  * THE MATRIX: Determines recipe based on inputs.
  * Now includes PROCEDURAL GENERATION for generic recipes.
  */
+/** Does this matrix entry run in this vessel? `vesselId` is one id, a list, or null for any. */
+export const matrixTakesVessel = (entry: MatrixEntry, vesselId: string): boolean =>
+  entry.vesselId === null
+  || (Array.isArray(entry.vesselId) ? entry.vesselId.includes(vesselId) : entry.vesselId === vesselId);
+
 export const resolveRecipeFromMatrix = (
   ingredients: Ingredient[], 
   vesselId: string
@@ -141,7 +146,7 @@ export const resolveRecipeFromMatrix = (
   };
 
   for (const entry of RECIPE_MATRIX) {
-    if (entry.vesselId !== null && entry.vesselId !== vesselId) continue;
+    if (!matrixTakesVessel(entry, vesselId)) continue;
     if (!matchSubstrate(entry.substrate)) continue;
     if (!entry.requires.every(matrixToken)) continue;
     if (entry.forbids?.some(matrixToken)) continue;
@@ -2725,9 +2730,9 @@ export const describeFormula = (recipeId: string): {
     substrateLabel,
     addLabels: entry.requires.map(t => MATRIX_TOKEN_LABELS[t] ?? t),
     forbidLabels: (entry.forbids ?? []).map(t => MATRIX_TOKEN_LABELS[t] ?? t),
-    vesselName: entry.vesselId
-      ? (VESSELS.find(v => v.id === entry.vesselId)?.name ?? entry.vesselId)
-      : 'Any vessel',
+    vesselName: entry.vesselId === null
+      ? 'Any vessel'
+      : [entry.vesselId].flat().map(id => VESSELS.find(v => v.id === id)?.name ?? id).join(' or '),
   };
 };
 

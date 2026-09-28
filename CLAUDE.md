@@ -36,6 +36,20 @@ so they cannot drift.
 - **New entries go above the `barley_koji` catch-all, which stays last.** It
   matches any substrate sporulated on a tray, so a grain koji placed after it is
   unreachable and einkorn silently becomes barley koji.
+- **`vesselId` may be a list, and a new koji vessel goes in `KOJI_BEDS`.** The
+  Cedar Muro shipped with no matrix entry naming it, so koji in the $420 koji
+  vessel was Bio-Sludge. The six entries that grow a mould on a bed (the
+  catch-all, heritage koji, the four "koji on anything") take `KOJI_BEDS`
+  (heritage repeats the literal); bottarga, casu marzu, tempeh, katsuobushi,
+  meju and IMO stay tray-only. Read an entry's vessels through
+  `matrixTakesVessel`, never `entry.vesselId === id`. Differential over
+  19,526,400 combinations (106 substrates + none × 15,226 reagent sets × 12
+  vessels): 353,928 moved, all on the muro; 343,632 off Bio-Sludge, 10,296 off a
+  generated garum or amino onto the koji the tray already made from them. Every
+  combination the tray makes a koji from, the muro makes the same koji from.
+  Expected differences: spores plus a tray-only recipe's inputs (roe + salt +
+  spores) are bottarga on the tray but koji in the muro, because the catch-all
+  is the first entry that takes the muro.
 - **Tokens are substring tests.** `hasId` is `id.includes(token)`, so a token
   that is a fragment of other ids leaks: `includes: 'pine'` matched pineapple and
   pineberry. Families are exact id lists for this reason.

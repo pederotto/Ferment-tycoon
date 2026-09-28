@@ -501,7 +501,9 @@ export interface MatrixEntry {
   substrate: MatrixSubstrate;
   requires: string[];
   forbids?: string[];
-  vesselId: string | null;   // null = vessel not consulted
+  // null = vessel not consulted. A list is one PROCESS that more than one vessel
+  // does: a koji bed grows on a cold tray or in a warm muro alike.
+  vesselId: string | string[] | null;
 }
 
 // --- RECIPE MASTERY ---

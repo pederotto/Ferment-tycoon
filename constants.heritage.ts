@@ -470,7 +470,7 @@ const PULSE: MatrixSubstrate = { kind: 'oneOf', ids: PULSE_IDS, label: 'Heirloom
 const TOMATO: MatrixSubstrate = { kind: 'oneOf', ids: TOMATO_IDS, label: 'Heirloom tomato' };
 
 export const HERITAGE_MATRIX: MatrixEntry[] = [
-  { recipeId: 'heritage_koji',   substrate: GRAIN,  requires: ['spores'],         forbids: ['salt'], vesselId: 'koji_tray' },
+  { recipeId: 'heritage_koji',   substrate: GRAIN,  requires: ['spores'],         forbids: ['salt'], vesselId: ['koji_tray', 'koji_muro'] },   // tray or muro: KOJI_BEDS in constants.ts
   { recipeId: 'grain_sake',      substrate: GRAIN,  requires: ['koji', 'water'],  forbids: ['salt'], vesselId: 'cedar_barrel' },
   { recipeId: 'corn_miso',       substrate: CORN,   requires: ['koji', 'salt'],   vesselId: 'cedar_barrel' },
   { recipeId: 'corn_chicha',     substrate: CORN,   requires: ['water'],          forbids: ['koji', 'salt'], vesselId: 'onggi' },

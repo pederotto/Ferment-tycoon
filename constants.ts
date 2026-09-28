@@ -157,6 +157,13 @@ export const BOOKS: Book[] = [
 // entries must precede the barley_koji catch-all at the bottom. This table was
 // extracted verbatim from the if-chain that used to live in
 // resolveRecipeFromMatrix and is differential-tested against it.
+/* Where a koji bed can grow. The Cedar Muro was sold as the koji vessel between
+   the tray and the chamber, but every koji entry named only the tray, so koji
+   in a muro was Bio-Sludge. Only the entries that GROW A MOULD ON A BED take
+   this list; bottarga, casu marzu, tempeh, katsuobushi, meju and IMO stay on
+   the tray. The heritage module repeats the literal (it cannot import this). */
+const KOJI_BEDS = ['koji_tray', 'koji_muro'];
+
 export const RECIPE_MATRIX: MatrixEntry[] = [
   // THE SOIL LAB FIRST. Every one of these needs an ingredient that exists only
   // for the soil lab, so nothing the game already knew can resolve differently
@@ -252,13 +259,13 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
      as readily as it takes barley, and what it makes of each is a different
      food. These sit above the catch-all so the SUBSTRATE decides the output
      instead of everything becoming barley koji. */
-  { recipeId: 'koji_pork_loin',     substrate: { kind: 'is', id: 'pork_belly' }, requires: ['spores'], forbids: ['water', 'koji'], vesselId: 'koji_tray' },
-  { recipeId: 'koji_mackerel_cure', substrate: { kind: 'is', id: 'mackerel' },   requires: ['spores', 'salt'], forbids: ['water'], vesselId: 'koji_tray' },
-  { recipeId: 'koji_lions_mane',    substrate: { kind: 'is', id: 'lions_mane' }, requires: ['spores'], forbids: ['salt', 'water'], vesselId: 'koji_tray' },
-  { recipeId: 'koji_root_pastrami', substrate: { kind: 'oneOf', ids: ['beetroot', 'white_cabbage', 'napa_cabbage'], label: 'A beetroot or a firm cabbage heart' }, requires: ['spores'], forbids: ['salt', 'water'], vesselId: 'koji_tray' },
+  { recipeId: 'koji_pork_loin',     substrate: { kind: 'is', id: 'pork_belly' }, requires: ['spores'], forbids: ['water', 'koji'], vesselId: KOJI_BEDS },
+  { recipeId: 'koji_mackerel_cure', substrate: { kind: 'is', id: 'mackerel' },   requires: ['spores', 'salt'], forbids: ['water'], vesselId: KOJI_BEDS },
+  { recipeId: 'koji_lions_mane',    substrate: { kind: 'is', id: 'lions_mane' }, requires: ['spores'], forbids: ['salt', 'water'], vesselId: KOJI_BEDS },
+  { recipeId: 'koji_root_pastrami', substrate: { kind: 'oneOf', ids: ['beetroot', 'white_cabbage', 'napa_cabbage'], label: 'A beetroot or a firm cabbage heart' }, requires: ['spores'], forbids: ['salt', 'water'], vesselId: KOJI_BEDS },
 
-  // Catch-all: anything sporulated on a tray becomes koji. Must stay last.
-  { recipeId: 'barley_koji', substrate: { kind: 'present' }, requires: ['spores'], vesselId: 'koji_tray' },
+  // Catch-all: anything sporulated on a koji bed becomes koji. Must stay last.
+  { recipeId: 'barley_koji', substrate: { kind: 'present' }, requires: ['spores'], vesselId: KOJI_BEDS },
 ];
 
 // Human labels for the tokens above, used by the recipe-book formula card.
