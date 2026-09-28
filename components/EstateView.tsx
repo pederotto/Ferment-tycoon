@@ -9,10 +9,11 @@ import {
   applyToPlots, pickHere, contractHarvest, pruneTrees, thinTrees, hiveAction, henAction, isBio, panAction, shedAction, PULLET_COST, RUN_CAPACITY, henFeedStock, henBinDays, HEN_SACK_KG, STRAW_BALE, FLY_FIRST,
   stoveAction, saveSeed, buyFacility, buyTool, setOrder, sellToVan, vanUnitPrice, isEstateProduce, baseOfProduce,
   plotQualityNow, treeQualityNow, baseIngredient, ROLE_FOR, farmRolesFor,
-  pantryOf, pantryKg, soilLots, doseKg, treatmentName, WET_WASTE, bioBlocker, treeIsBiodynamic, sprayPlots, sprayCost,
+  pantryOf, pantryKg, soilLots, doseKg, treatmentName, bioBlocker, treeIsBiodynamic, sprayPlots, sprayCost,
 } from '../services/estate';
 import { hiveNeeds, YOLKS_PER_UNIT, HEN_FEED, WORM_FOOD, WORM_REFUSE, BSF_FOOD, WORM_COLONY_KG, castingsGradeOf, eggGrade } from '../services/livestock';
 import { HenFeed } from '../types.farm';
+import { FARM_ICONS } from './farmIconSheet';
 import { SOIL_EFFECTS, SOIL_PRODUCT_INGREDIENTS, WASTE_IDS, WASTE_INGREDIENTS } from '../constants.soil';
 
 const soilName = (base: string) => SOIL_PRODUCT_INGREDIENTS.find(i => i.id === base)?.name ?? base;
@@ -66,6 +67,13 @@ const nameOf = (id: string) => baseIngredient(id)?.name ?? id;
 const kg = (v: number) => (v >= 100 ? `${Math.round(v)} kg` : v >= 10 ? `${v.toFixed(0)} kg` : `${v.toFixed(1)} kg`);
 
 /** A dark instrument bar, 0-100. */
+/** A cell off the owner's farm tool or unit sheet, at a whole-pixel scale. */
+const FarmIcon: React.FC<{ id: string; scale?: number }> = ({ id, scale = 1 }) => {
+  const ic = FARM_ICONS[id];
+  if (!ic) return null;
+  return <img className="farm-icon" src={ic.src} width={Math.round(ic.w * scale)} height={Math.round(ic.h * scale)} alt="" aria-hidden="true" />;
+};
+
 const Gauge: React.FC<{ label: string; v: number; warnBelow?: number; warnAbove?: number }> = ({ label, v, warnBelow = 30, warnAbove }) => {
   const bad = v < warnBelow || (warnAbove !== undefined && v > warnAbove);
   return (
@@ -508,12 +516,12 @@ const PlaceLedger: React.FC<PlaceProps> = (p) => {
           The kit
           <button className="linkish" onClick={() => p.setShowKit(!p.showKit)}>{p.showKit ? 'hide the catalogue' : 'buy more'}</button>
         </h3>
-        <p className="el-kv">{FARM_TOOLS.filter(t => f.kit[t.id]).map(t => <span key={t.id}>{t.name}</span>)}{!FARM_TOOLS.some(t => f.kit[t.id]) && <span className="faint">Bare hands and a bucket.</span>}</p>
+        <p className="el-kv">{FARM_TOOLS.filter(t => f.kit[t.id]).map(t => <span key={t.id} className="kit-owned"><FarmIcon id={t.id} scale={0.6} />{t.name}</span>)}{!FARM_TOOLS.some(t => f.kit[t.id]) && <span className="faint">Bare hands and a bucket.</span>}</p>
         {p.showKit && (
           <ul className="el-kit">
             {FARM_TOOLS.filter(t => !f.kit[t.id] && (!t.where || t.where.includes(f.id))).map(t => (
               <li key={t.id}>
-                <span className="nm">{t.name}</span><span className="ab">{t.about}</span>
+                <span className="nm">{FARM_ICONS[t.id] && <FarmIcon id={t.id} scale={0.6} />}{t.name}</span><span className="ab">{t.about}</span>
                 <button className="btn sm" disabled={state.money < t.cost} onClick={() => act(s => buyTool(s, f.id, t.id))}>${t.cost}</button>
               </li>
             ))}
@@ -706,7 +714,7 @@ const HivePanel: React.FC<PlaceProps & { hives: Hive[] }> = ({ hives, state, dat
       <ul className="el-beds">
         {hives.map((h, i) => (
           <li key={h.id} className={`el-bed label-plate${h.alive ? '' : ' stamped spoiled'}`}>
-            <div className="top"><Sprite id="honey" size="tiny" /><span className="name">Hive {i + 1}</span><span className="where">{h.alive ? `queen ${h.queenAge} yr${h.queenAge === 1 ? '' : 's'}` : 'dead'}</span></div>
+            <div className="top"><FarmIcon id={h.alive && h.strength > 0.8 ? 'hive_busy' : 'hive'} scale={0.5} /><span className="name">Hive {i + 1}</span><span className="where">{h.alive ? `queen ${h.queenAge} yr${h.queenAge === 1 ? '' : 's'}` : 'dead'}</span></div>
             {h.alive && (
               <>
                 <div className="gauges">
@@ -749,7 +757,7 @@ const HenPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
   ];
   return (
     <section className="el-sect">
-      <h3>The hens <span className="sub">{r.hens} in the run</span></h3>
+      <h3><FarmIcon id="feeder" scale={0.5} />The hens <span className="sub">{r.hens} in the run</span></h3>
       <div className="gauges wide">
         <Gauge label="Health" v={r.health} warnBelow={60} />
         <Gauge label="Mites" v={100 - r.mites} warnBelow={45} />
@@ -776,7 +784,7 @@ const HenPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
       )}
       <p className="el-kv"><span>In the bin: {inBin.length ? inBin.join(' · ') : 'nothing'}</span><span>{days >= 99 ? '' : `about ${Math.floor(days)} day${Math.floor(days) === 1 ? '' : 's'} of food`}</span></p>
       <div className="el-actions"><div className="row">
-        <button className="mini-btn gold" disabled={r.eggs === 0} onClick={() => act(s => henAction(s, 'eggs'))}>Collect the eggs</button>
+        <button className="mini-btn gold" disabled={r.eggs === 0} onClick={() => act(s => henAction(s, 'eggs'))}><FarmIcon id="egg_basket" scale={0.35} />Collect the eggs</button>
         {!f.kit.auto_door && <button className="mini-btn" onClick={() => act(s => henAction(s, 'shut'), { dark: true })}>Shut them in for the night</button>}
         {r.mites > 30 && <button className="mini-btn" onClick={() => act(s => henAction(s, 'clean'))}>Muck out</button>}
         {r.hens < RUN_CAPACITY && <button className={`mini-btn${r.hens === 0 ? ' gold' : ''}`} onClick={() => act(s => henAction(s, 'pullets'))}>{RUN_CAPACITY - r.hens >= 2 ? 'Two pullets' : 'A pullet'} · ${Math.min(2, RUN_CAPACITY - r.hens) * PULLET_COST}</button>}
@@ -846,17 +854,17 @@ const ShedPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
       <h3>The bins</h3>
       <ul className="el-beds">
         <li className="el-bed label-plate">
-          <div className="top"><span className="es-dot" /><span className="name">Worm towers</span><span className="where">{s.wormsKg.toFixed(1)} kg of worms</span></div>
+          <div className="top"><FarmIcon id={s.castingsKg > 2 ? 'worm_tray' : 'worm_tower'} scale={0.5} /><span className="name">Worm towers</span><span className="where">{s.wormsKg.toFixed(1)} kg of worms</span></div>
           <div className="stage">
             <span>{s.wormFeedKg.toFixed(1)} kg waiting{q !== undefined && s.wormFeedKg > 0.2 ? ` · ${q >= 0.8 ? 'well bedded' : q >= 0.55 ? 'short of bedding' : 'wet and sour'}` : ''}</span>
-            {s.castingsKg > 0.2 && <span className="ripe">{s.castingsKg.toFixed(1)} kg castings, grade {cg}</span>}
+            {s.castingsKg > 0.2 && <span className="ripe"><FarmIcon id="sack_castings" scale={0.4} />{s.castingsKg.toFixed(1)} kg castings, grade {cg}</span>}
           </div>
         </li>
         <li className={`el-bed label-plate${s.bsfLarvaeKg < 0.05 ? ' faint' : ''}`}>
-          <div className="top"><span className="es-dot" /><span className="name">Soldier fly bins</span><span className="where">{s.bsfLarvaeKg < 0.05 ? 'no colony' : `${s.bsfLarvaeKg.toFixed(1)} kg of larvae`}</span></div>
+          <div className="top"><FarmIcon id={s.bsfLarvaeKg < 0.05 ? 'fly_bin' : s.prepupaeKg > 0.5 ? 'fly_bin_full' : s.bsfFeedKg > 0.2 ? 'fly_bin_busy' : 'fly_bin'} scale={0.5} /><span className="name">Soldier fly bins</span><span className="where">{s.bsfLarvaeKg < 0.05 ? 'no colony' : `${s.bsfLarvaeKg.toFixed(1)} kg of larvae`}</span></div>
           <div className="stage">
             <span>{s.bsfFeedKg.toFixed(1)} kg waiting{conv !== undefined && s.bsfFeedKg > 0.2 ? ` · ${conv >= 0.16 ? 'rich feed' : conv >= 0.1 ? 'fair feed' : 'thin feed'}` : ''}</span>
-            {s.frassKg > 0.2 && <span className="ripe">{s.frassKg.toFixed(1)} kg frass</span>}
+            {s.frassKg > 0.2 && <span className="ripe"><FarmIcon id="sack_frass" scale={0.4} />{s.frassKg.toFixed(1)} kg frass</span>}
             {s.prepupaeKg > 0.1 && <span className="ripe">{s.prepupaeKg.toFixed(1)} kg prepupae for the hens</span>}
           </div>
         </li>

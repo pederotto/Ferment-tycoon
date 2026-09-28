@@ -5447,3 +5447,10 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .lab-orders input { accent-color: #c9a14f; }
 .lab-orders .lo-held { margin: 0; font-size: 12px; color: var(--text-mid); }
 .lab-orders .linkish { padding: 0; border: 0; background: none; color: #e2c27a; text-decoration: underline; cursor: pointer; font: inherit; }
+
+/* The owner's farm tool and unit icons: painted pixels, kept crisp and sat on the text line. */
+.farm-icon { image-rendering: pixelated; vertical-align: middle; flex: none; margin-right: 6px; }
+.el-sect h3 .farm-icon { margin-right: 8px; }
+.mini-btn .farm-icon { margin: -4px 5px -4px 0; }
+.el-kv .kit-owned { display: inline-flex; align-items: center; }
+.el-kit .nm { display: inline-flex; align-items: center; }

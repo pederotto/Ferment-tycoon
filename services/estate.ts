@@ -432,10 +432,6 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
         if ((run.bin?.shells ?? 0) < 0.1 && pantryKg(pan, 'eggshells') > 0) { const k = pantryKg(pan, 'eggshells'); pantryPut(pan, 'eggshells', -k); run = { ...run, bin: { ...run.bin, shells: (run.bin?.shells ?? 0) + k } }; }
         if (henBinDays(run) < 3) { run = { ...run, feedKg: run.feedKg + 25 }; money -= 18; }
         if (run.mites > 45 && act('clean')) run = { ...run, mites: 8 };
-        const shed = est.facilities.worm_shed?.shed;
-        if (shed && shed.prepupaeKg > 1 && run.larvaeKg < 1) {
-          // handled below when the shed is processed: the keeper carries larvae over
-        }
       }
       f.hens = run;
     }
@@ -594,8 +590,6 @@ const applyLot = (plot: Plot, pl: Planting | undefined, lot: { base: string }, d
 export const COMPOST_TEA_DECAY = 0.4;
 /** What a standing order to feed reaches for, richest first. */
 const FEEDS = ['worm_castings', 'compost', 'bokashi', 'fly_frass'];
-/** What the bins will take. Green tips go in by hand only: they are wanted for plant juice. */
-export const WET_WASTE = ['fish_waste', 'veg_waste', 'press_cake', 'spent_grain', 'windfalls'];
 /** Castings from a shed that predates graded feed; new castings take the grade of what the worms ate. */
 export const CASTINGS_GRADE = 84;
 
@@ -680,7 +674,7 @@ export const henFeedStock = (pan: Pantry): Record<HenFeed, { kg: number; lots: {
   return out;
 };
 /** A sack for the bin: a feeding's worth, never the whole harvest. */
-export const HEN_SACK_KG: Record<HenFeed, number> = { grain: 5, corn: 5, pulses: 3, greens: 5, mash: 5, worms: 0, shells: 99 };
+export const HEN_SACK_KG: Record<HenFeed, number> = { grain: 5, corn: 5, pulses: 3, greens: 5, mash: 5, worms: 0, shells: 2 };
 /** Days of feed in the bin at the flock's appetite, counting everything they eat. */
 export const henBinDays = (r: HenRun): number => {
   if (r.hens <= 0) return 99;

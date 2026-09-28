@@ -1797,3 +1797,7 @@ with the guess. If there is no real figure for a process, do not check it.
 - **The diet is in the egg, and the egg is sold on its yolk.** `eggGrade` = 56 + 18·yolk + 10·protein + 8·calcium + health. `QUALITY_ELASTIC` prices eggs at (grade / 86)^3 at the van, so the gentle default for other produce is untouched. Measured over 30 summer days, six hens:
   pellets 0.84 eggs/hen/day grade 84 ($7.83 per ½ kg of yolks before the home-grown premium); own grain alone 0.33, grade 68 ($4.15); grain + shell 0.62, 76; grain + cooked pulses + shell 0.84, 81; + greens 84; maize, grain, fly larvae, greens and shell 0.93, **91** ($9.95). Re-run a harness against that spread before touching a coefficient.
 - A keeper returns the shells to the flock and buys pellets only when the bin holds under three days of feed. They never feed your crops: whether the grain goes to the hens or the koji room is the player's decision.
+
+## Farm icons (components/farmIconSheet.ts)
+- Cut from the owner's tool sheet and farm-unit sheet by `scripts/forage_art/cut_icons.py`, which names cells row.column as `rows_of` numbers them. Check a new sheet as an indexed contact strip first: the tool sheet's spore print is two blobs, so its row has nine cells.
+- The unit icons carry state: a hive with bees in the air when the colony is strong, a worm tray open on its castings once there are some to take, a fly bin idle, busy or full of prepupae. Kit items without a painted tool (sprayer, pheromone traps, scarecrow, fence, seed drill, scythe) show their name alone.
