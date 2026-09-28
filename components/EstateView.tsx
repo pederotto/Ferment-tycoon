@@ -157,7 +157,15 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
               />
               {wild
                 ? <WildHits state={state} place={place as any} date={date} wx={wx} size={sceneSize(place)} onGo={onGo} act={act} owned={owned as Record<string, boolean>} />
-                : <HitAreas place={place} f={f} owned={owned} sel={sel} onPick={id => (place === 'farm_map' ? onGo(id as FacilityId) : toggle(id))} />}
+                : <HitAreas place={place} f={f} owned={owned} sel={sel} onPick={id => {
+                  if (place === 'farm_map') return onGo(id as FacilityId);
+                  if (place === 'worm_shed' || place === 'hives' || place === 'salt_pans') {
+                    setSel([id]);
+                    document.querySelector(`[data-unit="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    return;
+                  }
+                  toggle(id);
+                }} />}
             </div>
             <div className="estate-daybar">
               <span className="wx">
@@ -224,6 +232,19 @@ const HitAreas: React.FC<{ place: ScenePlace; f?: FacilityState; owned: Partial<
       if (!pts.length) return;
       const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
       shapes.push({ id: p.id, polys: [asQuad([Math.min(...xs) - 8, Math.min(...ys) - 40 * Math.max(...pts.map(q => q[2])), Math.max(...xs) + 8, Math.max(...ys) + 4])], label: p.label });
+    });
+    // Things in a painted place that are not beds: a click finds their card below.
+    if (place === 'worm_shed' && g) {
+      (g.worms ?? []).forEach((r: number[]) => shapes.push({ id: 'worms', polys: [asQuad(r)], label: 'The worm towers' }));
+      (g.bsf ?? []).forEach((r: number[]) => shapes.push({ id: 'bsf', polys: [asQuad(r)], label: 'The soldier fly bins' }));
+    }
+    if (place === 'hives' && g && f.hives) f.hives.forEach((h, i) => {
+      const at = g.hives?.[i];
+      if (at?.length >= 4) shapes.push({ id: h.id, polys: [asQuad([at[0] - at[3] / 2, at[2], at[0] + at[3] / 2, at[1]])], label: `Hive ${i + 1}` });
+    });
+    if (place === 'salt_pans' && g && f.pans) f.pans.forEach((pan, i) => {
+      const q = g.pans?.[i];
+      if (q && Array.isArray(q[0])) shapes.push({ id: pan.id, polys: [q], label: `Pan ${i + 1}` });
     });
     if (place === 'orchard' || place === 'orangery') f.trees.forEach(t => {
       const c = treeGeom(place, t.id);
@@ -706,7 +727,7 @@ const TreeActions: React.FC<PlaceProps & { trees: Tree[] }> = (p) => {
 };
 
 /* --- the apiary --- */
-const HivePanel: React.FC<PlaceProps & { hives: Hive[] }> = ({ hives, state, date, day, act, f }) => {
+const HivePanel: React.FC<PlaceProps & { hives: Hive[] }> = ({ hives, state, date, day, act, f, sel }) => {
   const needs = new Set(hives.flatMap(h => hiveNeeds(h, date.month)));
   const surplus = hives.reduce((a, h) => a + (h.alive ? h.surplus : 0), 0);
   return (
@@ -714,7 +735,7 @@ const HivePanel: React.FC<PlaceProps & { hives: Hive[] }> = ({ hives, state, dat
       <h3>The colonies</h3>
       <ul className="el-beds">
         {hives.map((h, i) => (
-          <li key={h.id} className={`el-bed label-plate${h.alive ? '' : ' stamped spoiled'}`}>
+          <li key={h.id} data-unit={h.id} className={`el-bed label-plate${h.alive ? '' : ' stamped spoiled'}${sel.includes(h.id) ? ' on' : ''}`}>
             <div className="top"><FarmIcon id={h.alive && h.strength > 0.8 ? 'hive_busy' : 'hive'} scale={0.5} /><span className="name">Hive {i + 1}</span><span className="where">{h.alive ? `queen ${h.queenAge} yr${h.queenAge === 1 ? '' : 's'}` : 'dead'}</span></div>
             {h.alive && (
               <>
@@ -807,7 +828,7 @@ const HenPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
 };
 
 /* --- the pans --- */
-const PanPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
+const PanPanel: React.FC<PlaceProps> = ({ f, act, state, sel }) => {
   const pans = f.pans!;
   const crust = pans.reduce((a, x) => a + x.crustKg, 0), flor = pans.reduce((a, x) => a + x.florKg, 0);
   return (
@@ -815,7 +836,7 @@ const PanPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
       <h3>The pans</h3>
       <ul className="el-beds">
         {pans.map((x, i) => (
-          <li key={x.id} className="el-bed label-plate">
+          <li key={x.id} data-unit={x.id} className={`el-bed label-plate${sel.includes(x.id) ? ' on' : ''}`}>
             <div className="top"><Sprite id="salt" size="tiny" /><span className="name">Pan {i + 1}</span><span className="where">{x.covered ? 'covered' : 'open'}</span></div>
             <div className="stage">
               <span>{x.brineMm > 1 ? `${x.brineMm.toFixed(0)} mm of brine at ${Math.round(x.gPerL)} g/l` : 'dry'}</span>
@@ -840,7 +861,7 @@ const PanPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
 /* --- the shed --- */
 const names = (ids: string[]) => ids.map(id => baseIngredient(id)?.name?.toLowerCase() ?? WASTE_NAME[id] ?? id.replace(/_/g, ' '));
 const WASTE_NAME: Record<string, string> = { veg_waste: 'vegetable waste', green_waste: 'green waste', spent_grain: 'spent grain', fish_waste: 'fish waste', press_cake: 'press cake', windfalls: 'windfalls', straw: 'straw', eggshells: 'eggshells', green_tips: 'green tips' };
-const ShedPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
+const ShedPanel: React.FC<PlaceProps> = ({ f, act, state, sel }) => {
   const s = f.shed!;
   const pan = pantryOf(state);
   const wormWet = Object.entries(WORM_FOOD).filter(([k, r]) => r !== 'carbon' && r !== 'grit' && k !== 'green_tips' && !(s.bsfLarvaeKg >= 0.05 && FLY_FIRST.includes(k))).reduce((a, [k]) => a + pantryKg(pan, k), 0);
@@ -854,14 +875,14 @@ const ShedPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
     <section className="el-sect">
       <h3>The bins</h3>
       <ul className="el-beds">
-        <li className="el-bed label-plate">
+        <li data-unit="worms" className={`el-bed label-plate${sel.includes('worms') ? ' on' : ''}`}>
           <div className="top"><FarmIcon id={s.castingsKg > 2 ? 'worm_tray' : 'worm_tower'} scale={0.5} /><span className="name">Worm towers</span><span className="where">{s.wormsKg.toFixed(1)} kg of worms</span></div>
           <div className="stage">
             <span>{s.wormFeedKg.toFixed(1)} kg waiting{q !== undefined && s.wormFeedKg > 0.2 ? ` · ${q >= 0.8 ? 'well bedded' : q >= 0.55 ? 'short of bedding' : 'wet and sour'}` : ''}</span>
             {s.castingsKg > 0.2 && <span className="ripe"><FarmIcon id="sack_castings" scale={0.4} />{s.castingsKg.toFixed(1)} kg castings, grade {cg}</span>}
           </div>
         </li>
-        <li className={`el-bed label-plate${s.bsfLarvaeKg < 0.05 ? ' faint' : ''}`}>
+        <li data-unit="bsf" className={`el-bed label-plate${s.bsfLarvaeKg < 0.05 ? ' faint' : ''}${sel.includes('bsf') ? ' on' : ''}`}>
           <div className="top"><FarmIcon id={s.bsfLarvaeKg < 0.05 ? 'fly_bin' : s.prepupaeKg > 0.5 ? 'fly_bin_full' : s.bsfFeedKg > 0.2 ? 'fly_bin_busy' : 'fly_bin'} scale={0.5} /><span className="name">Soldier fly bins</span><span className="where">{s.bsfLarvaeKg < 0.05 ? 'no colony' : `${s.bsfLarvaeKg.toFixed(1)} kg of larvae`}</span></div>
           <div className="stage">
             <span>{s.bsfFeedKg.toFixed(1)} kg waiting{conv !== undefined && s.bsfFeedKg > 0.2 ? ` · ${conv >= 0.16 ? 'rich feed' : conv >= 0.1 ? 'fair feed' : 'thin feed'}` : ''}</span>

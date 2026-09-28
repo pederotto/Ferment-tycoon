@@ -5455,3 +5455,4 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .el-kv .kit-owned { display: inline-flex; align-items: center; }
 .el-kit .nm { display: inline-flex; align-items: center; }
 .el-face { display: inline-block; vertical-align: middle; margin-right: 8px; border-radius: 50%; border: 1px solid rgba(222, 186, 110, 0.35); background-color: #1a130b; }
+.el-bed .stage .ripe:has(.farm-icon) { display: inline-flex; align-items: center; }

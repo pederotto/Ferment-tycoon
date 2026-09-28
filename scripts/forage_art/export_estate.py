@@ -37,7 +37,9 @@ INTERIOR = render_all.INTERIOR
 
 def webp_uri(im):
     b = io.BytesIO()
-    im.save(b, 'WEBP', lossless=True, quality=100, method=6)
+    # method 4, not 6: 6 took 11 s a plate (all of this script's 15 minutes over 104
+    # plates) for files 2.5% smaller. 4 takes 0.04 s.
+    im.save(b, 'WEBP', lossless=True, quality=100, method=4)
     return 'data:image/webp;base64,' + base64.b64encode(b.getvalue()).decode()
 
 
@@ -53,8 +55,14 @@ def smallest(im):
     return p if len(p) < len(w) * 0.92 else w
 
 
+# A place the owner has painted drops every placeholder plate further down, so drawing
+# them first was pure waste: it was most of this script's ~12 minutes once every farm
+# place had its painting. Only places with no painting are rendered now.
+PAINTED_ON_DISK = {f.split('-')[0] for f in os.listdir(os.path.join(REPO, 'art', 'estate')) if f.endswith('.png')}
 plates = {}
 for k in PLACES:
+    if k in PAINTED_ON_DISK:
+        continue
     for season, wx, name in VARIANTS:
         if k in INTERIOR and wx != 'clear':
             continue

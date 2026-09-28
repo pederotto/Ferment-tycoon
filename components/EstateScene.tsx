@@ -295,12 +295,15 @@ const drawPlant = (ctx: CanvasRenderingContext2D, cropId: string, f: number, x: 
 
 /** A flock on a bed: most of it on the ground hopping and pecking, a few birds at a time
  *  lifting off and landing again somewhere else. Each bird is sized by its own depth. */
-const BIRD: Record<string, { n: number; body: string; dark: string; beak: string; size: number }> = {
-  birds_grain: { n: 12, body: '#8a6a44', dark: '#5a4028', beak: '#c8a870', size: 0.7 },   // sparrows
-  crows:       { n: 4,  body: '#16161c', dark: '#08080c', beak: '#3a3a40', size: 1.2 },
-  pigeons:     { n: 3,  body: '#8a8e9a', dark: '#5a5e6a', beak: '#d8b0a0', size: 1.0 },
+const BIRD: Record<string, { n: number; body: string; dark: string; beak: string; lenM: number }> = {
+  birds_grain: { n: 12, body: '#8a6a44', dark: '#5a4028', beak: '#c8a870', lenM: 0.15 },  // sparrows
+  crows:       { n: 4,  body: '#16161c', dark: '#08080c', beak: '#3a3a40', lenM: 0.45 },
+  pigeons:     { n: 3,  body: '#8a8e9a', dark: '#5a5e6a', beak: '#d8b0a0', lenM: 0.32 },
 };
-const drawFlock = (ctx: CanvasRenderingContext2D, q: Quad, g: any, t: number, seed: number, b: { n: number; body: string; dark: string; beak: string; size: number }) => {
+/** Pixels per metre at a point. The field's depth constant is already pixels per metre; the
+ *  garden's is a plant-scale unit, measured at ~19 to the metre off its 6 m² beds. */
+const pxPerM = (g: any, y: number): number => depthScale(g, y) * (g === ESTATE_GEOM.top_field ? 1 : 19);
+const drawFlock = (ctx: CanvasRenderingContext2D, q: Quad, g: any, t: number, seed: number, b: { n: number; body: string; dark: string; beak: string; lenM: number }) => {
   for (let k = 0; k < b.n; k++) {
     const r = (j: number) => roll('flock', seed, k, j);
     const cycle = 240 + r(1) * 160;
@@ -308,8 +311,25 @@ const drawFlock = (ctx: CanvasRenderingContext2D, q: Quad, g: any, t: number, se
     const hopTo = Math.floor((t + r(2) * cycle) / cycle);     // a new spot after every flight
     const u = 0.1 + roll('fu', seed, k, hopTo) * 0.8, v = 0.15 + roll('fv', seed, k, hopTo) * 0.75;
     const [gx, gy] = qAt(q, u, v);
-    const s = Math.max(1, Math.round(depthScale(g, gy) * b.size));
+    const m = pxPerM(g, gy);
+    const lenPx = m * b.lenM;                                  // the bird's true length on screen
+    const s = Math.max(1, Math.round(lenPx / 4));              // the drawn bird is four blocks long
     const dir = roll('fd', seed, k, hopTo) < 0.5 ? -1 : 1;
+    // A bird under ~5 px long is two pixels, a body and a head, and a wing flick in the air:
+    // a 15 cm sparrow is a pixel or two at field distance, and drawing it as a block is a blob.
+    if (lenPx < 5) {
+      if (ph < 0.86) {
+        const peck = (t + k * 5) % 17 < 4;
+        const x = Math.round(gx + Math.sin((t + k * 11) / 40) * 2), y = Math.round(gy) - ((t + k * 7) % 23 === 0 ? 1 : 0);
+        px(ctx, x, y, b.body); px(ctx, x + dir, peck ? y : y - 1, b.dark);
+      } else {
+        const a = (ph - 0.86) / 0.14;
+        const x = Math.round(gx + dir * a * 3 * m), y = Math.round(gy - Math.sin(a * Math.PI) * 1.2 * m - 1);
+        px(ctx, x, y, b.dark);
+        if ((t + k) % 4 < 2) { px(ctx, x - 1, y - 1, b.dark); px(ctx, x + 1, y - 1, b.dark); }
+      }
+      continue;
+    }
     if (ph < 0.86) {
       // on the ground: a hop now and then, the head down to peck
       const hop = (t + k * 7) % 23 === 0 ? s : 0;
@@ -324,7 +344,7 @@ const drawFlock = (ctx: CanvasRenderingContext2D, q: Quad, g: any, t: number, se
     } else {
       // in the air: up and over in an arc, wings beating
       const a = (ph - 0.86) / 0.14;
-      const x = Math.round(gx + dir * a * 30 * s), y = Math.round(gy - Math.sin(a * Math.PI) * 18 * s - 2 * s);
+      const x = Math.round(gx + dir * a * 3 * m), y = Math.round(gy - Math.sin(a * Math.PI) * 1.2 * m - 2 * s);
       const up = (t + k) % 4 < 2;
       ctx.fillStyle = b.body; ctx.fillRect(x, y, 2 * s, s);
       ctx.fillStyle = b.dark;
@@ -776,11 +796,16 @@ const drawShed = (ctx: CanvasRenderingContext2D, shed: NonNullable<EstateState['
 
 const drawMap = (ctx: CanvasRenderingContext2D, p: Props) => {
   const places = ESTATE_GEOM.farm_map?.places ?? {};
-  // Places not yet bought are drawn back, so what is yours reads first.
+  // A place not yet bought has a signboard on a post at its corner, as a farm for sale
+  // would. Dimming it with a rectangle drew a box round every building on the painting.
   for (const [id, R] of Object.entries(places) as [string, number[]][]) {
     if (p.owned[id as FacilityId]) continue;
-    ctx.fillStyle = 'rgba(26,19,11,0.46)';
-    ctx.fillRect(R[0] - 2, R[1] - 2, R[2] - R[0] + 4, R[3] - R[1] + 4);
+    const x = Math.round(R[0] + 6), y = Math.round(R[3] - 4);
+    ctx.fillStyle = 'rgba(30,22,12,0.35)'; ctx.fillRect(x - 3, y, 8, 1);             // shadow
+    ctx.fillStyle = '#4a3220'; ctx.fillRect(x, y - 9, 1, 9);                        // post
+    ctx.fillStyle = '#3a2616'; ctx.fillRect(x - 4, y - 14, 11, 7);                  // board edge
+    ctx.fillStyle = '#e8dcc0'; ctx.fillRect(x - 3, y - 13, 9, 5);                   // board
+    ctx.fillStyle = '#a8342a'; ctx.fillRect(x - 2, y - 12, 7, 1); ctx.fillRect(x - 2, y - 10, 5, 1);  // lettering
   }
 };
 

@@ -113,4 +113,23 @@ if __name__ == '__main__':
     for i in range(GRAIN[2]):
         x0 = int(round(b[0] + i * w)) + 2; x1 = int(round(b[0] + (i + 1) * w)) - 2
         Image.fromarray(rgba[b[1] + 2:b[3] - 2, x0:x1]).save(os.path.join(DEST, f'grain-{i}.png'))
+    # Last pass over everything: magenta the edge peel missed, blended into the dark
+    # between leaves and stalks. Stamped hundreds of times across a field strip it read
+    # as a purple speckle. On a grain tile (a solid patch) it is recoloured to straw; on a
+    # plant it goes. A rose is pink for real, so roses are left alone.
+    for fn in os.listdir(DEST):
+        if fn.startswith('rose'):
+            continue
+        path = os.path.join(DEST, fn)
+        a = np.asarray(Image.open(path).convert('RGBA')).astype(int)
+        r_, g_, b_ = a[..., 0], a[..., 1], a[..., 2]
+        if fn.startswith('grain'):
+            tint = (a[..., 3] > 0) & (r_ - g_ > 20) & (b_ - g_ > 10)
+            lum = (r_ + g_ + b_) / 3
+            for ch, k in enumerate((1.05, 0.9, 0.55)):
+                a[..., ch] = np.where(tint, np.clip(lum * k, 0, 255), a[..., ch])
+        else:
+            tint = (a[..., 3] > 0) & (r_ - g_ > 40) & (b_ - g_ > 40)
+            a[..., 3] = np.where(tint, 0, a[..., 3])
+        Image.fromarray(a.astype(np.uint8)).save(path)
     print(len(os.listdir(DEST)), 'sprites in', DEST)
