@@ -1,3 +1,4 @@
+import { findIngredient } from './ingredientRegistry';
 
 import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage, GameState, CrewMember } from '../types';
 import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe , sporePotency } from './koji';
@@ -1943,7 +1944,7 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
   
   // NEW TERROIR MECHANIC: Calculate average quality of ingredients used in batch
   // Requires resolving ingredients from IDs (simulated here assuming we have access or pass simple metric)
-  const batchIngredients = batch.inputIngredientIds.map(id => INGREDIENTS.find(i => i.id === id)).filter(Boolean) as Ingredient[];
+  const batchIngredients = batch.inputIngredientIds.map(id => findIngredient(id)).filter(Boolean) as Ingredient[];
   
   let avgQuality = 50;
   if (batchIngredients.length > 0) {
@@ -1962,7 +1963,7 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
   let abvMiss = 0;
   if (recipe.targetAbv !== undefined) {
     const ings = batch.inputIngredientIds
-      .map(id => INGREDIENTS.find(i => i.id === id)).filter(Boolean) as Ingredient[];
+      .map(id => findIngredient(id)).filter(Boolean) as Ingredient[];
     if (ings.length) abvMiss = Math.min(40, Math.abs(alcoholPct(batch, recipe, ings) - recipe.targetAbv) * 2.5);
   }
 
@@ -2034,7 +2035,7 @@ export const calculateCriticScore = (batch: Batch, recipe: Recipe, activeStaff?:
  */
 const PLANT_MARKERS = /bean|soy|pea\b|peas|lentil|chickpea|nut|hazel|almond|walnut|seed|grain|barley|wheat|rice|corn|oat|rye|spelt|einkorn|emmer|kamut|freekeh|tea|petal|needle|mushroom|cep|oyster|maitake|shimeji|enoki|nameko|truffle/;
 const FLESH_MARKERS = /fish|anchov|mackerel|herring|bonito|krill|shrimp|roe|pork|beef|lamb|meat|belly|squid|scallop|yolk|egg|eel|tuna|bluefin|milk|cream|larvae/;
-const isFlesh = (i: Ingredient): boolean => {
+export const isFlesh = (i: Ingredient): boolean => {
   const t = `${i.id} ${i.name} ${i.tags?.join(' ') ?? ''}`.toLowerCase();
   if (PLANT_MARKERS.test(t)) return false;
   if (FLESH_MARKERS.test(t) || (i.tags ?? []).includes('SEAFOOD')) return true;
@@ -2586,7 +2587,7 @@ export const getUndergroundTier = (xp: number): number => getUndergroundTierFrom
 export const isContrabandBatch = (batch: Batch): boolean => {
   if (batch.contraband !== undefined) return batch.contraband;
   return (batch.inputIngredientIds ?? []).some(
-    id => INGREDIENTS.find(i => i.id === id)?.contraband === true
+    id => findIngredient(id)?.contraband === true
   );
 };
 
@@ -2706,7 +2707,7 @@ export const describeFormula = (recipeId: string): {
   const entry = getMatrixEntry(recipeId);
   if (!entry) return null;
 
-  const nameOf = (id: string) => INGREDIENTS.find(i => i.id === id)?.name ?? id;
+  const nameOf = (id: string) => findIngredient(id)?.name ?? id;
 
   let substrateLabel: string;
   switch (entry.substrate.kind) {
@@ -3023,7 +3024,7 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
   const notes: TastingNote[] = [];
 
   const ings = batch.inputIngredientIds
-    .map(i => INGREDIENTS.find(x => x.id === i))
+    .map(i => findIngredient(i))
     .filter(Boolean) as Ingredient[];
   const sub = ings.find(i => i.type === IngredientType.SUBSTRATE);
   const fatty = (sub?.hiddenStats.fatContent ?? 0) > 4;
@@ -3204,7 +3205,7 @@ export const generateCriticFeedback = (batch: Batch, recipe: Recipe): string[] =
     const t = recipe.idealFlavorProfile;
     
     // Resolve ingredients for deep analysis
-    const batchIngredients = batch.inputIngredientIds.map(id => INGREDIENTS.find(i => i.id === id)).filter(Boolean) as Ingredient[];
+    const batchIngredients = batch.inputIngredientIds.map(id => findIngredient(id)).filter(Boolean) as Ingredient[];
     const sub = batchIngredients.find(i => i.type === IngredientType.SUBSTRATE);
 
     // --- 1. MACRONUTRIENT & LOGIC FEEDBACK ---

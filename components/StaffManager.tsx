@@ -38,6 +38,12 @@ const ROLE_NAME: Record<StaffRoleType, string> = {
   chef: 'Sous Chef',
   rd: 'Head of R&D',
   toji: 'Koji Keeper',
+  gardener: 'Gardener',
+  orchardist: 'Orchardist',
+  beekeeper: 'Beekeeper',
+  poultry: 'Poultry Keeper',
+  soil_tech: 'Soil Technician',
+  forager: 'Forager’s Apprentice',
 };
 
 const Pips: React.FC<{ n: number }> = ({ n }) => (

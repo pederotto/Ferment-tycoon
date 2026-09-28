@@ -1,0 +1,671 @@
+import React, { useEffect, useRef } from 'react';
+import { EstateState, FacilityId, Plot, Tree, GroundId } from '../types.farm';
+import { GROUNDS, GROUND_ORDER } from '../constants.wild';
+import { CROPS, FAMILIES, TREE_SPECS } from '../constants.farm';
+import { ESTATE_PLATES, ESTATE_GEOM, CROP_SPRITES } from './estatePlates';
+import { DayWeather, sunTimes, roll } from '../services/climate';
+import { flyingDay } from '../services/livestock';
+
+/* =============================================================================
+   THE ESTATE, DRAWN
+
+   A 384x216 pixel canvas, scaled up crisp. The plate is the place; everything
+   that changes is drawn live over it from the state — each bed at its stage,
+   what has ripened, what has gone wrong, what is laid over it — and then the
+   day: its weather, and its light, which follows the real sunrise and sunset
+   at 45°N, so a December field day is visibly short.
+
+   The plates (components/estatePlates.ts) are the owner's paintings where they
+   exist, at their own 480x270 grid, and placeholders at 384x216 elsewhere; the
+   canvas takes the size of the plate. Geometry comes with each plate, measured
+   off it, so a bed is drawn where the picture has a bed. Beds and strips are
+   quads (top-left, top-right, bottom-right, bottom-left) because the paintings
+   are in perspective, and anything standing on them is scaled by its depth:
+   k * (y - horizon).
+   ============================================================================= */
+
+export const SCENE_W = 384;
+export const SCENE_H = 216;
+
+export type ScenePlace = FacilityId | 'farm_map' | 'wild_map' | GroundId;
+export const isGround = (p: string): p is GroundId => !!GROUNDS[p as GroundId];
+/** The wild map's postcards: every ground, and the salt pans, which are on the coast. */
+export const WILD_TILES: (GroundId | 'salt_pans')[] = [...GROUND_ORDER, 'salt_pans'];
+export const tileRect = (i: number): number[] => { const c = i % 4, r = Math.floor(i / 4); return [c * 120 + 4, r * 90 + 4, c * 120 + 116, r * 90 + 86]; };
+
+/** The grid this place's plate is on. */
+export const sceneSize = (place: ScenePlace): [number, number] => place === 'wild_map' ? [480, 270] : ESTATE_GEOM[place]?.size ?? [SCENE_W, SCENE_H];
+
+export type Quad = number[][];
+/** A rectangle [x0, y0, x1, y1] or a quad, as a quad. */
+export const asQuad = (r: number[] | Quad): Quad => Array.isArray(r[0]) ? r as Quad : [[r[0] as number, r[1] as number], [r[2] as number, r[1] as number], [r[2] as number, r[3] as number], [r[0] as number, r[3] as number]];
+/** The point u across and v down a quad (bilinear). */
+const qAt = (q: Quad, u: number, v: number): [number, number] => {
+  const tx = q[0][0] + (q[1][0] - q[0][0]) * u, ty = q[0][1] + (q[1][1] - q[0][1]) * u;
+  const bx = q[3][0] + (q[2][0] - q[3][0]) * u, by = q[3][1] + (q[2][1] - q[3][1]) * u;
+  return [tx + (bx - tx) * v, ty + (by - ty) * v];
+};
+/** v for a fraction t of the real depth from the far edge to the near one, so rows are evenly spaced on the ground. */
+const depthV = (q: Quad, t: number, horizon: number): number => {
+  const y0 = (q[0][1] + q[1][1]) / 2, y1 = (q[2][1] + q[3][1]) / 2;
+  if (y0 - horizon < 1) return t;
+  const d0 = 1 / (y0 - horizon), d1 = 1 / (y1 - horizon);
+  const y = horizon + 1 / (d0 + (d1 - d0) * t);
+  return (y - y0) / (y1 - y0);
+};
+const depthScale = (g: any, y: number): number => g?.k ? g.k * (y - g.horizon) : 1 + (y - 100) / 120;
+
+interface Props {
+  place: ScenePlace;
+  estate: EstateState;
+  month: number;
+  doy: number;
+  day: number;
+  minute: number;
+  wx: DayWeather;
+  weekType: string;
+  owned: Partial<Record<FacilityId, boolean>>;
+  selected: string[];
+}
+
+const seasonOf = (m: number) => (m >= 2 && m <= 4 ? 'spring' : m >= 5 && m <= 7 ? 'summer' : m >= 8 && m <= 10 ? 'autumn' : 'winter');
+
+/** Which painted variant fits today: snow lying, a hoarfrost morning, or the plain season. */
+export const plateKey = (place: ScenePlace, month: number, wx: DayWeather, weekType: string): string => {
+  const s = seasonOf(month);
+  const snowy = weekType === 'Snowy' || wx.snow;
+  const variant = s === 'winter' && snowy ? 'winter_snow' : wx.frost && (s === 'spring' || s === 'autumn') ? `${s}_frost` : s;
+  // A painted place may lack a variant (the lemon house came without a clear
+  // winter): the plain season, then the other winter, then summer.
+  const tries = [variant, s, s === 'winter' ? 'winter_snow' : s, 'summer'].map(v => `${place}:${v}`);
+  return tries.find(k => ESTATE_PLATES[k]) ?? tries[0];
+};
+
+/* Tree ids in the model against the placeholder plates' tree positions. */
+const TREE_AT: Record<string, string> = {
+  apple_old: 'apple_1', apple_young: 'apple_2', plum_near: 'plum_2', plum_far: 'plum_1', yuzu_wall: 'yuzu', akebi_pergola: 'akebi',
+  finger_lime: 'finger_limes', calamansi_pot: 'calamansi', buddhas_hand_pot: 'buddhas_hand', black_sapote_pot: 'black_sapote',
+};
+export const treeGeom = (place: ScenePlace, id: string): number[] | undefined => ESTATE_GEOM[place]?.trees?.[TREE_AT[id] ?? id];
+export const potGeom = (place: ScenePlace, id: string): number[] | undefined => ESTATE_GEOM[place]?.pots?.[TREE_AT[id] ?? id];
+
+const FRUIT_COL: Record<string, string[]> = {
+  apples: ['#b8302a', '#d8503a', '#8aa83a'], plums: ['#c8d860', '#a8c048'], yuzu: ['#e8c02a', '#f2d84a'], akebi: ['#6a3a8a', '#8a5aa8'],
+  finger_limes: ['#3a5a2a', '#5a7a3a'], calamansi: ['#e89a2a', '#b8b83a'], buddhas_hand: ['#f0d040', '#e8c030'], black_sapote: ['#4a6a2a', '#6a8a3a'],
+};
+const TOMATO_COL: Record<string, string> = {
+  cuore_di_bue: '#d0342a', brandywine: '#d8606a', black_krim: '#6a2a2a', green_zebra: '#b8c040', cherokee_purple: '#7a3a44',
+  san_marzano: '#d8302a', costoluto_genovese: '#d0402a', white_beauty: '#ece6c8', striped_german: '#e8a030', paul_robeson: '#5a2a26',
+};
+const CORN_COL: Record<string, string[]> = {
+  hopi_blue_corn: ['#3a4a8a', '#5a5aa0'], glass_gem_corn: ['#c86aa0', '#6ab0c8', '#e8c040'], painted_corn: ['#c84a3a', '#e8c040', '#6a4a8a'],
+  oaxacan_green_corn: ['#6a9a4a'], bloody_butcher_corn: ['#8a1a1a'], mandan_bride_corn: ['#e8d8a8', '#a86a8a'], strawberry_popcorn: ['#c83a3a'],
+  navajo_wedding_corn: ['#e8e0d0', '#6a4a8a'], cherokee_long_ear_corn: ['#d8a040', '#8a4a8a'], fire_chief_corn: ['#c83a2a', '#e8b040'],
+};
+
+const IMG: Record<string, HTMLImageElement> = {};
+const img = (src: string, onload: () => void): HTMLImageElement => {
+  let i = IMG[src];
+  if (!i) { i = new Image(); i.onload = onload; i.src = src; IMG[src] = i; }
+  return i;
+};
+
+const EstateScene: React.FC<Props> = (props) => {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const live = useRef(props);
+  live.current = props;
+  const tick = useRef(0);
+  const hens = useRef<{ x: number; y: number; tx: number; ty: number; c: string }[]>([]);
+
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let raf = 0, last = 0, alive = true;
+    const draw = () => frame(ctx, live.current, tick.current, hens.current, reduce, () => { if (alive) draw(); });
+    const loop = (t: number) => {
+      if (!alive) return;
+      if (!document.hidden && t - last > 95) { last = t; tick.current++; draw(); }
+      raf = requestAnimationFrame(loop);
+    };
+    draw();
+    if (!reduce) raf = requestAnimationFrame(loop);
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, []);
+
+  // A still frame whenever the state changes, for reduced motion and for the first paint.
+  useEffect(() => {
+    const cv = ref.current;
+    const ctx = cv?.getContext('2d');
+    if (ctx) frame(ctx, props, tick.current, hens.current, true, () => {});
+  });
+
+  const [w, h] = sceneSize(props.place);
+  return <canvas ref={ref} width={w} height={h} className="estate-canvas" aria-hidden="true" />;
+};
+
+/* -----------------------------------------------------------------------------
+   DRAWING
+   --------------------------------------------------------------------------- */
+const px = (ctx: CanvasRenderingContext2D, x: number, y: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); };
+
+const frame = (
+  ctx: CanvasRenderingContext2D, p: Props, t: number,
+  hens: { x: number; y: number; tx: number; ty: number; c: string }[], still: boolean, redraw: () => void,
+) => {
+  const [W, H] = sceneSize(p.place);
+  // Resizing a canvas resets its context, smoothing included.
+  if (ctx.canvas.width !== W || ctx.canvas.height !== H) { ctx.canvas.width = W; ctx.canvas.height = H; }
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, W, H);
+  if (p.place === 'wild_map') { drawWildMap(ctx, p, redraw); drawLight(ctx, p); return; }
+  const key = plateKey(p.place, p.month, p.wx, p.weekType);
+  const plate = ESTATE_PLATES[key] ? img(ESTATE_PLATES[key], redraw) : null;
+  if (plate && plate.complete && plate.width) ctx.drawImage(plate, 0, 0);
+  else { ctx.fillStyle = '#1a130b'; ctx.fillRect(0, 0, W, H); }
+  if (isGround(p.place)) drawGround(ctx, p, redraw);
+  const f = !isGround(p.place) && p.place !== 'farm_map' ? p.estate.facilities[p.place as FacilityId] : undefined;
+  if (p.place === 'farm_map') drawMap(ctx, p);
+  else if (f) {
+    if (p.place === 'walled_garden') drawGarden(ctx, f.plots, p, t);
+    if (p.place === 'polytunnel') drawTunnel(ctx, f.plots, p, t);
+    if (p.place === 'top_field') drawField(ctx, f.plots, p, t);
+    if (p.place === 'orchard' || p.place === 'orangery') drawTrees(ctx, f.trees, p, t);
+    if (p.place === 'orangery' && f.stoveLit) drawStove(ctx, t, ESTATE_GEOM.orangery?.stove ?? [36, 170]);
+    if (p.place === 'hives' && f.hives) drawHives(ctx, f.hives, p, t, still);
+    if (p.place === 'hen_run' && f.hens) drawHens(ctx, f.hens, hens, t, still);
+    if (p.place === 'salt_pans' && f.pans) drawPans(ctx, f.pans, t);
+    if (p.place === 'worm_shed' && f.shed) drawShed(ctx, f.shed, p, t);
+  }
+  drawWeather(ctx, p, t, still);
+  drawLight(ctx, p);
+};
+
+/* --- plants --- */
+const stageFrac = (pl: Plot['planting']) => {
+  if (!pl) return 0;
+  const spec = CROPS[pl.cropId];
+  return pl.gdd / spec.gddToRipe;
+};
+
+const drawPlant = (ctx: CanvasRenderingContext2D, cropId: string, f: number, x: number, y: number, scale: number, ripe: boolean, over: boolean, dead: boolean, fruit: number, seed: number) => {
+  const fam = FAMILIES[CROPS[cropId]?.family];
+  if (!fam) return;
+  const leaf = dead ? '#5a4a30' : over ? '#8a7a40' : '#4e8a34';
+  const leaf2 = dead ? '#3a3020' : over ? '#6a5a30' : '#3a6a28';
+  if (f < 0.05) { px(ctx, x, y, '#5a8a34'); return; }
+  const grow = Math.min(1, f);
+  switch (fam.id) {
+    case 'brassica': case 'napa': {
+      const r = Math.max(1, Math.round((fam.id === 'napa' ? 3.5 : 4.5) * scale * Math.min(1, 0.3 + grow)));
+      ctx.fillStyle = leaf2; ctx.fillRect(Math.round(x - r), Math.round(y - r), r * 2, r + 1);
+      ctx.fillStyle = leaf; ctx.fillRect(Math.round(x - r + 1), Math.round(y - r - 1), r * 2 - 2, r);
+      if (f > 0.5 && !dead) { const h = Math.max(1, Math.round(r * 0.7)); ctx.fillStyle = over ? '#c8c060' : '#a8c870'; ctx.fillRect(Math.round(x - h / 2), Math.round(y - r), h, h); }
+      if (over && !dead) px(ctx, x, y - r - 2, '#e8d040');
+      return;
+    }
+    case 'allium': {
+      const h = Math.round(3 + 5 * grow * scale);
+      for (let k = 0; k < h; k++) { px(ctx, x, y - k, k % 2 ? leaf : leaf2); if (k > 2 && k % 2 === 0) { px(ctx, x - 1, y - k, leaf); px(ctx, x + 1, y - k - 1, leaf2); } }
+      if (ripe || over) { ctx.fillStyle = '#e8e0d0'; ctx.fillRect(Math.round(x) - 1, Math.round(y), 3, 2); }
+      return;
+    }
+    case 'tomato': case 'chili': case 'strawberry': case 'rose': {
+      // drawn by their own place; a generic bush here
+      const r = Math.max(1, Math.round(3 * scale * grow));
+      ctx.fillStyle = leaf2; ctx.fillRect(Math.round(x - r), Math.round(y - r), r * 2, r);
+      ctx.fillStyle = leaf; ctx.fillRect(Math.round(x - r + 1), Math.round(y - r - 1), Math.max(1, r * 2 - 2), r);
+      if (fruit > 0) for (let k = 0; k < Math.min(6, Math.ceil(fruit)); k++) px(ctx, x - r + ((seed + k * 3) % (r * 2 + 1)), y - r + ((seed + k * 5) % Math.max(1, r)), fam.id === 'strawberry' ? '#f4ece0' : fam.id === 'rose' ? '#d85a8a' : '#d8342a');
+      return;
+    }
+    default: {
+      // pulses on canes or in bushes
+      const h = Math.round((3 + 7 * grow) * scale);
+      for (let k = 0; k < h; k++) { px(ctx, x, y - k, k % 2 ? leaf : leaf2); if (k % 2 === 0) { px(ctx, x - 1, y - k, leaf); px(ctx, x + 1, y - k - 1, leaf2); } }
+      if (f > 0.42 && f < 0.62 && !dead) px(ctx, x + 1, y - h + 1, cropId === 'broad_beans' ? '#f0f0e8' : '#e8a8c0');
+      if (f >= 0.62) { ctx.fillStyle = ripe || over ? '#3a2e20' : '#6aa040'; ctx.fillRect(Math.round(x) + 1, Math.round(y - h * 0.6), 1, 3); ctx.fillRect(Math.round(x) - 2, Math.round(y - h * 0.4), 1, 3); }
+    }
+  }
+};
+
+/** What the season and the problems have laid over a bed, drawn on its quad. */
+const drawBedExtras = (ctx: CanvasRenderingContext2D, q: Quad, plot: Plot, t: number, seed: number, g: any) => {
+  const pl = plot.planting;
+  const rnd = (k: number) => roll('bed', seed, k);
+  const P = (k: number) => qAt(q, rnd(k), rnd(k + 99));
+  // how much ground this is on screen, so a big near bed gets as dense a cover as a small far one
+  const xs = q.map(c => c[0]), ys = q.map(c => c[1]);
+  const areaPx = Math.max(1, (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)) * 0.7);
+  const n = (base: number) => Math.round(base * Math.min(6, Math.max(0.5, areaPx / 1800)));
+  const midY = (ys[0] + ys[2]) / 2;
+  const sc = Math.max(1, Math.round(depthScale(g, midY)));
+  if (pl?.cover.mulch) for (let k = 0; k < n(60); k++) { const [x, y] = P(k); ctx.fillStyle = k % 3 ? '#c8a860' : '#a88a48'; ctx.fillRect(Math.round(x), Math.round(y), sc, 1); }
+  if (plot.water < 22 && !pl?.cover.mulch) for (let k = 0; k < n(6); k++) { const [x, y] = qAt(q, 0.1 + rnd(k + 7) * 0.8, 0.15 + rnd(k + 17) * 0.75); ctx.fillStyle = '#2a1e14'; ctx.fillRect(Math.round(x), Math.round(y), 4 * sc, 1); px(ctx, x + 2 * sc, y + 1, '#2a1e14'); }
+  if (!pl) return;
+  for (const pr of pl.problems) {
+    if (pr.id === 'weeds') for (let k = 0; k < n(26); k++) { const [x, y] = P(k + 300); ctx.fillStyle = k % 2 ? '#7ab83a' : '#5a9a2a'; ctx.fillRect(Math.round(x), Math.round(y) - sc + 1, 1, sc); }
+    if (pr.id === 'whites') for (let k = 0; k < 4; k++) { const [x0, y0] = qAt(q, ((t * (1 + k) * 0.01 + k * 0.3) % 1), 0); const by = y0 - 5 * sc + Math.sin(t / 3 + k) * 3; px(ctx, x0, by, '#f6f6f0'); px(ctx, x0 + 1, by - (t % 2), '#f6f6f0'); }
+    if (pr.id === 'pigeons') for (let k = 0; k < 2; k++) { const [x, y] = qAt(q, 0.25 + k * 0.4, 0.3); ctx.fillStyle = '#7a7e88'; ctx.fillRect(Math.round(x), Math.round(y), 3 * sc, 2 * sc); px(ctx, x + 3 * sc, y, '#a8a8b0'); }
+    if (pr.id === 'slugs') for (let k = 0; k < n(5); k++) { const [x, y] = P(k + 500); ctx.fillStyle = 'rgba(220,230,235,0.75)'; ctx.fillRect(Math.round(x), Math.round(y), 4 * sc, 1); }
+    if (pr.id === 'crows' || pr.id === 'birds_grain') for (let k = 0; k < 3; k++) { const [x, y] = qAt(q, 0.2 + k * 0.28, 0.25 + k * 0.2); ctx.fillStyle = '#141418'; ctx.fillRect(Math.round(x + Math.sin(t / 4 + k) * 2), Math.round(y), 3 * sc, 2 * sc); }
+    if (pr.id === 'blight' || pr.id === 'rust' || pr.id === 'chocolate_spot' || pr.id === 'ascochyta' || pr.id === 'blackspot') for (let k = 0; k < n(10); k++) { const [x, y] = P(k + 700); px(ctx, x, y, pr.id === 'rust' ? '#c8702a' : '#5a3a1a'); }
+  }
+  const lift = 8 * sc;
+  if (pl.cover.net || pl.cover.fleece) {
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1] - lift); ctx.lineTo(q[1][0], q[1][1] - lift); ctx.lineTo(q[2][0], q[2][1]); ctx.lineTo(q[3][0], q[3][1]); ctx.closePath();
+    if (pl.cover.fleece) { ctx.fillStyle = 'rgba(244,244,236,0.55)'; ctx.fill(); }
+    else { ctx.clip(); ctx.fillStyle = 'rgba(220,226,230,0.3)'; for (let x = Math.min(...xs); x < Math.max(...xs); x += 3) ctx.fillRect(x, Math.min(...ys) - lift, 1, Math.max(...ys) - Math.min(...ys) + lift); for (let y = Math.min(...ys) - lift; y < Math.max(...ys); y += 3) ctx.fillRect(Math.min(...xs), y, Math.max(...xs) - Math.min(...xs), 1); }
+    ctx.restore();
+  }
+};
+
+const drawGarden = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: number) => {
+  const g = ESTATE_GEOM.walled_garden;
+  let bed = 0;
+  plots.forEach(plot => {
+    const pl = plot.planting;
+    if (plot.id === 'roses') {
+      const q = asQuad(g.rose);
+      if (!pl) return;
+      const inBloom = pl.stage === 'ripe';
+      const n = inBloom ? Math.round(90 + 140 * Math.min(1, pl.ripeKg / 0.5)) : pl.stage === 'flowering' || pl.stage === 'fruiting' ? 70 : 0;
+      // the bushes themselves, then what is on them
+      if (pl.stage !== 'dead') for (let k = 0; k < 14; k++) {
+        const [x, y] = qAt(q, 0.25 + roll('rb', k) * 0.5, (k + 0.5) / 14);
+        const sc = depthScale(g, y), r = Math.max(2, Math.round(4 * sc));
+        ctx.fillStyle = pl.stage === 'spent' && p.month >= 9 ? '#5a5a30' : '#3a5a26'; ctx.fillRect(Math.round(x - r), Math.round(y - r * 1.6), r * 2, Math.round(r * 1.6));
+        ctx.fillStyle = '#4e7a32'; ctx.fillRect(Math.round(x - r + 1), Math.round(y - r * 1.6 - 1), r * 2 - 2, r);
+      }
+      for (let k = 0; k < n; k++) {
+        const [x, y] = qAt(q, 0.15 + roll('rose', k) * 0.7, roll('rose2', k));
+        const sc = depthScale(g, y);
+        ctx.fillStyle = inBloom ? ['#d85a8a', '#f08aaa', '#b83a6a'][k % 3] : '#7a9a4a';
+        ctx.fillRect(Math.round(x), Math.round(y - 5 * sc * roll('rose3', k)), Math.max(1, Math.round(sc * 0.8)), Math.max(1, Math.round(sc * 0.8)));
+      }
+      if (pl.stage === 'spent' && p.month >= 7) for (let k = 0; k < 40; k++) { const [x, y] = qAt(q, 0.2 + roll('hip', k) * 0.6, roll('hip2', k)); px(ctx, x, y - 4 * depthScale(g, y) * roll('hip3', k), '#c83a1a'); }
+      return;
+    }
+    const R = g.beds[bed++];
+    if (!R) return;
+    const q = asQuad(R);
+    drawBedExtras(ctx, q, plot, t, bed, g);
+    if (!pl) return;
+    const f = stageFrac(pl);
+    const cols = plot.areaM2 >= 6 ? 6 : 4;
+    const rows = plot.areaM2 >= 6 ? 3 : 2;
+    const perPlant = pl.plants > 0 ? pl.ripeKg / pl.plants * 20 : 0;
+    for (let yy = 0; yy < rows; yy++) {
+      const v = depthV(q, (yy + 0.5) / rows, g.horizon ?? -20);
+      for (let xx = 0; xx < cols; xx++) {
+        const [x, y] = qAt(q, (xx + 0.5) / cols, v);
+        drawPlant(ctx, pl.cropId, f, x, y, depthScale(g, y), pl.stage === 'ripe', pl.stage === 'over' || pl.stage === 'spent', pl.stage === 'dead', perPlant, xx * 7 + yy * 3);
+      }
+    }
+  });
+};
+
+const drawTunnel = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: number) => {
+  const g = ESTATE_GEOM.polytunnel;
+  // Everything in one list, far to near, so a near plant stands in front of a far one.
+  const all: { plot: Plot; pt: number[]; k: number; n: number }[] = [];
+  plots.forEach((plot, i) => { const pts: number[][] = g.beds[i] ?? []; pts.forEach((pt, k) => all.push({ plot, pt, k, n: pts.length })); });
+  all.sort((a, b) => a.pt[1] - b.pt[1]);
+  for (const { plot, pt, k, n } of all) {
+    const pl = plot.planting;
+    const [x, y, sc] = pt;
+    if (plot.water < 22 && (!pl || k === 0)) { ctx.fillStyle = '#2a1e14'; ctx.fillRect(Math.round(x - 4 * sc), Math.round(y + 2), Math.round(6 * sc), 1); }
+    if (!pl) continue;
+    const spec = CROPS[pl.cropId];
+    const fam = FAMILIES[spec.family];
+    const f = stageFrac(pl);
+    const dead = pl.stage === 'dead';
+    const tall = fam.id === 'tomato';
+    const fruitPer = n ? pl.ripeKg / n : 0;
+    const h = Math.round((tall ? 44 : fam.id === 'chili' ? 16 : 8) * sc * Math.min(1, 0.15 + f));
+    const leaf = dead ? '#5a4a30' : pl.stage === 'spent' ? '#7a6a3a' : '#4e8a34';
+    const leaf2 = dead ? '#3a3020' : pl.stage === 'spent' ? '#5a4a28' : '#3a6a28';
+    if (tall) {
+      const X = Math.round(x), Y = Math.round(y), w = Math.max(1, Math.round(sc * 0.6));
+      ctx.fillStyle = dead ? '#4a3a24' : '#3e6a2a'; ctx.fillRect(X, Y - h, w, h);
+      // Leaves in loose clusters up the stem, bigger the nearer the plant. Seeded
+      // per plant so no two stand alike and none of them looks like a ladder.
+      const cl = Math.max(1, Math.round(sc * 1.3));
+      const rl = (j: number, q: number) => roll('tl', plot.id, k, j, q);
+      for (let j = 2, n = 0; j < h; j += Math.max(2, Math.round((2.2 + rl(n, 0) * 1.6) * sc)), n++) {
+        const side = rl(n, 1) < 0.5 ? 1 : -1;
+        const lw = cl * 2 + Math.round(rl(n, 2) * cl * 1.5), lh = cl + Math.round(rl(n, 3) * cl * 0.8);
+        const lx = side > 0 ? X + w : X - lw, ly = Y - j - lh + Math.round(rl(n, 4) * 2);
+        ctx.fillStyle = leaf2; ctx.fillRect(lx, ly + 1, lw, lh);
+        ctx.fillStyle = leaf; ctx.fillRect(lx + (side > 0 ? 0 : 1), ly, lw - 1, Math.max(1, lh - 1));
+        if (rl(n, 5) < 0.45) { const ox = side > 0 ? X - cl : X + w; ctx.fillStyle = leaf2; ctx.fillRect(ox, ly + Math.round(cl * 0.6), cl, Math.max(1, cl - 1)); }
+      }
+      // green trusses, then colour as it ripens
+      if (f > 0.62 && !dead) {
+        const col = TOMATO_COL[pl.cropId] ?? '#d0342a';
+        const trusses = Math.max(1, Math.round(h / (10 * sc)));
+        const r = Math.max(1, Math.round(2 * sc * 0.8));
+        for (let j = 0; j < trusses; j++) {
+          const ty = Y - 6 * sc - j * 9 * sc;
+          const ripeHere = pl.stage === 'ripe' && fruitPer > 0.05 && j < 1 + fruitPer * 2;
+          ctx.fillStyle = ripeHere ? col : '#6aa040';
+          ctx.fillRect(X + (j % 2 ? w + 1 : -r - 1), Math.round(ty), r, r);
+          ctx.fillRect(X + (j % 2 ? w + 1 + r : -2 * r - 1), Math.round(ty + r * 0.6), r, r);
+        }
+      }
+    } else {
+      drawPlant(ctx, pl.cropId, f, x, y, sc * 1.4, pl.stage === 'ripe', pl.stage === 'over' || pl.stage === 'spent', dead, fruitPer * 4, k * 5);
+      if (fam.id === 'chili' && pl.stage === 'ripe' && fruitPer > 0.02) for (let j = 0; j < 3; j++) { ctx.fillStyle = j % 2 ? '#d8302a' : '#c02820'; ctx.fillRect(Math.round(x - 2 * sc + j * 2 * sc), Math.round(y - h / 2 - j * sc), Math.max(1, Math.round(sc * 0.7)), Math.max(2, Math.round(sc * 1.4))); }
+    }
+    if (pl.problems.some(q => q.id === 'whitefly') && (t + k) % 5 < 2) px(ctx, x + 3 * sc, y - h - 2, '#f4f4f4');
+  }
+};
+
+/* How much a metre of ground shrinks going away from you, against a metre across:
+   rows 0.25 m apart land 3 px apart at the foot of the painted field, where a
+   metre across is 19 px, and close up into a haze by the hedge. */
+const FORESHORTEN = 0.0316;
+
+const drawField = (ctx: CanvasRenderingContext2D, plots: Plot[], p: Props, t: number) => {
+  const g = ESTATE_GEOM.top_field;
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const hz = g.horizon ?? 0;
+  const ppm = (y: number) => (g.k ?? 0.08) * (y - hz);    // pixels per metre at y
+  plots.forEach((plot, i) => {
+    const S = g.strips[i];
+    const pl = plot.planting;
+    if (!S) return;
+    const q = asQuad(S);
+    drawBedExtras(ctx, q, plot, t, 40 + i, g);
+    if (!pl) return;
+    const fam = FAMILIES[CROPS[pl.cropId].family];
+    const f = stageFrac(pl);
+    const ripe = pl.stage === 'ripe', over = pl.stage === 'over' || pl.stage === 'spent', dead = pl.stage === 'dead';
+    const yTop = Math.max(0, (q[0][1] + q[1][1]) / 2), yBot = Math.min(H, (q[2][1] + q[3][1]) / 2);
+    // Rows at constant y are lines of constant depth; step down the strip in
+    // ground metres, and across each row between its two edges.
+    const edge = (y: number): [number, number] => {
+      const v = (y - (q[0][1] + q[1][1]) / 2) / ((q[2][1] + q[3][1]) / 2 - (q[0][1] + q[1][1]) / 2);
+      return [q[0][0] + (q[3][0] - q[0][0]) * v, q[1][0] + (q[2][0] - q[1][0]) * v];
+    };
+    const rowsBy = (rowM: number, fn: (y: number, x0: number, x1: number, m: number) => void) => {
+      for (let y = yTop + 2; y < yBot; ) {
+        const m = ppm(y);
+        const [x0, x1] = edge(y);
+        fn(Math.round(y), Math.max(0, x0), Math.min(W, x1), m);
+        y += Math.max(1.5, rowM * m * m * FORESHORTEN);
+      }
+    };
+    if (fam.id === 'wintergrain' || fam.id === 'springgrain') {
+      const tall = 1.0 * Math.min(1, 0.2 + f);
+      const cc = dead ? '#6a5a3a' : over ? '#8a6a3a' : f < 0.72 ? '#5a8a34' : ripe ? '#d8b860' : '#a8a84a';
+      const ear = ripe || over ? '#e8c870' : '#b8b860';
+      rowsBy(0.25, (y, x0, x1, m) => {
+        const hh = Math.max(1, Math.round(tall * m));
+        const dx = Math.max(2, Math.round(m * 0.12));
+        for (let x = x0 + (y % 2); x < x1; x += dx) {
+          const jit = ((x * 7 + y * 3) % 3) - 1;
+          ctx.fillStyle = cc; ctx.fillRect(Math.round(x), y - hh - jit, 1, hh + jit);
+          if (f > 0.62 && !dead) { ctx.fillStyle = ear; ctx.fillRect(Math.round(x), y - hh - jit - Math.max(1, Math.round(m * 0.08)), 1, Math.max(1, Math.round(m * 0.08))); }
+        }
+      });
+    } else if (fam.id === 'corn') {
+      const cols = CORN_COL[pl.cropId] ?? ['#e8c040'];
+      rowsBy(0.75, (y, x0, x1, m) => {
+        const hh = Math.round(2.2 * m * Math.min(1, 0.1 + f));
+        const dx = Math.max(3, Math.round(0.7 * m));
+        const w = Math.max(1, Math.round(m * 0.04));
+        for (let x = x0 + (y % 3); x < x1; x += dx) {
+          const X = Math.round(x);
+          if (f < 0.1) { px(ctx, X, y, '#5a8a34'); continue; }
+          ctx.fillStyle = dead ? '#5a4a30' : over || ripe ? '#b8a860' : '#5a8a34'; ctx.fillRect(X, y - hh, w, hh);
+          const lw = Math.max(1, Math.round(m * 0.25));
+          ctx.fillStyle = dead ? '#4a3a24' : over || ripe ? '#a89850' : '#6a9a3a';
+          ctx.fillRect(X - lw, Math.round(y - hh * 0.6), lw, 1); ctx.fillRect(X + w, Math.round(y - hh * 0.4), lw, 1); ctx.fillRect(X - lw, Math.round(y - hh * 0.25), lw, 1);
+          if (f > 0.5 && f < 0.62) { ctx.fillStyle = '#e8d890'; ctx.fillRect(X, y - hh - 1, w, 1); }
+          if (f >= 0.62 && !dead) { ctx.fillStyle = ripe || over ? cols[X % cols.length] : '#8ab050'; ctx.fillRect(X + w, Math.round(y - hh * 0.55), Math.max(1, Math.round(m * 0.08)), Math.max(2, Math.round(m * 0.2))); }
+        }
+      });
+    } else {
+      // pulses and garlic in the field: low rows
+      rowsBy(0.45, (y, x0, x1, m) => {
+        const dx = Math.max(3, Math.round(0.3 * m));
+        for (let x = x0 + (y % 3); x < x1; x += dx) drawPlant(ctx, pl.cropId, f, x, y, Math.max(0.4, m * 0.09), ripe, over, dead, 0, Math.round(x));
+      });
+    }
+  });
+};
+
+const drawTrees = (ctx: CanvasRenderingContext2D, trees: Tree[], p: Props, t: number) => {
+  for (const tree of trees) {
+    const c = treeGeom(p.place, tree.id);
+    if (!c) continue;
+    const spec = TREE_SPECS[tree.cropId];
+    const bloomNow = tree.bloom > 0 && tree.gdd < spec.gddBloom + 90 && tree.fruitKg === 0;
+    const rr = (k: number) => roll('tree', tree.id, k);
+    // A fruit or a flower is sized to the canopy, or on a big painted tree it is a speck nobody can see.
+    const fs = c[2] >= 30 ? 3 : 2, bs = c[2] >= 30 ? 2 : 1;
+    if (bloomNow) {
+      const n = Math.round(30 + 60 * tree.bloom);
+      for (let i = 0; i < n; i++) { const a = rr(i) * Math.PI * 2, d = Math.sqrt(rr(i + 500)); ctx.fillStyle = i % 4 ? '#f6eef0' : '#f0c0d0'; ctx.fillRect(Math.round(c[0] + Math.cos(a) * d * c[2]), Math.round(c[1] + Math.sin(a) * d * c[3]), bs, bs); }
+    }
+    const hanging = tree.fruitKg + tree.ripeKg;
+    if (hanging > 0.05) {
+      const n = Math.round(Math.min(60, 6 + hanging * (spec.prime > 20 ? 0.45 : 4)));
+      const ripeShare = tree.ripeKg / hanging;
+      const cols = FRUIT_COL[tree.cropId] ?? ['#d8a030'];
+      for (let i = 0; i < n; i++) {
+        const a = rr(i + 1000) * Math.PI * 2, d = Math.sqrt(rr(i + 2000));
+        const fx = Math.round(c[0] + Math.cos(a) * d * c[2]), fy = Math.round(c[1] + Math.sin(a) * d * c[3]);
+        const isRipe = i < n * ripeShare;
+        ctx.fillStyle = '#1e1a10'; ctx.fillRect(fx, fy + fs, fs, 1);
+        ctx.fillStyle = isRipe ? cols[i % cols.length] : '#9ac850'; ctx.fillRect(fx, fy, fs, fs);
+        px(ctx, fx, fy, isRipe ? '#fff6d8' : '#c8e880');
+      }
+    }
+    // windfalls under the tree (on the tiles round a pot)
+    const pot = potGeom(p.place, tree.id);
+    const fy = pot ? pot[3] + 2 : c[1] + c[3] + 6, fx0 = pot ? pot[0] - 6 : c[0] - c[2] * 0.6, fw = pot ? pot[2] - pot[0] + 12 : c[2] * 1.2;
+    if (tree.lostKg > 1 && p.month >= 5 && p.month <= 10) for (let i = 0; i < Math.min(12, tree.lostKg / 2); i++) px(ctx, fx0 + rr(i + 3000) * fw, fy + rr(i + 4000) * 6, '#8a5a2a');
+    if (tree.problems.some(q => q.id === 'wasps')) for (let w = 0; w < 5; w++) px(ctx, c[0] - 10 + ((t * 2 + w * 9) % 20), c[1] + c[3] + 4 + Math.sin(t + w) * 2, '#e0b020');
+  }
+};
+
+const drawStove = (ctx: CanvasRenderingContext2D, t: number, at: number[]) => {
+  // a warm glow round the stove, and a thread of smoke from the pipe
+  const [x, y] = at;
+  const flick = (t % 6) < 3 ? 0.2 : 0.15;
+  const grd = ctx.createRadialGradient(x, y, 2, x, y, 80);
+  grd.addColorStop(0, `rgba(255,170,80,${flick})`); grd.addColorStop(1, 'rgba(255,170,80,0)');
+  ctx.fillStyle = grd; ctx.fillRect(x - 80, y - 80, 160, 160);
+  ctx.fillStyle = 'rgba(255,150,60,0.55)'; ctx.fillRect(x - 3, y + 6, 6, 2);
+};
+
+const drawHives = (ctx: CanvasRenderingContext2D, hives: NonNullable<EstateState['facilities']['hives']>['hives'], p: Props, t: number, still: boolean) => {
+  const g = ESTATE_GEOM.hives;
+  const flying = flyingDay(p.wx) && p.month >= 2 && p.month <= 9;
+  hives!.forEach((h, i) => {
+    const at = g.hives[i];
+    if (!at) return;
+    // supers stacked on top for the honey they are carrying
+    const supers = Math.min(3, Math.floor(h.surplus / 7));
+    for (let s = 0; s < supers; s++) { ctx.fillStyle = s % 2 ? '#e8e2cc' : '#f4eedc'; ctx.fillRect(at[0] - 11, at[1] - 34 - s * 6, 22, 6); ctx.fillStyle = '#8a8272'; ctx.fillRect(at[0] - 11, at[1] - 29 - s * 6, 22, 1); }
+    if (!h.alive) { ctx.fillStyle = 'rgba(20,16,12,0.35)'; ctx.fillRect(at[0] - 12, at[1] - 24, 24, 24); return; }
+    if (!flying || still) return;
+    const n = Math.round(6 + 10 * h.strength);
+    for (let b = 0; b < n; b++) {
+      const q = t * (0.18 + (b % 5) * 0.03) + b * 1.7;
+      const r2 = 5 + (b * 7) % 26;
+      px(ctx, at[0] + Math.cos(q) * r2, at[1] - 12 + Math.sin(q * 1.7) * r2 * 0.5, (t + b) % 2 ? '#e8c030' : '#2a2014');
+    }
+  });
+};
+
+const drawHens = (ctx: CanvasRenderingContext2D, run: NonNullable<EstateState['facilities']['hen_run']>['hens'], hens: { x: number; y: number; tx: number; ty: number; c: string }[], t: number, still: boolean) => {
+  const g = ESTATE_GEOM.hen_run;
+  const R = g.run;
+  const cols = ['#8a4a22', '#e8e0d0', '#2a2420', '#a8683a', '#e8e0d0', '#6a3a1a', '#c8a060', '#3a3028'];
+  while (hens.length < run!.hens) { const k = hens.length; hens.push({ x: R[0] + 20 + roll('hx', k) * (R[2] - R[0] - 40), y: R[1] + 12 + roll('hy', k) * (R[3] - R[1] - 16), tx: 0, ty: 0, c: cols[k % cols.length] }); }
+  hens.length = run!.hens;
+  hens.forEach((h, i) => {
+    if (!still && t % 3 === 0) {
+      if (!h.tx || Math.hypot(h.tx - h.x, h.ty - h.y) < 2) { h.tx = R[0] + 6 + roll('htx', i, t) * (R[2] - R[0] - 12); h.ty = R[1] + 10 + roll('hty', i, t) * (R[3] - R[1] - 12); }
+      h.x += Math.sign(h.tx - h.x); h.y += Math.sign(h.ty - h.y) * 0.5;
+    }
+    const x = Math.round(h.x), y = Math.round(h.y), dir = h.tx < h.x ? -1 : 1;
+    ctx.fillStyle = h.c; ctx.fillRect(x - 3, y - 4, 6, 4); ctx.fillRect(x + dir * 3, y - 6, 2, 3);
+    px(ctx, x + dir * 4, y - 7, '#d82a2a'); px(ctx, x + dir * 5, y - 5, '#e8a030'); px(ctx, x - 1, y, '#e8a030'); px(ctx, x + 1, y, '#e8a030');
+  });
+  // eggs waiting in the nest box
+  const nest = g.nest;
+  for (let k = 0; k < Math.min(8, run!.eggs); k++) { ctx.fillStyle = k % 3 ? '#f2ead8' : '#d8b88a'; ctx.fillRect(nest[0] - 8 + (k % 4) * 3, nest[1] + 6 - Math.floor(k / 4) * 2, 2, 2); }
+};
+
+const drawPans = (ctx: CanvasRenderingContext2D, pans: NonNullable<EstateState['facilities']['salt_pans']>['pans'], t: number) => {
+  const g = ESTATE_GEOM.salt_pans;
+  pans!.forEach((pan, i) => {
+    const R = g.pans[i];
+    if (!R) return;
+    const w = R[2] - R[0], h = R[3] - R[1];
+    if (pan.brineMm > 0.5) { ctx.fillStyle = `rgba(110,150,170,${Math.min(0.85, 0.25 + pan.brineMm / 50)})`; ctx.fillRect(R[0], R[1], w, h); }
+    const crust = Math.min(1, pan.crustKg / 12);
+    for (let k = 0; k < Math.round(w * h * 0.4 * crust); k++) px(ctx, R[0] + roll('pc', i, k) * w, R[1] + roll('pd', i, k) * h, k % 4 ? '#f2f0ea' : '#dcd8cc');
+    if (pan.florKg > 0.05 && (t % 10) < 5) for (let s = 0; s < Math.min(14, pan.florKg * 20); s++) px(ctx, R[0] + 6 + (s * 13) % (w - 8), R[1] + 3 + (s % 4) * 8, '#ffffff');
+    if (pan.covered) { ctx.fillStyle = 'rgba(40,52,58,0.7)'; ctx.fillRect(R[0] - 2, R[1] - 3, w + 4, 4); ctx.fillStyle = 'rgba(70,86,94,0.55)'; ctx.fillRect(R[0] - 2, R[1], w + 4, h); }
+  });
+};
+
+const drawShed = (ctx: CanvasRenderingContext2D, shed: NonNullable<EstateState['facilities']['worm_shed']>['shed'], p: Props, t: number) => {
+  const g = ESTATE_GEOM.worm_shed;
+  if (!g) return;
+  // castings darkening the bottom tier, waste in the top
+  g.worms.forEach((R: number[], i: number) => {
+    const food = Math.min(1, shed!.wormFeedKg / 12), cast = Math.min(1, shed!.castingsKg / 20);
+    ctx.fillStyle = `rgba(40,28,18,${0.3 + cast * 0.5})`; ctx.fillRect(R[0] + 2, R[3] - 6, R[2] - R[0] - 4, 4);
+    if (food > 0.05) for (let k = 0; k < 12 * food; k++) px(ctx, R[0] + 4 + roll('wf', i, k) * (R[2] - R[0] - 8), R[1] + 4, k % 2 ? '#7a9a3a' : '#a86a3a');
+  });
+  g.bsf.forEach((R: number[], i: number) => {
+    if (shed!.bsfLarvaeKg < 0.05) return;
+    const busy = shed!.bsfFeedKg > 0.2;
+    const n = Math.round(10 + 20 * Math.min(1, shed!.bsfLarvaeKg / 2));
+    for (let k = 0; k < n; k++) {
+      const x = R[0] + 5 + roll('bl', i, k) * (R[2] - R[0] - 10) + (busy ? Math.sin(t / 2 + k) : 0);
+      const y = R[1] + 8 + roll('bm', i, k) * (R[3] - R[1] - 14);
+      px(ctx, x, y, '#e8dcc0'); px(ctx, x + 1, y, '#c8b890');
+    }
+    if (shed!.prepupaeKg > 0.2) { ctx.fillStyle = '#4a3a2a'; ctx.fillRect(R[2] + 12, R[3] - 10, 10, Math.min(8, 2 + shed!.prepupaeKg * 2)); }
+    // adults over the cage in the warm months
+    if (i === 0 && p.month >= 4 && p.month <= 8) for (let k = 0; k < 6; k++) px(ctx, R[0] + 10 + ((t * (1 + k % 3) + k * 17) % 50), R[1] - 20 + Math.sin(t / 3 + k) * 8, '#1a1a1a');
+  });
+};
+
+const drawMap = (ctx: CanvasRenderingContext2D, p: Props) => {
+  const places = ESTATE_GEOM.farm_map?.places ?? {};
+  // Places not yet bought are drawn back, so what is yours reads first.
+  for (const [id, R] of Object.entries(places) as [string, number[]][]) {
+    if (p.owned[id as FacilityId]) continue;
+    ctx.fillStyle = 'rgba(26,19,11,0.46)';
+    ctx.fillRect(R[0] - 2, R[1] - 2, R[2] - R[0] + 4, R[3] - R[1] + 4);
+  }
+};
+
+/* --- the wild --- */
+/** What you have found today and not yet dealt with, drawn where you found it. */
+const drawGround = (ctx: CanvasRenderingContext2D, p: Props, redraw: () => void) => {
+  const v = p.estate.wild?.visit;
+  if (!v || v.ground !== p.place) return;
+  const big = ctx.canvas.width > 400;
+  v.finds.forEach(f => {
+    if (f.done) return;
+    const s = CROP_SPRITES[f.species];
+    if (!s) return;
+    const i = img(s.small, redraw);
+    if (!i.complete || !i.width) return;
+    const w = big ? i.width * 1.25 : i.width, h = big ? i.height * 1.25 : i.height;
+    ctx.fillStyle = 'rgba(20,14,8,0.35)'; ctx.fillRect(Math.round(f.at[0] - w * 0.4), Math.round(f.at[1] + 1), Math.round(w * 0.8), 2);
+    ctx.drawImage(i, Math.round(f.at[0] - w / 2), Math.round(f.at[1] - h + 2), Math.round(w), Math.round(h));
+  });
+};
+
+/** The wild map, until a painted one comes: a board of postcards cut from each ground's own plate. */
+const drawWildMap = (ctx: CanvasRenderingContext2D, p: Props, redraw: () => void) => {
+  ctx.fillStyle = '#211a12'; ctx.fillRect(0, 0, 480, 270);
+  WILD_TILES.forEach((g, i) => {
+    const R = tileRect(i);
+    const key = plateKey(g as ScenePlace, p.month, p.wx, p.weekType);
+    const src = ESTATE_PLATES[key];
+    ctx.fillStyle = '#0e0b07'; ctx.fillRect(R[0] - 1, R[1] - 1, R[2] - R[0] + 2, R[3] - R[1] + 2);
+    if (!src) return;
+    const im = img(src, redraw);
+    if (!im.complete || !im.width) return;
+    // the middle 4:3 of a 16:9 plate
+    const sw = im.height * 4 / 3, sx = (im.width - sw) / 2;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(im, sx, 0, sw, im.height, R[0], R[1], R[2] - R[0], R[3] - R[1]);
+    ctx.imageSmoothingEnabled = false;
+    if (g === 'bog' && !p.estate.wild?.bogFound) { ctx.fillStyle = 'rgba(20,16,12,0.45)'; ctx.fillRect(R[0], R[1], R[2] - R[0], R[3] - R[1]); }
+    if (g === 'salt_pans' && !p.owned.salt_pans) { ctx.fillStyle = 'rgba(20,16,12,0.5)'; ctx.fillRect(R[0], R[1], R[2] - R[0], R[3] - R[1]); }
+    // a band for the name, printed by the overlay
+    ctx.fillStyle = 'rgba(12,9,6,0.72)'; ctx.fillRect(R[0], R[3] - 15, R[2] - R[0], 15);
+  });
+};
+
+/* --- the day --- */
+const drawWeather = (ctx: CanvasRenderingContext2D, p: Props, t: number, still: boolean) => {
+  const SCENE_W = ctx.canvas.width, SCENE_H = ctx.canvas.height;
+  const indoors = p.place === 'polytunnel' || p.place === 'orangery';
+  const { wx } = p;
+  if (!indoors && wx.rainMm > 2 && !wx.snow) {
+    ctx.fillStyle = 'rgba(30,50,60,0.12)'; ctx.fillRect(0, 0, SCENE_W, SCENE_H);
+    ctx.fillStyle = 'rgba(200,220,230,0.55)';
+    const n = Math.min(260, 60 + wx.rainMm * 8);
+    for (let k = 0; k < n; k++) { const x = (roll('rx', k) * SCENE_W + (still ? 0 : t * 5)) % SCENE_W, y = (roll('ry', k) * SCENE_H + (still ? 0 : t * 11)) % SCENE_H; ctx.fillRect(Math.round(x), Math.round(y), 1, 3); }
+  }
+  if (!indoors && (wx.snow || (p.weekType === 'Snowy' && wx.rainMm > 0))) {
+    for (let k = 0; k < 90; k++) { const x = (roll('sx', k) * SCENE_W + (still ? 0 : Math.sin(t / 9 + k) * 3)) % SCENE_W, y = (roll('sy', k) * SCENE_H + (still ? 0 : t * (0.4 + (k % 4) * 0.2))) % SCENE_H; px(ctx, x, y, k % 5 ? '#f4f6f4' : '#dfe6ea'); }
+  }
+  if (!indoors && wx.hail) for (let k = 0; k < 60; k++) px(ctx, roll('hx', k, t) * SCENE_W, roll('hy', k, t) * SCENE_H, '#f0f4f4');
+  if (!indoors && p.weekType === 'Foggy') {
+    // valley fog sits low and thins by midday
+    const thin = Math.max(0.15, 1 - Math.max(0, p.minute - 7 * 60) / 300);
+    const grd = ctx.createLinearGradient(0, 60, 0, SCENE_H);
+    grd.addColorStop(0, `rgba(210,214,212,${0.05 * thin})`); grd.addColorStop(0.5, `rgba(214,218,216,${0.42 * thin})`); grd.addColorStop(1, `rgba(214,218,216,${0.25 * thin})`);
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, SCENE_W, SCENE_H);
+  }
+  // autumn leaves drifting in the woody places
+  if (!still && !indoors && p.month >= 8 && p.month <= 10 && (p.place === 'orchard' || p.place === 'walled_garden' || p.place === 'hives')) {
+    for (let k = 0; k < 12; k++) { const x = (roll('lx', k) * SCENE_W + t * 0.6 + Math.sin(t / 7 + k) * 4) % SCENE_W, y = (roll('ly', k) * SCENE_H + t * (0.3 + (k % 3) * 0.15)) % SCENE_H; ctx.fillStyle = ['#b0612c', '#c48d3c', '#9a5c26'][k % 3]; ctx.fillRect(Math.round(x), Math.round(y), 2, 1); }
+  }
+};
+
+/** Daylight: night outside the sun's hours, gold at either end of the day. */
+export const lightAt = (doy: number, minute: number): { dark: number; gold: number } => {
+  const s = sunTimes(doy);
+  const TW = 40;   // civil twilight, roughly
+  if (minute < s.sunrise - TW || minute > s.sunset + TW) return { dark: 1, gold: 0 };
+  if (minute < s.sunrise) return { dark: (s.sunrise - minute) / TW, gold: 0.6 };
+  if (minute > s.sunset) return { dark: (minute - s.sunset) / TW, gold: 0.6 };
+  const fromEdge = Math.min(minute - s.sunrise, s.sunset - minute);
+  return { dark: 0, gold: fromEdge < 70 ? 1 - fromEdge / 70 : 0 };
+};
+
+const drawLight = (ctx: CanvasRenderingContext2D, p: Props) => {
+  const SCENE_W = ctx.canvas.width, SCENE_H = ctx.canvas.height;
+  const { dark, gold } = lightAt(p.doy, p.minute);
+  if (gold > 0) {
+    ctx.save(); ctx.globalCompositeOperation = 'soft-light';
+    ctx.fillStyle = `rgba(255,160,80,${0.45 * gold})`; ctx.fillRect(0, 0, SCENE_W, SCENE_H);
+    ctx.restore();
+  }
+  if (dark > 0) {
+    ctx.save(); ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = `rgba(40,52,96,${0.72 * dark})`; ctx.fillRect(0, 0, SCENE_W, SCENE_H);
+    ctx.restore();
+    ctx.fillStyle = `rgba(6,8,18,${0.35 * dark})`; ctx.fillRect(0, 0, SCENE_W, SCENE_H);
+  }
+};
+
+export default EstateScene;

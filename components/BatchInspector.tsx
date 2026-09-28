@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { BUYER_SEAL } from './sealSheet';
 import GameIcon from './GameIcon';
 import PanelMark from './PanelMark';
-import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls, Contract, GameState, Ingredient } from '../types';
+import { Batch, Recipe, FermentType, Buyer, StaffRoleType, ChamberControls, Contract, GameState, Ingredient, LabOrders } from '../types';
 import { AlertTriangle, PauseCircle } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { describeEnzymes, describeLineage } from '../services/koji';
 import { eligibleContracts, unitsFromBatch, contractProgressLabel } from '../services/vendors';
 import RunTrace from './RunTrace';
 import SpeedControl from './SpeedControl';
+import { SoilPanel, SoilHarvest } from './SoilPanel';
+import { isSoilRecipe, SOIL_KINDS } from '../services/soil';
 import { calculateCriticScore, getInterestedBuyers, generateCriticFeedback, calculateBatchDynamics, calculateOffer, calculateWholesale, getDemandFor, buyerWillTake, getContrabandValue, isContrabandBatch, getControls, getLineage, chamberExchange, unevennessRate, evennessCeiling, isAgitatedFerment, filmsOver, filmIsTheCulture, interventionReach, reachImplement , generateTastingNotes , getMaturity, ageingBehaviour , sporulation, sporeYield, describeSporulation, contaminationRisk } from '../services/gameLogic';
 import { INGREDIENTS , AGEING_MAX_PROGRESS , VESSELS , SPORULATION_START } from '../constants';
 import { CloseIcon, VesselArt, MixToolIcon, MistToolIcon, LidToolIcon, CleanToolIcon, LogLinesIcon, getBuyerIcon, getBuyerAccentColor, ArrowRightIcon } from './icons';
@@ -315,6 +317,11 @@ interface BatchInspectorProps {
   onProcess?: (action: 'press' | 'filter') => void;
   onEvaluate?: (score: number, renown: number) => void;
   initialTab?: 'telemetry' | 'harvest';
+  /** Standing orders the technician carries out on this batch. */
+  labOrders?: LabOrders;
+  technician?: string | null;
+  onSetLabOrder?: (patch: Partial<LabOrders>) => void;
+  onRelease?: () => void;
 }
 
 // Full-circle progress ring (the ledger's centerpiece) — circumference-based,
@@ -388,7 +395,11 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
   onSporulate,
   onProcess,
   onEvaluate,
-  initialTab = 'telemetry'
+  initialTab = 'telemetry',
+  labOrders,
+  technician,
+  onSetLabOrder,
+  onRelease,
 }) => {
   const [activeTab, setActiveTab] = useState<'telemetry' | 'harvest'>(initialTab);
 
@@ -788,7 +799,61 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                   )}
                 </div>
 
+                {isSoilRecipe(recipe) && <SoilPanel batch={batch} recipe={recipe} onTurn={() => onIntervention('Turn')} />}
+
                 <ChamberPanel batch={batch} recipe={recipe} inventory={inventory} onSetControl={onSetControl} />
+
+                {/* WHILE YOU ARE OUT. The lab's automation: standing orders the
+                    technician carries out every tick, so a day on the estate is
+                    not a garum left to go over. The world runs on one clock —
+                    the bench does not wait for you. */}
+                {onSetLabOrder && !batch.kojiRoom && batch.status !== 'spoiled' && (
+                  <div className="lab-orders">
+                    <div className="lo-head">
+                      <span className="section-lbl">While you are out</span>
+                      <span className="lo-who">{technician ? `${technician} will see to it` : 'Orders need a lab technician'}</span>
+                    </div>
+                    {batch.held ? (
+                      <p className="lo-held">
+                        Held at the peak — bottled, and no longer changing. Sell it from Harvest, or
+                        {' '}<button className="linkish" onClick={onRelease}>let it carry on</button>.
+                      </p>
+                    ) : (
+                      <ul>
+                        {ageingBehaviour(recipe) !== 'matures' && !isKoji && (
+                          <li><label className={technician ? '' : 'off'}>
+                            <input type="checkbox" id={`lo-peak-${batch.id}`} disabled={!technician} checked={!!labOrders?.bottleAtPeak} onChange={e => onSetLabOrder({ bottleAtPeak: e.target.checked })} />
+                            Hold it at the height of its peak, so it cannot go over
+                          </label></li>
+                        )}
+                        {ageingBehaviour(recipe) === 'matures' && !batch.cellared && (
+                          <li><label className={technician ? '' : 'off'}>
+                            <input type="checkbox" id={`lo-cellar-${batch.id}`} disabled={!technician} checked={!!labOrders?.cellarWhenReady} onChange={e => onSetLabOrder({ cellarWhenReady: e.target.checked })} />
+                            Carry it down to the cellar when it is ready
+                          </label></li>
+                        )}
+                        {filmsOver(recipe) && !filmIsTheCulture(recipe) && (
+                          <li><label className={technician ? '' : 'off'}>
+                            <input type="checkbox" id={`lo-skim-${batch.id}`} disabled={!technician} checked={!!labOrders?.skim} onChange={e => onSetLabOrder({ skim: e.target.checked })} />
+                            Skim the film when it thickens
+                          </label></li>
+                        )}
+                        {isSoilRecipe(recipe) && SOIL_KINDS[recipe.id]?.air === 'aerobic' && (
+                          <li><label className={technician ? '' : 'off'}>
+                            <input type="checkbox" id={`lo-heap-${batch.id}`} disabled={!technician} checked={!!labOrders?.turn} onChange={e => onSetLabOrder({ turn: e.target.checked })} />
+                            Turn the heap when it runs short of air
+                          </label></li>
+                        )}
+                        {isAgitatedFerment(recipe) && (
+                          <li><label className={technician ? '' : 'off'}>
+                            <input type="checkbox" id={`lo-turn-${batch.id}`} disabled={!technician} checked={!!labOrders?.turn} onChange={e => onSetLabOrder({ turn: e.target.checked })} />
+                            {isKoji ? 'Turn the bed' : 'Stir the mash'} when it stratifies
+                          </label></li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                )}
 
                 {tools.length > 0 && (
                   <div>
@@ -900,6 +965,10 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                 </div>
               </div>
             </>
+          ) : isSoilRecipe(recipe) ? (
+            <div className="lcol-right" style={{ width: '100%', padding: '24px 28px' }}>
+              <SoilHarvest batch={batch} recipe={recipe} onStore={onStore} onDiscard={onDiscard} />
+            </div>
           ) : (
             <div className="lcol-right" style={{ width: '100%', padding: '24px 28px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) minmax(280px, 1.3fr)', gap: 20, alignItems: 'start' }}>
@@ -1094,6 +1163,11 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
 
         {/* PERSISTENT STATUS & HARVEST BAR */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 28px', borderTop: '1px solid var(--line)', flexShrink: 0, flexWrap: 'wrap' }}>
+          {isSoilRecipe(recipe) ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} className="mono">
+            <span style={{ color: 'var(--text-lo)', fontSize: 11 }}>For the land, not for sale</span>
+          </div>
+          ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }} className="mono">
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: 'var(--text-lo)', fontSize: 11 }}>Quality:</span>
@@ -1123,9 +1197,12 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
               </>
             )}
           </div>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {activeTab === 'telemetry' ? (
+            {activeTab === 'telemetry' && isSoilRecipe(recipe) ? (
+              <button className="btn btn-ghost" onClick={() => setActiveTab('harvest')}>For the land</button>
+            ) : activeTab === 'telemetry' ? (
               <>
                 <button className="btn btn-ghost" onClick={() => setActiveTab('harvest')}>Open Harvest Studio</button>
                 <button className="btn btn-amber" onClick={onQuickHarvest}>Quick Harvest (${highestOffer})</button>

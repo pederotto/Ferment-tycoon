@@ -1,6 +1,9 @@
 import { GameState, FermentType } from '../types';
 import { INGREDIENTS, SUPPLIERS, KOJI_ROOM_DEFAULT_TARGET_KG } from '../constants';
-import { rollCrewPool } from './crew';
+import { rollCrewPool, noStaff } from './crew';
+import { newEstate, farmRolesFor } from './estate';
+import { FACILITIES } from '../constants.farm';
+import type { FacilityId } from '../types.farm';
 
 /**
  * SAVE / LOAD
@@ -66,7 +69,7 @@ function migrate(state: Partial<GameState>): GameState {
     // for up to a month after loading, which reads as a broken screen.
     crewPool: (state.crewPool && state.crewPool.length > 0)
       ? state.crewPool
-      : rollCrewPool(state.week ?? 1, state.kojiRoomOwned ?? false),
+      : rollCrewPool(state.week ?? 1, state.kojiRoomOwned ?? false, farmRolesFor(state.estate)),
     contracts: state.contracts ?? [],
     unlockedVendorIds: state.unlockedVendorIds ?? [],
     // A supplier added after the save was made has no relationship in it, and the
@@ -97,7 +100,53 @@ function migrate(state: Partial<GameState>): GameState {
     kojiRoomOwned: state.kojiRoomOwned ?? false,
     kojiTargetKg: state.kojiTargetKg ?? KOJI_ROOM_DEFAULT_TARGET_KG,
     // A role added after the save leaves its flag missing, not false.
-    staff: { cleaner: false, tech: false, chef: false, rd: false, toji: false, ...(state.staff ?? {}) },
+    staff: { ...noStaff(), ...(state.staff ?? {}) },
+    // The world clock postdates every save: resume at half past seven.
+    minute: typeof state.minute === 'number' ? state.minute : 7 * 60 + 30,
+    // The estate postdates every save. Nobody has bought any land yet.
+    estate: migrateEstate(state.estate),
+    labOrders: state.labOrders ?? {},
+  };
+}
+
+/**
+ * A place's beds follow its spec: a bed added since the save was made is added
+ * empty, and a relabelled or resized one takes the new label, and the new size
+ * if nothing is growing in it.
+ */
+function reconcileFacilities(fs: GameState['estate']['facilities']): GameState['estate']['facilities'] {
+  const out: GameState['estate']['facilities'] = {};
+  for (const [id, f] of Object.entries(fs)) {
+    if (!f) continue;
+    const spec = FACILITIES[id as FacilityId]?.plots ?? [];
+    const plots = f.plots.map(p => {
+      const s = spec.find(q => q.id === p.id);
+      return s ? { ...p, label: s.label, areaM2: p.planting ? p.areaM2 : s.areaM2 } : p;
+    });
+    for (const s of spec) if (!plots.some(p => p.id === s.id)) plots.push({ id: s.id, label: s.label, areaM2: s.areaM2, water: 60, fertility: 55, life: 45, history: [] });
+    plots.sort((a, b) => spec.findIndex(s => s.id === a.id) - spec.findIndex(s => s.id === b.id));
+    out[id as FacilityId] = { ...f, plots };
+  }
+  return out;
+}
+
+/** Fill any estate field a save predates, so every reader can trust the shape. */
+function migrateEstate(e: Partial<GameState['estate']> | undefined): GameState['estate'] {
+  const fresh = newEstate();
+  if (!e) return fresh;
+  // Waste and soil products moved into the pantry; the estate's own stores went.
+  const { soilStore: _s, waste: _w, ...rest } = e as Partial<GameState['estate']> & { soilStore?: unknown; waste?: unknown };
+  return {
+    ...fresh,
+    ...rest,
+    facilities: reconcileFacilities(e.facilities ?? {}),
+    vanDemand: e.vanDemand ?? {},
+    log: e.log ?? [],
+    seedLines: e.seedLines ?? {},
+    ledger: e.ledger ?? {},
+    patches: e.patches ?? {},
+    guide: e.guide ?? {},
+    lastDay: e.lastDay ?? -1,
   };
 }
 

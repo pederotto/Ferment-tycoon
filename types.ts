@@ -1,3 +1,4 @@
+import type { EstateState } from './types.farm';
 
 export enum IngredientType {
   SUBSTRATE = 'SUBSTRATE',
@@ -169,7 +170,9 @@ export enum FermentType {
   BLACK = 'Blackening',
   FAIL = 'Bio-Hazard',
   ALCOHOL = 'Alcoholic Brew',
-  KOMBUCHA = 'Kombucha'
+  KOMBUCHA = 'Kombucha',
+  /** The soil lab: compost, bokashi, the KNF preparations, EM and compost tea. Its own physics (services/soil.ts). */
+  SOIL = 'Soil Culture'
 }
 
 export interface Vessel {
@@ -380,6 +383,31 @@ export interface Batch {
   // Post-Processing State
   isPressed?: boolean;
   isFiltered?: boolean;
+
+  /**
+   * Stopped at its peak by the technician's standing order: bottled, and no
+   * longer developing, so a batch left while you are out on the estate cannot
+   * go over. It waits on the bench to be sold like any finished batch.
+   */
+  held?: boolean;
+
+  /** A soil-lab batch's own state: heat, air and how well it has been run (services/soil.ts). */
+  soil?: SoilState;
+}
+
+export interface SoilState {
+  /** Running judgement of how right the conditions have been, 0-1. */
+  rightness: number;
+  samples: number;
+  /** Hottest it has been, °C — a hot compost must pass 55. */
+  peakTemp: number;
+  /** Ticks spent at or above 55 °C. Three days kills the weed seed. */
+  hotTicks: number;
+  /** Oxygen in the mass, 0-100. A heap uses it up; turning puts it back. */
+  oxygen: number;
+  turns: number;
+  /** Past its best and on the way to something else (wine, rot, anaerobic slime). */
+  turned?: boolean;
 }
 
 export interface LogEntry {
@@ -636,7 +664,9 @@ export type VendorUnlock =
    where the game has people in it at all, which is what a story would need.
    ============================================================================= */
 
-export type StaffRoleType = 'cleaner' | 'tech' | 'chef' | 'rd' | 'toji';
+export type StaffRoleType = 'cleaner' | 'tech' | 'chef' | 'rd' | 'toji'
+  // The estate's hands. Each works one kind of place and carries out its standing orders.
+  | 'gardener' | 'orchardist' | 'beekeeper' | 'poultry' | 'soil_tech' | 'forager';
 
 export interface CrewTrait {
   id: string;
@@ -769,4 +799,35 @@ export interface GameState {
   // Consecutive weeks ended in the red. Three closes the lab.
   insolvencyStrikes: number;
   gameOver: boolean;
+
+  /**
+   * THE WORLD CLOCK: minutes since midnight of the current day.
+   *
+   * One clock for the bench and the land. In the lab it runs live — a tick of
+   * the bench is three hours — and out in the field it moves by what the player
+   * does: twenty minutes to hoe a bed is twenty minutes the bench ferments
+   * without you. See services/climate.ts and advanceWorld in App.tsx.
+   */
+  minute: number;
+
+  /** The farm, the wild and the soil lab's store. See types.farm.ts. */
+  estate: EstateState;
+
+  /**
+   * Standing orders on a batch, carried out by the technician while you are
+   * elsewhere. Keyed by batch id.
+   */
+  labOrders: Record<string, LabOrders>;
+}
+
+/** What the technician does with a batch without being asked. */
+export interface LabOrders {
+  /** Bottle it at the height of its peak window, so it waits for you instead of going over. */
+  bottleAtPeak?: boolean;
+  /** Carry it down to the cellar the moment it is ready, if it is the kind that ages. */
+  cellarWhenReady?: boolean;
+  /** Skim the surface film when it gets thick — never on a vinegar or a kombucha. */
+  skim?: boolean;
+  /** Turn it when it stratifies. */
+  turn?: boolean;
 }

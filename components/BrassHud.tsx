@@ -146,3 +146,62 @@ export const WeatherGlass: React.FC<{
     </div>
   );
 };
+
+/**
+ * THE WATCH. One clock for the bench and the land: the hour and minute of the
+ * world, and a ring of the day's light round the dial — gold from sunrise to
+ * sunset at 45°N, dark for the rest — so how much of the day is left reads at a
+ * glance before the numbers do. Drawn until the painted face arrives; every
+ * reading is still printed beside it.
+ */
+export const BrassWatch: React.FC<{ minute: number; sunrise: number; sunset: number }> = ({ minute, sunrise, sunset }) => {
+  const R = 30;
+  const a24 = (m: number) => (m / 1440) * 360 - 90;
+  const arc = (from: number, to: number, r: number) => {
+    const p = (deg: number) => [32 + r * Math.cos((deg * Math.PI) / 180), 32 + r * Math.sin((deg * Math.PI) / 180)];
+    const [x0, y0] = p(a24(from)), [x1, y1] = p(a24(to));
+    const large = ((to - from + 1440) % 1440) > 720 ? 1 : 0;
+    return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  };
+  const h = (minute / 60) % 12;
+  const hourDeg = h * 30 - 90, minDeg = (minute % 60) * 6 - 90;
+  const hand = (deg: number, len: number) => [32 + len * Math.cos((deg * Math.PI) / 180), 32 + len * Math.sin((deg * Math.PI) / 180)];
+  const [hx, hy] = hand(hourDeg, 12), [mx, my] = hand(minDeg, 19);
+  const [sx, sy] = hand(a24(minute), R - 3);
+  const day = minute >= sunrise && minute < sunset;
+  const left = Math.max(0, sunset - Math.max(minute, sunrise));
+  const hhmm = (m: number) => `${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${String(Math.round(m) % 60).padStart(2, '0')}`;
+  return (
+    <div className="bwatch" title="The world clock: the bench and the land keep the same time">
+      <svg viewBox="0 0 64 64" className="face" aria-hidden="true">
+        <defs>
+          <radialGradient id="bwBezel" cx="40%" cy="35%" r="75%">
+            <stop offset="0%" stopColor="#f3dca0" /><stop offset="45%" stopColor="#c19a4e" /><stop offset="100%" stopColor="#6e5122" />
+          </radialGradient>
+          <radialGradient id="bwEnamel" cx="45%" cy="40%" r="70%">
+            <stop offset="0%" stopColor="#f6efdc" /><stop offset="100%" stopColor="#d9ccaa" />
+          </radialGradient>
+        </defs>
+        <circle cx="32" cy="32" r="31.5" fill="url(#bwBezel)" />
+        <circle cx="32" cy="32" r="27" fill="#1b1713" />
+        <path d={arc(sunrise, sunset, R - 3)} stroke="#e2c27a" strokeWidth="3.2" fill="none" strokeLinecap="round" opacity="0.95" />
+        <path d={arc(sunset, sunrise + 1440, R - 3)} stroke="#2c3550" strokeWidth="3.2" fill="none" opacity="0.9" />
+        <circle cx="32" cy="32" r="23.5" fill="url(#bwEnamel)" />
+        {Array.from({ length: 12 }, (_, i) => {
+          const d = i * 30 - 90, [x0, y0] = hand(d, 21.5), [x1, y1] = hand(d, i % 3 === 0 ? 18.5 : 19.8);
+          return <line key={i} x1={x0} y1={y0} x2={x1} y2={y1} stroke="#3a2b18" strokeWidth={i % 3 === 0 ? 1.4 : 0.7} />;
+        })}
+        <text x="32" y="17.6" textAnchor="middle" className="rn">XII</text>
+        <text x="32" y="50.4" textAnchor="middle" className="rn">VI</text>
+        <line x1="32" y1="32" x2={hx} y2={hy} stroke="#241a0e" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="32" y1="32" x2={mx} y2={my} stroke="#241a0e" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="32" cy="32" r="1.8" fill="#8a6a32" />
+        <circle cx={sx} cy={sy} r="2.3" fill={day ? '#ffe7a3' : '#b8c4e6'} stroke="#1b1713" strokeWidth="0.6" />
+      </svg>
+      <div className="wtext">
+        <div className="t"><b>{hhmm(minute)}</b></div>
+        <div className="l">{day ? `${Math.floor(left / 60)} h ${String(left % 60).padStart(2, '0')} of light` : `Dark · sunrise ${hhmm(sunrise)}`}</div>
+      </div>
+    </div>
+  );
+};

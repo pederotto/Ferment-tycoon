@@ -196,6 +196,9 @@ const BY_TYPE: Record<FermentType, ProcessModel> = {
   [FermentType.FAIL]:     { dry: 0.03, proteolysis: 0.40, amylolysis: 0.20, attenuation: 0.50, toEthanol: 0.10, toAcid: 0.40, toGas: 0.50, respiration: 0,    form: 'paste' },
   [FermentType.ALCOHOL]:  { dry: 0.01, proteolysis: 0.10, amylolysis: 0.90, attenuation: 0.92, toEthanol: 0.46, toAcid: 0.08, toGas: 0.46, respiration: 0,    form: 'liquid' },
   [FermentType.KOMBUCHA]: { dry: 0.04, proteolysis: 0.03, amylolysis: 0,    attenuation: 0.50, toEthanol: 0.10, toAcid: 0.45, toGas: 0.45, respiration: 0,    form: 'liquid' },
+  // The soil lab runs its own physics (services/soil.ts); this entry only keeps
+  // the table total. A heap loses water and burns carbon off as CO2.
+  [FermentType.SOIL]:     { dry: 0.30, proteolysis: 0.50, amylolysis: 0.50, attenuation: 0.60, toEthanol: 0,    toAcid: 0.20, toGas: 0.80, respiration: 0.20, form: 'solid' },
 };
 
 /* SHOYU's split is set off what a pressed raw shoyu actually carries — about 1%

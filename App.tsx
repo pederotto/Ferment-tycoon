@@ -8,13 +8,25 @@ import { BUYERS, INGREDIENTS, INITIAL_MONEY, RECIPES, VESSELS, INITIAL_MAX_POWER
   HYGIENE_IDLE_RECOVERY,
   GREASE_RENOWN_COST, GREASE_HEAT_RELIEF, getUndergroundTierFromXp } from './constants';
 import { inSeason, nextInSeason, MONTH_NAMES } from './constants.forage';
-import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY, isContrabandBatch } from './services/gameLogic';
+import { isAgitatedFerment, filmsOver, filmIsTheCulture } from './services/gameLogic';
+import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, isFlesh, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY, isContrabandBatch } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage , sporePotency } from './services/koji';
-import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect } from './services/crew';
+import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect, noStaff } from './services/crew';
+import { registerCustomIngredients, findIngredient } from './services/ingredientRegistry';
+import { newEstate, farmRolesFor, estateDay, EstateReport, baseIngredient, ActionResult, addWaste, addToPantry, mintSoilProduct } from './services/estate';
+import { wildDay, arriveAt, walkTo } from './services/wild';
+import { GROUNDS } from './constants.wild';
+import { isSoilRecipe, soilBatchTick, turnSoil, soilGrade, soilYieldKg, SOIL_KINDS } from './services/soil';
+import { weatherForWeek, absoluteDay, dayWeather, MINUTES_PER_TICK, TICKS_PER_DAY, MINUTES_PER_DAY, dayOfYear, sunTimes, lightLeft, formatClock, formatDuration } from './services/climate';
+import type { GroundId, FacilityId } from './types.farm';
 import LabView from './components/LabView';
 import SupplyPanel from './components/SupplyPanel';
 import IngredientIcon from './components/IngredientIcon';
-import { BrassSpeed, BrassGauge, BrassTicket, BrassRail, WeatherGlass, SeasonKey } from './components/BrassHud';
+import { BrassSpeed, BrassGauge, BrassTicket, BrassRail, WeatherGlass, SeasonKey, BrassWatch } from './components/BrassHud';
+import EstateView from './components/EstateView';
+import { ScenePlace } from './components/EstateScene';
+import { ESTATE_PLATES } from './components/estatePlates';
+import { FACILITIES } from './constants.farm';
 import InkDefs from './components/InkDefs';
 import ToolRack from './components/ToolRack';
 import CellarView from './components/CellarView';
@@ -42,6 +54,18 @@ import FirstCulture, { guideProgress } from './components/FirstCulture';
 import { TrendingUp, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon, BagIcon, CloseIcon } from './components/icons';
 
+/** What a discarded batch becomes: the solids of a press, flesh, a spent mash, or plain vegetable waste. */
+const WASTE_WORD: Record<string, string> = { press_cake: 'press cake', fish_waste: 'fish waste', spent_grain: 'spent grain', veg_waste: 'vegetable waste', green_waste: 'green waste' };
+const wasteKindOf = (b: Batch): string => {
+  const r = getRecipeForBatch(b);
+  if (r && isSoilRecipe(r)) return 'green_waste';
+  if ((b.massLoss?.pressedG ?? 0) > 0) return 'press_cake';
+  const sub = findIngredient(b.substrateId);
+  if (sub && isFlesh(sub)) return 'fish_waste';
+  if (sub && (sub.hiddenStats.starchContent ?? 0) >= 6) return 'spent_grain';
+  return 'veg_waste';
+};
+
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
     money: INITIAL_MONEY,
@@ -68,13 +92,7 @@ export default function App() {
     // Derived, so a supplier added to SUPPLIERS cannot be missing from a new game.
     supplierRelationships: Object.fromEntries(SUPPLIERS.map(s => [s.id, { level: 1, xp: 0 }])),
     customIngredients: [],
-    staff: {
-        cleaner: false,
-        tech: false,
-        chef: false,
-        rd: false,
-        toji: false
-    },
+    staff: noStaff(),
     // Vendors remember you now: standing accumulates, contracts are signed
     // against it, and some of the roster has to be earned rather than reached.
     vendorStanding: {},
@@ -84,7 +102,7 @@ export default function App() {
     // is going at any moment is part of the situation.
     crew: [],
     crewPool: rollCrewPool(1),
-    weather: { type: 'Cloudy', tempModifier: 0, humidityModifier: 0, description: 'Overcast' },
+    weather: weatherForWeek(1, 1, 2),
     marketDemand: Object.values(FermentType).reduce((acc, t) => ({ ...acc, [t]: 1 }), {} as Record<string, number>),
     insolvencyStrikes: 0,
     gameOver: false,
@@ -93,7 +111,15 @@ export default function App() {
     onboardingDone: false,
     kojiRoomOwned: false,
     kojiTargetKg: KOJI_ROOM_DEFAULT_TARGET_KG,
+    // The first morning: a little after seven, the light just up.
+    minute: 7 * 60 + 30,
+    estate: newEstate(),
+    labOrders: {},
   });
+
+  // Everything the player has made — strains, koji, the estate's produce — is
+  // visible to the critic and the notes through one registry.
+  registerCustomIngredients(gameState.customIngredients);
 
   // Any run left behind by a previous session, read once so the welcome screen
   // can offer to resume it.
@@ -129,8 +155,6 @@ export default function App() {
   const [gameSpeed, setGameSpeed] = useState<number>(1);
   const [paused, setPaused] = useState<boolean>(false);
   const lastActiveSpeed = useRef<number>(1);
-  // Counts sim ticks, so the cellar can run on a slower cadence than the bench.
-  const tickCount = useRef<number>(0);
 
   // Lab Event / Alert Notification
   // A queue, not a slot. There are 29 places that raise a notice — payroll,
@@ -209,6 +233,30 @@ export default function App() {
      overwrites the first) and posted once after the update commits. */
   const pendingNotices = useRef(new Map<string, Notice>());
   const queueNotice = (n: Notice) => { pendingNotices.current.set(`${n.type}|${n.text}`, n); };
+
+  /** Out on the estate: the farm or the wild. While set, the live clock waits for you. */
+  const [fieldView, setFieldView] = useState<null | 'farm' | 'wild'>(null);
+
+  /** Where on the estate the player is standing. */
+  const [estatePlace, setEstatePlace] = useState<ScenePlace>('farm_map');
+  /** What the player has done out there today, for the scene's margin. */
+  const [fieldLog, setFieldLog] = useState<{ day: string; at: string; text: string }[]>([]);
+
+  /** The estate's day, told once: losses as toasts, the rest into the journal. */
+  const postEstateNotes = (report: EstateReport) => {
+    for (const n of report.notes) {
+      queueNotice({ id: 0, text: n.text, type: n.kind === 'bad' ? 'alert' : n.kind === 'warn' ? 'warn' : 'info', quiet: n.kind !== 'bad' });
+    }
+    const picked = Object.entries(report.picked).filter(([, kg]) => kg > 0.05);
+    if (picked.length) {
+      queueNotice({
+        id: 0,
+        text: `Picked on the estate: ${picked.map(([id, kg]) => `${kg < 10 ? kg.toFixed(1) : Math.round(kg)} kg ${baseIngredient(id)?.name.toLowerCase() ?? id}`).join(', ')}. In the pantry.`,
+        type: 'info',
+        quiet: true,
+      });
+    }
+  };
   useEffect(() => {
     if (pendingNotices.current.size === 0) return;
     const queued = [...pendingNotices.current.values()];
@@ -384,33 +432,6 @@ export default function App() {
       return months[m];
   }
 
-  // --- WEATHER GENERATOR ---
-  const generateWeather = (month: number): WeatherState => {
-      const season = getSeason(month);
-      const rand = Math.random();
-      
-      if (season === "Summer") {
-          if (rand < 0.2) return { type: 'Heatwave', tempModifier: 8, humidityModifier: -20, description: 'Extreme Heat' };
-          if (rand < 0.5) return { type: 'Sunny', tempModifier: 3, humidityModifier: -5, description: 'Clear Skies' };
-          if (rand < 0.8) return { type: 'Rainy', tempModifier: -2, humidityModifier: 20, description: 'Summer Storms' };
-          return { type: 'Cloudy', tempModifier: 0, humidityModifier: 10, description: 'Humid' };
-      }
-      if (season === "Winter") {
-          if (rand < 0.3) return { type: 'Snowy', tempModifier: -8, humidityModifier: -10, description: 'Blizzard' };
-          if (rand < 0.6) return { type: 'Cloudy', tempModifier: -2, humidityModifier: 0, description: 'Overcast' };
-          return { type: 'Sunny', tempModifier: -4, humidityModifier: -15, description: 'Cold Front' };
-      }
-      if (season === "Spring") {
-          if (rand < 0.5) return { type: 'Rainy', tempModifier: -1, humidityModifier: 25, description: 'Heavy Rain' };
-          if (rand < 0.8) return { type: 'Sunny', tempModifier: 2, humidityModifier: 5, description: 'Mild' };
-          return { type: 'Foggy', tempModifier: -2, humidityModifier: 30, description: 'Dense Fog' };
-      }
-      // Autumn
-      if (rand < 0.4) return { type: 'Stormy', tempModifier: -3, humidityModifier: 15, description: 'Gale Winds' };
-      if (rand < 0.7) return { type: 'Sunny', tempModifier: 1, humidityModifier: -5, description: 'Crisp' };
-      return { type: 'Rainy', tempModifier: -2, humidityModifier: 10, description: 'Drizzle' };
-  };
-
   const getWeatherIcon = (type: WeatherType) => {
       switch(type) {
           case 'Sunny': return <GameIcon name="sunny" size={15} className="wx-sun" />;
@@ -423,348 +444,473 @@ export default function App() {
       }
   };
 
-  // --- Game Loop ---
-  useEffect(() => {
-    if (uiState.inspectorRaid || uiState.showWelcome) return; 
-    if (paused) return; // Fully paused state
-    if (gameState.gameOver) return; // Lab is closed — the clock stops
+  /* ===========================================================================
+     THE WORLD CLOCK
 
-    // Adjust rate based on gameSpeed
-    const tickRate = 1000 / gameSpeed;
-    
-    // 1. BATCH SIMULATION LOOP (Runs every tickRate)
-    const interval = setInterval(() => {
-        tickCount.current += 1;
-      setGameState((prev) => {
-        const isPowerAvailable = prev.power <= prev.maxPower;
-        
-        // Process Batches
-        const updatedBatches = prev.batches.map(batch => {
-          // A MATURING BATCH MUST KEEP TICKING PAST 'ready'.
-          //
-          // This gate read `=== 'active'`, so a batch froze the instant it hit
-          // 100 — which meant `getMaturity` (progress minus peakWindowEnd) was
-          // permanently zero and the whole ageing system was dead code. A
-          // colatura sat at 100% reporting "young, just past ready" forever, and
-          // AGEING_MAX_PROGRESS = 500, the log maturity curve, describeMaturity,
-          // the flavour gains past the window and the value bonus had never once
-          // executed. The ferments that are DEFINED by age were the ones that
-          // could not age.
-          //
-          // Spoiled and analyzed batches still stop, and the types that peak and
-          // decline still stop at 'ready' — they are finished, and holding them
-          // is what the cellar is for.
-          const stillDeveloping = batch.status === 'active'
-            || (batch.status === 'ready' && (() => {
-                 const r = getRecipeForBatch(batch);
-                 // Maturing types keep improving. Koji keeps RUNNING — a bed left
-                 // past its peak goes to spore, which is the only way to take a
-                 // strain off it. Freezing at 100 made SPORULATION_START
-                 // unreachable, so the lineage system had no entrance.
-                 return ageingBehaviour(r) === 'matures' || r.type === FermentType.KOJI;
-               })());
-          if (stillDeveloping) {
-            const recipe = getRecipeForBatch(batch);
-            const substrate = [...INGREDIENTS, ...prev.customIngredients].find(i => i.id === batch.substrateId);
-            
-            let batchIngredients: Ingredient[] = [];
-            if (batch.inputIngredientIds) {
-                batchIngredients = batch.inputIngredientIds.map(id => 
-                    [...INGREDIENTS, ...prev.customIngredients].find(i => i.id === id)!
-                ).filter(Boolean);
-            }
+     One clock for the bench and the land. `gameState.minute` is the time of
+     day; a tick of the bench is three hours of it (eight a day, which is what
+     every ferment was balanced on), and midnight turns the day.
 
-            if (recipe && substrate && batchIngredients.length > 0) {
-              // Pass current weather and power availability to simulation
-              // The cellar is cool, dark and undisturbed: batches there tick at a
-              // fraction of the rate and are not exposed to bench hygiene.
-              // The koji room is warm, clean and the beds' own: full rate, out of reach of bench hygiene.
-              if (batch.kojiRoom) {
-                return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true, prev.crew ?? []);
-              }
-              if (batch.cellared) {
-                if (tickCount.current % CELLAR_TICK_DIVISOR !== 0) return batch;
-                return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true, prev.crew ?? []);
-              }
-              return processBatchTick(batch, recipe, prev.hygiene, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, isPowerAvailable, prev.crew ?? []);
-            }
+     In the lab the clock runs live: every real tick advances the world three
+     hours. Out on the estate it moves by what you do — twenty minutes to hoe
+     a bed is twenty minutes the bench ferments without you — so nothing on the
+     bench waits for you and nothing on the land stops while you work. That is
+     what keeps the two halves of the game in one logic.
+
+     `advanceWorld` is the only thing that moves time. It runs whole bench
+     ticks at each three-hour boundary it crosses and turns the day at
+     midnight, with the estate's own day (services/estate.ts) run first so the
+     morning finds the land already grown.
+     =========================================================================== */
+  const runLabTick = (prev: GameState, tickIndex: number): GameState => {
+    const isPowerAvailable = prev.power <= prev.maxPower;
+
+    // Process Batches
+    const updatedBatches0 = prev.batches.map(batch => {
+      // Held at its peak by the technician: bottled, and no longer changing.
+      if (batch.held) return batch;
+      // A soil batch runs on its own physics — heat, air and time — and keeps
+      // going past ready: a compost cures, a plant juice left too long turns.
+      {
+        const r = getRecipeForBatch(batch);
+        if (r && isSoilRecipe(r)) {
+          if (batch.status === 'spoiled') return batch;
+          return soilBatchTick(batch, r, getAmbientConditions(prev.month, prev.weather).ambientTemp, isPowerAvailable, getControls(batch));
+        }
+      }
+      // A MATURING BATCH MUST KEEP TICKING PAST 'ready'.
+      //
+      // This gate read `=== 'active'`, so a batch froze the instant it hit
+      // 100 — which meant `getMaturity` (progress minus peakWindowEnd) was
+      // permanently zero and the whole ageing system was dead code. A
+      // colatura sat at 100% reporting "young, just past ready" forever, and
+      // AGEING_MAX_PROGRESS = 500, the log maturity curve, describeMaturity,
+      // the flavour gains past the window and the value bonus had never once
+      // executed. The ferments that are DEFINED by age were the ones that
+      // could not age.
+      //
+      // Spoiled and analyzed batches still stop, and the types that peak and
+      // decline still stop at 'ready' — they are finished, and holding them
+      // is what the cellar is for.
+      const stillDeveloping = batch.status === 'active'
+        || (batch.status === 'ready' && (() => {
+             const r = getRecipeForBatch(batch);
+             // Maturing types keep improving. Koji keeps RUNNING — a bed left
+             // past its peak goes to spore, which is the only way to take a
+             // strain off it. Freezing at 100 made SPORULATION_START
+             // unreachable, so the lineage system had no entrance.
+             return ageingBehaviour(r) === 'matures' || r.type === FermentType.KOJI;
+           })());
+      if (stillDeveloping) {
+        const recipe = getRecipeForBatch(batch);
+        const substrate = [...INGREDIENTS, ...prev.customIngredients].find(i => i.id === batch.substrateId);
+
+        let batchIngredients: Ingredient[] = [];
+        if (batch.inputIngredientIds) {
+            batchIngredients = batch.inputIngredientIds.map(id => 
+                [...INGREDIENTS, ...prev.customIngredients].find(i => i.id === id)!
+            ).filter(Boolean);
+        }
+
+        if (recipe && substrate && batchIngredients.length > 0) {
+          // Pass current weather and power availability to simulation
+          // The cellar is cool, dark and undisturbed: batches there tick at a
+          // fraction of the rate and are not exposed to bench hygiene.
+          // The koji room is warm, clean and the beds' own: full rate, out of reach of bench hygiene.
+          if (batch.kojiRoom) {
+            return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true, prev.crew ?? []);
           }
-          return batch;
+          if (batch.cellared) {
+            if (tickIndex % CELLAR_TICK_DIVISOR !== 0) return batch;
+            return processBatchTick(batch, recipe, 100, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, true, prev.crew ?? []);
+          }
+          return processBatchTick(batch, recipe, prev.hygiene, substrate, batchIngredients, prev.staff, prev.inventory, prev.month, prev.weather, isPowerAvailable, prev.crew ?? []);
+        }
+      }
+      return batch;
+    });
+
+    // THE TECHNICIAN'S ROUND. Standing orders on each batch, carried out every
+    // tick by the lab technician — the lab's automation, so a day out on the
+    // estate does not mean a garum left to go over. Pure: it runs inside this
+    // updater, and every intervention it calls is pure too.
+    const tech = prev.staff?.tech;
+    let cellarRoom = CELLAR_CAPACITY - prev.batches.filter(b => b.cellared).length;
+    const heldNow: string[] = [];
+    const updatedBatches = updatedBatches0.map(batch => {
+      const orders = prev.labOrders?.[batch.id];
+      if (!tech || !orders || batch.status === 'spoiled' || batch.held || batch.kojiRoom) return batch;
+      const recipe = getRecipeForBatch(batch);
+      const ambient = getAmbientConditions(prev.month, prev.weather).ambientTemp;
+      let b = batch;
+      // A heap is turned when it runs short of air — that is what keeps it hot.
+      if (orders.turn && isSoilRecipe(recipe) && SOIL_KINDS[recipe.id]?.air === 'aerobic' && (b.soil?.oxygen ?? 100) < 40) b = turnSoil(b);
+      if (orders.turn && isAgitatedFerment(recipe) && (b.evenness ?? 100) < 72) {
+        b = applyBatchIntervention(b, recipe.type === FermentType.KOJI ? 'Flip' : 'Stir', ambient, recipe, prev.inventory);
+      }
+      if (orders.skim && filmsOver(recipe) && !filmIsTheCulture(recipe) && (b.surfaceFilm ?? 0) > 35) {
+        b = applyBatchIntervention(b, 'Skim', ambient, recipe, prev.inventory);
+      }
+      const mid = (recipe.peakWindowStart + recipe.peakWindowEnd) / 2;
+      if (orders.bottleAtPeak && ageingBehaviour(recipe) !== 'matures' && recipe.type !== FermentType.KOJI && b.progress >= mid) {
+        b = { ...b, held: true, messages: [...b.messages, 'Held at the peak by the technician: bottled, and it will wait for you.'] };
+        heldNow.push(recipe.name);
+      }
+      if (orders.cellarWhenReady && ageingBehaviour(recipe) === 'matures' && !b.cellared && b.progress >= recipe.peakWindowStart && cellarRoom > 0) {
+        b = { ...b, cellared: true, messages: [...b.messages, 'Carried down to the cellar by the technician.'] };
+        cellarRoom -= 1;
+      }
+      return b;
+    });
+    if (heldNow.length) queueNotice({ id: Date.now(), text: `The technician held ${heldNow.join(', ')} at the peak. It waits on the bench for you.`, type: 'info' });
+
+    // Antagonist Logic (Entropy)
+    // REBALANCE: hygiene decay now scales with concurrent active batches, so
+    // running a full bench is genuinely harder to keep sanitary than tending
+    // one jar — previously the decay rate was flat no matter how much load
+    // you carried, so scaling up had no real management cost.
+    const activeBatchCount = prev.batches.filter(b => b.status === 'active' && !b.kojiRoom).length;
+
+    // AN EMPTY BENCH DOES NOT GET DIRTY. IT AIRS OUT.
+    //
+    // The decay was `1 + count * 0.18`, so a bench with NOTHING on it still
+    // lost hygiene at the full base rate, all the way down to the neglect
+    // floor of 25. And 25 is below the 40 that filth starts at — so the floor
+    // did not prevent filth heat, it GUARANTEED it: 0.0375 a tick, forever,
+    // on an empty room. Under the reduced post-bust decay of 0.0175 that is a
+    // net climb, so one bust and the heat ratcheted to 100 and the inspector
+    // called on a bench with no batches at all. Which is exactly what was
+    // reported, three fixes running.
+    //
+    // Load drives it from zero now, and an idle bench recovers. That bounds
+    // neglect: you can always stop, let the room settle, and the heat drains.
+    // The only thing that can hold heat up indefinitely is contraband, which
+    // is something you are actively doing.
+    const hygieneFloor = prev.staff['cleaner'] ? 50 : HYGIENE_NEGLECT_FLOOR;
+    const hygieneDelta = activeBatchCount === 0
+        ? HYGIENE_IDLE_RECOVERY
+        : -(prev.staff['cleaner'] ? 0.03 : 0.06) * (activeBatchCount * 0.18 + 0.55);
+    const newHygiene = Math.min(100, Math.max(hygieneFloor, prev.hygiene + hygieneDelta));
+
+    let heatChange = 0;
+    // Scaled by how filthy, not a cliff at 40. A bench at 39 is not the same
+    // as one at 5, and treating them alike is what let neglect alone ratchet
+    // heat to the ceiling and hold it there.
+    if (newHygiene < 40) {
+        heatChange += HEAT_FROM_FILTH * ((40 - newHygiene) / 40);
+    }
+    // Contraband is now flagged on the batch itself. It used to be inferred
+    // from "substrate was bought with renown", which stopped meaning anything
+    // once the underground started charging money.
+    const illegalBatches = prev.batches.filter(b => b.contraband).length;
+    if (illegalBatches > 0) heatChange += illegalBatches * HEAT_PER_ILLEGAL_BATCH;
+
+    // Once you have conceded a raid you are on a list, and heat no longer
+    // cools on its own — the only way down is to spend renown greasing it.
+    // Being on a list makes heat harder to shed; it used to make it
+    // impossible, so a single bust meant heat could only ever climb and the
+    // inspector kept calling however clean you were afterwards.
+    let decay = prev.undergroundBusts > 0
+        ? HEAT_DECAY_PER_TICK * HEAT_DECAY_AFTER_BUST
+        : HEAT_DECAY_PER_TICK;
+    // A spotless bench actively cools their interest. Good hygiene should
+    // do something, not merely fail to make things worse.
+    if (newHygiene > 85) decay += HEAT_DECAY_FROM_CLEANLINESS;
+    const newHeat = Math.min(100, Math.max(0, prev.heat + heatChange - decay));
+
+    // Re-calculate power internally to avoid dependency loop in useEffect
+    const newCurrentPower = updatedBatches.reduce((acc, b) => {
+        const v = VESSELS.find(v => v.id === b.vesselId);
+        return acc + (v?.powerDraw || 0);
+    }, 0);
+
+    if (prev.power <= prev.maxPower && newCurrentPower > prev.maxPower) {
+        // Queued, not posted: this runs inside a state updater, which StrictMode calls twice.
+        queueNotice({
+            id: Date.now(),
+            text: `Grid Overload: Drawing ${newCurrentPower}W on ${prev.maxPower}W breaker! Heating offline.`,
+            type: 'warn'
         });
-        
-        // Antagonist Logic (Entropy)
-        // REBALANCE: hygiene decay now scales with concurrent active batches, so
-        // running a full bench is genuinely harder to keep sanitary than tending
-        // one jar — previously the decay rate was flat no matter how much load
-        // you carried, so scaling up had no real management cost.
-        const activeBatchCount = prev.batches.filter(b => b.status === 'active' && !b.kojiRoom).length;
+    }
 
-        // AN EMPTY BENCH DOES NOT GET DIRTY. IT AIRS OUT.
-        //
-        // The decay was `1 + count * 0.18`, so a bench with NOTHING on it still
-        // lost hygiene at the full base rate, all the way down to the neglect
-        // floor of 25. And 25 is below the 40 that filth starts at — so the floor
-        // did not prevent filth heat, it GUARANTEED it: 0.0375 a tick, forever,
-        // on an empty room. Under the reduced post-bust decay of 0.0175 that is a
-        // net climb, so one bust and the heat ratcheted to 100 and the inspector
-        // called on a bench with no batches at all. Which is exactly what was
-        // reported, three fixes running.
-        //
-        // Load drives it from zero now, and an idle bench recovers. That bounds
-        // neglect: you can always stop, let the room settle, and the heat drains.
-        // The only thing that can hold heat up indefinitely is contraband, which
-        // is something you are actively doing.
-        const hygieneFloor = prev.staff['cleaner'] ? 50 : HYGIENE_NEGLECT_FLOOR;
-        const hygieneDelta = activeBatchCount === 0
-            ? HYGIENE_IDLE_RECOVERY
-            : -(prev.staff['cleaner'] ? 0.03 : 0.06) * (activeBatchCount * 0.18 + 0.55);
-        const newHygiene = Math.min(100, Math.max(hygieneFloor, prev.hygiene + hygieneDelta));
-        
-        let heatChange = 0;
-        // Scaled by how filthy, not a cliff at 40. A bench at 39 is not the same
-        // as one at 5, and treating them alike is what let neglect alone ratchet
-        // heat to the ceiling and hold it there.
-        if (newHygiene < 40) {
-            heatChange += HEAT_FROM_FILTH * ((40 - newHygiene) / 40);
-        }
-        // Contraband is now flagged on the batch itself. It used to be inferred
-        // from "substrate was bought with renown", which stopped meaning anything
-        // once the underground started charging money.
-        const illegalBatches = prev.batches.filter(b => b.contraband).length;
-        if (illegalBatches > 0) heatChange += illegalBatches * HEAT_PER_ILLEGAL_BATCH;
+    return {
+      ...prev,
+      batches: updatedBatches,
+      hygiene: newHygiene,
+      heat: newHeat,
+      power: newCurrentPower
+    };
+  };
 
-        // Once you have conceded a raid you are on a list, and heat no longer
-        // cools on its own — the only way down is to spend renown greasing it.
-        // Being on a list makes heat harder to shed; it used to make it
-        // impossible, so a single bust meant heat could only ever climb and the
-        // inspector kept calling however clean you were afterwards.
-        let decay = prev.undergroundBusts > 0
-            ? HEAT_DECAY_PER_TICK * HEAT_DECAY_AFTER_BUST
-            : HEAT_DECAY_PER_TICK;
-        // A spotless bench actively cools their interest. Good hygiene should
-        // do something, not merely fail to make things worse.
-        if (newHygiene > 85) decay += HEAT_DECAY_FROM_CLEANLINESS;
-        const newHeat = Math.min(100, Math.max(0, prev.heat + heatChange - decay));
+  const runLabDay = (prevIn: GameState): GameState => {
+    // The land first: the day that is ending grows every bed, tree and hive.
+    const endedDate = { year: prevIn.year, month: prevIn.month, week: prevIn.week, day: prevIn.day };
+    const estated = estateDay(prevIn, endedDate, prevIn.weather);
+    postEstateNotes(estated.report);
+    // The wild: the year settles its patches, and on a Monday the apprentice goes out.
+    const wilded = wildDay(estated.state, endedDate, dayWeather(endedDate, prevIn.weather));
+    wilded.notes.forEach(text => queueNotice({ id: Date.now(), text, type: 'info' }));
+    const prev = wilded.state;
+    let newDay = prev.day + 1;
+    let newWeek = prev.week;
+    let newMonth = prev.month;
+    let newYear = prev.year;
+    let newMoney = prev.money;
+    let newStaff = { ...prev.staff };
+    let newWeather = prev.weather;
+    let newMarketDemand = prev.marketDemand;
+    let newStrikes = prev.insolvencyStrikes;
+    let newGameOver = prev.gameOver;
 
-        // Re-calculate power internally to avoid dependency loop in useEffect
-        const newCurrentPower = updatedBatches.reduce((acc, b) => {
-            const v = VESSELS.find(v => v.id === b.vesselId);
-            return acc + (v?.powerDraw || 0);
-        }, 0);
+    let newStanding = prev.vendorStanding ?? {};
+    let newContracts = prev.contracts ?? [];
+    let newUnlockedVendorIds = prev.unlockedVendorIds ?? [];
+    let newCrew = prev.crew ?? [];
+    let newCrewPool = prev.crewPool ?? [];
 
-        if (prev.power <= prev.maxPower && newCurrentPower > prev.maxPower) {
-            setLabNotification({
-                id: Date.now(),
-                text: `Grid Overload: Drawing ${newCurrentPower}W on ${prev.maxPower}W breaker! Heating offline.`,
-                type: 'warn'
-            });
-        }
+    // Start of a New Week
+    if (newDay > 7) {
+        newDay = 1;
+        newWeek += 1;
 
-        return {
-          ...prev,
-          batches: updatedBatches,
-          hygiene: newHygiene,
-          heat: newHeat,
-          power: newCurrentPower
-        };
-      });
-    }, tickRate);
-    
-    // 2. TIME & ECONOMY LOOP (Runs Daily)
-    const dayRate = DAY_DURATION_MS / gameSpeed;
+        // --- WEEKLY BILLS ---
+        // The bench used to cost nothing to keep open, so there was no
+        // floor to beat and no reason not to sprawl. Rent, per-vessel
+        // upkeep and metered power give every week a number to clear.
+        // Payroll is the crew's actual wages. The old flat per-role figure could not
+        // express a cheap junior or an expensive veteran, which is most of what
+        // makes hiring a decision.
+        const totalWages = crewWages(prev.crew ?? []);
+        const drawnWatts = prev.batches.reduce((acc, b) => acc + (VESSELS.find(v => v.id === b.vesselId)?.powerDraw || 0), 0);
+        const bills = calculateOverheads(prev.ownedVessels, drawnWatts, totalWages);
 
-    const dayInterval = setInterval(() => {
-        setGameState(prev => {
-            let newDay = prev.day + 1;
-            let newWeek = prev.week;
-            let newMonth = prev.month;
-            let newYear = prev.year;
-            let newMoney = prev.money;
-            let newStaff = { ...prev.staff };
-            let newWeather = prev.weather;
-            let newMarketDemand = prev.marketDemand;
-            let newStrikes = prev.insolvencyStrikes;
-            let newGameOver = prev.gameOver;
+        newMoney -= bills.total;
 
-            let newStanding = prev.vendorStanding ?? {};
-            let newContracts = prev.contracts ?? [];
-            let newUnlockedVendorIds = prev.unlockedVendorIds ?? [];
-            let newCrew = prev.crew ?? [];
-            let newCrewPool = prev.crewPool ?? [];
+        if (newMoney < 0) {
+            // Staff walk first — they are the largest and most optional cost.
+            if (totalWages > 0) {
+                // People leave when they are not paid. They do not
+                // become false; they go, and the pool does not hold
+                // them for you.
+                newCrew = [];
+                newStaff = noStaff();
+            }
+            newStrikes = prev.insolvencyStrikes + 1;
 
-            // Start of a New Week
-            if (newDay > 7) {
-                newDay = 1;
-                newWeek += 1;
-
-                // --- WEEKLY BILLS ---
-                // The bench used to cost nothing to keep open, so there was no
-                // floor to beat and no reason not to sprawl. Rent, per-vessel
-                // upkeep and metered power give every week a number to clear.
-                // Payroll is the crew's actual wages. The old flat per-role figure could not
-                // express a cheap junior or an expensive veteran, which is most of what
-                // makes hiring a decision.
-                const totalWages = crewWages(prev.crew ?? []);
-                const drawnWatts = prev.batches.reduce((acc, b) => acc + (VESSELS.find(v => v.id === b.vesselId)?.powerDraw || 0), 0);
-                const bills = calculateOverheads(prev.ownedVessels, drawnWatts, totalWages);
-
-                newMoney -= bills.total;
-
-                if (newMoney < 0) {
-                    // Staff walk first — they are the largest and most optional cost.
-                    if (totalWages > 0) {
-                        // People leave when they are not paid. They do not
-                        // become false; they go, and the pool does not hold
-                        // them for you.
-                        newCrew = [];
-                        newStaff = { cleaner: false, tech: false, chef: false, rd: false };
-                    }
-                    newStrikes = prev.insolvencyStrikes + 1;
-
-                    if (newStrikes >= BANKRUPTCY_STRIKES) {
-                        newGameOver = true;
-                        queueNotice({
-                            id: Date.now(),
-                            text: `The lease is up. ${BANKRUPTCY_STRIKES} weeks in the red and the atelier is closed.`,
-                            type: 'alert'
-                        });
-                    } else {
-                        queueNotice({
-                            id: Date.now(),
-                            text: `In the red by $${Math.abs(Math.round(newMoney))} — bills were $${bills.total}. Strike ${newStrikes} of ${BANKRUPTCY_STRIKES}.${totalWages > 0 ? ' Your staff have walked.' : ''}`,
-                            type: 'alert'
-                        });
-                    }
-                } else {
-                    if (newStrikes > 0) {
-                        queueNotice({
-                            id: Date.now(),
-                            text: `Back in the black. Bills settled: $${bills.total}.`,
-                            type: 'info'
-                        });
-                    } else if (bills.total > 0) {
-                        queueNotice({
-                            id: Date.now(),
-                            text: `Weekly bills: $${bills.rent} rent · $${bills.upkeep} upkeep · $${bills.utilities} power${bills.wages > 0 ? ` · $${bills.wages} wages` : ''}.`,
-                            type: 'info',
-                            quiet: true
-                        });
-                    }
-                    newStrikes = 0;
-                }
-
-                // The crew get better at the job, and ask for more when they do.
-                // The pool refreshes monthly — who is looking for work is part of
-                // the situation, not a permanent shop.
-                newCrew = advanceCrew(prev.crew ?? []);
-                if (newWeek % 4 === 1 || newCrewPool.length === 0) newCrewPool = rollCrewPool(newWeek, prev.kojiRoomOwned);
-
-                // Appetite for every ferment type drifts back toward normal.
-                newMarketDemand = recoverDemand(prev.marketDemand);
-
-                // --- VENDOR RELATIONSHIPS AND CONTRACTS ---
-                // Relationships cool if you stop showing up, promises come due,
-                // and vendors who think well of you offer work.
-                newStanding = decayStanding(prev.vendorStanding ?? {}, []);
-
-                const late = overdueContracts(prev.contracts, newWeek);
-                if (late.length > 0) {
-                    newContracts = newContracts.map(c => {
-                        if (!late.some(l => l.id === c.id)) return c;
-                        newMoney -= c.cashPenalty;
-                        newStanding[c.buyerId] = Math.max(0, (newStanding[c.buyerId] ?? 0) - c.standingPenalty);
-                        return { ...c, status: 'failed' as const };
-                    });
-                    const worst = late[0];
-                    queueNotice({
-                        id: Date.now() + 3,
-                        text: `Contract failed — ${worst.buyerName} went without. $${worst.cashPenalty} forfeited, and they will not forget.`,
-                        type: 'alert',
-                    });
-                }
-
-                // A vendor whose condition has just been met is latched and
-                // announced, so meeting someone is an event rather than a row
-                // quietly appearing in a list you might never open.
-                const probeUnlock: GameState = { ...prev, week: newWeek, vendorStanding: newStanding, contracts: newContracts };
-                const fresh = newlyUnlockedVendors(probeUnlock);
-                if (fresh.length > 0) {
-                    newUnlockedVendorIds = [...newUnlockedVendorIds, ...fresh.map(b => b.id)];
-                    queueNotice({
-                        id: Date.now() + 5,
-                        text: `${fresh[0].name} will deal with you now. ${fresh[0].dialogue.intro}`,
-                        type: 'info',
-                    });
-                }
-
-                // One offer at a time, from whichever vendor is most minded to
-                // make one. More than that and the screen becomes a queue.
-                const liveCount = newContracts.filter(c => c.status === 'offered' || c.status === 'active').length;
-                if (liveCount < MAX_ACTIVE_CONTRACTS && newWeek % 2 === 0) {
-                    const probe: GameState = { ...prev, week: newWeek, vendorStanding: newStanding, contracts: newContracts };
-                    const willing = BUYERS.filter(b => canOfferContract(b, probe))
-                        .sort((a, b) => (newStanding[b.id] ?? 0) - (newStanding[a.id] ?? 0));
-                    if (willing.length > 0) {
-                        const offer = makeContractOffer(willing[0], probe, newWeek * 7 + willing.length);
-                        if (offer) {
-                            newContracts = [offer, ...newContracts];
-                            queueNotice({
-                                id: Date.now() + 4,
-                                text: `${offer.buyerName} has work for you. Check the order book.`,
-                                type: 'info',
-                            });
-                        }
-                    }
-                }
-
-                // --- MONTHLY CYCLE (Every 4 weeks) ---
-                if (newWeek > 1 && (newWeek - 1) % 4 === 0) {
-                    newMonth += 1;
-                    if (newMonth > 11) {
-                        newMonth = 0;
-                        newYear++;
-                    }
-                }
-
-                // --- WEEKLY WEATHER UPDATE ---
-                newWeather = generateWeather(newMonth);
+            if (newStrikes >= BANKRUPTCY_STRIKES) {
+                newGameOver = true;
                 queueNotice({
-                    id: Date.now() + 1,
-                    text: `The weather turns ${newWeather.type.toLowerCase()} — ${newWeather.description.toLowerCase()}.`,
+                    id: Date.now(),
+                    text: `The lease is up. ${BANKRUPTCY_STRIKES} weeks in the red and the atelier is closed.`,
+                    type: 'alert'
+                });
+            } else {
+                queueNotice({
+                    id: Date.now(),
+                    text: `In the red by $${Math.abs(Math.round(newMoney))} — bills were $${bills.total}. Strike ${newStrikes} of ${BANKRUPTCY_STRIKES}.${totalWages > 0 ? ' Your staff have walked.' : ''}`,
+                    type: 'alert'
+                });
+            }
+        } else {
+            if (newStrikes > 0) {
+                queueNotice({
+                    id: Date.now(),
+                    text: `Back in the black. Bills settled: $${bills.total}.`,
+                    type: 'info'
+                });
+            } else if (bills.total > 0) {
+                queueNotice({
+                    id: Date.now(),
+                    text: `Weekly bills: $${bills.rent} rent · $${bills.upkeep} upkeep · $${bills.utilities} power${bills.wages > 0 ? ` · $${bills.wages} wages` : ''}.`,
                     type: 'info',
                     quiet: true
                 });
             }
+            newStrikes = 0;
+        }
 
-            return { 
-                ...prev, 
-                day: newDay,
-                week: newWeek,
-                month: newMonth,
-                year: newYear,
-                money: newMoney,
-                weather: newWeather,
-                marketDemand: newMarketDemand,
-                insolvencyStrikes: newStrikes,
-                gameOver: newGameOver,
-                vendorStanding: newStanding,
-                contracts: newContracts,
-                unlockedVendorIds: newUnlockedVendorIds,
-                crew: newCrew,
-                crewPool: newCrewPool,
-                // The boolean roles stay as the derived summary, so everything
-                // that already reads gameState.staff keeps working. A crew that
-                // walked out leaves every flag false, which is exactly right.
-                staff: newCrew.length > 0 ? crewToStaffFlags(newCrew) : newStaff,
-            };
+        // The crew get better at the job, and ask for more when they do.
+        // The pool refreshes monthly — who is looking for work is part of
+        // the situation, not a permanent shop.
+        newCrew = advanceCrew(prev.crew ?? []);
+        if (newWeek % 4 === 1 || newCrewPool.length === 0) newCrewPool = rollCrewPool(newWeek, prev.kojiRoomOwned, farmRolesFor(prev.estate));
+
+        // Appetite for every ferment type drifts back toward normal.
+        newMarketDemand = recoverDemand(prev.marketDemand);
+
+        // --- VENDOR RELATIONSHIPS AND CONTRACTS ---
+        // Relationships cool if you stop showing up, promises come due,
+        // and vendors who think well of you offer work.
+        newStanding = decayStanding(prev.vendorStanding ?? {}, []);
+
+        const late = overdueContracts(prev.contracts, newWeek);
+        if (late.length > 0) {
+            newContracts = newContracts.map(c => {
+                if (!late.some(l => l.id === c.id)) return c;
+                newMoney -= c.cashPenalty;
+                newStanding[c.buyerId] = Math.max(0, (newStanding[c.buyerId] ?? 0) - c.standingPenalty);
+                return { ...c, status: 'failed' as const };
+            });
+            const worst = late[0];
+            queueNotice({
+                id: Date.now() + 3,
+                text: `Contract failed — ${worst.buyerName} went without. $${worst.cashPenalty} forfeited, and they will not forget.`,
+                type: 'alert',
+            });
+        }
+
+        // A vendor whose condition has just been met is latched and
+        // announced, so meeting someone is an event rather than a row
+        // quietly appearing in a list you might never open.
+        const probeUnlock: GameState = { ...prev, week: newWeek, vendorStanding: newStanding, contracts: newContracts };
+        const fresh = newlyUnlockedVendors(probeUnlock);
+        if (fresh.length > 0) {
+            newUnlockedVendorIds = [...newUnlockedVendorIds, ...fresh.map(b => b.id)];
+            queueNotice({
+                id: Date.now() + 5,
+                text: `${fresh[0].name} will deal with you now. ${fresh[0].dialogue.intro}`,
+                type: 'info',
+            });
+        }
+
+        // One offer at a time, from whichever vendor is most minded to
+        // make one. More than that and the screen becomes a queue.
+        const liveCount = newContracts.filter(c => c.status === 'offered' || c.status === 'active').length;
+        if (liveCount < MAX_ACTIVE_CONTRACTS && newWeek % 2 === 0) {
+            const probe: GameState = { ...prev, week: newWeek, vendorStanding: newStanding, contracts: newContracts };
+            const willing = BUYERS.filter(b => canOfferContract(b, probe))
+                .sort((a, b) => (newStanding[b.id] ?? 0) - (newStanding[a.id] ?? 0));
+            if (willing.length > 0) {
+                const offer = makeContractOffer(willing[0], probe, newWeek * 7 + willing.length);
+                if (offer) {
+                    newContracts = [offer, ...newContracts];
+                    queueNotice({
+                        id: Date.now() + 4,
+                        text: `${offer.buyerName} has work for you. Check the order book.`,
+                        type: 'info',
+                    });
+                }
+            }
+        }
+
+        // --- MONTHLY CYCLE (Every 4 weeks) ---
+        if (newWeek > 1 && (newWeek - 1) % 4 === 0) {
+            newMonth += 1;
+            if (newMonth > 11) {
+                newMonth = 0;
+                newYear++;
+            }
+        }
+
+        // --- WEEKLY WEATHER UPDATE ---
+        newWeather = weatherForWeek(newYear, newWeek, newMonth);
+        queueNotice({
+            id: Date.now() + 1,
+            text: `The weather turns ${newWeather.type.toLowerCase()} — ${newWeather.description.toLowerCase()}.`,
+            type: 'info',
+            quiet: true
         });
-    }, dayRate);
+    }
 
-    return () => {
-        clearInterval(interval);
-        clearInterval(dayInterval);
+    return { 
+        ...prev, 
+        day: newDay,
+        week: newWeek,
+        month: newMonth,
+        year: newYear,
+        money: newMoney,
+        weather: newWeather,
+        marketDemand: newMarketDemand,
+        insolvencyStrikes: newStrikes,
+        gameOver: newGameOver,
+        vendorStanding: newStanding,
+        contracts: newContracts,
+        unlockedVendorIds: newUnlockedVendorIds,
+        crew: newCrew,
+        crewPool: newCrewPool,
+        // The boolean roles stay as the derived summary, so everything
+        // that already reads gameState.staff keeps working. A crew that
+        // walked out leaves every flag false, which is exactly right.
+        staff: newCrew.length > 0 ? crewToStaffFlags(newCrew) : newStaff,
     };
-  }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, paused, gameState.gameOver]); 
+  };
+
+  /** Move the world on by some minutes: bench ticks at each three-hour line, the day at midnight. */
+  const advanceWorld = (prevIn: GameState, minutes: number): GameState => {
+    let s = prevIn;
+    let left = Math.max(0, Math.round(minutes));
+    while (left > 0 && !s.gameOver) {
+      const toBoundary = MINUTES_PER_TICK - (s.minute % MINUTES_PER_TICK);
+      if (left < toBoundary) { s = { ...s, minute: s.minute + left }; break; }
+      left -= toBoundary;
+      const at = s.minute + toBoundary;
+      const tickIndex = absoluteDay(s) * TICKS_PER_DAY + Math.floor((at % MINUTES_PER_DAY) / MINUTES_PER_TICK);
+      s = runLabTick({ ...s, minute: at % MINUTES_PER_DAY }, tickIndex);
+      if (at >= MINUTES_PER_DAY) s = runLabDay({ ...s, minute: 0 });
+    }
+    return s;
+  };
+
+  /* WORKING ON THE ESTATE. Every action is a pure function that says what it
+     did and how many minutes it took; the minutes are spent on the world clock,
+     so the bench ferments through them. Checked against the light BEFORE the
+     update, so a refusal is posted once and the updater stays pure. */
+  const todayKey = `${gameState.year}-${gameState.week}-${gameState.day}`;
+  const fieldAct = (fn: (s: GameState) => ActionResult, opts: { dark?: boolean } = {}) => {
+    const probe = fn(gameState);
+    if (!probe.ok) { setLabNotification({ id: Date.now(), text: probe.message, type: 'warn' }); return; }
+    const left = lightLeft(dayOfYear(gameState), gameState.minute);
+    if (probe.minutes > 0 && !opts.dark && probe.minutes > left) {
+      setLabNotification({
+        id: Date.now(),
+        text: left <= 0 ? 'It is dark. That will have to wait for the light.' : `Not enough light for that: it takes ${formatDuration(probe.minutes)} and there is ${formatDuration(left)} left.`,
+        type: 'warn',
+      });
+      return;
+    }
+    setGameState(prev => { const r = fn(prev); return r.ok ? advanceWorld(r.state, r.minutes) : prev; });
+    if (!probe.message) return;   // a state change with nothing to say (turning a piece over in your hand)
+    setFieldLog(l => [...l.filter(x => x.day === todayKey), { day: todayKey, at: formatClock(gameState.minute), text: probe.minutes > 0 ? `${probe.message} · ${formatDuration(probe.minutes)}` : probe.message }].slice(-12));
+  };
+  const goEstatePlace = (place: ScenePlace) => {
+    if (place === estatePlace) return;
+    if (GROUNDS[place as GroundId]) {
+      // Out into the wild: the walk is the ground's own, and today's outing starts there.
+      const g = place as GroundId;
+      const walk = walkTo(gameState, g);
+      setGameState(prev => advanceWorld(arriveAt(prev, g, absoluteDay(prev)), walk));
+    } else if (place !== 'farm_map' && place !== 'wild_map') {
+      if (!gameState.estate.facilities[place as FacilityId]) return;
+      const walk = FACILITIES[place as FacilityId].walk;
+      setGameState(prev => advanceWorld(prev, walk));
+    }
+    setEstatePlace(place);
+  };
+  const waitOnEstate = (minutes: number) => {
+    setGameState(prev => advanceWorld(prev, minutes));
+    setFieldLog(l => [...l.filter(x => x.day === todayKey), { day: todayKey, at: formatClock(gameState.minute), text: `Waited · ${formatDuration(minutes)}` }].slice(-12));
+  };
+  const leaveEstate = () => {
+    const walk = GROUNDS[estatePlace as GroundId] ? GROUNDS[estatePlace as GroundId].walk : estatePlace !== 'farm_map' && estatePlace !== 'wild_map' ? FACILITIES[estatePlace as FacilityId].walk : 2;
+    setGameState(prev => advanceWorld(prev, walk));
+    setFieldView(null);
+  };
+
+  // --- Game Loop ---
+  // In the lab the world runs live. On the estate it waits for you: time there
+  // moves with each thing you do, through advanceWorld.
+  useEffect(() => {
+    if (uiState.inspectorRaid || uiState.showWelcome) return;
+    if (paused) return; // Fully paused state
+    if (gameState.gameOver) return; // Lab is closed — the clock stops
+    if (fieldView) return; // Out on the estate: the clock moves with what you do
+
+    const tickRate = 1000 / gameSpeed;
+    const interval = setInterval(() => {
+      setGameState(prev => advanceWorld(prev, MINUTES_PER_TICK));
+    }, tickRate);
+    return () => clearInterval(interval);
+  }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, paused, gameState.gameOver, fieldView]);
 
   const handleGreaseTheFile = () => {
     if (gameState.renown < GREASE_RENOWN_COST) {
@@ -826,7 +972,7 @@ export default function App() {
       money: prev.money - KOJI_ROOM_COST,
       kojiRoomOwned: true,
       // Someone who can keep it turns up now, rather than at the next monthly roll.
-      crewPool: [...prev.crewPool.filter(c => c.role !== 'toji'), ...rollCrewPool(prev.week, true).filter(c => c.role === 'toji')],
+      crewPool: [...prev.crewPool.filter(c => c.role !== 'toji'), ...rollCrewPool(prev.week, true, farmRolesFor(prev.estate)).filter(c => c.role === 'toji')],
     }));
     setLabNotification({ id: Date.now(), text: 'The koji room is built. Carry koji beds in from the bench, and hire a koji keeper in Staff to run it.', type: 'info' });
   };
@@ -1190,12 +1336,17 @@ export default function App() {
             newInventory[ing.id] = Math.max(0, held - amountToDeduct);
         });
 
-        return {
+        // Rice is washed before it is steamed, and the cloudy water is kept to
+        // sour: half a kilo of rinse for every kilo of rice, for a LAB serum.
+        const riceKg = [...charged].filter(id => /rice/.test(id) && !/rice_bran|rice_rinse/.test(id))
+            .reduce((a, id) => a + (deductionMap?.[id] ?? 1) * ((usedIngredients.find(i => i.id === id)?.mass ?? 1000) / 1000), 0);
+
+        return addWaste({
             ...prev,
             inventory: newInventory,
             batches: [...prev.batches, newBatch],
             hygiene: Math.max(0, prev.hygiene - 5)
-        };
+        }, ['rice_rinse', riceKg * 0.5]);
     });
     setUiState(prev => ({ ...prev, modalOpen: false }));
   };
@@ -1208,6 +1359,8 @@ export default function App() {
         ...prev,
         batches: prev.batches.map(b => {
             if (b.id !== batch.id) return b;
+            // Turning a heap is air and heat, not evenness: the soil lab's own turn.
+            if (action === 'Turn' && isSoilRecipe(getRecipeForBatch(b))) return turnSoil(b);
             return applyBatchIntervention(b, action, currentAmbient, getRecipeForBatch(b), gameState.inventory);
         }),
         // Small hygiene hit for interactions
@@ -1707,6 +1860,20 @@ export default function App() {
     const recipe = getRecipeForBatch(batch);
     if (!recipe) return;
 
+    // A soil batch goes to the pantry as its product, graded by how it was run.
+    if (isSoilRecipe(recipe)) {
+      const grade = soilGrade(batch, recipe);
+      const kgOut = Math.round(soilYieldKg(batch, recipe) * 10) / 10;
+      const base = recipe.outputIngredientId ?? recipe.id;
+      setGameState(prev => {
+        const m = mintSoilProduct(prev, base, grade);
+        return { ...addToPantry(m.state, m.id, kgOut), batches: prev.batches.filter(b => b.id !== batch.id) };
+      });
+      setUiState(prev => ({ ...prev, activeBatchId: null }));
+      setLabNotification({ id: Date.now(), text: `${kgOut} kg of ${recipe.name.toLowerCase()} into the pantry, graded ${grade}.`, type: 'success' });
+      return;
+    }
+
     // Yield applies to inventory count
     const amount = Math.max(1, Math.floor(1 * (batch.yieldVolume || 1)));
     const outputId = recipe.outputIngredientId || `vintage_${recipe.id}`;
@@ -1819,15 +1986,18 @@ export default function App() {
   const handleDiscard = () => {
     const id = activeBatchForTest?.id;
     if(!id) return;
-    setGameState(prev => ({
+    const gone = activeBatchForTest!;
+    const kind = wasteKindOf(gone);
+    const kgOut = Math.round(Math.max(0, (gone.totalMass || 0) / 1000) * 10) / 10;
+    setGameState(prev => addWaste({
       ...prev,
       batches: prev.batches.filter(b => b.id !== id),
       hygiene: Math.max(0, prev.hygiene - 5)
-    }));
+    }, [kind, kgOut]));
     setUiState(prev => ({ ...prev, activeBatchId: null }));
     setLabNotification({
       id: Date.now(),
-      text: `🧹 Batch cleared and vessel sanitized.`,
+      text: kgOut >= 0.1 && !isSoilRecipe(getRecipeForBatch(gone)) ? `Vessel cleared and sanitised. ${kgOut} kg of ${WASTE_WORD[kind]} for the bins or the soil lab.` : 'Vessel cleared and sanitised.',
       type: 'info'
     });
   };
@@ -2065,6 +2235,7 @@ export default function App() {
               humidity={currentAmbient.ambientHumidity}
               weather={gameState.weather}
             />
+            {(() => { const sunNow = sunTimes(dayOfYear(gameState)); return <BrassWatch minute={gameState.minute} sunrise={sunNow.sunrise} sunset={sunNow.sunset} />; })()}
           </section>
 
 
@@ -2114,6 +2285,17 @@ export default function App() {
             >
             <PanelMark name="codex" size={38} />
             <span className="nt-name">Codex</span>
+            </button>
+            {/* The estate is a place you go, like the cellar: out there the clock
+                moves with what you do, and the bench keeps the same time behind you. */}
+            <button
+            onClick={() => { setEstatePlace('farm_map'); setFieldView('farm'); }}
+            className="tab-btn-hud"
+            title="The farm: garden, tunnel, field, orchard, bees, hens and the shed"
+            >
+            <span className="estate-tile-mark" style={{ backgroundImage: `url(${ESTATE_PLATES['farm_map:summer']})` }} />
+            <span className="nt-name">The Estate</span>
+            {Object.keys(gameState.estate.facilities).length > 0 && <span className="dot mono">{Object.keys(gameState.estate.facilities).length}</span>}
             </button>
             {/* The cellar is a place you go, so it goes where the other places are. */}
             <button
@@ -2354,6 +2536,19 @@ export default function App() {
             sixth of the rate and is out of reach of bench hygiene — but the batch
             vanished when you sent it down, so the one room where you deliberately
             do nothing for a year could not be looked at. */}
+        {fieldView === 'farm' && (
+          <EstateView
+            state={gameState}
+            place={estatePlace}
+            onGo={goEstatePlace}
+            act={fieldAct}
+            onWait={waitOnEstate}
+            onClose={leaveEstate}
+            onOpenStaff={() => setUiState(u => ({ ...u, showStaff: true }))}
+            log={fieldLog.filter(x => x.day === todayKey)}
+          />
+        )}
+
         {showCellar && (
           <CellarView
             batches={gameState.batches.filter(b => b.cellared)}
@@ -2401,6 +2596,13 @@ export default function App() {
              onQuickHarvest={() => handleQuickHarvest(activeBatchForTest)}
              onSell={handleSell}
              onStore={() => handleStore(activeBatchForTest)}
+             labOrders={gameState.labOrders?.[activeBatchForTest.id]}
+             technician={(gameState.crew ?? []).find(c => c.role === 'tech')?.name ?? null}
+             onSetLabOrder={patch => setGameState(prev => ({
+               ...prev,
+               labOrders: { ...(prev.labOrders ?? {}), [activeBatchForTest.id]: { ...(prev.labOrders?.[activeBatchForTest.id] ?? {}), ...patch } },
+             }))}
+             onRelease={() => setGameState(prev => ({ ...prev, batches: prev.batches.map(b => b.id === activeBatchForTest.id ? { ...b, held: false } : b) }))}
              onCellar={() => handleCellarBatch(activeBatchForTest)}
              canCellar={!activeBatchForTest.cellared && ageingBehaviour(getRecipeForBatch(activeBatchForTest)) === 'matures'}
              onToKojiRoom={() => handleToKojiRoom(activeBatchForTest)}

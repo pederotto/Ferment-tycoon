@@ -3,6 +3,7 @@ import { Ingredient, IngredientType, Recipe, FermentType, Supplier, Vessel, Buye
 import { FORAGE_SUPPLIER, FORAGED_MUSHROOMS, FORAGE_RECIPES, FORAGE_MATRIX } from './constants.forage';
 import { HERITAGE_INGREDIENTS, HERITAGE_RECIPES, HERITAGE_MATRIX } from './constants.heritage';
 import { MARKET_INGREDIENTS, MARKET_RECIPES, MARKET_MATRIX } from './constants.market';
+import { SOIL_INGREDIENTS, SOIL_RECIPES, SOIL_MATRIX, SOIL_VESSELS } from './constants.soil';
 
 // --- CONFIGURATION ---
 // REBALANCE: was 3000 — enough to buy nearly every early vessel and ingredient
@@ -157,6 +158,11 @@ export const BOOKS: Book[] = [
 // extracted verbatim from the if-chain that used to live in
 // resolveRecipeFromMatrix and is differential-tested against it.
 export const RECIPE_MATRIX: MatrixEntry[] = [
+  // THE SOIL LAB FIRST. Every one of these needs an ingredient that exists only
+  // for the soil lab, so nothing the game already knew can resolve differently
+  // (differential-tested: see CLAUDE.md), and they are the most specific
+  // entries in the table.
+  ...SOIL_MATRIX,
   // Direct koji substrates — these ran before everything else and ignore the vessel.
   { recipeId: 'shio_koji', substrate: { kind: 'kojiBase' }, requires: ['koji', 'salt', 'water'], vesselId: null },
   { recipeId: 'amazake',   substrate: { kind: 'kojiBase' }, requires: ['koji', 'water'], forbids: ['salt'], vesselId: null },
@@ -665,6 +671,64 @@ export const STAFF_ROLES: StaffRole[] = [
         weeklyWage: 350,
         icon: 'Thermometer',
         effectDescription: 'Runs the koji room: holds every bed at temperature, turns them, takes them to the pantry at their peak, lays new beds to keep koji at your target, and lets a bed run to spore when the house runs low. Only hired once the room is built.'
+    },
+    // --- THE ESTATE ---
+    // Each works one kind of place and does what its standing orders say, every
+    // day, whether or not you are there. They miss a little of it while they
+    // are learning the place. Offered only once you own somewhere for them to work.
+    {
+        id: 'gardener',
+        name: 'Gardener',
+        description: 'Three mornings a week, and knows a dry bed by the colour of the soil.',
+        hiringCost: 200,
+        weeklyWage: 70,
+        icon: 'Sprout',
+        effectDescription: 'Works the kitchen garden, the polytunnel and the top field to their standing orders: waters, hoes, deals with pests, pinches out the tomatoes, fleeces against frost and picks what is ripe.'
+    },
+    {
+        id: 'orchardist',
+        name: 'Orchardist',
+        description: 'Comes when the trees need him, and reads one from the ground.',
+        hiringCost: 150,
+        weeklyWage: 40,
+        icon: 'TreeDeciduous',
+        effectDescription: 'Prunes in winter, thins the apples in June, hangs traps, picks at ripeness and keeps the lemon-house stove in on frosty nights.'
+    },
+    {
+        id: 'beekeeper',
+        name: 'Beekeeper',
+        description: 'An afternoon a week. Calm, slow, and never stung twice by the same colony.',
+        hiringCost: 120,
+        weeklyWage: 30,
+        icon: 'Hexagon',
+        effectDescription: 'Inspects every week through the swarming season, feeds light colonies, treats for varroa in late summer and takes the capped honey.'
+    },
+    {
+        id: 'poultry',
+        name: 'Poultry Keeper',
+        description: 'A neighbour’s child, up before the hens and in after them.',
+        hiringCost: 60,
+        weeklyWage: 15,
+        icon: 'Egg',
+        effectDescription: 'Collects the eggs, shuts the coop at dusk, keeps the feed bin full, cleans out the red mite and carries fly larvae over from the shed.'
+    },
+    {
+        id: 'soil_tech',
+        name: 'Soil Technician',
+        description: 'Part-time, and talks about fungal-to-bacterial ratios at dinner.',
+        hiringCost: 150,
+        weeklyWage: 35,
+        icon: 'FlaskConical',
+        effectDescription: 'Carries the lab’s wet waste to the worm and fly bins, takes castings and frass to the pantry, and carries larvae to the hens. What it buys is soil life, which shows in the grade of what grows, not the weight.'
+    },
+    {
+        id: 'forager',
+        name: 'Forager’s Apprentice',
+        description: 'Weekends. Young, keen and knows every stump in the valley.',
+        hiringCost: 120,
+        weeklyWage: 40,
+        icon: 'Footprints',
+        effectDescription: 'Walks one wild ground a week, two once they know the valley: whichever of the grounds you have found has the most in season. Takes only the prime, and only what you have taught yourself to tell apart. Also minds the salt pans.'
     }
 ];
 
@@ -677,7 +741,8 @@ export const SUPPLIERS: Supplier[] = [
   FORAGE_SUPPLIER,
   { id: 'tech', name: 'Lab Tech Solutions', description: 'Heavy machinery and processing tools.', color: 'blue' },
   { id: 'black_market', name: 'The Underground', description: 'Restricted, dangerous, and legendary items.', color: 'zinc' },
-  { id: 'in_house', name: 'In-House Production', description: 'Made in your own lab.', color: 'emerald' }
+  { id: 'in_house', name: 'In-House Production', description: 'Made in your own lab.', color: 'emerald' },
+  { id: 'estate', name: 'The Estate', description: 'Grown, gathered and cured here.', color: 'moss' }
 ];
 
 // --- VESSELS ---
@@ -788,7 +853,9 @@ export const VESSELS: Vessel[] = [
         heatedTo: KOJI_ROOM_TEMP,
         capacityL: 3,
         builtIn: true
-    }
+    },
+    // The soil lab's corner of the bench (constants.soil.ts).
+    ...SOIL_VESSELS,
 ];
 
 // --- INGREDIENTS ---
@@ -1764,7 +1831,7 @@ INGREDIENTS.push(...HIGH_TIER);
 // --- THE FORAGER, THE HERITAGE STAPLES AND THE MARKET ---
 // Appended, never interleaved. Nothing reads this list by position — the sheet
 // art is looked up by id — but appending leaves every existing entry where it was.
-INGREDIENTS.push(...FORAGED_MUSHROOMS, ...HERITAGE_INGREDIENTS, ...MARKET_INGREDIENTS);
+INGREDIENTS.push(...FORAGED_MUSHROOMS, ...HERITAGE_INGREDIENTS, ...MARKET_INGREDIENTS, ...SOIL_INGREDIENTS);
 
 // Generated from the real entries above, so a grey copy can never drift from the
 // ingredient it is a copy of.
@@ -2904,4 +2971,4 @@ export const RECIPES: Recipe[] = [
   }
 ];
 
-RECIPES.push(...FORAGE_RECIPES, ...HERITAGE_RECIPES, ...MARKET_RECIPES);
+RECIPES.push(...FORAGE_RECIPES, ...HERITAGE_RECIPES, ...MARKET_RECIPES, ...SOIL_RECIPES);

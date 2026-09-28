@@ -92,6 +92,30 @@ const LINES: Record<StaffRoleType, string[]> = {
     'Everything you are doing by feel, I can tell you why it works.',
     'I read the literature so you can keep your hands in the mash.',
   ],
+  gardener: [
+    'Tell me what you want on the table in August and I will tell you what goes in now.',
+    'The soil tells you when it wants water. You only have to put your hand in it.',
+  ],
+  orchardist: [
+    'Prune for light and the fruit takes care of itself.',
+    'An apple tree remembers a bad year. So do I.',
+  ],
+  beekeeper: [
+    'Move slowly and they forget you are there.',
+    'May is the month. Everything else is waiting for May.',
+  ],
+  poultry: [
+    'Six hens is six opinions. I listen to all of them.',
+    'Shut the door at dusk. The fox never forgets a door.',
+  ],
+  soil_tech: [
+    'Your waste is somebody’s dinner. Several billion somebodies.',
+    'Feed the soil, not the plant. The plant can look after itself.',
+  ],
+  forager: [
+    'I know where the ceps come up. I will not tell you. I will bring you some.',
+    'If I am not sure, it stays in the ground. That is the whole rule.',
+  ],
 };
 
 /**
@@ -125,9 +149,13 @@ export const makeCandidate = (role: StaffRoleType, seed: number): CrewMember => 
   };
 };
 
-/** One candidate per role, refreshed on a schedule. A koji keeper only once there is a room to keep. */
-export const rollCrewPool = (week: number, kojiRoom = false): CrewMember[] =>
-  ((kojiRoom ? ['cleaner', 'tech', 'chef', 'rd', 'toji'] : ['cleaner', 'tech', 'chef', 'rd']) as StaffRoleType[])
+/**
+ * One candidate per role, refreshed on a schedule. A koji keeper only once there
+ * is a room to keep, and the estate's hands only once there is somewhere for
+ * them to work — `farmRoles` comes from what the estate owns.
+ */
+export const rollCrewPool = (week: number, kojiRoom = false, farmRoles: StaffRoleType[] = []): CrewMember[] =>
+  ([...(kojiRoom ? ['cleaner', 'tech', 'chef', 'rd', 'toji'] : ['cleaner', 'tech', 'chef', 'rd']), ...farmRoles] as StaffRoleType[])
     .map((role, i) => makeCandidate(role, week * 11 + i * 29));
 
 /**
@@ -182,13 +210,13 @@ export const crewEffect = (
 };
 
 /** The boolean summary the rest of the game still reads. */
-export const crewToStaffFlags = (crew: CrewMember[]): Record<StaffRoleType, boolean> => ({
-  cleaner: crew.some(c => c.role === 'cleaner'),
-  tech: crew.some(c => c.role === 'tech'),
-  chef: crew.some(c => c.role === 'chef'),
-  rd: crew.some(c => c.role === 'rd'),
-  toji: crew.some(c => c.role === 'toji'),
-});
+export const ALL_ROLES: StaffRoleType[] = ['cleaner', 'tech', 'chef', 'rd', 'toji', 'gardener', 'orchardist', 'beekeeper', 'poultry', 'soil_tech', 'forager'];
+
+export const noStaff = (): Record<StaffRoleType, boolean> =>
+  Object.fromEntries(ALL_ROLES.map(r => [r, false])) as Record<StaffRoleType, boolean>;
+
+export const crewToStaffFlags = (crew: CrewMember[]): Record<StaffRoleType, boolean> =>
+  Object.fromEntries(ALL_ROLES.map(r => [r, crew.some(c => c.role === r)])) as Record<StaffRoleType, boolean>;
 
 export const describeCrewMember = (c: CrewMember): string => {
   const t = getTrait(c.traitId);
