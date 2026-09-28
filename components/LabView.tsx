@@ -251,10 +251,8 @@ const LabView: React.FC<LabViewProps> = ({
 
   /* FILL THE ROOM, WITHIN REASON.
      The stage and the painting rarely share an aspect. Fitting it whole leaves
-     bands; covering it crops shelves the hardware stands on. So the painting is
-     fitted, then zoomed by up to 12% towards covering — enough to close most of
-     a band, never enough to cut into the boards. What remains shows the painting
-     itself, blurred, behind it (see .bench-wrap::before). */
+     bands; covering it can crop the vessels at the edges. So the painting is
+     fitted, then zoomed towards covering as far as the empty margins allow. */
   const roomRef = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
@@ -265,7 +263,11 @@ const LabView: React.FC<LabViewProps> = ({
       if (width <= 0 || height <= 0) return;
       const contain = Math.min(width / W, height / H);
       const cover = Math.max(width / W, height / H);
-      const k = Math.min(cover, contain * 1.12);
+      // Zoom towards covering, but never past the plate's safe margins: the
+      // outermost floor spots stand at x170 / x1174 and y724, so up to 110px a
+      // side and 60px off the foot (the room is pinned to the top) is only
+      // wall and flagstone. A ratio cap (1.12) left a band on every desktop.
+      const k = Math.max(contain, Math.min(cover, width / (W - 220), height / (H - 60)));
       setFit(prev => (prev && Math.abs(prev.w - W * k) < 1 && Math.abs(prev.h - H * k) < 1) ? prev : { w: W * k, h: H * k });
     };
     measure();

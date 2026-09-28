@@ -5534,3 +5534,44 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
   .tw-card.finished { padding-right: 14px; padding-bottom: 44px; }
   .tw-stamp { top: auto; bottom: 10px; max-width: none; }
 }
+
+/* THE WINDOW IS THE FRAME, AND EVERYTHING IN IT IS ON SCREEN. The lab grid was
+   sized by its rail, so the page ran ~200px past the window: the room was fitted
+   to height nobody could see, and the pantry and the action bar sat below the
+   fold. Above the phone breakpoint the shell is exactly the window, and the rail
+   is fitted to it rather than scrolled — Go To is three tiles across (it was two
+   across and four deep, 349px), and the pantry takes whatever height is left,
+   its drawers scrolling inside the chest. (`.el-bed .stage` exists in the
+   estate, hence `.lab-grid > .stage`.) */
+@media (min-width: 760px) {
+  .app-shell { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+  .app-shell > .lab-grid { flex: 1 1 0; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .lab-grid > .rail { min-height: 0; }
+  .lab-grid > .stage { min-height: 0; overflow: hidden; }
+
+  .lab-grid > .rail.left { gap: 12px; padding-top: 12px; padding-bottom: 12px; }
+  .rail .tabs-hud.nav-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .rail .nav-grid .tab-btn-hud { min-height: 64px; padding: 7px 3px 6px; gap: 3px; font-size: 12.5px; }
+  .rail .nav-grid .tab-btn-hud .panel-mark { transform: scale(0.84); margin: -3px 0; }
+  .rail .nav-grid .tab-btn-hud:last-child:nth-child(odd) { grid-column: auto; flex-direction: column; min-height: 64px; gap: 3px; }
+  .rail .nav-grid .tab-btn-hud:last-child:nth-child(3n + 1) { grid-column: 1 / -1; flex-direction: row; min-height: 46px; gap: 10px; }
+  .rail .nav-grid .tab-btn-hud:last-child:nth-child(3n + 2) { grid-column: span 2; flex-direction: row; min-height: 64px; gap: 10px; }
+
+  .lab-grid > .rail.left > .rail-sect:last-child { flex: 1 1 auto; min-height: 150px; display: flex; flex-direction: column; }
+  .lab-grid > .rail.left > .rail-sect:last-child > .pantry { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+}
+
+/* THE ESTATE'S PAINTING TAKES THE HEIGHT IT HAS. The modal was capped at
+   1440x920 and split 1.6 : 1, so the painting's height came from the ledger's
+   share of the width, not from the window: at 1440x900 it was 486px tall over
+   250px of empty stage. The modal fills the window now, and the stage is as
+   wide as the height allows (less the 52px day bar), stopping where the ledger
+   would drop under 380px. Every estate plate is 16:9 (480x270 painted, 384x216
+   placeholder). At 1100px and below the one-column layout is unchanged. */
+@media (min-width: 621px) {
+  .estate { width: calc(100vw - 20px); height: calc(100vh - 20px); height: calc(100dvh - 20px); }
+}
+@media (min-width: 1101px) {
+  .estate-body { container-type: size; grid-template-columns: auto minmax(380px, 1fr); }
+  .estate-stage { width: min(calc((100cqh - 52px) * 16 / 9), calc(100cqw - 380px)); }
+}
