@@ -6,12 +6,14 @@ import { INGREDIENTS } from '../constants';
 import { ActionResult } from '../services/estate';
 import {
   wildOf, patchOf, guideOf, inSeason, walkTo, lookAt, examine, runTest, decide, afterVerdict, togglePiece, pickAllPrime,
-  pickOutcome, finishPick, dropPick, layBed, knowsTell, signalCtx, LOOK_MINUTES, TEST_MINUTES,
+  pickOutcome, finishPick, dropPick, layBed, knowsTell, signalCtx, TEST_MINUTES,
+  forageLevel, forageProgress, forageQualityBonus, foragePieceMult, lookMinutes, knownNothing, SPOT_DECOYS_AT, SPOT_EMPTY_AT,
 } from '../services/wild';
 import { CalendarDate, DayWeather, formatDuration, absoluteDay } from '../services/climate';
 import { MONTH_NAMES } from '../constants.forage';
 import { WILD_TILES, tileRect, wildMapPainted } from './EstateScene';
 import { FACILITIES } from '../constants.farm';
+import SkillCard from './SkillCard';
 
 /* =============================================================================
    THE WILD, IN THE LEDGER
@@ -83,16 +85,17 @@ export const WildHits: React.FC<{ state: GameState; place: GroundId | 'wild_map'
     <svg className="estate-hits" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
       {signals.map(sg => {
         const read = !!v?.read.includes(sg.id);
+        const known = !read && knownNothing(state, place as GroundId, sg, date);
         const fi = v?.finds.findIndex(f => f.sid === sg.id) ?? -1;
         const open = fi >= 0 && !v!.finds[fi].done;
         const r = W > 400 ? 9 : 7;
         // `onSign` puts the answer beside the sign: the card opens on a seen sign
         // too, so its entry can be read again without the journal.
         const onPick = () => { onSign?.([sg.at[0] / W, sg.at[1] / H]); return open ? act(s => examine(s, fi, date, wx)) : !read ? act(s => lookAt(s, sg.id, date, wx)) : undefined; };
-        const label = `${sg.label}${read ? (open ? ' — pick it up' : ' — seen') : ` — look · ${LOOK_MINUTES} min`}`;
+        const label = `${sg.label}${read ? (open ? ' — pick it up' : ' — seen') : known ? ' — nothing today; you know this one' : ` — look · ${lookMinutes(forageLevel(state))} min`}`;
         return (
           <g key={sg.id} role="button" tabIndex={0} aria-label={label}
-            className={`wild-pin${read ? ' read' : ''}${open ? ' open' : ''}`}
+            className={`wild-pin${read ? ' read' : ''}${known ? ' known' : ''}${open ? ' open' : ''}`}
             onClick={onPick} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(); } }}>
             <title>{label}</title>
             <circle cx={sg.at[0]} cy={sg.at[1]} r={r * 1.8} className="hit" />
@@ -105,12 +108,26 @@ export const WildHits: React.FC<{ state: GameState; place: GroundId | 'wild_map'
   );
 };
 
+/* --- the forager's eye: your level, how far to the next, and what it buys --- */
+export const ForagerEye: React.FC<{ state: GameState }> = ({ state }) => {
+  const p = forageProgress(state);
+  const L = p.level;
+  const spots = L >= SPOT_EMPTY_AT ? 'decoys, and finds that are out of season or picked over, at a glance'
+    : L >= SPOT_DECOYS_AT ? `decoys at a glance; empty finds from level ${SPOT_EMPTY_AT}` : `nothing yet at a glance; decoys from level ${SPOT_DECOYS_AT}`;
+  return (
+    <SkillCard title="Your eye" {...p}
+      perks={[[`+${forageQualityBonus(L)}`, 'grade'], [`×${foragePieceMult(L).toFixed(2)}`, 'per find'], [`${lookMinutes(L)} min`, 'a look']]}
+      note={`You know ${spots}. Every look, tell, right call and kilo picked sharpens it. The van tires of wild things fast: what you pick is for the bench.`} />
+  );
+};
+
 /* --- the map's ledger: where to go, and the field guide --- */
 export const WildMapLedger: React.FC<{ state: GameState; date: CalendarDate; onGo: (p: any) => void }> = ({ state, date, onGo }) => {
   const m = date.month;
   const hands = (state.crew ?? []).filter((c: any) => c.role === 'forager');
   return (
     <>
+      <ForagerEye state={state} />
       <section className="el-sect">
         <h3>The grounds <span className="sub">a morning’s walk, or a day’s</span></h3>
         <ul className="wild-grounds">
@@ -183,15 +200,16 @@ export const GroundLedger: React.FC<{ state: GameState; ground: GroundId; date: 
   const v = wildOf(state).visit;
   const visit = v && v.ground === ground && v.day === absoluteDay(date) ? v : undefined;
   const signals = signalsFor(ground, signalCtx(date, wx));
-  const unread = signals.filter(sg => !visit?.read.includes(sg.id)).length;
+  const unread = signals.filter(sg => !visit?.read.includes(sg.id) && !knownNothing(state, ground, sg, date)).length;
   return (
     <>
       {visit?.pick && <PickPanel state={state} date={date} act={act} />}
       {visit?.spec && !visit.pick && <ExaminePanel state={state} date={date} wx={wx} act={act} />}
+      <ForagerEye state={state} />
       <section className="el-sect">
         <h3>{G.name} <span className="sub">{G.where}</span></h3>
         <p className="el-note">{G.hint}</p>
-        <p className="el-note">{unread ? `${unread} thing${unread > 1 ? 's' : ''} you have not looked at. Each look is ${LOOK_MINUTES} minutes: most of them are nothing, which is the skill.` : 'You have looked at everything here today.'}</p>
+        <p className="el-note">{unread ? `${unread} thing${unread > 1 ? 's' : ''} you have not looked at. Each look is ${lookMinutes(forageLevel(state))} minutes: most of them are nothing, which is the skill.` : 'You have looked at everything here today.'}</p>
       </section>
       {visit && visit.log.length > 0 && (
         <section className="el-sect">

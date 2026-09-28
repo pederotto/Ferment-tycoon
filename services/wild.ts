@@ -4,6 +4,8 @@ import { WILD, LOOKALIKES, GROUNDS, GROUND_ORDER, signalsFor, Signal, SignalCtx 
 import { INGREDIENTS } from '../constants';
 import { ActionResult, storeProduce } from './estate';
 import { roll, CalendarDate, DayWeather, absoluteDay } from './climate';
+import { FORAGER_LEVELS, levelOf, progressOf, frac, skill5, crewLevel } from './skills';
+import { addCrewXp } from './crew';
 
 /* =============================================================================
    THE WILD: going out, looking, telling things apart, and picking well
@@ -46,6 +48,56 @@ const wxKind = (wx: DayWeather, wetStreak: number): 'frost' | 'rain' | 'dry' => 
 export const walkTo = (s: GameState, g: GroundId) => GROUNDS[g].walk + (g === 'bog' && !wildOf(s).bogFound ? 60 : 0);
 
 const withWild = (s: GameState, w: WildState): GameState => ({ ...s, estate: { ...s.estate, wild: w } });
+
+/* -----------------------------------------------------------------------------
+   THE FORAGER'S EYE: experience, and what it buys
+   The owner found the wild gave almost nothing back for something tedious:
+   measured, a player who only went where something was in season earned about
+   $9 a game hour, against ~$20 for the kitchen garden by hand. Experience is
+   earned by doing the work — every look, clue, find, test, right call and kilo
+   picked — and pays out in four ways, each a thing a practised forager really
+   does better:
+   - a better GRADE: you cut cleaner, handle less, and take them at their best;
+   - MORE per find: you see the rest of the flush, and more of it is prime;
+   - a flush on less: you know the wet week it will come;
+   - you SPOT what is nothing: decoys, then out-of-season and worked-out finds,
+     are known at a glance and need no look, and a look is quicker.
+   Level 1 is exactly the old game. The balance claim is measured: see
+   CLAUDE.md, "The forager's eye".
+   --------------------------------------------------------------------------- */
+/** The scale is 1-15 like every hand (services/skills.ts); level 1 is the old game. */
+export const forageXp = (s: GameState) => wildOf(s).xp ?? 0;
+export const forageLevel = (s: GameState) => levelOf(forageXp(s), FORAGER_LEVELS);
+/** Where you are within the current level, for the progress bar. */
+export const forageProgress = (s: GameState) => progressOf(forageXp(s), FORAGER_LEVELS);
+/** Grade added to anything you pick: 0 at level 1, +16 at 15. */
+export const forageQualityBonus = (L: number) => Math.round(16 * frac(L));
+/** Pieces a find carries, as a multiple: 1 at level 1, 1.6 at 15. */
+export const foragePieceMult = (L: number) => 1 + 0.6 * frac(L);
+/** Minutes a look takes: 15 at level 1, 7 at 15. */
+export const lookMinutes = (L: number) => Math.round(LOOK_MINUTES - 8 * frac(L));
+/** The levels at which you know a sign for nothing without looking. */
+export const SPOT_DECOYS_AT = 4;
+export const SPOT_EMPTY_AT = 9;
+/** Add experience; a new level is announced in the action's message. */
+const gainXp = (s: GameState, n: number): { state: GameState; up: string } => {
+  if (n <= 0) return { state: s, up: '' };
+  const before = forageLevel(s);
+  const next = withWild(s, { ...wildOf(s), xp: forageXp(s) + n });
+  const after = forageLevel(next);
+  return { state: next, up: after > before ? ` Your eye for the wild is sharper: forager level ${after}.` : '' };
+};
+/** Would you know this sign for nothing today, at your level, without stopping? */
+export const knownNothing = (s: GameState, g: GroundId, sg: Signal, date: CalendarDate): boolean => {
+  const L = forageLevel(s);
+  if (sg.clue) return false;
+  if (!sg.kind) return L >= SPOT_DECOYS_AT;
+  if (L < SPOT_EMPTY_AT || sg.kind !== 'find' || !sg.species) return false;
+  // The things only a look can tell you — a hedge flowering, a tide, the moss — stay worth a look.
+  if (sg.flowerSignal || sg.tide !== undefined || sg.discovery || sg.nuts || sg.timing) return false;
+  const pt = patchOf(s, sg.species);
+  return !inSeason(sg.species, date.month) || pt.vigour < 0.3 || (pt.restUntil ?? -1) > absoluteDay(date);
+};
 const withVisit = (s: GameState, v: WildVisit): GameState => withWild(s, { ...wildOf(s), visit: v });
 const learn = (s: GameState, sp: string, tell: string): GameState => {
   const g = guideOf(s, sp);
@@ -97,8 +149,12 @@ export const lookAt = (s: GameState, sid: string, date: CalendarDate, wx: DayWea
     next = r.state; entry = r.entry;
   }
   const v2 = wildOf(next).visit!;
+  const L = forageLevel(s);
   next = withVisit(next, { ...v2, read: [...v2.read, sid], log: [...v2.log, entry] });
-  return { state: next, minutes: LOOK_MINUTES, message: sg.label, ok: true };
+  // Knowing a decoy is learning too; a find or a tell is worth more.
+  const firstFind = entry.kind === 'find' && !!entry.species && !guideOf(s, entry.species).found;
+  const g = gainXp(next, entry.kind === 'find' ? 6 + (firstFind ? 20 : 0) : entry.kind === 'clue' ? 5 : 2);
+  return { state: g.state, minutes: lookMinutes(L), message: sg.label + g.up, ok: true };
 };
 
 const findEntry = (s: GameState, sg: Signal, date: CalendarDate, wx: DayWeather): { state: GameState; entry: VisitEntry } => {
@@ -190,7 +246,8 @@ export const runTest = (s: GameState, tid: string): ActionResult => {
   const t = LOOKALIKES[sp.species].tests.find(x => x.id === tid);
   if (!t || sp.done.includes(tid)) return fail(s, 'Done that.');
   if (t.needs && !knowsTell(s, sp.species, t.needs)) return fail(s, 'You would have had to see it earlier in the year.');
-  return { state: withVisit(s, { ...v, spec: { ...sp, done: [...sp.done, tid] } }), minutes: TEST_MINUTES, message: t.label, ok: true };
+  const g = gainXp(withVisit(s, { ...v, spec: { ...sp, done: [...sp.done, tid] } }), 3);
+  return { state: g.state, minutes: TEST_MINUTES, message: t.label + g.up, ok: true };
 };
 
 export type Choice = 'real' | 'fake' | 'unnamed' | 'walk';
@@ -211,7 +268,10 @@ export const decide = (s: GameState, choice: Choice): ActionResult => {
   for (const tid of sp.done) next = learn(next, sp.species, tid);
   if (choice === 'fake' && !sp.real) next = { ...next, estate: { ...next.estate, guide: { ...next.estate.guide, [sp.species]: { ...guideOf(next, sp.species), lookalike: true } } } };
   const v2 = wildOf(next).visit!;
-  return { state: withVisit(next, { ...v2, verdict }), minutes: 0, message: '', ok: true };
+  // A right call is the skill itself; a wrong one still teaches something.
+  const right = (choice === 'real' && sp.real) || (choice === 'fake' && !sp.real);
+  const g = gainXp(withVisit(next, { ...v2, verdict }), right ? 15 : choice === 'walk' ? 1 : 4);
+  return { state: g.state, minutes: 0, message: g.up.trim(), ok: true };
 };
 
 /** After the verdict: pick, or put it down and go on. */
@@ -238,16 +298,21 @@ const startPick = (s: GameState, idx: number, flag: NonNullable<WildVisit['pick'
   const r = (k: number) => roll('pick', sp, day, k);
   const kind = wxKind(wx, s.estate.wetStreak ?? 0);
   const pos = position(W.season, m), wet = kind === 'rain', frost = kind === 'frost';
-  let n = Math.round((W.n[0] + r(0) * (W.n[1] - W.n[0])) * clamp(pt.vigour, 0.3, 1.5));
-  const flush = (W.kind === 'mushroom' && wet && pos > 0.2 && pos < 0.8 && pt.vigour >= 1.15) || (sp === 'sea_buckthorn' && frost && m === 9) || (W.kind === 'fish' && v.read.includes('gannets') && pt.vigour >= 1.1);
+  const L = forageLevel(s);
+  let n = Math.round((W.n[0] + r(0) * (W.n[1] - W.n[0])) * clamp(pt.vigour, 0.3, 1.5) * foragePieceMult(L));
+  const flush = (W.kind === 'mushroom' && wet && pos > 0.2 && pos < 0.8 && pt.vigour >= 1.15 - (L - 1) * 0.03) || (sp === 'sea_buckthorn' && frost && m === 9) || (W.kind === 'fish' && v.read.includes('gannets') && pt.vigour >= 1.1);
   if (flush) n = Math.round(n * 1.6);
-  n = clamp(n, 1, 12);
+  n = clamp(n, 1, 20);
   let pY = clamp(0.45 - pos * 0.38 - (wet ? 0.08 : 0), 0.04, 0.6), pP = clamp(0.08 + pos * 0.42 + (frost && W.kind === 'mushroom' ? 0.1 : 0), 0.04, 0.65);
   if (W.kind === 'fish') { pY = 0.18; pP = 0.12 + (sp === 'herring' ? 0.2 : 0); }
   if (W.kind === 'shrimp') { pY = 0.22; pP = 0.2; }
   if (sp === 'hazelnuts') { pY = m === 7 ? 0.5 : 0.15; pP = m === 8 ? 0.35 : 0.05; }
-  let q = baseQ(sp) + (wet && W.kind === 'mushroom' ? 3 : 0) + ((sp === 'winter_ceps' || sp === 'sea_buckthorn') && frost ? 4 : 0) - (kind === 'dry' && W.kind === 'mushroom' ? 6 : 0);
+  // A practised hand times it better: fewer young and past pieces in a find.
+  const timing = 1 - (L - 1) * 0.035;
+  pY *= timing; pP *= timing;
+  let q = baseQ(sp) + forageQualityBonus(L) + (wet && W.kind === 'mushroom' ? 3 : 0) + ((sp === 'winter_ceps' || sp === 'sea_buckthorn') && frost ? 4 : 0) - (kind === 'dry' && W.kind === 'mushroom' ? 6 : 0);
   if (!real && flag !== 'unnamed') q = LOOKALIKES[sp]?.fakeQ ?? 0;
+  q = Math.min(100, q);
   const pieces: WildPiece[] = [];
   for (let i = 0; i < n; i++) {
     const x = r(10 + i);
@@ -315,7 +380,8 @@ export const finishPick = (s: GameState, date: CalendarDate): ActionResult => {
   const v2 = wildOf(next).visit!;
   const finds = v2.finds.map((f, i) => (i === p.find ? { ...f, done: true } : f));
   next = withVisit(next, { ...v2, finds, pick: undefined });
-  return { state: next, minutes: o.minutes, message, ok: true };
+  const g = gainXp(next, o.kg > 0 && p.flag !== 'ruin' && p.flag !== 'deadly' ? 4 + Math.round(o.kg * 5) : 0);
+  return { state: g.state, minutes: o.minutes, message: message + g.up, ok: true };
 };
 
 export const dropPick = (s: GameState): GameState => {
@@ -353,6 +419,8 @@ export const wildDay = (s: GameState, date: CalendarDate, wx: DayWeather): { sta
   // first version — brought in 2.5 times the wage for nothing.
   const day = absoluteDay(date);
   const took: string[] = [];
+  let gotKg = 0;
+  const HL = crewLevel(hand), hf = frac(HL);
   const pickable = (g: GroundId, sp: string) => {
     const guide = guideOf(next, sp), pt = patchOf(next, sp);
     if (!guide.found || !inSeason(sp, date.month) || pt.vigour < 0.3 || (pt.restUntil ?? -1) > day) return false;
@@ -363,19 +431,28 @@ export const wildDay = (s: GameState, date: CalendarDate, wx: DayWeather): { sta
   };
   const expected = (sp: string) => { const W = WILD[sp]; const i = INGREDIENTS.find(x => x.id === sp); return (W.n[0] + W.n[1]) / 2 * clamp(patchOf(next, sp).vigour, 0.3, 1.5) * 0.45 * W.piece * ((i?.baseCost ?? 0) / ((i?.mass ?? 1000) / 1000)); };
   const ranked = GROUND_ORDER.map(g => ({ g, v: GROUNDS[g].grows.filter(sp => pickable(g, sp)).reduce((a, sp) => a + expected(sp), 0) }))
-    .filter(x => x.v > 0).sort((a, b) => b.v - a.v).slice(0, hand.skill >= 4 ? 2 : 1);
+    .filter(x => x.v > 0).sort((a, b) => b.v - a.v).slice(0, 1 + (HL >= 8 ? 1 : 0) + (HL >= 13 ? 1 : 0));
   for (const { g } of ranked) for (const sp of GROUNDS[g].grows) {
     if (!pickable(g, sp)) continue;
     const pt = patchOf(next, sp);
-    if (roll('forager', sp, day) < clamp(0.3 - hand.skill * 0.05, 0.05, 0.3)) continue;
+    if (roll('forager', sp, day) < clamp(0.3 - skill5(hand) * 0.05, 0.05, 0.3)) continue;
     const W = WILD[sp];
     const n = (W.n[0] + W.n[1]) / 2 * clamp(pt.vigour, 0.3, 1.5);
-    const kg = n * 0.45 * W.piece;
+    // A practised hand sees more of the flush and picks it better, as the player does.
+    const kg = n * 0.45 * W.piece * (1 + 0.5 * hf);
     if (kg < 0.05) continue;
-    next = storeProduce(next, sp, kg, baseQ(sp) - 2);
+    next = storeProduce(next, sp, kg, Math.min(100, baseQ(sp) - 2 + Math.round(12 * hf)));
+    gotKg += kg;
     // Prime only, so the patch does better than it would left alone.
     next = { ...next, estate: { ...next.estate, patches: { ...next.estate.patches, [sp]: { ...pt, next: clamp((pt.next ?? pt.vigour) * 1.02, 0.2, 1.5), lastPicked: day, restUntil: day + 7 } } } };
     took.push(`${kg.toFixed(1)} kg ${nameOf(sp).toLowerCase()}`);
+  }
+  // A forager learns on the ground: each walk and each kilo brought home.
+  if (ranked.length) {
+    const before = crewLevel(hand);
+    const grown = addCrewXp(hand, ranked.length * 12 + Math.round(gotKg * 8));
+    next = { ...next, crew: (next.crew as CrewMember[]).map(c => (c.id === hand.id ? grown : c)) };
+    if (grown.skill > before) notes.push(`${hand.name} knows the valley better: forager level ${grown.skill}. Their wage is now $${grown.weeklyWage} a week.`);
   }
   if (took.length) notes.push(`${hand.name} came back from the wild: ${took.join(', ')}.`);
   return { state: next, notes };

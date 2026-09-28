@@ -1827,6 +1827,42 @@ with the guess. If there is no real figure for a process, do not check it.
 - Sign coordinates live in `signalsFor`, on each plate's own grid (480×270). Pins go on something PAINTED: the pine plantation has no stump in its picture, so the stump sign stands on the needle floor by the big trunks, not in the grass of the ride.
 - The wild board is the owner's painted map (`wild_map`) with a pin and label per ground from `MAP_PINS`; the postcards remain the fallback when that plate is missing.
 
+## The compact layout: a phone, or a tablet held upright
+- One query in two places (`components/layout.ts` and the "COMPACT" block in index.css): `(max-width: 759px), (max-width: 1179px) and (orientation: portrait)`. Keep them the same.
+- **The rail is a drawer behind one round menu button**, bottom-right in thumb reach (`.menu-fab`, `menuOpen` in App). Choosing a Go To tile closes it, as do the scrim and Escape. The notes dock moves bottom-left, clear of it.
+- **The paintings fill the height and pan sideways.** Fitted to a phone's width the bench was 223 px tall and the farm 193. LabView sizes the bench to the room's height (capped at 2.4 screens wide, `.iso-room.pan`); the estate scene is `100cqh * 16/9` in a stage that scrolls in a ROW (the stage is a column elsewhere, which centred the overflow off-screen); the cellar and koji room take `min(58vh, 150vw)`. Each opens centred. On a phone the estate is edge to edge.
+- **The estate's foot (day bar and log) lives outside the scrolling stage**, in `.estate-body`, or it pans away with the picture.
+
+## The clock in the rooms
+- The estate, the cellar and the koji room carry `RoomClock`: the speed control and a **Skip ahead** menu (1 hour, 3 hours, until morning or evening, 1 day, 1 week). A jump runs `advanceWorld` for the whole span, so every tick and every estate day still happens. The menu is paper.
+- The game loop no longer stops on the estate. **Walking out pauses the clock**, so the estate is still turn by turn until you press play or skip, and walking home restores what the clock was doing (`pausedBeforeField`). At 1x the live clock is three game hours a real second: left running on entry, the light was gone before a ledger could be read.
+
+## Experience: one scale for every hand (services/skills.ts)
+- **Every track runs 1-15** (the owner's scale): the player as forager, gardener and fermenter, and every hired hand. `frac(L)` is 0 at level 1 and 1 at 15, so level 1 is exactly the game before the track existed, and each effect is written as "fully practised" times `frac`. Thresholds are `top * ((L-1)/14)^1.7`. The crew's older formulas speak 1-5; `skill5` maps a level onto that so their balance did not move.
+- **Experience is the work done, never the calendar.** Crew skill used to rise with weeks served, so a technician on an empty bench grew as fast as one running eight casks. `weeklyWork` pays each role for what there was to do, and bench hands (`BENCH_ROLES`) also learn 0.6x of every harvested batch's `batchXp`, which is score-weighted. Measured: a technician on a five-batch bench reaches level 8 in ~11 weeks and 15 in ~34 (the old top took 41).
+- **Each level is a raise.** 3% for most hands; a forager's is 9%: what they bring is rare, and the owner asked for them to cost more the longer you keep them. Measured over two years: one grown from level 1 returns 0.9x their wage in year one and 1.3x in year two at $120/wk; one hired at 12 returns 1.4-1.75x at $89. Their picks gain grade (+12 at 15), kilos (x1.5) and grounds walked (one, two from level 8, three from 13); they earn 12 a walk and 8 a kilo in `wildDay`.
+- **Old saves:** `migrate()` puts every hand and candidate from the 1-5 scale onto 1-15 (`levelFromOldSkill`) with the experience that level takes; a member with `xp` is already migrated.
+
+## The fermenter's hand
+- **Craft, not score** (the owner's choice, and "mastery grants information only" still holds for recipe mastery). The player's fermenter level is stamped on a batch when it is sealed (`Batch.craftLevel`) and does three things to THAT batch: bloom odds x(1 - 0.45f) (`craftRiskMult`, applied to the per-tick roll and shown in the inspector's odds as "Your hand"), yield +12% (`craftYieldMult`, in the offer, the demand hit and the units cellared), and interventions disturb up to 60% less (`craftSteadiness`, the player's own pokes; a technician's standing orders are not the player's hand). Nothing is added to `calculateCriticScore`.
+- **Experience is score-weighted, per the owner:** `batchXp` (3 below 40, then 10 + 50 x ((score-40)/60)^1.5) for every batch sold or cellared, never a sporulation. It is granted inside the updater (`learnFromBatch`, pure) and announced outside it.
+
+## The gardener's hands
+- Earned by estate work: one point per six minutes of a job that succeeded (`actWork` in EstateView wraps every place's actions; the wild keeps its own track). Up to +12 grade and x1.2 kilos on what YOU pick (`pickHere`), rows walked in half the time, and from level 7 a place's problems show as you come in without walking the rows. Hired gardeners and orchardists pick up to +10 grade with level (`handGrade`).
+
+## The forager's eye (services/wild.ts)
+- **The wild paid too little for too much tedium** (the owner's complaint). Measured over two years, a player who only walks where something is in season, looks at every sign and picks only the prime: **$9.3 a game hour**, against ~$20 for the kitchen garden by hand. Walking every ground every week: $3.7.
+- **Experience** (`estate.wild.xp`, optional, absent is 0): a look 2, a clue 5, a find 6 (+20 the first time a species is ever found), a test 3, a right call 15 (a wrong one 4), a pick 4 + 5 a kilo. `FORAGER_LEVELS` tops out at 12000: level 15 after about two dedicated years.
+- **It pays four ways**: grade +16 at 15 (capped at 100); pieces per find x1.6; fewer young and past pieces, and a flush on less vigour; and you SPOT what is nothing — decoys from level 4, out-of-season and worked-out finds from level 9 (`knownNothing`), drawn like read signs — and a look takes 15 -> 7 minutes. Signs only a look can answer (a flowering hedge, the tide, the moss, the nuts, the buckthorn's timing) are never known in advance.
+- **Measured** on the first 10-level version, whose top and bottom are 15's: bottom $9.3/h, 94 kg a year, grade 80; garden parity ($21/h) at 5/9 of the way; top $30.1/h, 197 kg, grade 94. Re-run a harness before touching a coefficient.
+- **This does feed the critic**, through the terroir cap. The owner asked for better base stats here; a forager's grade is the thing itself, picked better.
+
+## Wild things at the van
+- **A scarce market that fills for good** (the owner's call): selling foraged goods is for the early game, then they have to go to the bench. On top of the class's weekly appetite, each wild species has its own tiny weekly appetite (`WILD_APPETITE_KG` 1.5) and a lifetime total sold (`estate.wildSoldKg`) that never recovers: half price by the sixth kilo (`WILD_SATURATION_KG`). Measured, a kilo of maitake a week: $37, $19.60, $13.66, then $9.53 by week 5, $3.71 by week 20.
+
+## A menu is paper
+- A pop-up you read and choose from is printed stock, soft corners, soft shadow: the estate's pop-up ledger, the sign card, the skill cards. The owner found the dark plaster panel over a painting harsh. `.estate-pop` redefines `--text-hi/-mid/-lo` to the ink tones so every rule written with the tokens turns to ink; rules that hard-code the room's brass are restated for paper. Gauges and bars are instruments and stay dark.
+
 ## The estate's economy (measured, three years, every place owned)
 - **By hand**: ~$11,400 a year of produce at the van's prices (what you no longer buy), $1,700 of running costs, and 10.6 hours a week of the player's time (145 minutes a day in July at the peak).
 - **Fully staffed at skill 3** (wages scale ×(0.55 + 0.22 × skill), so ×1.21): $13,300 of wages plus $1,800 running, against $11,750 of produce plus about $2,100 of wild haul. **About −$1,200 a year for 0.2 hours a week.** Staff buy time, not profit. The profit is the ingredients themselves, in the lab.

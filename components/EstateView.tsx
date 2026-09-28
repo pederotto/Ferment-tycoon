@@ -25,6 +25,9 @@ import {
 import { MONTH_NAMES, seasonLabel } from '../constants.forage';
 import EstateScene, { ScenePlace, sceneSize, asQuad, treeGeom, potGeom, isGround } from './EstateScene';
 import { WildHits, WildMapLedger, GroundLedger, SignCallout } from './WildView';
+import SkillCard from './SkillCard';
+import { RoomClock, ClockProps } from './SpeedControl';
+import { gainCraft, gardenerLevel, gardenerXp, progressOf, GARDENER_LEVELS, gardenQualityBonus, gardenKgMult, gardenWalkMult, GARDEN_SPOT_AT, crewLevel } from '../services/skills';
 import { GROUNDS } from '../constants.wild';
 import { ESTATE_GEOM, ESTATE_PLATES, CROP_SPRITES } from './estatePlates';
 import { CloseIcon } from './icons';
@@ -56,6 +59,8 @@ export interface EstateViewProps {
   onClose: () => void;
   onOpenStaff: () => void;
   log: { at: string; text: string }[];
+  /** The game clock's control, so time can be run or stopped from inside the room. */
+  clock?: ClockProps;
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -91,7 +96,7 @@ const Sprite: React.FC<{ id: string; size?: 'small' | 'tiny' }> = ({ id, size = 
   return <img className={`es-sprite ${size}`} src={s[size]} alt="" />;
 };
 
-const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait, onClose, onOpenStaff, log }) => {
+const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait, onClose, onOpenStaff, log, clock }) => {
   const date = dateOf(state);
   const doy = dayOfYear(date);
   const day = absoluteDay(date);
@@ -122,7 +127,10 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
   useEffect(() => {
     setSel([]); setPlanting(false); setFeeding(false); setPop(null); setCallout(null);
     body.current?.scrollTo(0, 0);
-    body.current?.querySelectorAll('.estate-ledger, .estate-stage').forEach(e => e.scrollTo(0, 0));
+    body.current?.querySelectorAll('.estate-ledger').forEach(e => e.scrollTo(0, 0));
+    // Upright, the painting fills the height and pans: open it on the middle.
+    const st = body.current?.querySelector('.estate-stage') as HTMLElement | null;
+    if (st) requestAnimationFrame(() => { st.scrollLeft = Math.max(0, (st.scrollWidth - st.clientWidth) / 2); st.scrollTop = 0; });
   }, [place]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (pop || callout) closePop(); else if (isGround(place)) onGo('wild_map'); else if (place !== 'farm_map') onGo('farm_map'); else onClose(); } };
@@ -135,6 +143,14 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
   const kicker = place === 'farm_map' || place === 'wild_map' ? 'The estate' : isGround(place) ? 'In the wild' : FACILITIES[place as FacilityId].map === 'wild' ? 'On the coast' : 'The estate';
 
   const toggle = (id: string) => setSel(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]));
+  // Work on the land is how a gardener learns: a point for every six minutes of
+  // it that succeeded (services/skills.ts). The wild keeps its own track.
+  const actWork: EstateViewProps['act'] = (fn, o) => act(s => {
+    const r = fn(s);
+    if (!r.ok || !(r.minutes > 0)) return r;
+    const g = gainCraft(r.state, 'gardener', Math.round(r.minutes / 6));
+    return { ...r, state: g.state, message: `${r.message}${g.up}` };
+  }, o);
 
   return (
     <div className="modal-overlay estate-overlay">
@@ -153,6 +169,7 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
             <span className={`sh-plate${left < 60 && !dark ? ' low' : ''}`}><span className="l">{dark ? 'Sunrise' : 'Light left'}</span><span className="v">{dark ? formatClock(sun.sunrise) : formatDuration(left)}</span></span>
             <span className="sh-plate"><span className="l">Purse</span><span className="v">${Math.round(state.money).toLocaleString()}</span></span>
           </div>
+          {clock && <RoomClock {...clock} />}
           <button className="close-stamp" onClick={onClose} aria-label="Walk home to the workshop" title="Walk home to the workshop">
             <CloseIcon size={13} />
           </button>
@@ -192,33 +209,33 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
                 </div>
               )}
             </div>
-            {/* The foot of the picture: the day's log stacked on the day bar, so a bar
-                that wraps pushes the log up rather than printing under it. */}
-            <div className="estate-foot">
-            {log.length > 0 && (
-              <ol className="estate-log mono" aria-label="Today">
-                {log.slice(-5).map((l, i) => <li key={i}><span>{l.at}</span> {l.text}</li>)}
-              </ol>
-            )}
-            <div className="estate-daybar">
-              <span className="wx">
-                <b>{wx.label}</b> · {Math.round(wx.tMin)}–{Math.round(wx.tMax)} °C{wx.rainMm > 0.5 ? ` · ${wx.rainMm.toFixed(0)} mm` : ''} · {state.weather.description}
-              </span>
-              <span className="sun mono">☀ {formatClock(sun.sunrise)}–{formatClock(sun.sunset)}</span>
-              {place === 'farm_map' && <button className="mini-btn" onClick={() => onGo('wild_map')}>The wild →</button>}
-              {place === 'wild_map' && <button className="mini-btn" onClick={() => onGo('farm_map')}>← The farm</button>}
-              {isGround(place) && <button className="mini-btn" onClick={() => onGo('wild_map')}>← The wild</button>}
-              {!wild && place !== 'farm_map' && <button className="mini-btn" onClick={() => onGo(FACILITIES[place as FacilityId].map === 'wild' ? 'wild_map' : 'farm_map')}>{FACILITIES[place as FacilityId].map === 'wild' ? '← The wild' : '← The farm'}</button>}
-              <button className={`mini-btn${pop ? ' on' : ''}`} onClick={() => (pop ? closePop() : openPop('ledger'))}>
-                {pop ? 'Close' : place === 'farm_map' ? 'The farm book' : wild ? 'Journal' : 'Ledger'}
-              </button>
-              {dark
-                ? <button className="mini-btn gold" onClick={() => onWait(((sun.sunrise - state.minute) + 1440) % 1440)}>Wait for the light ({formatClock(sun.sunrise)})</button>
-                : <button className="mini-btn" onClick={() => onWait(60)} title="Let an hour pass: the bench works on">Wait an hour</button>}
-            </div>
-            </div>
           </div>
 
+          {/* The foot of the picture: the day's log stacked on the day bar, so a bar
+              that wraps pushes the log up rather than printing under it. */}
+          <div className="estate-foot">
+          {log.length > 0 && (
+            <ol className="estate-log mono" aria-label="Today">
+              {log.slice(-5).map((l, i) => <li key={i}><span>{l.at}</span> {l.text}</li>)}
+            </ol>
+          )}
+          <div className="estate-daybar">
+            <span className="wx">
+              <b>{wx.label}</b> · {Math.round(wx.tMin)}–{Math.round(wx.tMax)} °C{wx.rainMm > 0.5 ? ` · ${wx.rainMm.toFixed(0)} mm` : ''} · {state.weather.description}
+            </span>
+            <span className="sun mono">☀ {formatClock(sun.sunrise)}–{formatClock(sun.sunset)}</span>
+            {place === 'farm_map' && <button className="mini-btn" onClick={() => onGo('wild_map')}>The wild →</button>}
+            {place === 'wild_map' && <button className="mini-btn" onClick={() => onGo('farm_map')}>← The farm</button>}
+            {isGround(place) && <button className="mini-btn" onClick={() => onGo('wild_map')}>← The wild</button>}
+            {!wild && place !== 'farm_map' && <button className="mini-btn" onClick={() => onGo(FACILITIES[place as FacilityId].map === 'wild' ? 'wild_map' : 'farm_map')}>{FACILITIES[place as FacilityId].map === 'wild' ? '← The wild' : '← The farm'}</button>}
+            <button className={`mini-btn${pop ? ' on' : ''}`} onClick={() => (pop ? closePop() : openPop('ledger'))}>
+              {pop ? 'Close' : place === 'farm_map' ? 'The farm book' : wild ? 'Journal' : 'Ledger'}
+            </button>
+            {dark
+              ? <button className="mini-btn gold" onClick={() => onWait(((sun.sunrise - state.minute) + 1440) % 1440)}>Wait for the light ({formatClock(sun.sunrise)})</button>
+              : <button className="mini-btn" onClick={() => onWait(60)} title="Let an hour pass: the bench works on">Wait an hour</button>}
+          </div>
+          </div>
           {pop && (
           <div className={`estate-ledger estate-pop${popLeft ? ' left' : ''}${place === 'farm_map' && pop !== 'ledger' ? ' card' : ''}`} role="dialog" aria-label={`${title}: ledger`}>
             <button className="close-stamp estate-pop-close" onClick={closePop} aria-label="Close" title="Close"><CloseIcon size={11} /></button>
@@ -232,7 +249,7 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
               ? <GroundLedger state={state} ground={place} date={date} wx={wx} act={act} />
               : f && (
                 <PlaceLedger
-                  state={state} f={f} day={day} date={date} sel={sel} setSel={setSel} toggle={toggle} act={act}
+                  state={state} f={f} day={day} date={date} sel={sel} setSel={setSel} toggle={toggle} act={actWork}
                   planting={planting} setPlanting={setPlanting} feeding={feeding} setFeeding={setFeeding}
                   showKit={showKit} setShowKit={setShowKit} onOpenStaff={onOpenStaff}
                 />
@@ -422,7 +439,7 @@ const MapLedger: React.FC<{ state: GameState; onGo: (p: ScenePlace) => void; act
               {roles.map(r => {
                 const c = crew.find(x => x.role === r);
                 const where = (Object.keys(ROLE_FOR) as FacilityId[]).filter(k => ROLE_FOR[k] === r && est.facilities[k]).map(k => FACILITIES[k].name.replace('The ', ''));
-                return <li key={r}><span className="r">{ROLE_LABEL[r]}</span><span className="w">{c && <Portrait seed={c.id} size={26} className="el-face" role={c.role} />}{c ? `${c.name}, skill ${c.skill}` : 'nobody'}</span><span className="p">{where.join(', ') || 'the wild'}</span></li>;
+                return <li key={r}><span className="r">{ROLE_LABEL[r]}</span><span className="w">{c && <Portrait seed={c.id} size={26} className="el-face" role={c.role} />}{c ? `${c.name}, level ${crewLevel(c)}` : 'nobody'}</span><span className="p">{where.join(', ') || 'the wild'}</span></li>;
               })}
             </ul>
           )}
@@ -474,6 +491,9 @@ const PlaceLedger: React.FC<PlaceProps> = (p) => {
   const spec = FACILITIES[f.id];
   const groups = groupedProblems(f);
   const walkedToday = f.walkedDay === day;
+  // A practised gardener sees what is wrong as they come through the gate.
+  const GL = gardenerLevel(state);
+  const spotsAll = GL >= GARDEN_SPOT_AT;
   const hand = (state.crew as CrewMember[]).find(c => c.role === ROLE_FOR[f.id]);
 
   const selectedPlots = f.plots.filter(x => sel.includes(x.id));
@@ -491,10 +511,10 @@ const PlaceLedger: React.FC<PlaceProps> = (p) => {
         <div className="el-todo">
           {!walkedToday && (f.plots.some(x => x.planting) || f.trees.length > 0) && (
             <button className="el-do primary" onClick={() => act(s => walkRows(s, f.id, day))}>
-              <span className="what">Walk the rows</span><span className="why">see every problem here at once</span><span className="t mono">{spec.walkRows} min</span>
+              <span className="what">Walk the rows</span><span className="why">see every problem here at once</span><span className="t mono">{Math.round(spec.walkRows * gardenWalkMult(GL))} min</span>
             </button>
           )}
-          {groups.filter(g => g.seen || walkedToday).map(g => {
+          {groups.filter(g => g.seen || walkedToday || spotsAll).map(g => {
             const ps = PROBLEMS[g.id];
             const n = g.plots.length + g.trees.length;
             const passive = !ps || ps.minutes === 0 || g.id === 'birds_grain';
@@ -507,7 +527,7 @@ const PlaceLedger: React.FC<PlaceProps> = (p) => {
               </div>
             );
           })}
-          {groups.some(g => !g.seen) && !walkedToday && <p className="el-note">Something may be wrong that you have not seen yet.</p>}
+          {groups.some(g => !g.seen) && !walkedToday && !spotsAll && <p className="el-note">Something may be wrong that you have not seen yet.</p>}
           {dry.length > 0 && f.id !== 'top_field' && !f.kit.drip && (
             <button className="el-do" onClick={() => act(s => waterPlots(s, f.id, dry))}>
               <span className="what">Water {dry.length} bed{dry.length > 1 ? 's' : ''}</span><span className="why">{f.kit.hose ? 'with the hose' : 'by can'}</span>
@@ -602,6 +622,10 @@ const PlaceLedger: React.FC<PlaceProps> = (p) => {
           </ul>
         )}
       </section>
+
+      <SkillCard title="Your hands" {...progressOf(gardenerXp(state), GARDENER_LEVELS)}
+        perks={[[`+${gardenQualityBonus(GL)}`, 'grade'], [`×${gardenKgMult(GL).toFixed(2)}`, 'kilos picked'], [`${Math.round(spec.walkRows * gardenWalkMult(GL))} min`, 'to walk the rows']]}
+        note={spotsAll ? 'You see what is wrong here as you come in, without walking the rows.' : `Every job done here teaches you the ground. From level ${GARDEN_SPOT_AT} you see what is wrong as you come in.`} />
     </>
   );
 };

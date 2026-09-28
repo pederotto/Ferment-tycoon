@@ -1,4 +1,5 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
+import { COMPACT_QUERY } from './layout';
 import { Batch, Recipe, FermentType, WeatherState, WeatherType } from '../types';
 import { RECIPES, VESSELS } from '../constants';
 import { isAgitatedFerment } from '../services/gameLogic';
@@ -254,6 +255,7 @@ const LabView: React.FC<LabViewProps> = ({
      bands; covering it can crop the vessels at the edges. So the painting is
      fitted, then zoomed towards covering as far as the empty margins allow. */
   const roomRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia(COMPACT_QUERY).matches);
   const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
     const el = roomRef.current;
@@ -267,13 +269,22 @@ const LabView: React.FC<LabViewProps> = ({
       // outermost floor spots stand at x170 / x1174 and y724, so up to 110px a
       // side and 60px off the foot (the room is pinned to the top) is only
       // wall and flagstone. A ratio cap (1.12) left a band on every desktop.
-      const k = Math.max(contain, Math.min(cover, width / (W - 220), height / (H - 60)));
+      let k = Math.max(contain, Math.min(cover, width / (W - 220), height / (H - 60)));
+      // On a phone or an upright tablet the room is TALL and narrow: fitted to
+      // the width it was a strip a few centimetres high. It fills the height
+      // there instead, up to 2.4 screens wide, and pans under a finger.
+      const compact = window.matchMedia(COMPACT_QUERY).matches;
+      if (compact) k = Math.max(contain, Math.min(height / H, (width * 2.4) / W));
       setFit(prev => (prev && Math.abs(prev.w - W * k) < 1 && Math.abs(prev.h - H * k) < 1) ? prev : { w: W * k, h: H * k });
+      if (compact) requestAnimationFrame(() => { el.scrollLeft = Math.max(0, (W * k - el.clientWidth) / 2); });
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    const mq = window.matchMedia(COMPACT_QUERY);
+    const onMq = () => { setCompact(mq.matches); measure(); };
+    mq.addEventListener?.('change', onMq);
+    return () => { ro.disconnect(); mq.removeEventListener?.('change', onMq); };
   }, []);
 
   return (
@@ -286,7 +297,7 @@ const LabView: React.FC<LabViewProps> = ({
         <div className="slot-pill">Bench: <b>{usedSlots}</b> / {maxSlots} slots</div>
       </div>
 
-      <div className="iso-room" ref={roomRef}>
+      <div className={`iso-room${compact ? ' pan' : ''}`} ref={roomRef}>
         <svg viewBox={`0 0 ${W} ${H}`} className="iso-svg" role="group" aria-label="The fermentation bench"
              style={fit ? { width: fit.w, height: fit.h } : undefined}>
           <defs>

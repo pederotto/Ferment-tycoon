@@ -1,6 +1,7 @@
-import { GameState, FermentType } from '../types';
+import { GameState, FermentType, CrewMember } from '../types';
 import { INGREDIENTS, SUPPLIERS, KOJI_ROOM_DEFAULT_TARGET_KG } from '../constants';
 import { rollCrewPool, noStaff } from './crew';
+import { levelFromOldSkill, CREW_LEVELS } from './skills';
 import { newEstate, farmRolesFor } from './estate';
 import { FACILITIES } from '../constants.farm';
 import type { FacilityId } from '../types.farm';
@@ -40,6 +41,15 @@ interface SaveEnvelope {
 const freshDemand = (): Record<string, number> =>
   Object.values(FermentType).reduce((acc, t) => ({ ...acc, [t]: 1 }), {} as Record<string, number>);
 
+/** A hand from before experience existed: skill was 1-5 and rose with weeks
+    served. Put them on the 1-15 scale at the same standing, with the experience
+    that level takes, so nobody loses anything and they keep growing from there. */
+const toLevelScale = (c: CrewMember): CrewMember => {
+  if (c.xp !== undefined) return c;
+  const skill = levelFromOldSkill(c.skill);
+  return { ...c, skill, xp: CREW_LEVELS[skill - 1] };
+};
+
 /** Fields added after v1 shipped get defaults rather than undefined. */
 function migrate(state: Partial<GameState>): GameState {
   return {
@@ -63,12 +73,14 @@ function migrate(state: Partial<GameState>): GameState {
     // Saves made before the crew existed keep whatever boolean roles they had
     // running for free until the player hires someone real; there is no fair way
     // to invent names and wages for staff they already paid for.
-    crew: state.crew ?? [],
+    crew: (state.crew ?? []).map(toLevelScale),
+    // The player's own hands (services/skills.ts): a save from before them starts at 0.
+    craft: state.craft ?? {},
     // A save that predates the crew has no pool, and the pool only rolls every
     // fourth week — so without seeding one here the hiring list would be empty
     // for up to a month after loading, which reads as a broken screen.
     crewPool: (state.crewPool && state.crewPool.length > 0)
-      ? state.crewPool
+      ? state.crewPool.map(toLevelScale)
       : rollCrewPool(state.week ?? 1, state.kojiRoomOwned ?? false, farmRolesFor(state.estate)),
     contracts: state.contracts ?? [],
     unlockedVendorIds: state.unlockedVendorIds ?? [],

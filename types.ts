@@ -255,6 +255,8 @@ export interface Recipe {
 
 export interface Batch {
   id: string;
+  /** The fermenter's level when it was sealed: whose hand made it (services/skills.ts). */
+  craftLevel?: number;
   recipeId: string;
   cachedRecipe?: Recipe;
   substrateId: string;
@@ -689,8 +691,10 @@ export interface CrewMember {
   name: string;
   role: StaffRoleType;
   traitId: string;
-  /** 1-5. Rises with weeks worked; a raw hire is cheap and clumsy. */
+  /** Level 1-15 (services/skills.ts). Rises with the work they do, not the weeks. */
   skill: number;
+  /** Experience earned by doing the work; sets `skill` through CREW_LEVELS. */
+  xp?: number;
   /** Accumulated weeks of service, which is what raises skill. */
   weeksWorked: number;
   weeklyWage: number;
@@ -786,6 +790,10 @@ export interface GameState {
 
   // Per-recipe mastery. Buys progressively more precise advice, never a bonus.
   recipeMastery: Record<string, RecipeMastery>;
+
+  // The player's own hands, 1-15 (services/skills.ts). The forager's lives in
+  // estate.wild.xp; these two are the gardener's and the fermenter's.
+  craft: { gardener?: number; fermenter?: number };
 
   // Raids conceded. Escalates later fines and stops heat decaying on its own.
   undergroundBusts: number;

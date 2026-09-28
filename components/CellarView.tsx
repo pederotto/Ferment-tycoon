@@ -1,5 +1,7 @@
 import PanelMark from './PanelMark';
-import React, { useState } from 'react';
+import { RoomClock, ClockProps } from './SpeedControl';
+import React, { useState, useRef, useEffect } from 'react';
+import { isCompact } from './layout';
 import { Batch, Recipe } from '../types';
 import { VESSELS } from '../constants';
 import { getRecipeForBatch, getMaturity, describeMaturity } from '../services/gameLogic';
@@ -29,6 +31,8 @@ interface CellarViewProps {
   onClose: () => void;
   onSelect: (batch: Batch) => void;
   onBringUp: (batch: Batch) => void;
+  /** The game clock's control, so time can be run or stopped from inside the room. */
+  clock?: ClockProps;
   /** Places, with any bays the mason opened. */
   capacity?: number;
 }
@@ -88,8 +92,12 @@ const SHELF_SPOTS: Spot[] = [
    on those boards. */
 const ROOM_SCALE = 2.0;
 
-const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onBringUp, capacity = CELLAR_CAPACITY }) => {
+const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onBringUp, capacity = CELLAR_CAPACITY, clock }) => {
   const [focused, setFocused] = useState<string | null>(null);
+  // In the compact layout the room is drawn at full height and pans: open it on the middle.
+  const centreRef = useRef<HTMLDivElement | null>(null);
+  const centreRoom = (el: HTMLDivElement | null) => { centreRef.current = el; };
+  useEffect(() => { const el = centreRef.current; if (el && isCompact()) requestAnimationFrame(() => { el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2); }); }, []);
 
   const read = (batch: Batch) => {
     const recipe: Recipe = getRecipeForBatch(batch);
@@ -167,6 +175,7 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
             <span className="kicker">Below the workshop</span>
             <h2>The Cellar</h2>
           </div>
+          {clock && <RoomClock {...clock} />}
           <button className="close-stamp" onClick={onClose} aria-label="Back up to the bench">
             <CloseIcon size={13} />
           </button>
@@ -178,7 +187,7 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
           <span><b>{batches.length}</b> / {capacity} places</span>
         </div>
 
-        <div className="iso-room cellar-room">
+        <div className="iso-room cellar-room" ref={centreRoom}>
           <svg viewBox={`0 0 ${W} ${H}`} className="iso-svg" role="group" aria-label="The cellar">
             <defs>
               {/* A cellar is dark at the edges and lit where the lamps are. The

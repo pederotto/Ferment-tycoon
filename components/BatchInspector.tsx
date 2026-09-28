@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { craftRiskMult } from '../services/skills';
 import { BUYER_SEAL } from './sealSheet';
 import GameIcon from './GameIcon';
 import PanelMark from './PanelMark';
@@ -767,7 +768,13 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                       gameState.hygiene ?? 100, gameState.month ?? 0, gameState.weather,
                       batch.vesselId, batch.controls?.vent ?? 0, left,
                     );
-                    const pct = risk.perRun * 100;
+                    // The fermenter's hand scales the per-tick odds, exactly as the tick rolls them.
+                    const hand = craftRiskMult(batch.craftLevel);
+                    const pct = (1 - Math.pow(1 - Math.min(1, risk.perTick * hand), left)) * 100;
+                    const factors = hand < 1
+                      ? [...risk.factors, { label: 'Your hand', weight: hand, note: `sealed at fermenter level ${batch.craftLevel}` }]
+                          .sort((a, b) => Math.abs(Math.log(b.weight)) - Math.abs(Math.log(a.weight)))
+                      : risk.factors;
                     const tone = pct >= 55 ? 'var(--brick)' : pct >= 20 ? 'var(--amber)' : 'var(--moss)';
                     return (
                       <div className="spoil-odds">
@@ -779,7 +786,7 @@ const BatchInspector: React.FC<BatchInspectorProps> = ({
                         </div>
                         <div className="so-bar"><span style={{ width: `${Math.min(100, pct)}%`, background: tone }} /></div>
                         <ul className="so-list">
-                          {risk.factors.slice(0, 4).map(f => (
+                          {factors.slice(0, 4).map(f => (
                             <li key={f.label} className={f.weight > 1 ? 'up' : 'down'}>
                               <span className="l">{f.label}</span>
                               <span className="w mono">{f.weight > 1 ? '+' : ''}{((f.weight - 1) * 100).toFixed(0)}%</span>

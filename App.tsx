@@ -11,7 +11,8 @@ import { inSeason, nextInSeason, MONTH_NAMES } from './constants.forage';
 import { isAgitatedFerment, filmsOver, filmIsTheCulture } from './services/gameLogic';
 import { ageingBehaviour, describeMaturity, processBatchTick, getAmbientConditions, applyBatchIntervention, calculateBatchDynamics, getRecipeForBatch, calculateCriticScore, getInterestedBuyers, getBestOffer, getDemandHitForSale, recoverDemand, calculateOverheads, getLineage, getControls, isFlesh, provenanceOf, LABEL_DEMAND_KEY, BIO_SALE_HIT, sporeYield, sporeValue, cultureSalePrice, cultureDemandAfter, CULTURE_DEMAND_KEY, isContrabandBatch } from './services/gameLogic';
 import { propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage , sporePotency } from './services/koji';
-import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect, noStaff } from './services/crew';
+import { rollCrewPool, advanceCrew, crewWages, crewToStaffFlags, crewEffect, noStaff, crewLearnFromBatch } from './services/crew';
+import { gainCraft, batchXp, fermenterLevel, fermenterXp, levelOf, FERMENTER_LEVELS, craftSteadiness, craftYieldMult } from './services/skills';
 import { registerCustomIngredients, findIngredient } from './services/ingredientRegistry';
 import { newEstate, farmRolesFor, estateDay, EstateReport, baseIngredient, ActionResult, addWaste, addToPantry, mintSoilProduct } from './services/estate';
 import { wildDay, arriveAt, walkTo } from './services/wild';
@@ -112,6 +113,7 @@ export default function App() {
     insolvencyStrikes: 0,
     gameOver: false,
     recipeMastery: {},
+    craft: {},
     undergroundBusts: 0,
     onboardingDone: false,
     kojiRoomOwned: false,
@@ -241,6 +243,17 @@ export default function App() {
 
   /** Out on the estate: the farm or the wild. While set, the live clock waits for you. */
   const [fieldView, setFieldView] = useState<null | 'farm' | 'wild'>(null);
+  // On a phone, and a tablet held upright, the rail is a drawer behind a menu button.
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Walking out to the estate stops the clock (it is turn by turn until you
+  // press play or skip ahead); walking home puts it back as it was.
+  const pausedBeforeField = useRef(false);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
 
   /** Where on the estate the player is standing. */
   const [estatePlace, setEstatePlace] = useState<ScenePlace>('farm_map');
@@ -737,7 +750,7 @@ export default function App() {
         // The crew get better at the job, and ask for more when they do.
         // The pool refreshes monthly — who is looking for work is part of
         // the situation, not a permanent shop.
-        newCrew = advanceCrew(prev.crew ?? []);
+        newCrew = advanceCrew(prev.crew ?? [], prev);
         if (newWeek % 4 === 1 || newCrewPool.length === 0) newCrewPool = rollCrewPool(newWeek, prev.kojiRoomOwned, farmRolesFor(prev.estate));
 
         // Appetite for every ferment type drifts back toward normal.
@@ -899,23 +912,26 @@ export default function App() {
     const walk = GROUNDS[estatePlace as GroundId] ? GROUNDS[estatePlace as GroundId].walk : estatePlace !== 'farm_map' && estatePlace !== 'wild_map' ? FACILITIES[estatePlace as FacilityId].walk : 2;
     setGameState(prev => advanceWorld(prev, walk));
     setFieldView(null);
+    // Home again: the clock does whatever it was doing before you went out.
+    setPaused(pausedBeforeField.current);
   };
 
   // --- Game Loop ---
-  // In the lab the world runs live. On the estate it waits for you: time there
-  // moves with each thing you do, through advanceWorld.
+  // The world runs live everywhere now, the estate included: the owner asked for
+  // the clock to be run or stopped from inside the estate and the growing rooms
+  // (each carries a SpeedControl). Paused, the estate is still turn by turn —
+  // every action spends its own minutes through advanceWorld.
   useEffect(() => {
     if (uiState.inspectorRaid || uiState.showWelcome) return;
     if (paused) return; // Fully paused state
     if (gameState.gameOver) return; // Lab is closed — the clock stops
-    if (fieldView) return; // Out on the estate: the clock moves with what you do
 
     const tickRate = 1000 / gameSpeed;
     const interval = setInterval(() => {
       setGameState(prev => advanceWorld(prev, MINUTES_PER_TICK));
     }, tickRate);
     return () => clearInterval(interval);
-  }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, paused, gameState.gameOver, fieldView]);
+  }, [uiState.inspectorRaid, uiState.showWelcome, gameSpeed, paused, gameState.gameOver]);
 
   const handleGreaseTheFile = () => {
     if (gameState.renown < GREASE_RENOWN_COST) {
@@ -1312,6 +1328,8 @@ export default function App() {
     // Initialize New Physics State
     newBatch.stress = 0;
     newBatch.disturbanceTimer = 0;
+    // Whose hand sealed it: the fermenter's level travels with the batch (services/skills.ts).
+    newBatch.craftLevel = fermenterLevel(gameState);
     newBatch.flags = { isLidPropped: false };
     newBatch.surfaceWater = newBatch.surfaceWater ?? 0;
 
@@ -1366,7 +1384,7 @@ export default function App() {
             if (b.id !== batch.id) return b;
             // Turning a heap is air and heat, not evenness: the soil lab's own turn.
             if (action === 'Turn' && isSoilRecipe(getRecipeForBatch(b))) return turnSoil(b);
-            return applyBatchIntervention(b, action, currentAmbient, getRecipeForBatch(b), gameState.inventory);
+            return applyBatchIntervention(b, action, currentAmbient, getRecipeForBatch(b), gameState.inventory, craftSteadiness(fermenterLevel(gameState)));
         }),
         // Small hygiene hit for interactions
         hygiene: Math.max(0, prev.hygiene - 1) 
@@ -1749,6 +1767,20 @@ export default function App() {
     });
   };
 
+  /* A finished batch teaches whoever worked it, weighted by its score: the
+     player's fermenter track and every bench hand (services/skills.ts). Pure, so
+     it can sit inside an updater; the notice is posted outside it. */
+  const learnFromBatch = (prev: GameState, xp: number): GameState => {
+    if (xp <= 0) return prev;
+    const g = gainCraft(prev, 'fermenter', xp).state;
+    return { ...g, crew: crewLearnFromBatch(g.crew ?? [], xp) };
+  };
+  const announceFermenter = (xp: number) => {
+    const before = fermenterLevel(gameState);
+    const after = levelOf(fermenterXp(gameState) + xp, FERMENTER_LEVELS);
+    if (after > before) setLabNotification({ id: Date.now() + 3, text: `Your hand at the bench is steadier: fermenter level ${after}. Batches you seal now spoil less, yield more and take a disturbance better.`, type: 'info' });
+  };
+
   const processHarvest = (batch: Batch, moneyGain: number, renownGain: number, sporeAmount: number, isSporulation: boolean, buyerName: string, isContracted: boolean = false) => {
     const recipe = getRecipeForBatch(batch);
     const substrate = [...INGREDIENTS, ...gameState.customIngredients].find(i => i.id === batch.substrateId);
@@ -1828,6 +1860,8 @@ export default function App() {
     // Cooking a recipe is how you learn it. Weighted by the critic score, so a
     // good run teaches disproportionately more and a failure teaches nothing.
     const mastery = grantMastery(gameState.recipeMastery, recipe, calculatedScore, batch);
+    const handXp = isSporulation ? 0 : batchXp(calculatedScore);
+    announceFermenter(handXp);
     if (mastery.leveledTo) {
       setLabNotification({
         id: Date.now() + 2,
@@ -1838,7 +1872,7 @@ export default function App() {
     }
 
     setGameState(prev => ({
-      ...prev,
+      ...learnFromBatch(prev, handXp),
       recipeMastery: mastery.next,
       marketDemand: (() => {
         let md = soldType && demandHit > 0
@@ -1898,7 +1932,8 @@ export default function App() {
     }
 
     // Yield applies to inventory count
-    const amount = Math.max(1, Math.floor(1 * (batch.yieldVolume || 1)));
+    // The fermenter's hand: less spilled racking it off (services/skills.ts).
+    const amount = Math.max(1, Math.floor((batch.yieldVolume || 1) * craftYieldMult(batch.craftLevel)));
     const outputId = recipe.outputIngredientId || `vintage_${recipe.id}`;
     let newCustomIngredients = [...gameState.customIngredients];
 
@@ -1933,6 +1968,8 @@ export default function App() {
     const currentScore = batch.evaluationScore || calculateCriticScore(batch, recipe, gameState.staff);
     // Cellaring a batch is still a completed run, so it teaches the same as a sale.
     const storeMastery = grantMastery(gameState.recipeMastery, recipe, currentScore, batch);
+    const storeXp = batchXp(currentScore);
+    announceFermenter(storeXp);
     if (storeMastery.leveledTo) {
       setLabNotification({
         id: Date.now() + 2,
@@ -1964,7 +2001,7 @@ export default function App() {
 
       const read = describeEnzymes(batch.enzymes);
       setGameState(prev => ({
-        ...prev,
+        ...learnFromBatch(prev, storeXp),
         batches: prev.batches.filter(b => b.id !== batch.id),
         customIngredients: newCustomIngredients,
         inventory: { ...prev.inventory, [product.id]: (prev.inventory[product.id] || 0) + amount },
@@ -1987,7 +2024,7 @@ export default function App() {
     }
 
     setGameState(prev => ({
-      ...prev,
+      ...learnFromBatch(prev, storeXp),
       inventory: { ...prev.inventory, [outputId]: (prev.inventory[outputId] || 0) + amount },
       batches: prev.batches.filter(b => b.id !== batch.id),
       customIngredients: newCustomIngredients,
@@ -2058,6 +2095,20 @@ export default function App() {
     }
   }, [gameState.day, gameState.week, gameState.month, gameState.year,
       gameState.heat, gameState.gameOver, uiState.inspectorRaid, uiState.showWelcome]);
+
+  // The clock's control, for the rooms that carry one (estate, cellar, koji room).
+  const sunToday = sunTimes(dayOfYear(gameState));
+  const clock = {
+    gameSpeed, paused, onSetSpeed: setGameSpeed, onTogglePause: () => setPaused(p => !p),
+    jump: {
+      minute: gameState.minute, sunrise: sunToday.sunrise, sunset: sunToday.sunset,
+      // Runs the world forward exactly as the clock would: every tick, every day.
+      onJump: (minutes: number, label: string) => {
+        setGameState(prev => advanceWorld(prev, minutes));
+        if (fieldView) setFieldLog(l => [...l.filter(x => x.day === todayKey), { day: todayKey, at: formatClock(gameState.minute), text: `Skipped ahead · ${label.toLowerCase()}` }].slice(-12));
+      },
+    },
+  };
 
   // Helper for ambient display
   const currentAmbient = getAmbientConditions(gameState.month, gameState.weather);
@@ -2247,10 +2298,18 @@ export default function App() {
       )}
 
       {/* Main Layout - Modified to allow Sourcing Popup */}
-      <div className={`lab-grid pane-${railPane}`}>
+      {/* THE MENU, ON A PHONE. The rail's weather, Go To and pantry were a long
+          scroll under the room; there they are a drawer behind one big button,
+          in thumb reach, and choosing somewhere to go closes it. CSS decides
+          when the button exists (the compact layout); on a desktop it is not drawn. */}
+      <button className={`menu-fab${menuOpen ? ' open' : ''}`} onClick={() => setMenuOpen(o => !o)} aria-label={menuOpen ? 'Close the menu' : 'Open the menu'} aria-expanded={menuOpen}>
+        <span /><span /><span />
+      </button>
+      {menuOpen && <button className="menu-scrim" aria-label="Close the menu" onClick={() => setMenuOpen(false)} />}
+      <div className={`lab-grid pane-${railPane}${menuOpen ? ' menu-open' : ''}`}>
 
         {/* LEFT RAIL — the world, and what you own. */}
-        <aside className="rail left">
+        <aside className="rail left" onClickCapture={e => { if ((e.target as Element).closest('.tab-btn-hud')) setTimeout(() => setMenuOpen(false), 0); }}>
           <section className="rail-sect">
             <h3>Weather</h3>
             <WeatherGlass
@@ -2314,7 +2373,7 @@ export default function App() {
             {/* The estate is a place you go, like the cellar: out there the clock
                 moves with what you do, and the bench keeps the same time behind you. */}
             <button
-            onClick={() => { setEstatePlace('farm_map'); setFieldView('farm'); }}
+            onClick={() => { setEstatePlace('farm_map'); setFieldView('farm'); pausedBeforeField.current = paused; setPaused(true); }}
             className="tab-btn-hud"
             title="The farm: garden, tunnel, field, orchard, bees, hens and the shed"
             >
@@ -2581,6 +2640,7 @@ export default function App() {
             onClose={leaveEstate}
             onOpenStaff={() => setUiState(u => ({ ...u, showStaff: true }))}
             log={fieldLog.filter(x => x.day === todayKey)}
+            clock={clock}
           />
         )}
 
@@ -2591,6 +2651,7 @@ export default function App() {
             onSelect={b => { setShowCellar(false); setUiState(u => ({ ...u, activeBatchId: b.id })); }}
             onBringUp={b => handleUncellarBatch(b)}
             capacity={cellarCapacity(gameState)}
+            clock={clock}
           />
         )}
 
@@ -2604,6 +2665,7 @@ export default function App() {
             onClose={() => setShowKojiRoom(false)}
             onSelect={b => { setShowKojiRoom(false); setUiState(u => ({ ...u, activeBatchId: b.id })); }}
             onCarryOut={b => handleFromKojiRoom(b)}
+            clock={clock}
           />
         )}
 
@@ -2694,6 +2756,7 @@ export default function App() {
               week={gameState.week}
               onHire={handleHire}
               onLetGo={handleLetGo}
+              self={gameState}
           />
       )}
 

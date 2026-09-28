@@ -7,6 +7,8 @@ import {
   BIO_CONVERSION_DAYS, BIO_LIFE_MIN, SPRAYABLE, QUALITY_ELASTIC, SPRAY_DAYS, SPRAY_COST_M2, HOME_GROWN_PREMIUM, BIO_VAN_PREMIUM, BIO_APPETITE_KG,
 } from '../constants.farm';
 import { makeCandidate } from './crew';
+import { skill5, frac, crewLevel, gardenerLevel, gardenQualityBonus, gardenKgMult, gardenWalkMult } from './skills';
+import { WILD } from '../constants.wild';
 import { INGREDIENTS } from '../constants';
 import { SOIL_EFFECTS, SOIL_PRODUCT_INGREDIENTS, SOIL_PRODUCT_IDS } from '../constants.soil';
 import { strengthOf } from './soil';
@@ -161,10 +163,26 @@ export const vanUnitPrice = (state: GameState, itemId: string): number => {
   const item = state.customIngredients.find(i => i.id === itemId) ?? base;
   if (!base || !item) return 0;
   const cls = produceClassOf(base.id);
-  const demand = state.estate?.vanDemand[cls] ?? 1;
+  const demand = (state.estate?.vanDemand[cls] ?? 1) * wildGlut(state, base.id);
   const k = QUALITY_ELASTIC[base.id];
   const qMult = k ? Math.pow(item.quality / Math.max(1, base.quality), k) : 0.7 + 0.3 * (item.quality / Math.max(1, base.quality));
   return Math.max(0, base.baseCost * VAN_WHOLESALE * demand * qMult * labelMult(state, itemId));
+};
+
+/* WILD THINGS ARE A SCARCE MARKET, AND IT FILLS FOR GOOD. The owner's call: a
+   rare ingredient sells well at the gate early on, and then the few buyers who
+   want it have had their fill, so a forager's haul has to go to the bench. Two
+   terms, both on top of the class's weekly appetite: a tiny weekly appetite of
+   its own (`WILD_APPETITE_KG`, recovering with the rest), and the kilos of it
+   ever sold (`wildSoldKg`), which never recover — half price by the sixth kilo,
+   a sixth by the thirtieth. */
+export const WILD_APPETITE_KG = 1.5;
+export const WILD_SATURATION_KG = 6;
+const wildKey = (id: string) => `wild:${id}`;
+export const wildGlut = (state: GameState, baseId: string): number => {
+  if (!WILD[baseId]) return 1;
+  const est = state.estate;
+  return (est?.vanDemand[wildKey(baseId)] ?? 1) / (1 + (est?.wildSoldKg?.[baseId] ?? 0) / WILD_SATURATION_KG);
 };
 
 /** Home-grown sells over wholesale; biodynamic sells for a great deal more while its few buyers last. */
@@ -183,13 +201,18 @@ export const sellToVan = (state: GameState, itemId: string, units: number): { st
   const est = state.estate;
   let demand = est.vanDemand[cls] ?? 1;
   let bioDemand = est.vanDemand.biodynamic ?? 1;
+  const wild = !!WILD[base.id];
+  let wildDemand = est.vanDemand[wildKey(base.id)] ?? 1;
+  let wildSold = est.wildSoldKg?.[base.id] ?? 0;
   let paid = 0;
   const item = state.customIngredients.find(i => i.id === itemId) ?? base;
   const qMult = 0.7 + 0.3 * (item.quality / Math.max(1, base.quality));
   const bio = isBio(itemId);
   for (let i = 0; i < n; i++) {
-    paid += base.baseCost * VAN_WHOLESALE * demand * qMult * labelMult(state, itemId, bioDemand);
+    const glut = wild ? wildDemand / (1 + wildSold / WILD_SATURATION_KG) : 1;
+    paid += base.baseCost * VAN_WHOLESALE * demand * glut * qMult * labelMult(state, itemId, bioDemand);
     demand *= Math.exp(-unitKg / appetite);
+    if (wild) { wildDemand *= Math.exp(-unitKg / WILD_APPETITE_KG); wildSold += unitKg; }
     if (bio) bioDemand *= Math.exp(-unitKg / BIO_APPETITE_KG);
   }
   paid = Math.round(paid * 100) / 100;
@@ -201,7 +224,11 @@ export const sellToVan = (state: GameState, itemId: string, units: number): { st
       ...state,
       money: state.money + paid,
       inventory: { ...state.inventory, [itemId]: have - n },
-      estate: { ...est, vanDemand: { ...est.vanDemand, [cls]: Math.max(0.05, demand), ...(bio ? { biodynamic: Math.max(0.05, bioDemand) } : {}) }, ledger },
+      estate: {
+        ...est, ledger,
+        vanDemand: { ...est.vanDemand, [cls]: Math.max(0.05, demand), ...(bio ? { biodynamic: Math.max(0.05, bioDemand) } : {}), ...(wild ? { [wildKey(base.id)]: Math.max(0.02, wildDemand) } : {}) },
+        ...(wild ? { wildSoldKg: { ...(est.wildSoldKg ?? {}), [base.id]: wildSold } } : {}),
+      },
     },
     paid,
   };
@@ -237,7 +264,9 @@ const handOf = (crew: CrewMember[], role: FarmRole): CrewMember | undefined =>
   (crew as any[]).filter(c => c.role === role).sort((a, b) => b.skill - a.skill)[0];
 
 /** A hand misses a little of what they are asked to do, less as they learn the place. */
-const missRate = (c: CrewMember | undefined) => c ? clamp(0.3 - c.skill * 0.055, 0.02, 0.3) : 1;
+const missRate = (c: CrewMember | undefined) => c ? clamp(0.3 - skill5(c) * 0.055, 0.02, 0.3) : 1;
+/** A practised hand picks better, as the player does: up to +10 grade at level 15. */
+const handGrade = (c: CrewMember | undefined) => (c ? Math.round(10 * frac(crewLevel(c))) : 0);
 
 /* -----------------------------------------------------------------------------
    THE DAY
@@ -277,6 +306,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
     const f: FacilityState = { ...f0, orders: { ...f0.orders }, kit: { ...f0.kit } };
     const hand = handOf(crew, ROLE_FOR[fid]);
     const miss = missRate(hand);
+    const hq = handGrade(hand);
     const ctx: DayCtx = { day, month: date.month, doy, wx, wetStreak, dryStreak, kit: kitProvides(f.kit), bees, stoveLit: !!f.stoveLit };
     const orders = f.orders;
     const act = (salt: string) => hand && roll('hand', fid, salt, day) >= miss;
@@ -357,7 +387,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
         if (due && !grain) {
           const res = pickPlanting(next, BASE(next.cropId)?.quality ?? 70);
           next = res.planting;
-          if (res.kg > 0) { produce.push({ id: next.cropId, kg: res.kg, q: res.quality, bio: bedIsBiodynamic(plot, day, f.boughtDay) }); report.picked[next.cropId] = (report.picked[next.cropId] ?? 0) + res.kg; }
+          if (res.kg > 0) { produce.push({ id: next.cropId, kg: res.kg, q: Math.min(100, res.quality + hq), bio: bedIsBiodynamic(plot, day, f.boughtDay) }); report.picked[next.cropId] = (report.picked[next.cropId] ?? 0) + res.kg; }
         }
       }
       return { ...plot, planting: next };
@@ -386,7 +416,7 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
       if (orders.pick && tree.ripeKg > 0.05 && act('tpick' + tree.id)) {
         const res = pickTree(tree, BASE(tree.cropId)?.quality ?? 70);
         tree = res.tree;
-        if (res.kg > 0) { produce.push({ id: tree.cropId, kg: res.kg, q: res.quality, bio: treeIsBiodynamic(tree, day, f.boughtDay) }); report.picked[tree.cropId] = (report.picked[tree.cropId] ?? 0) + res.kg; }
+        if (res.kg > 0) { produce.push({ id: tree.cropId, kg: res.kg, q: Math.min(100, res.quality + hq), bio: treeIsBiodynamic(tree, day, f.boughtDay) }); report.picked[tree.cropId] = (report.picked[tree.cropId] ?? 0) + res.kg; }
       }
       return tree;
     });
@@ -731,7 +761,7 @@ export const walkRows = (state: GameState, fid: FacilityId, day: number): Action
   const count = plots.reduce((a, p) => a + (p.planting?.problems.length ?? 0), 0) + trees.reduce((a, t) => a + t.problems.length, 0);
   return {
     state: withFacility(state, fid, { ...f, plots, trees, walkedDay: day }),
-    minutes: FACILITIES[fid].walkRows,
+    minutes: Math.round(FACILITIES[fid].walkRows * gardenWalkMult(gardenerLevel(state))),
     message: count === 0 ? 'Walked the rows. Nothing wrong.' : `Walked the rows: ${count} thing${count > 1 ? 's' : ''} to see to.`,
     ok: true,
   };
@@ -947,13 +977,15 @@ export const pickHere = (state: GameState, fid: FacilityId, ids: string[]): Acti
   let minutes = 0;
   const today = absoluteDay(state as unknown as CalendarDate);
   const got: { id: string; kg: number; q: number; bio: boolean }[] = [];
+  // A practised gardener takes more of what is there and takes it better (services/skills.ts).
+  const GL = gardenerLevel(state), gq = gardenQualityBonus(GL), gk = gardenKgMult(GL);
   const plots = f.plots.map(p => {
     const pl = p.planting;
     if (!ids.includes(p.id) || !pl || pl.ripeKg <= 0.05) return p;
     const fam = FAMILIES[CROPS[pl.cropId].family];
     const r = pickPlanting(pl, BASE(pl.cropId)?.quality ?? 70);
     if (r.kg <= 0) return p;
-    got.push({ id: pl.cropId, kg: r.kg, q: r.quality, bio: bedIsBiodynamic(p, today, f.boughtDay) });
+    got.push({ id: pl.cropId, kg: r.kg * gk, q: Math.min(100, r.quality + gq), bio: bedIsBiodynamic(p, today, f.boughtDay) });
     if (fam.pickKgH > 0) minutes += (r.kg / fam.pickKgH) * 60;
     else minutes += f.kit.scythe ? 360 : 540;   // a strip of grain by hand: cut, stook, thresh
     return { ...p, planting: r.planting };
@@ -961,7 +993,7 @@ export const pickHere = (state: GameState, fid: FacilityId, ids: string[]): Acti
   const trees = f.trees.map(t => {
     if (!ids.includes(t.id) || t.ripeKg <= 0.05) return t;
     const r = pickTree(t, BASE(t.cropId)?.quality ?? 70);
-    got.push({ id: t.cropId, kg: r.kg, q: r.quality, bio: treeIsBiodynamic(t, today, f.boughtDay) });
+    got.push({ id: t.cropId, kg: r.kg * gk, q: Math.min(100, r.quality + gq), bio: treeIsBiodynamic(t, today, f.boughtDay) });
     minutes += (r.kg / (TREE_SPECS[t.cropId].pickKgH * (f.kit.ladder ? 2 : 1))) * 60;
     return r.tree;
   });

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { isCompact } from './layout';
+import { RoomClock, ClockProps } from './SpeedControl';
 import { Batch, Recipe, CrewMember } from '../types';
 import PanelMark from './PanelMark';
 import { getRecipeForBatch, getMaturity, describeMaturity } from '../services/gameLogic';
@@ -33,6 +35,8 @@ interface KojiRoomViewProps {
   onClose: () => void;
   onSelect: (batch: Batch) => void;
   onCarryOut: (batch: Batch) => void;
+  /** The game clock's control, so time can be run or stopped from inside the room. */
+  clock?: ClockProps;
 }
 
 const W = 1344;
@@ -100,8 +104,12 @@ const STAGE_TONE: Record<Stage, string> = {
   growing: 'var(--moss)', peak: 'var(--amber)', spore: 'var(--plum)', spoiled: 'var(--brick)',
 };
 
-const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, targetKg, onTarget, onClose, onSelect, onCarryOut }) => {
+const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, targetKg, onTarget, onClose, onSelect, onCarryOut, clock }) => {
   const [focused, setFocused] = useState<string | null>(null);
+  // In the compact layout the room is drawn at full height and pans: open it on the middle.
+  const centreRef = useRef<HTMLDivElement | null>(null);
+  const centreRoom = (el: HTMLDivElement | null) => { centreRef.current = el; };
+  useEffect(() => { const el = centreRef.current; if (el && isCompact()) requestAnimationFrame(() => { el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2); }); }, []);
   const beds = batches
     .map(batch => { const recipe = recipeOf(batch); return { batch, recipe, stage: stageOf(batch, recipe) }; })
     .sort((a, b) => (a.batch.startTime ?? 0) - (b.batch.startTime ?? 0));
@@ -120,6 +128,7 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
             <span className="kicker">Off the workshop</span>
             <h2>The Koji Room</h2>
           </div>
+          {clock && <RoomClock {...clock} />}
           <button className="close-stamp" onClick={onClose} aria-label="Back to the bench">
             <CloseIcon size={13} />
           </button>
@@ -147,7 +156,7 @@ const KojiRoomView: React.FC<KojiRoomViewProps> = ({ batches, keeper, stockKg, t
           </span>
         </div>
 
-        <div className="iso-room cellar-room">
+        <div className="iso-room cellar-room" ref={centreRoom}>
           <svg viewBox={`0 0 ${W} ${H}`} className="iso-svg" role="group" aria-label="The koji room">
             <defs>
               <radialGradient id="kojiVignette" cx="50%" cy="44%" r="74%">

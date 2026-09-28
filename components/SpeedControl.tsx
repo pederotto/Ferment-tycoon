@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, PauseCircle } from 'lucide-react';
+import TimeJump, { TimeJumpProps } from './TimeJump';
 
 /**
  * THE CLOCK, WHEREVER YOU HAPPEN TO BE STANDING.
@@ -15,6 +16,24 @@ import { Play, PauseCircle } from 'lucide-react';
  * resume at. Speed and pause are separate here, and the selected speed stays
  * lit while the clock is stopped.
  */
+
+/** What a room needs to carry the clock: the same four things the header has. */
+export interface ClockProps {
+  gameSpeed: number;
+  paused: boolean;
+  onSetSpeed: (n: number) => void;
+  onTogglePause: () => void;
+  /** For the jump: now, and today's light. */
+  jump?: TimeJumpProps;
+}
+
+/** The speed and the jump together, for a room's head. */
+export const RoomClock: React.FC<ClockProps> = ({ jump, ...speed }) => (
+  <div className="room-clock">
+    <SpeedControl {...speed} compact />
+    {jump && <TimeJump {...jump} />}
+  </div>
+);
 
 interface SpeedControlProps {
   gameSpeed: number;

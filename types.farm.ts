@@ -315,6 +315,8 @@ export interface WildState {
   hedgeReal?: boolean;
   /** Last year the patches were settled. */
   settledYear?: number;
+  /** The player's foraging experience: see `forageLevel` in services/wild.ts. Absent is 0. */
+  xp?: number;
 }
 
 export interface EstateState {
@@ -334,6 +336,8 @@ export interface EstateState {
   /** The part-kilo of an item not yet a whole unit in the pantry, by item id:
       produce, waste and soil products all live in `inventory` in whole units. */
   carry?: Record<string, number>;
+  /** Kilos of each wild thing ever sold to the van: the market gets used to it. */
+  wildSoldKg?: Record<string, number>;
   /** The run of wet and dry days, ending yesterday. */
   wetStreak?: number;
   dryStreak?: number;

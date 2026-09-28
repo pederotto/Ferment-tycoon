@@ -1,4 +1,5 @@
 import { findIngredient } from './ingredientRegistry';
+import { craftYieldMult, craftRiskMult } from './skills';
 
 import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage, GameState, CrewMember } from '../types';
 import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe , sporePotency, isKojiSpore, isLiveKoji, citricPotential } from './koji';
@@ -572,7 +573,9 @@ export const applyBatchIntervention = (
     action: string, 
     ambientTemp: number,
     recipe?: Recipe,
-    inventory?: Record<string, number>
+    inventory?: Record<string, number>,
+    /** 0-0.6: how much less a steady hand disturbs the ferment (services/skills.ts). */
+    steadiness = 0
 ): Batch => {
     const newParams = { ...batch.params };
     const messages = [...batch.messages];
@@ -792,7 +795,7 @@ export const applyBatchIntervention = (
         quality: quality,
         flags: flags,
         messages: messages.slice(-5),
-        disturbanceTimer: (batch.disturbanceTimer || 0) + disturbance 
+        disturbanceTimer: (batch.disturbanceTimer || 0) + Math.round(disturbance * (1 - steadiness)) 
     };
 };
 
@@ -1643,7 +1646,8 @@ export const processBatchTick = (
   // Seeded on the batch and its progress, so StrictMode's second invocation of
   // this updater computes the identical answer instead of rolling again.
   const tickSeed = Math.round(progress * 100);
-  if (risk.perTick > 0 && seededRoll(batch.id, tickSeed, 0x5A17) < risk.perTick) {
+  // A practised hand leaves a contaminant fewer ways in: the odds, not the rules (services/skills.ts).
+  if (risk.perTick > 0 && seededRoll(batch.id, tickSeed, 0x5A17) < risk.perTick * craftRiskMult(batch.craftLevel)) {
       // A bloom: a real event, not a bleed. Repeated ones still ruin a batch.
       safetyDecay += 9 + 10 * risk.saltDeficit;
       newQuality.funk = Math.min(100, newQuality.funk + 4);
@@ -2845,7 +2849,8 @@ export const calculateOffer = (
   if (score <= 0 && !buyer.pricesContraband) return { money: 0, renown: 0 };
 
   const chefMultiplier = activeStaff?.chef ? 1.15 : 1.0;
-  const yieldMult = getYieldMultiplier(batch.yieldVolume || 1);
+  // The fermenter's hand: less spilled and less left in the press (services/skills.ts).
+  const yieldMult = getYieldMultiplier((batch.yieldVolume || 1) * craftYieldMult(batch.craftLevel));
   const demand = getDemandFor(recipe.type, marketDemand);
   // A buyer who knows you pays over the odds, and that is the return on the
   // relationship. Fences are excluded deliberately — the underground does not
@@ -2898,7 +2903,7 @@ export const calculateWholesale = (
 ): number => {
   if (ctx.score <= 0) return 0;
   const chefMultiplier = ctx.activeStaff?.chef ? 1.15 : 1.0;
-  const yieldMult = getYieldMultiplier(batch.yieldVolume || 1);
+  const yieldMult = getYieldMultiplier((batch.yieldVolume || 1) * craftYieldMult(batch.craftLevel));
   const demand = getDemandFor(recipe.type, ctx.marketDemand);
   return Math.max(
     5,
@@ -2929,7 +2934,7 @@ export const getBestOffer = (
 
 /** How far one sale depresses appetite for that ferment type. */
 export const getDemandHitForSale = (batch: Batch): number =>
-  DEMAND_DROP_PER_YIELD * getYieldMultiplier(batch.yieldVolume || 1);
+  DEMAND_DROP_PER_YIELD * getYieldMultiplier((batch.yieldVolume || 1) * craftYieldMult(batch.craftLevel));
 
 /** Weekly appetite recovery, drifting every type back toward normal. */
 export const recoverDemand = (
