@@ -1863,7 +1863,7 @@ with the guess. If there is no real figure for a process, do not check it.
 
 ## Farm icons (components/farmIconSheet.ts)
 - Cut from the owner's tool sheet and farm-unit sheet by `scripts/forage_art/cut_icons.py`, which names cells row.column as `rows_of` numbers them. Check a new sheet as an indexed contact strip first: the tool sheet's spore print is two blobs, so its row has nine cells.
-- The unit icons carry state: a hive with bees in the air when the colony is strong, a worm tray open on its castings once there are some to take, a fly bin idle, busy or full of prepupae. Kit items without a painted tool (sprayer, pheromone traps, scarecrow, fence, seed drill, scythe) show their name alone.
+- The unit icons carry state: a hive with bees in the air when the colony is strong, a worm tray open on its castings once there are some to take, a fly bin idle, busy or full of prepupae. The rest of the kit (sprayer, pheromone trap, scarecrow, fence, seed drill, scythe) comes off `7ab3xh`, a ruled 3x2 sheet: its black rules would join every tool into one blob, so `grid_cells` erases them and cuts on the grid. It paints each tool about three times the first tool sheet's size, so each is fitted to the same 50 px box (LANCZOS, alpha cut hard).
 
 ## The orchard plate and the farm hands' faces
 - The orchard is painted (`vyipot`); its six trees are canopy ellipses in `PAINTED_GEOM.orchard`, measured off the summer plate, and the game draws blossom, fruit and windfalls into them as it does in the lemon house. The yuzu is painted with fruit all year, which is right for an evergreen citrus that holds its crop into winter.
