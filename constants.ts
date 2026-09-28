@@ -160,8 +160,10 @@ export const BOOKS: Book[] = [
 /* Where a koji bed can grow. The Cedar Muro was sold as the koji vessel between
    the tray and the chamber, but every koji entry named only the tray, so koji
    in a muro was Bio-Sludge. Only the entries that GROW A MOULD ON A BED take
-   this list; bottarga, casu marzu, tempeh, katsuobushi, meju and IMO stay on
-   the tray. The heritage module repeats the literal (it cannot import this). */
+   this list (tempeh too: rhizopus is a bed mould that wants 30-35 C); bottarga,
+   casu marzu, katsuobushi, meju and IMO stay on the tray. The Thermal Chamber
+   is deliberately NOT a koji bed: it traps the bed's own heat and kills the
+   mould, so koji in it is Bio-Sludge by design. The heritage module repeats the literal (it cannot import this). */
 const KOJI_BEDS = ['koji_tray', 'koji_muro'];
 
 export const RECIPE_MATRIX: MatrixEntry[] = [
@@ -220,7 +222,7 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   { recipeId: 'ancient_garum', substrate: { kind: 'is', id: 'mackerel' }, requires: ['ancient_spores'],       vesselId: 'onggi' },
 
   // --- Era II, continued ---
-  { recipeId: 'tempeh',       substrate: { kind: 'includes', token: 'soybean' }, requires: ['rhizopus'],        vesselId: 'koji_tray' },
+  { recipeId: 'tempeh',       substrate: { kind: 'includes', token: 'soybean' }, requires: ['rhizopus'],        vesselId: KOJI_BEDS },   // rhizopus wants 30-35 C: the muro is its vessel
   { recipeId: 'natto',        substrate: { kind: 'includes', token: 'soybean' }, requires: ['bacillus_natto'],  vesselId: 'incubator' },
   { recipeId: 'katsuobushi',  substrate: { kind: 'is', id: 'bonito' },           requires: ['a_glaucus'],       vesselId: 'koji_tray' },
   { recipeId: 'meju',         substrate: { kind: 'includes', token: 'soybean' }, requires: [], forbids: ['spores', 'koji', 'salt', 'rhizopus', 'bacillus_natto'], vesselId: 'koji_tray' },

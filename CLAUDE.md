@@ -38,15 +38,18 @@ so they cannot drift.
   unreachable and einkorn silently becomes barley koji.
 - **`vesselId` may be a list, and a new koji vessel goes in `KOJI_BEDS`.** The
   Cedar Muro shipped with no matrix entry naming it, so koji in the $420 koji
-  vessel was Bio-Sludge. The six entries that grow a mould on a bed (the
-  catch-all, heritage koji, the four "koji on anything") take `KOJI_BEDS`
-  (heritage repeats the literal); bottarga, casu marzu, tempeh, katsuobushi,
-  meju and IMO stay tray-only. Read an entry's vessels through
+  vessel was Bio-Sludge. The entries that grow a mould on a bed (the
+  catch-all, heritage koji, the four "koji on anything", and tempeh) take
+  `KOJI_BEDS` (heritage repeats the literal); bottarga, casu marzu,
+  katsuobushi, meju and IMO stay tray-only. **The incubator making no koji is
+  intended**, not a missing entry: it traps the bed's heat and kills the mould. Read an entry's vessels through
   `matrixTakesVessel`, never `entry.vesselId === id`. Differential over
   19,526,400 combinations (106 substrates + none × 15,226 reagent sets × 12
   vessels): 353,928 moved, all on the muro; 343,632 off Bio-Sludge, 10,296 off a
   generated garum or amino onto the koji the tray already made from them. Every
   combination the tray makes a koji from, the muro makes the same koji from.
+  Tempeh joined after (2,973 moved, all muro, all onto the tempeh the tray
+  already made).
   Expected differences: spores plus a tray-only recipe's inputs (roe + salt +
   spores) are bottarga on the tray but koji in the muro, because the catch-all
   is the first entry that takes the muro.
