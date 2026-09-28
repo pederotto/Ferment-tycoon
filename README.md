@@ -1,5 +1,5 @@
 # Ferment-tycoon
 
-Fermenta Tycoon — a fermentation-workshop management game.
+**[▶ Play Fermenta Tycoon in your browser](https://raw.githack.com/pederotto/Ferment-tycoon/main/index.html)**
 
-Open `index.html` in a browser to play. It's a single self-contained page.
+Fermenta Tycoon is a fermentation-workshop management game. Nothing to install: the link above opens it straight away.
