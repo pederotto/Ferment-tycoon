@@ -170,6 +170,25 @@ export interface HenRun {
   doorShut: boolean;        // shut in for the night
   problems: ActiveProblem[];
   laidTotal: number;
+  /** The rest of the feed bin, kilos as fed (pellets are `feedKg`, fly larvae `larvaeKg`). Absent on old saves. */
+  bin?: Partial<Record<HenFeed, number>>;
+  /** Grade of the eggs waiting in the nest box, set by what the hens ate while laying them. */
+  eggQ?: number;
+  /** What the hens ate yesterday, for the panel. */
+  diet?: HenDiet;
+}
+
+/** What goes in the hens' bin besides bought pellets and fly larvae. */
+export type HenFeed = 'grain' | 'corn' | 'pulses' | 'greens' | 'mash' | 'worms' | 'shells';
+export interface HenDiet {
+  /** Dry matter eaten against what the flock needs, 0-1+. */
+  fed: number;
+  /** Crude protein, share of dry matter. */
+  protein: number;
+  /** 0-1: enough calcium for a sound shell. */
+  calcium: number;
+  /** 0-1: carotenoids from greens and maize, the depth of the yolk's colour. */
+  yolk: number;
 }
 
 export interface SaltPan {
@@ -195,6 +214,12 @@ export interface WormShed {
   frassKg: number;
   /** Prepupae crawled out and ready: hen food, or next generation. */
   prepupaeKg: number;
+  /** 0-1: how well made the worms' waiting feed is (bedding, acidity). Absent on old saves. */
+  wormFeedQ?: number;
+  /** Grade of the castings in the bottom tier. */
+  castingsGrade?: number;
+  /** Prepupae per kilo of the flies' waiting feed, which depends on what it is. */
+  bsfConv?: number;
 }
 
 export interface FacilityState {

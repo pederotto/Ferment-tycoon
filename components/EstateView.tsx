@@ -6,12 +6,13 @@ import {
 } from '../constants.farm';
 import {
   ActionResult, walkRows, groupedProblems, fixProblem, waterPlots, plantPlots, clearPlots, coverPlots, trainPlots,
-  applyToPlots, pickHere, contractHarvest, pruneTrees, thinTrees, hiveAction, henAction, isBio, panAction, shedAction, PULLET_COST, RUN_CAPACITY,
+  applyToPlots, pickHere, contractHarvest, pruneTrees, thinTrees, hiveAction, henAction, isBio, panAction, shedAction, PULLET_COST, RUN_CAPACITY, henFeedStock, henBinDays, HEN_SACK_KG, STRAW_BALE, FLY_FIRST,
   stoveAction, saveSeed, buyFacility, buyTool, setOrder, sellToVan, vanUnitPrice, isEstateProduce, baseOfProduce,
   plotQualityNow, treeQualityNow, baseIngredient, ROLE_FOR, farmRolesFor,
   pantryOf, pantryKg, soilLots, doseKg, treatmentName, WET_WASTE, bioBlocker, treeIsBiodynamic, sprayPlots, sprayCost,
 } from '../services/estate';
-import { hiveNeeds, YOLKS_PER_UNIT } from '../services/livestock';
+import { hiveNeeds, YOLKS_PER_UNIT, HEN_FEED, WORM_FOOD, WORM_REFUSE, BSF_FOOD, WORM_COLONY_KG, castingsGradeOf, eggGrade } from '../services/livestock';
+import { HenFeed } from '../types.farm';
 import { SOIL_EFFECTS, SOIL_PRODUCT_INGREDIENTS, WASTE_IDS, WASTE_INGREDIENTS } from '../constants.soil';
 
 const soilName = (base: string) => SOIL_PRODUCT_INGREDIENTS.find(i => i.id === base)?.name ?? base;
@@ -732,26 +733,65 @@ const HivePanel: React.FC<PlaceProps & { hives: Hive[] }> = ({ hives, state, dat
 };
 
 /* --- the hens --- */
+const HEN_BINS: HenFeed[] = ['grain', 'corn', 'pulses', 'greens', 'mash', 'worms', 'shells'];
 const HenPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
   const r = f.hens!;
-  const shedLarvae = state.estate.facilities.worm_shed?.shed?.prepupaeKg ?? 0;
+  const shed = state.estate.facilities.worm_shed?.shed;
+  const shedLarvae = shed?.prepupaeKg ?? 0;
+  const spareWorms = shed ? shed.wormsKg - WORM_COLONY_KG : 0;
+  const stock = henFeedStock(pantryOf(state));
+  const d = r.diet;
+  const days = henBinDays(r);
+  const inBin = [
+    ...(r.feedKg > 0.05 ? [`${r.feedKg.toFixed(0)} kg pellets`] : []),
+    ...(r.larvaeKg > 0.05 ? [`${r.larvaeKg.toFixed(1)} kg larvae`] : []),
+    ...HEN_BINS.filter(k => (r.bin?.[k] ?? 0) > 0.05).map(k => `${(r.bin![k]!).toFixed(1)} kg ${HEN_FEED[k].label.toLowerCase()}`),
+  ];
   return (
     <section className="el-sect">
       <h3>The hens <span className="sub">{r.hens} in the run</span></h3>
       <div className="gauges wide">
         <Gauge label="Health" v={r.health} warnBelow={60} />
         <Gauge label="Mites" v={100 - r.mites} warnBelow={45} />
-        <Gauge label="Feed" v={Math.min(100, r.feedKg / 25 * 100)} warnBelow={30} />
+        <Gauge label="Feed" v={Math.min(100, days / 7 * 100)} warnBelow={30} />
       </div>
-      <p className="el-kv"><span><b>{r.eggs}</b> eggs in the nest box</span><span>{r.feedKg.toFixed(0)} kg of layers’ feed</span>{r.larvaeKg > 0.05 && <span>{r.larvaeKg.toFixed(1)} kg of fly larvae</span>}<span>{Math.round(r.laidTotal / YOLKS_PER_UNIT)} × ½ kg of yolks laid so far</span></p>
+      <p className="el-kv"><span><b>{r.eggs}</b> eggs in the nest box{r.eggs > 0 && r.eggQ ? `, grade ${Math.round(r.eggQ)}` : ''}</span><span>{Math.round(r.laidTotal / YOLKS_PER_UNIT)} × ½ kg of yolks laid so far</span></p>
+      {d && r.hens > 0 && (
+        <div className="hen-diet">
+          <span className="section-lbl">Yesterday’s diet</span>
+          <dl>
+            <div className={d.fed < 0.9 ? 'bad' : ''}><dt>Fed</dt><dd className="mono">{Math.round(Math.min(1.5, d.fed) * 100)}%</dd></div>
+            <div className={d.protein < 0.15 ? 'bad' : ''}><dt>Protein</dt><dd className="mono">{(d.protein * 100).toFixed(0)}%</dd></div>
+            <div className={d.calcium < 0.55 ? 'bad' : ''}><dt>Shell</dt><dd className="mono">{d.calcium >= 0.8 ? 'sound' : d.calcium >= 0.55 ? 'thin' : 'breaking'}</dd></div>
+            <div><dt>Yolk</dt><dd className="mono">{d.yolk >= 0.65 ? 'deep orange' : d.yolk >= 0.4 ? 'golden' : 'pale'}</dd></div>
+            <div><dt>Eggs grade</dt><dd className="mono">{eggGrade(d, r.health)}</dd></div>
+          </dl>
+          <p className="el-note">
+            {d.fed < 0.9 ? 'Hungry hens stop laying. ' : ''}
+            {d.protein < 0.15 ? 'Short of protein: pulses, larvae or worms bring the lay back. ' : ''}
+            {d.calcium < 0.55 ? 'Short of calcium: give them their shells back, or pellets. ' : ''}
+            {d.yolk < 0.4 ? 'Greens and maize deepen the yolk, which the lab pays for.' : ''}
+          </p>
+        </div>
+      )}
+      <p className="el-kv"><span>In the bin: {inBin.length ? inBin.join(' · ') : 'nothing'}</span><span>{days >= 99 ? '' : `about ${Math.floor(days)} day${Math.floor(days) === 1 ? '' : 's'} of food`}</span></p>
       <div className="el-actions"><div className="row">
         <button className="mini-btn gold" disabled={r.eggs === 0} onClick={() => act(s => henAction(s, 'eggs'))}>Collect the eggs</button>
         {!f.kit.auto_door && <button className="mini-btn" onClick={() => act(s => henAction(s, 'shut'), { dark: true })}>Shut them in for the night</button>}
-        <button className="mini-btn" onClick={() => act(s => henAction(s, 'feed'))}>A sack of feed · $18</button>
-        {r.hens < RUN_CAPACITY && <button className={`mini-btn${r.hens === 0 ? ' gold' : ''}`} onClick={() => act(s => henAction(s, 'pullets'))}>{RUN_CAPACITY - r.hens >= 2 ? 'Two pullets' : 'A pullet'} · ${Math.min(2, RUN_CAPACITY - r.hens) * PULLET_COST}</button>}
         {r.mites > 30 && <button className="mini-btn" onClick={() => act(s => henAction(s, 'clean'))}>Muck out</button>}
+        {r.hens < RUN_CAPACITY && <button className={`mini-btn${r.hens === 0 ? ' gold' : ''}`} onClick={() => act(s => henAction(s, 'pullets'))}>{RUN_CAPACITY - r.hens >= 2 ? 'Two pullets' : 'A pullet'} · ${Math.min(2, RUN_CAPACITY - r.hens) * PULLET_COST}</button>}
+      </div>
+      <div className="row">
+        <button className="mini-btn" onClick={() => act(s => henAction(s, 'feed'))}>A sack of pellets · $18</button>
+        {(['grain', 'corn', 'pulses', 'greens', 'mash', 'shells'] as HenFeed[]).map(k => {
+          const kg = stock[k]?.kg ?? 0;
+          if (kg < 0.05) return null;
+          return <button key={k} className="mini-btn" onClick={() => act(s => henAction(s, k))}>{HEN_FEED[k].label} · {Math.min(HEN_SACK_KG[k], kg).toFixed(Math.min(HEN_SACK_KG[k], kg) < 10 ? 1 : 0)} kg</button>;
+        })}
         {shedLarvae > 0.4 && <button className="mini-btn gold" onClick={() => act(s => henAction(s, 'larvae'))}>Larvae from the shed · {shedLarvae.toFixed(1)} kg</button>}
+        {spareWorms > 0.2 && <button className="mini-btn" onClick={() => act(s => henAction(s, 'worms'))}>Spare worms · {spareWorms.toFixed(1)} kg</button>}
       </div></div>
+      <p className="el-note">What they eat is in the egg. Pellets are complete but plain; your own grain feeds them, pulses (cooked — raw beans make a hen ill) and fly larvae bring the protein, greens and maize colour the yolk, and their own shells, roasted and crushed, keep the next shell sound.</p>
       {!f.kit.auto_door && <p className="el-note">A fox tries the door every night. Shut it at dusk, or buy the automatic door, or hire a keeper.</p>}
     </section>
   );
@@ -789,29 +829,47 @@ const PanPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
 };
 
 /* --- the shed --- */
+const names = (ids: string[]) => ids.map(id => baseIngredient(id)?.name?.toLowerCase() ?? WASTE_NAME[id] ?? id.replace(/_/g, ' '));
+const WASTE_NAME: Record<string, string> = { veg_waste: 'vegetable waste', green_waste: 'green waste', spent_grain: 'spent grain', fish_waste: 'fish waste', press_cake: 'press cake', windfalls: 'windfalls', straw: 'straw', eggshells: 'eggshells', green_tips: 'green tips' };
 const ShedPanel: React.FC<PlaceProps> = ({ f, act, state }) => {
   const s = f.shed!;
   const pan = pantryOf(state);
-  const wet = [...WET_WASTE, 'green_tips'].reduce((a, k) => a + pantryKg(pan, k), 0);
+  const wormWet = Object.entries(WORM_FOOD).filter(([k, r]) => r !== 'carbon' && r !== 'grit' && k !== 'green_tips' && !(s.bsfLarvaeKg >= 0.05 && FLY_FIRST.includes(k))).reduce((a, [k]) => a + pantryKg(pan, k), 0);
+  const flyOwn = FLY_FIRST.reduce((a, k) => a + pantryKg(pan, k), 0);
+  const flyWet = flyOwn >= 0.2 ? flyOwn : Object.keys(BSF_FOOD).filter(k => k !== 'green_tips').reduce((a, k) => a + pantryKg(pan, k), 0);
+  const straw = pantryKg(pan, 'straw');
+  const q = s.wormFeedQ;
+  const conv = s.bsfConv;
+  const cg = Math.round(s.castingsGrade ?? castingsGradeOf(q ?? 0.6));
   return (
     <section className="el-sect">
       <h3>The bins</h3>
       <ul className="el-beds">
         <li className="el-bed label-plate">
           <div className="top"><span className="es-dot" /><span className="name">Worm towers</span><span className="where">{s.wormsKg.toFixed(1)} kg of worms</span></div>
-          <div className="stage"><span>{s.wormFeedKg.toFixed(1)} kg waiting to be eaten</span>{s.castingsKg > 0.2 && <span className="ripe">{s.castingsKg.toFixed(1)} kg castings</span>}</div>
+          <div className="stage">
+            <span>{s.wormFeedKg.toFixed(1)} kg waiting{q !== undefined && s.wormFeedKg > 0.2 ? ` · ${q >= 0.8 ? 'well bedded' : q >= 0.55 ? 'short of bedding' : 'wet and sour'}` : ''}</span>
+            {s.castingsKg > 0.2 && <span className="ripe">{s.castingsKg.toFixed(1)} kg castings, grade {cg}</span>}
+          </div>
         </li>
         <li className={`el-bed label-plate${s.bsfLarvaeKg < 0.05 ? ' faint' : ''}`}>
           <div className="top"><span className="es-dot" /><span className="name">Soldier fly bins</span><span className="where">{s.bsfLarvaeKg < 0.05 ? 'no colony' : `${s.bsfLarvaeKg.toFixed(1)} kg of larvae`}</span></div>
-          <div className="stage"><span>{s.bsfFeedKg.toFixed(1)} kg waiting</span>{s.frassKg > 0.2 && <span className="ripe">{s.frassKg.toFixed(1)} kg frass</span>}{s.prepupaeKg > 0.1 && <span className="ripe">{s.prepupaeKg.toFixed(1)} kg prepupae for the hens</span>}</div>
+          <div className="stage">
+            <span>{s.bsfFeedKg.toFixed(1)} kg waiting{conv !== undefined && s.bsfFeedKg > 0.2 ? ` · ${conv >= 0.16 ? 'rich feed' : conv >= 0.1 ? 'fair feed' : 'thin feed'}` : ''}</span>
+            {s.frassKg > 0.2 && <span className="ripe">{s.frassKg.toFixed(1)} kg frass</span>}
+            {s.prepupaeKg > 0.1 && <span className="ripe">{s.prepupaeKg.toFixed(1)} kg prepupae for the hens</span>}
+          </div>
         </li>
       </ul>
       <div className="el-actions"><div className="row">
-        <button className="mini-btn gold" disabled={wet < 0.2} onClick={() => act(st => shedAction(st, 'feed'))}>Feed them the lab’s waste{wet >= 0.2 ? ` · ${wet.toFixed(0)} kg` : ''}</button>
+        <button className="mini-btn gold" disabled={wormWet < 0.2} onClick={() => act(st => shedAction(st, 'worms'))}>Feed the worms{wormWet >= 0.2 ? ` · ${wormWet.toFixed(0)} kg${straw > 0.5 ? ' + straw' : ''}` : ''}</button>
+        {s.bsfLarvaeKg >= 0.05 && <button className="mini-btn gold" disabled={flyWet < 0.2} onClick={() => act(st => shedAction(st, 'flies'))}>Feed the flies{flyWet >= 0.2 ? ` · ${flyWet.toFixed(0)} kg` : ''}</button>}
+        {straw < wormWet * 0.43 && <button className="mini-btn" onClick={() => act(st => shedAction(st, 'straw'))}>A bale of straw · ${STRAW_BALE.cost}</button>}
         <button className="mini-btn" disabled={s.castingsKg + s.frassKg < 0.5} onClick={() => act(st => shedAction(st, 'harvest'))}>Castings and frass to the pantry</button>
         {s.bsfLarvaeKg < 0.05 && <button className="mini-btn" onClick={() => act(st => shedAction(st, 'restock'))}>Restock the flies · $30</button>}
       </div></div>
-      <p className="el-note">Worms work all year and slow in the cold. The flies want it above eighteen degrees — April to October here — and die back in winter.</p>
+      <p className="el-note"><b>Worms</b> eat {names(Object.keys(WORM_FOOD).filter(k => WORM_FOOD[k] === 'green')).join(', ')} and a little windfall fruit, bedded in straw at about a third of the weight, with crushed shell against the acid. Never {Object.entries(WORM_REFUSE).map(([k, why]) => `${names([k])[0]} (${why})`).join('; ')}.</p>
+      <p className="el-note"><b>Soldier flies</b> eat anything wet and rich, fish and salty press cake included, and turn the best of it — fish, spent grain — into a fifth of its weight in fat, 40%-protein larvae for the hens; green waste barely feeds them. They want it above eighteen degrees: April to October here. Worms work all year and slow in the cold.</p>
     </section>
   );
 };

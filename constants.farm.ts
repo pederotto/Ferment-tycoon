@@ -511,6 +511,10 @@ export const SPRAY_COST_M2 = 0.12;
 /* THE MARKET FOR WHAT YOU GROW. Home-grown sells over the van's wholesale; a
    biodynamic label sells for a great deal more, but the buyers who pay for it
    are few, so the premium saturates fast and recovers weekly. */
+/** Produce bought on sight of its quality, priced (grade / standard)^k at the van instead of the
+ *  gentle default. An egg is sold on its yolk: a deep-orange pastured egg fetches a good deal
+ *  more than a pale barn one, and a thin-shelled pale one far less. */
+export const QUALITY_ELASTIC: Record<string, number> = { egg_yolks: 3 };
 export const HOME_GROWN_PREMIUM = 1.25;
 export const BIO_VAN_PREMIUM = 1.6;
 export const BIO_APPETITE_KG = 6;

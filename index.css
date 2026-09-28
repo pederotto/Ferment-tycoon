@@ -5421,6 +5421,13 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .soil-panel .sp-read dd { margin: 2px 0 0; font-size: 13px; color: var(--text-hi); }
 .soil-panel .sp-read .ok dd { color: #9cc27a; }
 .soil-panel .sp-read .bad dd { color: #e0896a; }
+.hen-diet { margin: 8px 0; }
+.hen-diet dl { margin: 6px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.hen-diet dl div { padding: 5px 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(222, 186, 110, 0.12); }
+.hen-diet dt { font-family: var(--f-spec); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-lo); }
+.hen-diet dd { margin: 2px 0 0; font-size: 13px; color: var(--text-hi); }
+.hen-diet .bad dd { color: #e0896a; }
+.el-actions .row + .row { margin-top: 6px; }
 .soil-panel .sp-warn { margin: 0; font-size: 12px; color: #e0896a; }
 .soil-panel .mini-btn { justify-self: start; }
 .soil-harvest { display: grid; gap: 12px; max-width: 560px; }

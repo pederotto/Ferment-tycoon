@@ -1,10 +1,10 @@
 import { GameState, Ingredient, IngredientType, WeatherState, CrewMember } from '../types';
 import {
-  EstateState, FacilityId, FacilityState, Plot, Tree, Planting, StandingOrders, EstateLogEntry, Hive,
+  EstateState, FacilityId, FacilityState, Plot, Tree, Planting, StandingOrders, EstateLogEntry, Hive, HenRun, HenFeed, WormShed,
 } from '../types.farm';
 import {
   FACILITIES, CROPS, FAMILIES, TREE_SPECS, PROBLEMS, FARM_TOOLS, VAN_WHOLESALE, VAN_RECOVERY, PRODUCE_CLASS, produceClassOf, FACILITY_ORDER,
-  BIO_CONVERSION_DAYS, BIO_LIFE_MIN, SPRAYABLE, SPRAY_DAYS, SPRAY_COST_M2, HOME_GROWN_PREMIUM, BIO_VAN_PREMIUM, BIO_APPETITE_KG,
+  BIO_CONVERSION_DAYS, BIO_LIFE_MIN, SPRAYABLE, QUALITY_ELASTIC, SPRAY_DAYS, SPRAY_COST_M2, HOME_GROWN_PREMIUM, BIO_VAN_PREMIUM, BIO_APPETITE_KG,
 } from '../constants.farm';
 import { makeCandidate } from './crew';
 import { INGREDIENTS } from '../constants';
@@ -12,7 +12,7 @@ import { SOIL_EFFECTS, SOIL_PRODUCT_INGREDIENTS, SOIL_PRODUCT_IDS } from '../con
 import { strengthOf } from './soil';
 import { dayWeather, dayOfYear, absoluteDay, CalendarDate, DayWeather, roll } from './climate';
 import { plotDay, treeDay, newPlanting, pickPlanting, pickTree, DayCtx, clamp, pickQuality, treePickQuality, localTemps } from './growth';
-import { hiveDay, henDay, panDay, shedDay, newHive, honeyQuality, YOLKS_PER_UNIT, HIVE_BROOD_STORES, PAN_FILL_MM, hiveNeeds } from './livestock';
+import { hiveDay, henDay, panDay, shedDay, newHive, honeyQuality, YOLKS_PER_UNIT, HIVE_BROOD_STORES, PAN_FILL_MM, hiveNeeds, WORM_FOOD, BSF_FOOD, wormMixQ, castingsGradeOf, WORM_COLONY_KG, HEN_FEED, HEN_DM_KG } from './livestock';
 
 /* =============================================================================
    THE ESTATE: one day, and the things a person does in it
@@ -162,7 +162,8 @@ export const vanUnitPrice = (state: GameState, itemId: string): number => {
   if (!base || !item) return 0;
   const cls = produceClassOf(base.id);
   const demand = state.estate?.vanDemand[cls] ?? 1;
-  const qMult = 0.7 + 0.3 * (item.quality / Math.max(1, base.quality));
+  const k = QUALITY_ELASTIC[base.id];
+  const qMult = k ? Math.pow(item.quality / Math.max(1, base.quality), k) : 0.7 + 0.3 * (item.quality / Math.max(1, base.quality));
   return Math.max(0, base.baseCost * VAN_WHOLESALE * demand * qMult * labelMult(state, itemId));
 };
 
@@ -422,12 +423,14 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
       r.events.forEach(t => log(report.notes, day, t, 'bad', fid));
       if (orders.hens && keeper) {
         if (run.eggs > 0 && act('eggs')) {
-          produce.push({ id: 'egg_yolks', kg: run.eggs / YOLKS_PER_UNIT * 0.5, q: clamp(80 + (run.larvaeKg > 0 ? 8 : 0) + (run.health - 80) / 4, 50, 100) });
+          produce.push({ id: 'egg_yolks', kg: run.eggs / YOLKS_PER_UNIT * 0.5, q: Math.round(run.eggQ ?? 80) });
           report.picked['egg_yolks'] = (report.picked['egg_yolks'] ?? 0) + run.eggs / YOLKS_PER_UNIT * 0.5;
           pantryPut(pan, 'eggshells', run.eggs * 0.006);
           run = { ...run, eggs: 0 };
         }
-        if (run.feedKg < 8) { run = { ...run, feedKg: run.feedKg + 25 }; money -= 18; }
+        // Shell back to the flock, then pellets only when the home feed in the bin runs short.
+        if ((run.bin?.shells ?? 0) < 0.1 && pantryKg(pan, 'eggshells') > 0) { const k = pantryKg(pan, 'eggshells'); pantryPut(pan, 'eggshells', -k); run = { ...run, bin: { ...run.bin, shells: (run.bin?.shells ?? 0) + k } }; }
+        if (henBinDays(run) < 3) { run = { ...run, feedKg: run.feedKg + 25 }; money -= 18; }
         if (run.mites > 45 && act('clean')) run = { ...run, mites: 8 };
         const shed = est.facilities.worm_shed?.shed;
         if (shed && shed.prepupaeKg > 1 && run.larvaeKg < 1) {
@@ -452,18 +455,15 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
       // Waste from the lab goes into the bins if there is someone to carry it.
       const tech = handOf(crew, 'soil_tech');
       if (tech && orders.feed) {
-        let moved = 0;
-        for (const k of WET_WASTE) { moved += pantryKg(pan, k); pantryPut(pan, k, -pantryKg(pan, k)); }
-        if (moved > 0) {
-          shed = { ...shed, bsfFeedKg: shed.bsfFeedKg + (shed.bsfLarvaeKg > 0.05 ? moved * 0.6 : 0), wormFeedKg: shed.wormFeedKg + moved * (shed.bsfLarvaeKg > 0.05 ? 0.4 : 1) };
-        }
+        shed = routeWaste(pan, shed);
       }
       const r = shedDay(shed, { day, month: date.month, doy, year: date.year, wx });
       shed = r.shed;
       r.events.forEach(t => log(report.notes, day, t, 'warn', fid));
       if (tech && orders.feed) {
         // Castings and frass to the pantry, larvae to the hens.
-        if (shed.castingsKg >= 5) { pantryPut(pan, soilProductId('worm_castings', CASTINGS_GRADE), shed.castingsKg); mints.push(['worm_castings', CASTINGS_GRADE]); shed = { ...shed, castingsKg: 0 }; }
+        const cg = Math.round(shed.castingsGrade ?? CASTINGS_GRADE);
+        if (shed.castingsKg >= 5) { pantryPut(pan, soilProductId('worm_castings', cg), shed.castingsKg); mints.push(['worm_castings', cg]); shed = { ...shed, castingsKg: 0 }; }
         if (shed.frassKg >= 5) { pantryPut(pan, soilProductId('fly_frass', FRASS_GRADE), shed.frassKg); mints.push(['fly_frass', FRASS_GRADE]); shed = { ...shed, frassKg: 0 }; }
         const hens = facilities.hen_run?.hens ?? est.facilities.hen_run?.hens;
         if (hens && shed.prepupaeKg >= 1) {
@@ -596,8 +596,98 @@ export const COMPOST_TEA_DECAY = 0.4;
 const FEEDS = ['worm_castings', 'compost', 'bokashi', 'fly_frass'];
 /** What the bins will take. Green tips go in by hand only: they are wanted for plant juice. */
 export const WET_WASTE = ['fish_waste', 'veg_waste', 'press_cake', 'spent_grain', 'windfalls'];
-/** The shed makes one grade: castings are castings. */
+/** Castings from a shed that predates graded feed; new castings take the grade of what the worms ate. */
 export const CASTINGS_GRADE = 84;
+
+/* -----------------------------------------------------------------------------
+   FEEDING THE SHED AND THE HENS
+
+   Worms and soldier flies eat different things, for real reasons (see WORM_FOOD,
+   WORM_REFUSE and BSF_FOOD in livestock.ts), so each has its own button and the
+   technician's order routes waste by kind: fish and salty press cake to the flies,
+   the greens with straw bedding to the worms, spent grain to whichever is alive.
+   --------------------------------------------------------------------------- */
+/** Put waste into the worm bins: greens, a little acid fruit, grit, and straw up to a third. */
+export const feedWorms = (pan: Pantry, shed: WormShed, only?: string[]): { shed: WormShed; kg: number; q: number } => {
+  const mix: Record<string, number> = {};
+  for (const [k, role] of Object.entries(WORM_FOOD)) {
+    if (role === 'carbon' || role === 'grit' || k === 'green_tips') continue;
+    if (only && !only.includes(k)) continue;
+    mix[k] = pantryKg(pan, k);
+  }
+  const wet = Object.values(mix).reduce((a, b) => a + b, 0);
+  if (wet < 0.2) return { shed, kg: 0, q: shed.wormFeedQ ?? 0 };
+  mix.straw = Math.min(pantryKg(pan, 'straw'), wet * 0.43);
+  mix.eggshells = Math.min(pantryKg(pan, 'eggshells'), wet * 0.03);
+  const q = wormMixQ(mix);
+  let kg = 0;
+  for (const [k, v] of Object.entries(mix)) { if (v > 0) { pantryPut(pan, k, -v); kg += v; } }
+  const old = shed.wormFeedKg, oq = shed.wormFeedQ ?? q;
+  return { shed: { ...shed, wormFeedKg: old + kg, wormFeedQ: (old * oq + kg * q) / (old + kg) }, kg, q };
+};
+/** Put waste into the fly bins; what it becomes depends on what it is. */
+export const feedFlies = (pan: Pantry, shed: WormShed, only?: string[]): { shed: WormShed; kg: number } => {
+  let kg = 0, conv = 0;
+  for (const [k, c] of Object.entries(BSF_FOOD)) {
+    if (k === 'green_tips' || (only && !only.includes(k))) continue;
+    const v = pantryKg(pan, k);
+    if (v <= 0) continue;
+    pantryPut(pan, k, -v); kg += v; conv += v * c;
+  }
+  if (kg <= 0) return { shed, kg: 0 };
+  const old = shed.bsfFeedKg, oc = shed.bsfConv ?? conv / kg;
+  return { shed: { ...shed, bsfFeedKg: old + kg, bsfConv: (old * oc + conv) / (old + kg) }, kg };
+};
+/** What goes to the flies first: what worms cannot take (fish, salt) and what flies turn to
+ *  larvae best (spent grain). The greens stay for the worms, which make better use of them. */
+export const FLY_FIRST = ['fish_waste', 'press_cake', 'spent_grain'];
+/** The standing order: each waste to the animal that can use it. */
+export const routeWaste = (pan: Pantry, shed: WormShed): WormShed => {
+  const flies = shed.bsfLarvaeKg > 0.05;
+  let s = shed;
+  if (flies) s = feedFlies(pan, s, FLY_FIRST).shed;
+  s = feedWorms(pan, s).shed;
+  return s;
+};
+
+/** Which bin a pantry lot goes in, if the hens can eat it. */
+export const henFeedOf = (id: string): HenFeed | null => {
+  if (id === 'eggshells') return 'shells';
+  if (id === 'spent_grain') return 'mash';
+  if (id === 'veg_waste' || id === 'green_waste') return 'greens';
+  if (!isEstateProduce(id)) return null;
+  const fam = CROPS[baseOfProduce(id)]?.family;
+  if (fam === 'wintergrain' || fam === 'springgrain') return 'grain';
+  if (fam === 'corn') return 'corn';
+  if (fam === 'pea' || fam === 'fava' || fam === 'chickpea' || fam === 'lentil' || fam === 'bean') return 'pulses';
+  return null;
+};
+/** Kilos in the pantry for each hen feed, and the lots behind it, poorest grade first. */
+export const henFeedStock = (pan: Pantry): Record<HenFeed, { kg: number; lots: { id: string; kg: number; unitKg: number }[] }> => {
+  const out = {} as Record<HenFeed, { kg: number; lots: { id: string; kg: number; unitKg: number }[] }>;
+  const ids = new Set([...Object.keys(pan.inventory), ...Object.keys(pan.carry)]);
+  for (const id of ids) {
+    const k = henFeedOf(id);
+    if (!k || k === 'worms') continue;
+    const unitKg = isEstateProduce(id) ? (BASE(baseOfProduce(id))?.mass ?? 1000) / 1000 : 1;
+    const kg = pantryKg(pan, id) * unitKg;
+    if (kg < 0.01) continue;
+    const row = out[k] ?? (out[k] = { kg: 0, lots: [] });
+    row.kg += kg; row.lots.push({ id, kg, unitKg });
+  }
+  const grade = (id: string) => +(id.match(/__q(\d+)/)?.[1] ?? 0);
+  for (const r of Object.values(out)) r.lots.sort((a, b) => grade(a.id) - grade(b.id));
+  return out;
+};
+/** A sack for the bin: a feeding's worth, never the whole harvest. */
+export const HEN_SACK_KG: Record<HenFeed, number> = { grain: 5, corn: 5, pulses: 3, greens: 5, mash: 5, worms: 0, shells: 99 };
+/** Days of feed in the bin at the flock's appetite, counting everything they eat. */
+export const henBinDays = (r: HenRun): number => {
+  if (r.hens <= 0) return 99;
+  let dm = r.feedKg * HEN_FEED.pellets.dm + r.larvaeKg * HEN_FEED.larvae.dm;
+  for (const [k, kg] of Object.entries(r.bin ?? {})) if (k !== 'shells') dm += (kg ?? 0) * HEN_FEED[k as HenFeed].dm;
+  return dm / (r.hens * HEN_DM_KG);
+};
 export const FRASS_GRADE = 78;
 
 /* -----------------------------------------------------------------------------
@@ -967,7 +1057,7 @@ export const hiveAction = (state: GameState, kind: 'inspect' | 'feed' | 'varroa'
 /* --- The hens --- */
 /** Point-of-lay pullets, bought in pairs: hens are flock birds and one alone pines. */
 export const PULLET_COST = 22; export const RUN_CAPACITY = 12;
-export const henAction = (state: GameState, kind: 'eggs' | 'shut' | 'clean' | 'feed' | 'larvae' | 'pullets'): ActionResult => {
+export const henAction = (state: GameState, kind: 'eggs' | 'shut' | 'clean' | 'feed' | 'larvae' | 'pullets' | 'worms' | HenFeed): ActionResult => {
   const f = state.estate.facilities.hen_run;
   if (!f?.hens) return fail(state, 'No hens.');
   let run = { ...f.hens };
@@ -975,13 +1065,37 @@ export const henAction = (state: GameState, kind: 'eggs' | 'shut' | 'clean' | 'f
   if (kind === 'eggs') {
     if (run.eggs <= 0) return fail(state, 'No eggs yet.');
     const kg = run.eggs / YOLKS_PER_UNIT * 0.5;
-    const q = clamp(80 + (run.larvaeKg > 0 ? 8 : 0) + (run.health - 80) / 4, 50, 100);
+    const q = Math.round(run.eggQ ?? 80);
     message = `Collected ${run.eggs} eggs.`;
     next = storeProduce(next, 'egg_yolks', kg, q);
     next = addWaste(next, ['eggshells', run.eggs * 0.006]);
     run = { ...run, eggs: 0 }; minutes = 5;
   } else if (kind === 'shut') { run = { ...run, doorShut: true }; minutes = 3; message = 'Shut them in for the night.'; }
   else if (kind === 'clean') { run = { ...run, mites: 5 }; minutes = 40; message = 'Mucked out and dusted the perches.'; }
+  else if (kind === 'worms') {
+    const shed = state.estate.facilities.worm_shed?.shed;
+    const spare = shed ? shed.wormsKg - WORM_COLONY_KG : 0;
+    if (!shed || spare < 0.2) return fail(state, `The towers keep ${WORM_COLONY_KG} kg of worms to breed from; there are none spare.`);
+    run = { ...run, bin: { ...run.bin, worms: (run.bin?.worms ?? 0) + spare } }; minutes = 15;
+    message = `${spare.toFixed(1)} kg of worms forked out of the towers for the hens.`;
+    next = withFacility(next, 'worm_shed', { ...state.estate.facilities.worm_shed!, shed: { ...shed, wormsKg: WORM_COLONY_KG } });
+  }
+  else if (kind === 'grain' || kind === 'corn' || kind === 'pulses' || kind === 'greens' || kind === 'mash' || kind === 'shells') {
+    const pan = pantryOf(state);
+    const stock = henFeedStock(pan)[kind];
+    if (!stock || stock.kg < 0.05) return fail(state, `No ${HEN_FEED[kind].label.toLowerCase()} in the pantry.`);
+    let want = Math.min(HEN_SACK_KG[kind], stock.kg), took = 0;
+    for (const lot of stock.lots) {
+      if (want <= 1e-6) break;
+      const kg = Math.min(want, lot.kg);
+      pantryPut(pan, lot.id, -kg / lot.unitKg); want -= kg; took += kg;
+    }
+    next = withPantry(next, pan);
+    run = { ...run, bin: { ...run.bin, [kind]: (run.bin?.[kind] ?? 0) + took } };
+    // Dried beans are cooked first: raw, their lectins make a hen ill.
+    minutes = kind === 'pulses' ? 40 : 5;
+    message = kind === 'pulses' ? `${took.toFixed(1)} kg of pulses soaked, boiled and into the bin.` : `${took.toFixed(1)} kg of ${HEN_FEED[kind].label.toLowerCase()} into the bin.`;
+  }
   else if (kind === 'pullets') {
     const n = Math.min(2, RUN_CAPACITY - run.hens);
     if (n <= 0) return fail(state, `The coop holds ${RUN_CAPACITY}.`);
@@ -1032,24 +1146,36 @@ export const panAction = (state: GameState, kind: 'fill' | 'cover' | 'rake' | 'f
 };
 
 /* --- The shed --- */
-export const shedAction = (state: GameState, kind: 'feed' | 'harvest' | 'restock'): ActionResult => {
+export const STRAW_BALE = { kg: 15, cost: 8 };
+export const shedAction = (state: GameState, kind: 'worms' | 'flies' | 'harvest' | 'restock' | 'straw'): ActionResult => {
   const f = state.estate.facilities.worm_shed;
   if (!f?.shed) return fail(state, 'No shed.');
   let shed = { ...f.shed };
   let next = state;
   let minutes = 0, message = '', cost = 0;
-  if (kind === 'feed') {
+  if (kind === 'worms') {
     const pan = pantryOf(state);
-    let moved = 0;
-    for (const k of [...WET_WASTE, 'green_tips']) { moved += pantryKg(pan, k); pantryPut(pan, k, -pantryKg(pan, k)); }
-    if (moved < 0.2) return fail(state, 'No wet waste to feed them.');
-    const toFly = shed.bsfLarvaeKg > 0.05 ? moved * 0.6 : 0;
-    shed = { ...shed, bsfFeedKg: shed.bsfFeedKg + toFly, wormFeedKg: shed.wormFeedKg + moved - toFly };
-    next = withPantry(next, pan);
-    minutes = 10 + moved * 0.5; message = `${moved.toFixed(1)} kg of waste into the bins.`;
+    const r = feedWorms(pan, shed, shed.bsfLarvaeKg >= 0.05 ? Object.keys(WORM_FOOD).filter(k => !FLY_FIRST.includes(k)) : undefined);
+    if (r.kg < 0.2) return fail(state, 'Nothing the worms can eat: they want greens, peelings and windfalls.');
+    shed = r.shed; next = withPantry(next, pan);
+    minutes = 10 + r.kg * 0.5;
+    message = `${r.kg.toFixed(1)} kg into the worm towers${r.q >= 0.8 ? ', well bedded with straw' : r.q < 0.5 ? ' — wet and short of bedding: they will go slowly and the castings will be poor' : ''}.`;
+  } else if (kind === 'flies') {
+    if (shed.bsfLarvaeKg < 0.05) return fail(state, 'There is no fly colony to feed.');
+    const pan = pantryOf(state);
+    // Their own first; the greens only when there is nothing else, since the worms use those better.
+    let r = feedFlies(pan, shed, FLY_FIRST);
+    if (r.kg < 0.2) r = feedFlies(pan, shed);
+    if (r.kg < 0.2) return fail(state, 'Nothing for the flies: they want wet, rich waste.');
+    shed = r.shed; next = withPantry(next, pan);
+    minutes = 10 + r.kg * 0.4; message = `${r.kg.toFixed(1)} kg into the fly bins.`;
+  } else if (kind === 'straw') {
+    if (state.money < STRAW_BALE.cost) return fail(state, `A bale of straw is $${STRAW_BALE.cost}.`);
+    next = addToPantry({ ...next, money: next.money - STRAW_BALE.cost }, 'straw', STRAW_BALE.kg);
+    minutes = 5; message = `A ${STRAW_BALE.kg} kg bale of straw for bedding.`;
   } else if (kind === 'harvest') {
     if (shed.castingsKg + shed.frassKg < 0.2) return fail(state, 'Nothing ready in the bins.');
-    for (const [base, kg, grade] of [['worm_castings', shed.castingsKg, CASTINGS_GRADE], ['fly_frass', shed.frassKg, FRASS_GRADE]] as [string, number, number][]) {
+    for (const [base, kg, grade] of [['worm_castings', shed.castingsKg, Math.round(shed.castingsGrade ?? CASTINGS_GRADE)], ['fly_frass', shed.frassKg, FRASS_GRADE]] as [string, number, number][]) {
       if (kg <= 0) continue;
       const m = mintSoilProduct(next, base, grade);
       next = addToPantry(m.state, m.id, kg);

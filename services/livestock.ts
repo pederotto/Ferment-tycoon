@@ -1,4 +1,4 @@
-import { Hive, HenRun, SaltPan, WormShed } from '../types.farm';
+import { Hive, HenRun, HenFeed, HenDiet, SaltPan, WormShed } from '../types.farm';
 import { DayWeather, roll, sunTimes } from './climate';
 import { clamp } from './growth';
 
@@ -124,29 +124,87 @@ export const honeyQuality = (month: number, extractor: boolean): number =>
    day, and at 45°N December gives her nine. Heat stops her too, and so does a
    moult in October. Fly larvae are the best thing you can put in front of her.
    --------------------------------------------------------------------------- */
+/** Per kilo AS FED: dry matter, crude protein as a share of that dry matter, how much
+ *  it does for the shell (0-1), how much it colours the yolk (0-1), and the most of it a
+ *  hen will eat in a day, in kilos of dry matter. Poultry-nutrition figures, rounded. */
+export const HEN_FEED: Record<HenFeed | 'pellets' | 'larvae', { label: string; dm: number; cp: number; ca: number; yolk: number; cap: number }> = {
+  larvae:  { label: 'Fly larvae',       dm: 0.38, cp: 0.42, ca: 0.8, yolk: 0.3, cap: 0.035 },
+  worms:   { label: 'Worms',            dm: 0.18, cp: 0.60, ca: 0.1, yolk: 0.2, cap: 0.02 },
+  greens:  { label: 'Greens and scraps', dm: 0.12, cp: 0.20, ca: 0.3, yolk: 1.0, cap: 0.025 },
+  pulses:  { label: 'Cooked pulses',    dm: 0.88, cp: 0.25, ca: 0.1, yolk: 0.1, cap: 0.03 },
+  mash:    { label: 'Spent grain',      dm: 0.25, cp: 0.25, ca: 0.0, yolk: 0.1, cap: 0.03 },
+  corn:    { label: 'Maize',            dm: 0.88, cp: 0.10, ca: 0.0, yolk: 0.8, cap: 0.07 },
+  grain:   { label: 'Grain',            dm: 0.88, cp: 0.13, ca: 0.0, yolk: 0.1, cap: 0.11 },
+  pellets: { label: 'Layers’ pellets',  dm: 0.90, cp: 0.165, ca: 1.0, yolk: 0.25, cap: 0.12 },
+  shells:  { label: 'Crushed eggshell', dm: 1.00, cp: 0.00, ca: 1.0, yolk: 0.0, cap: 0 },
+};
+/** A laying hen eats about 110 g of dry matter a day and wants ~16% of it protein. */
+export const HEN_DM_KG = 0.11;
+const PROTEIN_NEED = 0.16;
+/** Eaten first to last: what they run to, then what fills them up. Pellets fill the rest. */
+const EAT_ORDER: (HenFeed | 'larvae' | 'pellets')[] = ['larvae', 'worms', 'greens', 'pulses', 'mash', 'corn', 'grain', 'pellets'];
+
+/** The grade an egg laid on this diet earns: yolk colour, protein, a sound shell and a well hen. */
+export const eggGrade = (d: HenDiet, health: number): number =>
+  Math.round(clamp(56 + 18 * d.yolk + 10 * Math.min(1, (d.protein - 0.10) / (PROTEIN_NEED - 0.10)) + 8 * d.calcium + (health - 80) / 4, 40, 100));
+
+/** One day at the trough: takes from the bin, and says what that diet was. Pure. */
+export const henEat = (r: HenRun): { run: HenRun; diet: HenDiet } => {
+  const bin: Partial<Record<HenFeed, number>> = { ...(r.bin ?? {}) };
+  const stock = (k: string) => k === 'pellets' ? r.feedKg : k === 'larvae' ? r.larvaeKg : bin[k as HenFeed] ?? 0;
+  const need = r.hens * HEN_DM_KG;
+  let dm = 0, cp = 0, ca = 0, yolk = 0, feedKg = r.feedKg, larvaeKg = r.larvaeKg;
+  for (const k of EAT_ORDER) {
+    const f = HEN_FEED[k];
+    const wantDm = Math.min(need - dm, f.cap * r.hens);
+    if (wantDm <= 1e-6) continue;
+    const kg = Math.min(stock(k), wantDm / f.dm);
+    if (kg <= 0) continue;
+    const d = kg * f.dm;
+    dm += d; cp += d * f.cp; ca += d * f.ca; yolk += d * f.yolk;
+    if (k === 'pellets') feedKg -= kg; else if (k === 'larvae') larvaeKg -= kg; else bin[k as HenFeed] = (bin[k as HenFeed] ?? 0) - kg;
+  }
+  // Shell is free choice: they take what they need, about four grams a hen a day.
+  const shellKg = Math.min(bin.shells ?? 0, r.hens * 0.004);
+  if (shellKg > 0) bin.shells = (bin.shells ?? 0) - shellKg;
+  const shellShare = r.hens > 0 ? shellKg / (r.hens * 0.004) : 0;
+  const diet: HenDiet = dm > 0
+    ? { fed: dm / need, protein: cp / dm, calcium: clamp(ca / dm + shellShare, 0, 1), yolk: clamp(yolk / dm, 0, 1) }
+    : { fed: 0, protein: 0, calcium: shellShare, yolk: 0 };
+  return { run: { ...r, feedKg: Math.max(0, feedKg), larvaeKg: Math.max(0, larvaeKg), bin, diet }, diet };
+};
+
 export const henDay = (rIn: HenRun, ctx: LiveCtx, tended: { collected?: boolean; shutByDusk?: boolean; autoDoor?: boolean }): { run: HenRun; events: string[] } => {
-  const r: HenRun = { ...rIn, problems: rIn.problems.map(p => ({ ...p })) };
+  let r: HenRun = { ...rIn, problems: rIn.problems.map(p => ({ ...p })) };
   const events: string[] = [];
   if (r.hens <= 0) return { run: r, events };
   const light = sunTimes(ctx.doy).daylight / 60;
   let rate = clamp((light - 9) / 5, 0.1, 0.85);
   if (ctx.wx.tMax > 32) rate *= 0.7;
   if (ctx.month === 9) rate *= 0.35;                        // the autumn moult
-  if (r.feedKg <= 0) rate *= 0.35;
   if (r.mites > 50) rate *= 0.7;
-  const larvae = r.larvaeKg > 0;
-  if (larvae) rate = Math.min(0.95, rate * 1.15);
+  // What they ate decides the rest: hunger and short protein both stop a hen laying.
+  const eaten = henEat(r);
+  r = eaten.run;
+  const d = eaten.diet;
+  rate *= clamp(d.fed, 0.25, 1);
+  rate *= 0.45 + 0.55 * clamp((d.protein - 0.10) / (PROTEIN_NEED - 0.10), 0, 1);
+  if (d.protein > 0.2 && d.fed > 0.9) rate = Math.min(0.95, rate * 1.1);
   rate *= r.health / 100;
   // A deterministic lay: expected eggs, with the fraction carried by a seeded roll.
   const expected = r.hens * rate;
-  const eggs = Math.floor(expected) + (roll('lay', ctx.day) < expected - Math.floor(expected) ? 1 : 0);
+  let eggs = Math.floor(expected) + (roll('lay', ctx.day) < expected - Math.floor(expected) ? 1 : 0);
+  // Short of calcium the shells come thin, and a thin egg breaks in the nest.
+  const broken = d.calcium < 0.55 ? Math.round(eggs * (0.55 - d.calcium) * 0.8) : 0;
+  eggs -= broken;
+  const q = eggGrade(d, r.health);
+  r.eggQ = r.eggs + eggs > 0 ? ((r.eggQ ?? q) * r.eggs + q * eggs) / (r.eggs + eggs) : r.eggQ;
   r.eggs += eggs;
   r.laidTotal += eggs;
-  r.feedKg = Math.max(0, r.feedKg - r.hens * (larvae ? 0.1 : 0.12));
-  if (larvae) r.larvaeKg = Math.max(0, r.larvaeKg - r.hens * 0.02);
+  if (d.fed < 0.6) r.health = clamp(r.health - 0.5, 20, 100);
   r.mites = clamp(r.mites + (ctx.month >= 4 && ctx.month <= 8 ? 0.7 : 0.15), 0, 100);
   if (r.mites > 60) r.health = clamp(r.health - 0.4, 20, 100);
-  else r.health = clamp(r.health + 0.2, 0, 100);
+  else if (d.fed >= 0.6) r.health = clamp(r.health + 0.2, 0, 100);
   // Uncollected eggs get broken and eaten.
   if (r.eggs > r.hens * 3) { const lost = Math.floor(r.eggs * 0.2); r.eggs -= lost; }
   // The fox, on a night the coop stood open.
@@ -216,21 +274,63 @@ export const panDay = (pIn: SaltPan, ctx: LiveCtx): { pan: SaltPan; events: stri
    fly larvae are fast and hungry and want it warm — above 18 °C, so April to
    October here — and give frass for the beds and fat larvae for the hens.
    --------------------------------------------------------------------------- */
+/** What each waste does in a worm bin. Compost worms want greens with a third of their
+ *  weight in dry carbon bedding, a little grit, and not much acid fruit. */
+export const WORM_FOOD: Record<string, 'green' | 'carbon' | 'grit' | 'acid'> = {
+  veg_waste: 'green', green_waste: 'green', green_tips: 'green', spent_grain: 'green', windfalls: 'acid', straw: 'carbon', eggshells: 'grit',
+};
+/** What worms must not get, and why. */
+export const WORM_REFUSE: Record<string, string> = {
+  fish_waste: 'fish rots before the worms reach it: it sours the bin and draws flies',
+  press_cake: 'the salt in it kills worms',
+  prunings: 'wood is years of work for a worm; it goes on the heap',
+};
+/** Kilos of prepupae a kilo of each waste becomes (as fed). Rich, wet, protein-heavy waste
+ *  converts best; fibrous greens barely feed them. Straw, wood and shell are not food at all. */
+export const BSF_FOOD: Record<string, number> = {
+  fish_waste: 0.20, spent_grain: 0.20, press_cake: 0.14, veg_waste: 0.12, windfalls: 0.10, green_tips: 0.08, green_waste: 0.05,
+};
+
+/** How good a worm feed this mix is, 0-1: carbon bedding near a third, acid fruit buffered by grit. */
+export const wormMixQ = (mix: Record<string, number>): number => {
+  let total = 0, carbon = 0, grit = 0, acid = 0;
+  for (const [k, kg] of Object.entries(mix)) {
+    const role = WORM_FOOD[k];
+    if (!role || kg <= 0) continue;
+    total += kg;
+    if (role === 'carbon') carbon += kg; else if (role === 'grit') grit += kg; else if (role === 'acid') acid += kg;
+  }
+  if (total <= 0) return 0;
+  const cs = carbon / total;
+  const bedding = clamp(1 - Math.abs(cs - 0.3) / 0.3, 0, 1);
+  const acidShare = acid / total;
+  const sour = acidShare > 0.15 ? Math.min(0.3, (acidShare - 0.15) * 1.5) * (grit >= total * 0.02 ? 0.4 : 1) : 0;
+  return clamp(0.35 + 0.65 * bedding - sour, 0.1, 1);
+};
+export const castingsGradeOf = (q: number): number => Math.round(52 + 44 * q);
+/** A colony this size keeps itself; anything over it can go to the hens. */
+export const WORM_COLONY_KG = 3;
+
 export const shedDay = (sIn: WormShed, ctx: LiveCtx): { shed: WormShed; events: string[] } => {
   const s: WormShed = { ...sIn };
   const events: string[] = [];
   const t = ctx.wx.tMean + 4;                                 // sheltered, and the bins make their own warmth
   const wormT = t < 6 ? 0.05 : t < 15 ? (t - 6) / 9 : t <= 25 ? 1 : t < 32 ? 1 - (t - 25) / 10 : 0.2;
-  const wormEat = Math.min(s.wormFeedKg, s.wormsKg * 0.35 * wormT);
+  const q = s.wormFeedQ ?? 0.6;
+  // A soggy, sour bin with no bedding slows them; a well made one they get through.
+  const wormEat = Math.min(s.wormFeedKg, s.wormsKg * 0.35 * wormT * (0.5 + 0.5 * q));
   s.wormFeedKg -= wormEat;
-  s.castingsKg += wormEat * 0.45;
-  s.wormsKg = clamp(s.wormsKg + (wormEat > s.wormsKg * 0.2 ? 0.004 : -0.002) * s.wormsKg, 0.2, 8);
+  const made = wormEat * 0.45;
+  const g = castingsGradeOf(q);
+  s.castingsGrade = s.castingsKg + made > 0 ? ((s.castingsGrade ?? g) * s.castingsKg + g * made) / (s.castingsKg + made) : s.castingsGrade;
+  s.castingsKg += made;
+  s.wormsKg = clamp(s.wormsKg + (wormEat > s.wormsKg * 0.2 ? 0.004 * (0.5 + q) : -0.002) * s.wormsKg, 0.2, 8);
 
   const bsfT = t < 16 ? 0 : t < 24 ? (t - 16) / 8 : t <= 34 ? 1 : 0.4;
   if (s.bsfLarvaeKg > 0) {
     const bsfEat = Math.min(s.bsfFeedKg, 3.5 * bsfT * clamp(s.bsfLarvaeKg / 2, 0.2, 2));
     s.bsfFeedKg -= bsfEat;
-    s.prepupaeKg += bsfEat * 0.17;
+    s.prepupaeKg += bsfEat * (s.bsfConv ?? 0.12);
     s.frassKg += bsfEat * 0.28;
     // The colony lives on through what it feeds; a cold winter with no heat ends it.
     if (bsfT === 0 && ctx.wx.tMean < 5) s.bsfLarvaeKg = Math.max(0, s.bsfLarvaeKg - 0.02);
@@ -238,3 +338,4 @@ export const shedDay = (sIn: WormShed, ctx: LiveCtx): { shed: WormShed; events: 
   }
   return { shed: s, events };
 };
+

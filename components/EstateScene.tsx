@@ -685,28 +685,36 @@ const drawPans = (ctx: CanvasRenderingContext2D, pans: NonNullable<EstateState['
   });
 };
 
+/** Measured off the painted shed: the ramps the prepupae climb out along into the lidded
+ *  buckets, and the mesh cage above the bins where the adults mate. The bins and towers are
+ *  painted shut, so nothing is drawn on them: how full they are lives in the panel. */
+const SHED_RAMPS: [number, number, number, number][] = [[341, 190, 365, 215], [396, 190, 425, 215]];
+const FLY_CAGE = [353, 78, 443, 132];
+
 const drawShed = (ctx: CanvasRenderingContext2D, shed: NonNullable<EstateState['facilities']['worm_shed']>['shed'], p: Props, t: number) => {
-  const g = ESTATE_GEOM.worm_shed;
-  if (!g) return;
-  // castings darkening the bottom tier, waste in the top
-  g.worms.forEach((R: number[], i: number) => {
-    const food = Math.min(1, shed!.wormFeedKg / 12), cast = Math.min(1, shed!.castingsKg / 20);
-    ctx.fillStyle = `rgba(40,28,18,${0.3 + cast * 0.5})`; ctx.fillRect(R[0] + 2, R[3] - 6, R[2] - R[0] - 4, 4);
-    if (food > 0.05) for (let k = 0; k < 12 * food; k++) px(ctx, R[0] + 4 + roll('wf', i, k) * (R[2] - R[0] - 8), R[1] + 4, k % 2 ? '#7a9a3a' : '#a86a3a');
-  });
-  g.bsf.forEach((R: number[], i: number) => {
-    if (shed!.bsfLarvaeKg < 0.05) return;
-    const busy = shed!.bsfFeedKg > 0.2;
-    const n = Math.round(10 + 20 * Math.min(1, shed!.bsfLarvaeKg / 2));
+  const s = shed!;
+  if (s.bsfLarvaeKg < 0.05) return;
+  // Prepupae crawling down the ramps while the colony is eating and it is warm enough.
+  const working = s.bsfFeedKg > 0.2 && p.month >= 3 && p.month <= 9;
+  if (working) {
+    const n = Math.round(2 + 5 * Math.min(1, s.bsfLarvaeKg / 2));
+    SHED_RAMPS.forEach(([x0, y0, x1, y1], i) => {
+      for (let k = 0; k < n; k++) {
+        const u = ((t * 0.004 + roll('pp', i, k)) % 1);
+        const x = x0 + (x1 - x0) * u + (roll('ppx', i, k) - 0.5) * 3, y = y0 + (y1 - y0) * u;
+        px(ctx, x, y, '#3a2a1c'); px(ctx, x + 1, y, '#5a4430');
+      }
+    });
+  }
+  // Adults in the cage in the warm months.
+  if (p.month >= 4 && p.month <= 8) {
+    const n = Math.round(4 + 8 * Math.min(1, s.bsfLarvaeKg / 2));
     for (let k = 0; k < n; k++) {
-      const x = R[0] + 5 + roll('bl', i, k) * (R[2] - R[0] - 10) + (busy ? Math.sin(t / 2 + k) : 0);
-      const y = R[1] + 8 + roll('bm', i, k) * (R[3] - R[1] - 14);
-      px(ctx, x, y, '#e8dcc0'); px(ctx, x + 1, y, '#c8b890');
+      const x = FLY_CAGE[0] + 3 + ((t * (0.6 + roll('fx', k)) + roll('fx0', k) * 90) % (FLY_CAGE[2] - FLY_CAGE[0] - 6));
+      const y = FLY_CAGE[1] + 6 + roll('fy', k) * (FLY_CAGE[3] - FLY_CAGE[1] - 12) + Math.sin(t / 3 + k) * 3;
+      px(ctx, x, y, '#141414');
     }
-    if (shed!.prepupaeKg > 0.2) { ctx.fillStyle = '#4a3a2a'; ctx.fillRect(R[2] + 12, R[3] - 10, 10, Math.min(8, 2 + shed!.prepupaeKg * 2)); }
-    // adults over the cage in the warm months
-    if (i === 0 && p.month >= 4 && p.month <= 8) for (let k = 0; k < 6; k++) px(ctx, R[0] + 10 + ((t * (1 + k % 3) + k * 17) % 50), R[1] - 20 + Math.sin(t / 3 + k) * 8, '#1a1a1a');
-  });
+  }
 };
 
 const drawMap = (ctx: CanvasRenderingContext2D, p: Props) => {
