@@ -46,7 +46,10 @@ SOURCES = {
     'wzj3y2': ('worm_shed', ORDER),
     'cy615i': ('pine_plantation', ORDER),
     'xxfz5j': ('wild_map', ORDER),
-    'hp0qrm': ('farm_map', ['winter', 'winter_snow', 'summer']),   # no spring or autumn came
+    # (3) is the map-parts sheet and (4) a copy of (2); autumn and spring came third
+    'hp0qrm': ('farm_map', ['winter', 'winter_snow', 'summer', None, None, 'autumn', 'spring']),
+    # the third batch: (5)-(9) are copies of the first five
+    'vyipot': ('orchard', ORDER),
 }
 
 W, H = 480, 268
@@ -82,7 +85,7 @@ if __name__ == '__main__':
         files = sorted(glob.glob(os.path.join(src, f'Gemini_Generated_Image_{stem}*.jpeg')), key=index)
         for f in files:
             i = index(f)
-            if i >= len(order):
+            if i >= len(order) or order[i] is None:
                 continue
             out = os.path.join(DEST, f'{place}-{order[i]}.png')
             snap(f).save(out, optimize=True)

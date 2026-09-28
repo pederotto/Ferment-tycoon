@@ -5454,3 +5454,4 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .mini-btn .farm-icon { margin: -4px 5px -4px 0; }
 .el-kv .kit-owned { display: inline-flex; align-items: center; }
 .el-kit .nm { display: inline-flex; align-items: center; }
+.el-face { display: inline-block; vertical-align: middle; margin-right: 8px; border-radius: 50%; border: 1px solid rgba(222, 186, 110, 0.35); background-color: #1a130b; }

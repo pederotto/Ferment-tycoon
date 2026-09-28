@@ -1,6 +1,7 @@
 import React from 'react';
 import { PEOPLE_SHEET, PEOPLE_COLS, PEOPLE_CELL, portraitIndex } from './peopleSheet';
 import { KEEPER_FACES } from './keeperSheet';
+import { FARM_FACES } from './farmFaceSheet';
 import { StaffRoleType } from '../types';
 
 /**
@@ -12,11 +13,13 @@ import { StaffRoleType } from '../types';
  */
 const Portrait: React.FC<{ seed: string; size?: number; className?: string; role?: StaffRoleType }> = ({ seed, size = 44, className, role }) => {
   const i = portraitIndex(seed);
-  // A koji keeper wears the room's clothes: their faces come from their own four.
-  if (role === 'toji' && KEEPER_FACES.length) {
+  // A koji keeper wears the room's clothes, and a farm hand their own working clothes:
+  // those roles take their faces from their own few.
+  const own = role === 'toji' ? KEEPER_FACES : role ? FARM_FACES[role] : undefined;
+  if (own?.length) {
     return (
       <span className={`portrait${className ? ' ' + className : ''}`} role="img" aria-hidden="true"
-            style={{ width: size, height: size, backgroundImage: `url(${KEEPER_FACES[i % KEEPER_FACES.length]})`,
+            style={{ width: size, height: size, backgroundImage: `url(${own[i % own.length]})`,
                      backgroundSize: 'cover', backgroundPosition: 'center bottom', backgroundRepeat: 'no-repeat' }} />
     );
   }

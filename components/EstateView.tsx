@@ -14,6 +14,7 @@ import {
 import { hiveNeeds, YOLKS_PER_UNIT, HEN_FEED, WORM_FOOD, WORM_REFUSE, BSF_FOOD, WORM_COLONY_KG, castingsGradeOf, eggGrade } from '../services/livestock';
 import { HenFeed } from '../types.farm';
 import { FARM_ICONS } from './farmIconSheet';
+import Portrait from './Portrait';
 import { SOIL_EFFECTS, SOIL_PRODUCT_INGREDIENTS, WASTE_IDS, WASTE_INGREDIENTS } from '../constants.soil';
 
 const soilName = (base: string) => SOIL_PRODUCT_INGREDIENTS.find(i => i.id === base)?.name ?? base;
@@ -348,7 +349,7 @@ const MapLedger: React.FC<{ state: GameState; onGo: (p: ScenePlace) => void; act
               {roles.map(r => {
                 const c = crew.find(x => x.role === r);
                 const where = (Object.keys(ROLE_FOR) as FacilityId[]).filter(k => ROLE_FOR[k] === r && est.facilities[k]).map(k => FACILITIES[k].name.replace('The ', ''));
-                return <li key={r}><span className="r">{ROLE_LABEL[r]}</span><span className="w">{c ? `${c.name}, skill ${c.skill}` : 'nobody'}</span><span className="p">{where.join(', ') || 'the wild'}</span></li>;
+                return <li key={r}><span className="r">{ROLE_LABEL[r]}</span><span className="w">{c && <Portrait seed={c.id} size={26} className="el-face" role={c.role} />}{c ? `${c.name}, skill ${c.skill}` : 'nobody'}</span><span className="p">{where.join(', ') || 'the wild'}</span></li>;
               })}
             </ul>
           )}
@@ -492,7 +493,7 @@ const PlaceLedger: React.FC<PlaceProps> = (p) => {
       {f.shed && <ShedPanel {...p} />}
 
       <section className="el-sect">
-        <h3>Standing orders <span className="sub">{hand ? `${hand.name} does these, every day` : ORDERS_FOR[f.id].length ? 'nobody works here to do them' : ''}</span></h3>
+        <h3>{hand && <Portrait seed={hand.id} size={30} className="el-face" role={hand.role} />}Standing orders <span className="sub">{hand ? `${hand.name} does these, every day` : ORDERS_FOR[f.id].length ? 'nobody works here to do them' : ''}</span></h3>
         {ORDERS_FOR[f.id].length === 0
           ? <p className="el-note">The pans are minded by the forager’s apprentice, or by you.</p>
           : (

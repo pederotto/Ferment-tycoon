@@ -3,6 +3,7 @@ import { EstateState, FacilityId, Plot, Tree, GroundId } from '../types.farm';
 import { GROUNDS, GROUND_ORDER } from '../constants.wild';
 import { CROPS, FAMILIES, TREE_SPECS } from '../constants.farm';
 import { ESTATE_PLATES, ESTATE_GEOM, CROP_SPRITES, CROP_STAGES, CROP_EXTRA, StageSprite } from './estatePlates';
+import { HEN_FRAMES } from './farmIconSheet';
 import { DayWeather, sunTimes, roll } from '../services/climate';
 import { flyingDay } from '../services/livestock';
 
@@ -88,8 +89,10 @@ const TREE_AT: Record<string, string> = {
   apple_old: 'apple_1', apple_young: 'apple_2', plum_near: 'plum_2', plum_far: 'plum_1', yuzu_wall: 'yuzu', akebi_pergola: 'akebi',
   finger_lime: 'finger_limes', calamansi_pot: 'calamansi', buddhas_hand_pot: 'buddhas_hand', black_sapote_pot: 'black_sapote',
 };
-export const treeGeom = (place: ScenePlace, id: string): number[] | undefined => ESTATE_GEOM[place]?.trees?.[TREE_AT[id] ?? id];
-export const potGeom = (place: ScenePlace, id: string): number[] | undefined => ESTATE_GEOM[place]?.pots?.[TREE_AT[id] ?? id];
+// A painted place names its trees by the game's own ids; the placeholder renders used the
+// aliases above. The tree's own id wins, so the two can coexist.
+export const treeGeom = (place: ScenePlace, id: string): number[] | undefined => ESTATE_GEOM[place]?.trees?.[id] ?? ESTATE_GEOM[place]?.trees?.[TREE_AT[id] ?? id];
+export const potGeom = (place: ScenePlace, id: string): number[] | undefined => ESTATE_GEOM[place]?.pots?.[id] ?? ESTATE_GEOM[place]?.pots?.[TREE_AT[id] ?? id];
 
 const FRUIT_COL: Record<string, string[]> = {
   apples: ['#b8302a', '#d8503a', '#8aa83a'], plums: ['#c8d860', '#a8c048'], yuzu: ['#e8c02a', '#f2d84a'], akebi: ['#6a3a8a', '#8a5aa8'],
@@ -201,11 +204,11 @@ const stageFrac = (pl: Plot['planting']) => {
    behind — so a bed comes into flower and ripens unevenly, the way one does,
    instead of in lockstep. */
 const SPRITE_SET: Record<string, string> = {
-  brassica: 'cabbage', napa: 'cabbage', allium: 'garlic', tomato: 'tomato', chili: 'chili', strawberry: 'strawberry',
-  rose: 'rose', corn: 'corn', bean: 'bean', fava: 'pea', pea: 'pea', chickpea: 'pea', lentil: 'pea',
+  brassica: 'cabbage', napa: 'napa', allium: 'garlic', tomato: 'tomato', chili: 'chili', strawberry: 'strawberry',
+  rose: 'rose', corn: 'corn', bean: 'bean', fava: 'fava', pea: 'pea', chickpea: 'chickpea', lentil: 'lentil',
 };
 /** How tall the ripe plant stands at scale 1, in scene pixels (cabbage and strawberry by their spread). */
-const SPRITE_TALL: Record<string, number> = { tomato: 46, bean: 38, pea: 16, corn: 50, chili: 15, rose: 16, cabbage: 11, garlic: 12, strawberry: 8 };
+const SPRITE_TALL: Record<string, number> = { tomato: 46, bean: 38, pea: 22, fava: 25, chickpea: 13, lentil: 9, napa: 12, corn: 50, chili: 15, rose: 16, cabbage: 11, garlic: 12, strawberry: 8 };
 const TOMATO_COLOUR: Record<string, string> = {
   cuore_di_bue: 'red', brandywine: 'pink', black_krim: 'black', green_zebra: 'green', cherokee_purple: 'plum',
   san_marzano: 'red', costoluto_genovese: 'red', white_beauty: 'cream', striped_german: 'orange', paul_robeson: 'black',
@@ -218,11 +221,10 @@ const plantStage = (f: number, jit: number, ripe: boolean, over: boolean, dead: 
   if (ripe) return fj >= 0.97 ? 5 : 4;
   return fj < 0.05 ? 0 : fj < 0.2 ? 1 : fj < 0.45 ? 2 : fj < 0.64 ? 3 : 4;
 };
-/** The owner's rows are not all in growth order, and not every row ends in a dead plant.
- *  Tomato flowers come before green fruit; garlic's last two cells are lifted bulbs, which
- *  never stand in a bed; a rose dies back to bare canes; a pea has no dead cell of its own. */
-const STAGE_MAP: Record<string, number[]> = { tomato: [0, 1, 3, 2, 4, 5, 6], garlic: [0, 1, 2, 3, 4, 4, 4] };
-const DEAD_SPRITE: Record<string, [string, number]> = { pea: ['bean', 6], rose: ['rose', 0], garlic: ['garlic', 4] };
+/** Not every row ends in the plant the game wants: garlic's last two cells are lifted
+ *  bulbs, which never stand in a bed, and a dead rose is bare canes, not hips. */
+const STAGE_MAP: Record<string, number[]> = { garlic: [0, 1, 2, 3, 4, 4, 4] };
+const DEAD_SPRITE: Record<string, [string, number]> = { rose: ['rose', 0], garlic: ['garlic', 4] };
 
 const drawCropSprite = (ctx: CanvasRenderingContext2D, cropId: string, f: number, x: number, y: number, scale: number, ripe: boolean, over: boolean, dead: boolean, seed: number): boolean => {
   const fam = CROPS[cropId]?.family;
@@ -607,46 +609,19 @@ const drawHives = (ctx: CanvasRenderingContext2D, hives: NonNullable<EstateState
   });
 };
 
-/** A hen at the painting's scale, about as tall as the waterer's body: a 9x9 template
- *  at 2 px a cell, facing right, mirrored to face left. */
-const HEN = [
-  '......c..',
-  '.....HHc.',
-  '.....HHb.',
-  'T....HH..',
-  'TT.BBBB..',
-  'TBBWWWBB.',
-  '.BBWWWBB.',
-  '..BBBBB..',
-  '...l.l...',
-];
-const HEN_PECK = [
-  '.........',
-  '.........',
-  '.........',
-  'T........',
-  'TT.BBBBc.',
-  'TBBWWWBHc',
-  '.BBWWWBHb',
-  '..BBBBB..',
-  '...l.l...',
-];
-const shade = (hex: string, k: number) => {
-  const n = parseInt(hex.slice(1), 16);
-  const f = (v: number) => Math.max(0, Math.min(255, Math.round(v * k)));
-  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
-};
-const drawHen = (ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, c: string, peck: boolean) => {
-  const S = 2, T = peck ? HEN_PECK : HEN;
-  const col: Record<string, string> = { c: '#c8282a', H: c, B: c, W: shade(c, 0.78), T: shade(c, 0.6), b: '#e8a030', l: '#d89030' };
+/** A hen off the owner's sheet, pre-shrunk to the run's scale (about as tall as the painted
+ *  waterer's body). Frames: stand, walk x3, peck, scratch, sit; the sheet faces right. */
+const HEN_BREED_ORDER = ['brown', 'white', 'black', 'speckled'];
+const drawHen = (ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, breed: number, frame: number) => {
+  const fr = HEN_FRAMES[HEN_BREED_ORDER[breed % HEN_BREED_ORDER.length]]?.[frame];
+  if (!fr) return;
+  const im = img(fr.src, wake);
+  if (!im.complete || !im.width) return;
   ctx.fillStyle = 'rgba(40,28,16,0.28)'; ctx.fillRect(x - 7, y - 1, 14, 2);
-  for (let r = 0; r < T.length; r++) for (let k = 0; k < T[r].length; k++) {
-    const ch = T[r][k];
-    if (ch === '.') continue;
-    ctx.fillStyle = col[ch];
-    const cx = dir > 0 ? k : 8 - k;
-    ctx.fillRect(x + (cx - 4) * S, y - (9 - r) * S, S, S);
-  }
+  ctx.save();
+  if (dir < 0) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+  ctx.drawImage(im, Math.round(x - fr.w / 2), Math.round(y - fr.h), fr.w, fr.h);
+  ctx.restore();
 };
 
 const drawHens = (ctx: CanvasRenderingContext2D, run: NonNullable<EstateState['facilities']['hen_run']>['hens'], hens: { x: number; y: number; tx: number; ty: number; c: string }[], t: number, still: boolean) => {
@@ -665,9 +640,11 @@ const drawHens = (ctx: CanvasRenderingContext2D, run: NonNullable<EstateState['f
   [...hens.keys()].sort((a, b) => hens[a].y - hens[b].y).forEach(i => {
     const h = hens[i];
     const x = Math.round(h.x), y = Math.round(h.y), dir = h.tx < h.x ? -1 : 1;
-    // Pecking: the head drops for a few frames now and then.
-    const peck = !still && roll('peck', i, Math.floor(t / 6)) < 0.25;
-    drawHen(ctx, x, y, dir, h.c, peck);
+    // Walking while she has somewhere to be; otherwise pecking, now and then scratching, or standing.
+    const moving = !still && !!h.tx && Math.hypot(h.tx - h.x, h.ty - h.y) >= 2;
+    const r = roll('peck', i, Math.floor(t / 6));
+    const frame = moving ? 1 + (Math.floor(t / 3) + i) % 3 : still ? 0 : r < 0.3 ? 4 : r < 0.4 ? 5 : 0;
+    drawHen(ctx, x, y, dir, i, frame);
   });
 };
 

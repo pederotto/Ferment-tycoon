@@ -166,6 +166,16 @@ PAINTED_GEOM = {
             [[18, 82], [64, 82], [284, 270], [50, 270]],
         ],
     },
+    'orchard': {
+        # canopy ellipses (cx, cy, rx, ry), measured off the painted summer plate; the
+        # akebi's is the top of its pergola. Blossom and fruit are drawn into these.
+        'size': PAINTED_SIZE,
+        'trees': {
+            'apple_old': [80, 118, 70, 50], 'apple_young': [170, 140, 22, 24],
+            'plum_near': [213, 110, 34, 30], 'akebi_pergola': [272, 108, 22, 10],
+            'plum_far': [318, 122, 44, 36], 'yuzu_wall': [432, 185, 34, 38],
+        },
+    },
     'orangery': {
         # canopy ellipses (cx, cy, rx, ry) back to front, and each pot's box
         'size': PAINTED_SIZE,

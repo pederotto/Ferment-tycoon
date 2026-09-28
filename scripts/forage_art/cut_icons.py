@@ -16,7 +16,13 @@ SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser('~/Downloads')
 SHEETS = {
     'tools': 'Gemini_Generated_Image_jd9xcjjd9xcjjd9x.jpeg',
     'units': 'Gemini_Generated_Image_lec255lec255lec2.jpeg',
+    'hens':  'Gemini_Generated_Image_r02y90r02y90r02y.jpeg',
 }
+# Hens: four breeds as rows (brown, white, black, speckled), seven frames each (stand,
+# walk x3, peck, scratch, sit), all facing right. Painted about 58 px tall, three times the
+# run's scale, so they are shrunk here by one factor for every frame of a breed.
+HEN_BREEDS = ['brown', 'white', 'black', 'speckled']
+HEN_TALL = 19
 ICONS = {
     # the farm kit, by FARM_TOOLS id
     'hose': ('tools', '0.1'), 'drip': ('tools', '0.2'), 'stirrup_hoe': ('tools', '0.4'),
@@ -30,6 +36,8 @@ ICONS = {
     'fly_bin': ('units', '3.0'), 'fly_bin_busy': ('units', '3.3'), 'fly_bin_full': ('units', '3.6'),
     'sack_frass': ('units', '4.0'), 'sack_castings': ('units', '4.4'),
 }
+# The 3lgfas sheet (press, bread maker, trays, carboy, clock, mister, barrel, paddle) is
+# smooth illustration on a ruled grid, not pixel art, and has no farm tool on it: not used.
 
 def main():
     cells = {}
@@ -47,6 +55,23 @@ def main():
         buf = io.BytesIO(); c.save(buf, 'WEBP', lossless=True)
         b = buf.getvalue(); total += len(b)
         out.append(f"  {key}: {{ src: 'data:image/webp;base64,{base64.b64encode(b).decode()}', w: {c.width}, h: {c.height} }},")
+    out.append('};')
+    # the hens, pre-shrunk: LANCZOS, then the alpha cut hard so the edge stays a pixel edge
+    out.append('/** Hen frames by breed: stand, walk x3, peck, scratch, sit; facing right. */')
+    out.append('export const HEN_FRAMES: Record<string, { src: string; w: number; h: number }[]> = {')
+    for ri, breed in enumerate(HEN_BREEDS):
+        row = [cells[('hens', f'{ri}.{ci}')] for ci in range(7)]
+        k = HEN_TALL / row[0].height
+        frames = []
+        for c in row:
+            w, h = max(1, round(c.width * k)), max(1, round(c.height * k))
+            sm = c.resize((w, h), Image.LANCZOS)
+            a = sm.getchannel('A').point(lambda v: 255 if v > 110 else 0)
+            sm.putalpha(a)
+            buf = io.BytesIO(); sm.save(buf, 'WEBP', lossless=True)
+            b = buf.getvalue(); total += len(b)
+            frames.append(f"{{ src: 'data:image/webp;base64,{base64.b64encode(b).decode()}', w: {w}, h: {h} }}")
+        out.append(f"  {breed}: [{', '.join(frames)}],")
     out.append('};')
     with open(os.path.join(REPO, 'components', 'farmIconSheet.ts'), 'w') as f:
         f.write('\n'.join(out) + '\n')
