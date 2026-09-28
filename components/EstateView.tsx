@@ -106,19 +106,27 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
   const [planting, setPlanting] = useState(false);
   const [feeding, setFeeding] = useState(false);
   const [showKit, setShowKit] = useState(false);
+  // THE LEDGER IS A POP-UP. The painting takes the whole window, and what you
+  // can do with a thing opens beside it when you click it: on the farm map a
+  // place's card (`pop` is its id), anywhere else the place's ledger ('ledger').
+  // `popLeft` puts it on the far side of the picture from what was clicked.
+  const [pop, setPop] = useState<string | null>(null);
+  const [popLeft, setPopLeft] = useState(false);
+  const openPop = (what: string, atX = 0.5) => { setPop(what); setPopLeft(atX > 0.55); };
+  const closePop = () => { setPop(null); setSel([]); setPlanting(false); setFeeding(false); };
 
   const body = useRef<HTMLDivElement>(null);
   // A new place starts at the top: its picture, not halfway down the last one's ledger.
   useEffect(() => {
-    setSel([]); setPlanting(false); setFeeding(false);
+    setSel([]); setPlanting(false); setFeeding(false); setPop(null);
     body.current?.scrollTo(0, 0);
     body.current?.querySelectorAll('.estate-ledger, .estate-stage').forEach(e => e.scrollTo(0, 0));
   }, [place]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (isGround(place)) onGo('wild_map'); else if (place !== 'farm_map') onGo('farm_map'); else onClose(); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (pop) closePop(); else if (isGround(place)) onGo('wild_map'); else if (place !== 'farm_map') onGo('farm_map'); else onClose(); } };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [place, onGo, onClose]);
+  }, [place, onGo, onClose, pop]);
 
   const owned = useMemo(() => Object.fromEntries(Object.keys(est.facilities).map(k => [k, true])) as Partial<Record<FacilityId, boolean>>, [est.facilities]);
   const title = place === 'farm_map' ? 'The Farm' : place === 'wild_map' ? 'The Wild' : isGround(place) ? GROUNDS[place].name : FACILITIES[place as FacilityId].name;
@@ -149,19 +157,25 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
         </div>
 
         <div className="estate-body" ref={body}>
-          <div className="estate-stage">
+          {/* A click anywhere on the picture that is not on a thing closes the pop-up;
+              a click on another thing moves it there instead. */}
+          <div className="estate-stage" onClick={e => {
+            if (pop && !(e.target as Element).closest('.estate-hit, .wild-pin, button, [role="button"], a, input, select')) closePop();
+          }}>
             <div className="estate-scene">
               <EstateScene
                 place={place} estate={est} month={state.month} doy={doy} day={day} minute={state.minute}
                 wx={wx} weekType={state.weather.type} owned={owned} selected={sel}
               />
               {wild
-                ? <WildHits state={state} place={place as any} date={date} wx={wx} size={sceneSize(place)} onGo={onGo} act={act} owned={owned as Record<string, boolean>} />
-                : <HitAreas place={place} f={f} owned={owned} sel={sel} onPick={id => {
-                  if (place === 'farm_map') return onGo(id as FacilityId);
+                ? <WildHits state={state} place={place as any} date={date} wx={wx} size={sceneSize(place)} onGo={onGo}
+                            act={(fn, o) => { openPop('ledger'); act(fn, o); }} owned={owned as Record<string, boolean>} />
+                : <HitAreas place={place} f={f} owned={owned} sel={sel} onPick={(id, atX) => {
+                  if (place === 'farm_map') return openPop(id, atX);
+                  openPop('ledger', atX);
                   if (place === 'worm_shed' || place === 'hives' || place === 'salt_pans') {
                     setSel([id]);
-                    document.querySelector(`[data-unit="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    setTimeout(() => document.querySelector(`[data-unit="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 30);
                     return;
                   }
                   toggle(id);
@@ -176,6 +190,9 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
               {place === 'wild_map' && <button className="mini-btn" onClick={() => onGo('farm_map')}>← The farm</button>}
               {isGround(place) && <button className="mini-btn" onClick={() => onGo('wild_map')}>← The wild</button>}
               {!wild && place !== 'farm_map' && <button className="mini-btn" onClick={() => onGo(FACILITIES[place as FacilityId].map === 'wild' ? 'wild_map' : 'farm_map')}>{FACILITIES[place as FacilityId].map === 'wild' ? '← The wild' : '← The farm'}</button>}
+              <button className={`mini-btn${pop ? ' on' : ''}`} onClick={() => (pop ? closePop() : openPop('ledger'))}>
+                {pop ? 'Close' : place === 'farm_map' ? 'The farm book' : wild ? 'Journal' : 'Ledger'}
+              </button>
               {dark
                 ? <button className="mini-btn gold" onClick={() => onWait(((sun.sunrise - state.minute) + 1440) % 1440)}>Wait for the light ({formatClock(sun.sunrise)})</button>
                 : <button className="mini-btn" onClick={() => onWait(60)} title="Let an hour pass: the bench works on">Wait an hour</button>}
@@ -187,8 +204,12 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
             )}
           </div>
 
-          <div className="estate-ledger">
-            {place === 'farm_map'
+          {pop && (
+          <div className={`estate-ledger estate-pop${popLeft ? ' left' : ''}${place === 'farm_map' && pop !== 'ledger' ? ' card' : ''}`} role="dialog" aria-label={`${title}: ledger`}>
+            <button className="close-stamp estate-pop-close" onClick={closePop} aria-label="Close" title="Close"><CloseIcon size={11} /></button>
+            {place === 'farm_map' && pop !== 'ledger'
+              ? <PlaceCardPop state={state} id={pop as FacilityId} onGo={onGo} act={act} onMore={() => setPop('ledger')} />
+              : place === 'farm_map'
               ? <MapLedger state={state} onGo={onGo} act={act} onOpenStaff={onOpenStaff} />
               : place === 'wild_map'
               ? <WildMapLedger state={state} date={date} onGo={onGo} />
@@ -202,6 +223,7 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
                 />
               )}
           </div>
+          )}
         </div>
       </div>
     </div>
@@ -211,7 +233,7 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
 /* -----------------------------------------------------------------------------
    HIT AREAS OVER THE SCENE: every bed, tree and place is a button
    --------------------------------------------------------------------------- */
-const HitAreas: React.FC<{ place: ScenePlace; f?: FacilityState; owned: Partial<Record<FacilityId, boolean>>; sel: string[]; onPick: (id: string) => void }> = ({ place, f, owned, sel, onPick }) => {
+const HitAreas: React.FC<{ place: ScenePlace; f?: FacilityState; owned: Partial<Record<FacilityId, boolean>>; sel: string[]; onPick: (id: string, atX: number) => void }> = ({ place, f, owned, sel, onPick }) => {
   // Every shape is a polygon on the plate's own grid: beds and strips are
   // quads in perspective, a tree is its canopy and its pot.
   const shapes: { id: string; polys: number[][][]; label: string }[] = [];
@@ -255,6 +277,8 @@ const HitAreas: React.FC<{ place: ScenePlace; f?: FacilityState; owned: Partial<
   }
   // Far things first, so a near tree or bed takes the click where two overlap.
   shapes.sort((a, b) => Math.max(...a.polys.flat().map(q => q[1])) - Math.max(...b.polys.flat().map(q => q[1])));
+  // Where across the picture a shape sits, 0-1, so the pop-up opens on the other side.
+  const cx = (b: { polys: number[][][] }) => { const xs = b.polys.flat().map(q => q[0]); return (Math.min(...xs) + Math.max(...xs)) / 2 / W; };
   return (
     <svg className="estate-hits" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
       {shapes.map(b => (
@@ -264,8 +288,8 @@ const HitAreas: React.FC<{ place: ScenePlace; f?: FacilityState; owned: Partial<
           tabIndex={0}
           className={`estate-hit${sel.includes(b.id) ? ' on' : ''}${place === 'farm_map' && !owned[b.id as FacilityId] ? ' unowned' : ''}`}
           aria-label={b.label}
-          onClick={() => onPick(b.id)}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(b.id); } }}
+          onClick={() => onPick(b.id, cx(b))}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(b.id, cx(b)); } }}
         >
           <title>{b.label}</title>
           {b.polys.map((poly, i) => <polygon key={i} points={poly.map(q => q.join(',')).join(' ')} />)}
@@ -299,6 +323,32 @@ const facilitySummary = (f: FacilityState, month: number, day: number): { line: 
   return { line: bits.join(' · '), urgent };
 };
 
+const PlaceRow: React.FC<{ state: GameState; id: FacilityId; onGo: (p: ScenePlace) => void; act: EstateViewProps['act'] }> = ({ state, id, onGo, act }) => {
+  const day = absoluteDay(dateOf(state));
+  const spec = FACILITIES[id];
+  const f = state.estate.facilities[id];
+  const s = f ? facilitySummary(f, state.month, day) : null;
+  return (
+    <li className={`el-place label-plate${f ? '' : ' for-sale'}`}>
+      <div className="nm">
+        <span className="name">{spec.name}</span>
+        {f ? <span className={`st${s?.urgent ? ' urgent' : ''}`}>{s?.line}</span> : <span className="about">{spec.about}</span>}
+      </div>
+      {f
+        ? <button className="btn btn-amber sm" onClick={() => onGo(id)}>Go · {spec.walk} min</button>
+        : <button className="btn sm" disabled={state.money < spec.cost} onClick={() => act(s2 => buyFacility(s2, id, day))}>Buy ${spec.cost.toLocaleString()}</button>}
+    </li>
+  );
+};
+
+/* A place clicked on the farm map: its own card, and the way to the whole book. */
+const PlaceCardPop: React.FC<{ state: GameState; id: FacilityId; onGo: (p: ScenePlace) => void; act: EstateViewProps['act']; onMore: () => void }> = ({ state, id, onGo, act, onMore }) => (
+  <section className="el-sect">
+    <ul className="el-places"><PlaceRow state={state} id={id} onGo={onGo} act={act} /></ul>
+    <button className="linkish estate-pop-more" onClick={onMore}>The whole farm book: every place, the van at the gate, the hands →</button>
+  </section>
+);
+
 const MapLedger: React.FC<{ state: GameState; onGo: (p: ScenePlace) => void; act: EstateViewProps['act']; onOpenStaff: () => void }> = ({ state, onGo, act, onOpenStaff }) => {
   const est = state.estate;
   const day = absoluteDay(dateOf(state));
@@ -316,20 +366,7 @@ const MapLedger: React.FC<{ state: GameState; onGo: (p: ScenePlace) => void; act
         <h3>The places</h3>
         <ul className="el-places">
           {FACILITY_ORDER.map(id => {
-            const spec = FACILITIES[id];
-            const f = est.facilities[id];
-            const s = f ? facilitySummary(f, state.month, day) : null;
-            return (
-              <li key={id} className={`el-place label-plate${f ? '' : ' for-sale'}`}>
-                <div className="nm">
-                  <span className="name">{spec.name}</span>
-                  {f ? <span className={`st${s?.urgent ? ' urgent' : ''}`}>{s?.line}</span> : <span className="about">{spec.about}</span>}
-                </div>
-                {f
-                  ? <button className="btn btn-amber sm" onClick={() => onGo(id)}>Go · {spec.walk} min</button>
-                  : <button className="btn sm" disabled={state.money < spec.cost} onClick={() => act(s2 => buyFacility(s2, id, day))}>Buy ${spec.cost.toLocaleString()}</button>}
-              </li>
-            );
+            return <PlaceRow key={id} state={state} id={id} onGo={onGo} act={act} />;
           })}
         </ul>
       </section>
