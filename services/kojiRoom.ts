@@ -10,6 +10,7 @@ import {
 } from './gameLogic';
 import {
   propagateLineage, lineageStrainKey, lineageStrainLabel, describeLineage, sporePotency, mintKojiProduct,
+  bedSpore, blackKojiTag,
 } from './koji';
 
 /* =============================================================================
@@ -74,7 +75,11 @@ export const mintSporeHarvest = (
   const child = propagateLineage(parent, batch.history, batch.lineageDamaged, potency);
   const strain = lineageStrainKey(child.bias);
   const nextGen = child.generation;
-  const sporeId = `koji_spores_gen${nextGen}_${strain}`;
+  // Spores off a black koji bed are black koji. Without this the strain's
+  // citric acid was lost at the first sporulation, and its children were
+  // blended into the yellow house strain of the same generation.
+  const acid = bedSpore(batch, [...INGREDIENTS, ...customIngredients])?.acidProtection;
+  const sporeId = `koji_spores_gen${nextGen}_${strain}${blackKojiTag(acid)}`;
   const existingIdx = newCustomIngredients.findIndex(i => i.id === sporeId);
 
   // Re-propagating into a strain you already hold blends the two rather than
@@ -91,13 +96,14 @@ export const mintSporeHarvest = (
 
   const spore: Ingredient = {
     id: sporeId,
-    name: `Master Spores (Gen ${nextGen} · ${lineageStrainLabel(merged.bias)})`,
+    name: `Master ${acid ? 'Black Koji ' : ''}Spores (Gen ${nextGen} · ${lineageStrainLabel(merged.bias)})`,
     type: IngredientType.STARTER,
     // Priced on strength, not on how many times you have propagated it.
     baseCost: sporeValue(merged),
     currency: 'money',
     quality: Math.round(Math.max(20, Math.min(100, (merged.potency ?? 1) * 78))),
-    description: describeLineage(merged),
+    description: describeLineage(merged) +
+      (acid ? ' Black koji: the beds you grow from it carry citric acid into whatever they go into.' : ''),
     idealFor: ['koji'],
     supplierId: 'in_house',
     tierRequired: 0,
@@ -110,6 +116,7 @@ export const mintSporeHarvest = (
     // simulation through the same door a bought spore does.
     strainBias: merged.bias,
     lineage: merged,
+    ...(acid ? { acidProtection: acid } : {}),
   } as Ingredient;
 
   if (existingIdx >= 0) newCustomIngredients[existingIdx] = spore;
@@ -245,7 +252,7 @@ export const keeperRound = (
       const amount = Math.max(1, Math.floor(b.yieldVolume || 1));
       const substrate = find({ ...state, customIngredients }, b.substrateId);
       if (b.enzymes) {
-        const product = mintKojiProduct(b, recipe, substrate);
+        const product = mintKojiProduct(b, recipe, substrate, bedSpore(b, [...INGREDIENTS, ...customIngredients]));
         if (!customIngredients.some(i => i.id === product.id) && !INGREDIENTS.some(i => i.id === product.id)) customIngredients.push(product);
         inventory[product.id] = (inventory[product.id] || 0) + amount;
       } else {

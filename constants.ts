@@ -275,6 +275,7 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
 export const MATRIX_TOKEN_LABELS: Record<string, string> = {
   salt: 'Salt',
   koji: 'Live koji',
+  black_koji: 'Live black koji',
   spores: 'Spores',
   chili: 'Chili or pepper',
   sugar: 'Sugar',

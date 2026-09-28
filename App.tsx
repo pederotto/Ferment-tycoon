@@ -45,7 +45,7 @@ import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
 import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
 import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, batchFitsContract, unitsFromBatch, makeContractOffer, overdueContracts, newlyUnlockedVendors, canOfferContract } from './services/vendors';
-import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
+import { mintKojiProduct, describeEnzymes, isKojiRecipe, bedSpore } from './services/koji';
 import { keeperRound, mintSporeHarvest, kojiStockKg, KOJI_ROOM_VESSEL } from './services/kojiRoom';
 import { planSeparation, currentMassG, emptyLoss, addRemoved } from './services/massBalance';
 import KojiRoomView from './components/KojiRoomView';
@@ -1955,8 +1955,10 @@ export default function App() {
     // depends on how you grew it. Mint it carrying the enzyme profile the bed
     // actually developed, so it can be spent on the next batch.
     if (isKojiRecipe(recipe) && batch.enzymes) {
-      const substrate = [...INGREDIENTS, ...newCustomIngredients].find(i => i.id === batch.substrateId);
-      const product = mintKojiProduct(batch, recipe, substrate);
+      const known = [...INGREDIENTS, ...newCustomIngredients];
+      const substrate = known.find(i => i.id === batch.substrateId);
+      const starter = bedSpore(batch, known);
+      const product = mintKojiProduct(batch, recipe, substrate, starter);
       const already = [...INGREDIENTS, ...newCustomIngredients].find(i => i.id === product.id);
       if (!already) newCustomIngredients.push(product);
 

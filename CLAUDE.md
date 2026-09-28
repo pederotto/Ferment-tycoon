@@ -60,6 +60,19 @@ so they cannot drift.
 - **Every reader must know every substrate kind.** `recipesUsing` had no `oneOf`
   case, so the ingredient panel told the player a maitake went into nothing.
   Adding a kind means grepping for `substrate.kind`.
+- **Token meanings live in one function, `satisfiesToken`.** The resolver and
+  `recipesUsing` each had their own, and they disagreed. `'spores'` was
+  `id.includes('spores')` in one and "any STARTER" in the other. Black koji is
+  `aspergillus_luchuensis`, so the resolver never saw spores: on a tray it made
+  Bio-Sludge, and on soybeans meju's `forbids: ['spores']` let it through as
+  meju. Meanwhile the panel said rhizopus made barley koji. `'spores'` is
+  `isKojiSpore` now: a STARTER whose id holds `spores` or the genus
+  `aspergillus`. A mould that is not a koji mould must not carry the genus in
+  its id; A. glaucus is `a_glaucus` for that reason. The differential test moved
+  black-koji combinations only, and each now resolves exactly as A. oryzae does
+  in the same slot. That includes 2,397 that left meju, lacto_tomato,
+  lacto_mushroom and brined_fruit/plums, which forbid spores, and 9 shiro misos
+  that douchi now claims.
 - **Differential-test any matrix change.** Resolve every old substrate × every
   reagent set of up to three × every vessel against HEAD (a `git worktree`) and
   against the working tree — 284,200 combinations. A change is fine when it moves
@@ -80,6 +93,28 @@ substrate.
 **Enzymes gate what the substrate can become.** Protein is not umami until a
 protease cuts it up; starch is not sweet until an amylase does; fat is not
 pungent until a lipase does. `getFlavorPotential` applies all three.
+
+**Black koji's acid rides on the koji, not the spore.** `acidProtection` lived on
+the spore only, and every recipe that uses it takes *grown* koji, so the one
+thing the strain is sold for died at the tray. `mintKojiProduct` takes the bed's
+spore and carries the acid onto the koji, with `_kuro` in the id so a black and a
+yellow koji with the same enzymes do not share an inventory row. Sporulation
+carries it too. `citricPotential` turns it into acidity in whatever the koji goes
+into, mass-weighted per unique id. It is zero without black koji, so every other
+batch ticks bit-identically to before. Measured: a black sake reaches acidity 56
+and scores 85, against 73 with yellow koji forced into the same recipe. A shiro
+miso on black koji goes tart and loses 8 points; a lukewarm garum gains 8.
+
+Merged onto the flavour pipeline (acid converging on `potential.acidity`) and the
+koji room: the citric pull runs AFTER that convergence and only when it is
+higher, so nothing without black koji moves. The measurements above were
+taken before that merge; re-measure before rebalancing on them. `bedSpore` is the
+one way to find a bed's spore, and `mintSporeHarvest` and the keeper's harvest
+read it too, so a keeper-run black bed yields black koji and black spore. The
+keeper still only lays beds from `koji_spores*`, so it never spends bought
+black koji. Differential against the muro commit, 19,526,400 combinations:
+172,107 moved, every one containing black koji and every one equal to A. oryzae
+in the same slot (78,307 of them in the muro).
 
 **Salt and heat are alternative preservatives, not a single axis.** Above ~20%
 salt nothing establishes at room temperature (the Roman route); above ~55 °C

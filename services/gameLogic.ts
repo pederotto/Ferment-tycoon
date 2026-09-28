@@ -1,7 +1,7 @@
 import { findIngredient } from './ingredientRegistry';
 
 import { Batch, Recipe, FermentType, Ingredient, Vessel, HiddenStats, FlavorProfile, IngredientType, Buyer, StaffRoleType, WeatherState, MatrixSubstrate, MatrixEntry, RecipeKnowledge, TelemetrySample, ChamberControls, Lineage, GameState, CrewMember } from '../types';
-import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe , sporePotency } from './koji';
+import { advanceEnzymes, getBatchEnzymes, getAcidProtection, isKojiRecipe , sporePotency, isKojiSpore, isLiveKoji, citricPotential } from './koji';
 import { standingTier, isVendorUnlocked } from './vendors';
 import { crewEffect } from './crew';
 import {
@@ -79,6 +79,31 @@ export const getRecipeForBatch = (batch: Batch): Recipe => {
 }; 
 
 /**
+ * WHAT A MATRIX TOKEN MEANS, FOR ONE INGREDIENT.
+ *
+ * The resolver asks whether anything in the bowl satisfies a token;
+ * recipesUsing asks whether this ingredient does. They used to carry two
+ * definitions and disagreed — the panel counted any STARTER as spores, so it
+ * said rhizopus made barley koji, and it counted koji spores as live koji. One
+ * definition, so the panel cannot promise a combination the resolver refuses.
+ *
+ * Everything not named here is a plain substring test, with the leak that
+ * CLAUDE.md describes. These are the families with a meaning of their own.
+ */
+export const satisfiesToken = (t: string, i: Ingredient): boolean => {
+  switch (t) {
+    case 'koji': return isLiveKoji(i);
+    case 'spores': return isKojiSpore(i);
+    // A kuro-koji sake needs the grown koji, not the spore: the acid is made on
+    // the grain. Read off the acid rather than the id, so anything that carries
+    // it counts and nothing that merely has 'black' in its name does.
+    case 'black_koji': return isLiveKoji(i) && (i.acidProtection ?? 0) > 0;
+    case 'chili': return i.id.includes('chili') || i.id.includes('pepper');
+    default: return i.id.includes(t);
+  }
+};
+
+/**
  * THE MATRIX: Determines recipe based on inputs.
  * Now includes PROCEDURAL GENERATION for generic recipes.
  */
@@ -103,21 +128,18 @@ export const resolveRecipeFromMatrix = (
   
   const hasSalt = hasId('salt');
   const hasSugar = hasId('sugar');
-  const hasKoji = ingredients.some(i => i.id.includes('koji') && !i.id.includes('spores'));
-  const hasSpores = hasId('spores');
+  const hasKoji = ingredients.some(isLiveKoji);
+  const hasSpores = ingredients.some(isKojiSpore);
   const hasChili = hasId('chili') || hasId('pepper');
   const hasWheat = hasId('wheat');
   const hasWater = hasId('water');
   const hasTears = hasId('tears');
   const hasLarvae = hasId('larvae');
 
-  // Token semantics for RECIPE_MATRIX. 'koji' means live koji rather than spores,
-  // and 'chili' also matches peppers — both carried over from the old chain.
-  const matrixToken = (t: string): boolean => {
-    if (t === 'koji') return hasKoji;
-    if (t === 'chili') return hasChili;
-    return hasId(t);
-  };
+  // Token semantics for RECIPE_MATRIX live in satisfiesToken, shared with
+  // recipesUsing. 'koji' means live koji rather than spores, 'spores' means any
+  // koji spore including black koji, and 'chili' also matches peppers.
+  const matrixToken = (t: string): boolean => ingredients.some(i => satisfiesToken(t, i));
 
   // --- 1. NAMED RECIPES, FROM THE MATRIX TABLE ---
   // This was a 24-line if-chain. It is a data table now (constants.RECIPE_MATRIX)
@@ -1789,6 +1811,8 @@ export const processBatchTick = (
   // and left the outcome essentially equal to its starting value.
   const rdUmamiMult = activeStaff['rd'] ? 1.35 : 1.0;
   const potential = getFlavorPotential(ingredients, concentration, batch.ingredientQuantities, recipe, enzymes);
+  // Zero for anything without black koji in it, so nothing else moves.
+  const citric = citricPotential(ingredients, batch.ingredientQuantities);
 
   // How well the batch is being run, 0..1. Enzymes stall when it is too cold and
   // denature when it is too hot, so this is a band around the recipe's ideal.
@@ -1825,6 +1849,13 @@ export const processBatchTick = (
     // become sour. Acidification is a little slower than proteolysis because the
     // bacteria have to establish first, and it does not reverse.
     newQuality.acidity += (potential.acidity - newQuality.acidity) * convert * 0.7;
+    // Black koji's citric acid comes through into the mash, faster than the
+    // bacteria's: it is made on the grain, not established in the pot. This is
+    // what makes a kuro-koji sake tart, and the cost of using black koji
+    // anywhere a sharp result is not wanted. Zero without black koji.
+    if (citric > newQuality.acidity) {
+      newQuality.acidity += (citric - newQuality.acidity) * convert;
+    }
   } else if (ageingBehaviour(recipe) === 'matures') {
     // The ferments defined by age keep improving past the window rather than
     // falling over: proteolysis continues slowly, sharp edges mellow, and the
@@ -2660,18 +2691,14 @@ export const recipesUsing = (ingredient: Ingredient): { recipe: Recipe; role: 's
       // case told the player a maitake went into nothing at all.
       else if (sub.kind === 'oneOf' && sub.ids.includes(ingredient.id)) role = 'substrate';
       else if (sub.kind === 'includes' && ingredient.id.includes(sub.token)) role = 'substrate';
-      else if (sub.kind === 'kojiBase' && /koji/.test(ingredient.id)) role = 'substrate';
+      // The resolver's koji base is SUBSTRATE-typed koji; a spore cannot be it.
+      else if (sub.kind === 'kojiBase' && ingredient.type === IngredientType.SUBSTRATE && isLiveKoji(ingredient)) role = 'substrate';
       else if (sub.kind === 'any' && ingredient.type === IngredientType.SUBSTRATE) role = 'substrate';
     }
     if (!role && entry.requires) {
-      // The tokens are families ('salt', 'koji', 'spores'), not ids.
-      const tok = (t: string) =>
-        t === 'salt' ? /salt/.test(ingredient.id)
-        : t === 'koji' ? /koji/.test(ingredient.id)
-        : t === 'spores' ? ingredient.type === IngredientType.STARTER
-        : t === 'water' ? ingredient.id === 'water'
-        : ingredient.id.includes(t);
-      if (entry.requires.some(tok)) role = 'component';
+      // The tokens are families ('salt', 'koji', 'spores'), not ids, and they
+      // mean exactly what they mean to the resolver.
+      if (entry.requires.some(t => satisfiesToken(t, ingredient))) role = 'component';
     }
     if (role) { seen.add(recipe.id); out.push({ recipe, role }); }
   }

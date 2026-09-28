@@ -201,28 +201,112 @@ export const getAcidProtection = (ingredients: Ingredient[]): number =>
   ingredients.reduce((a, i) => a + (i.acidProtection ?? 0), 0);
 
 /**
+ * IS THIS A KOJI SPORE?
+ *
+ * The matrix token 'spores' used to be the substring test `id.includes('spores')`,
+ * and black koji's id is `aspergillus_luchuensis`. So it was not spores: on a
+ * tray it made Bio-Sludge where every other strain made koji, and on soybeans
+ * meju's "no spores" rule let it through as meju. The genus covers it. Harvested
+ * spores keep 'spores' in their generated ids, which is why the substring half
+ * stays. A mould that is not a koji mould must not carry the genus in its id —
+ * A. glaucus is `a_glaucus` for that reason.
+ *
+ * The resolver, recipesUsing and the bench all read this. Before it they had
+ * four different answers.
+ */
+export const isKojiSpore = (i: Ingredient): boolean =>
+  i.type === IngredientType.STARTER && (i.id.includes('spores') || i.id.includes('aspergillus'));
+
+/** Grown koji, as opposed to the spore it was grown from: the matrix token 'koji'. */
+export const isLiveKoji = (i: Ingredient): boolean =>
+  i.id.includes('koji') && !i.id.includes('spores');
+
+/** Id tag that keeps a black koji apart from a yellow one with the same numbers. */
+export const blackKojiTag = (acid: number | undefined): string => (acid ?? 0) > 0 ? '_kuro' : '';
+
+/**
+ * The spore a bed was grown from, read off what went into it rather than
+ * batch.starterId (which a black koji bed started before isKojiSpore left null).
+ * Shared by the player's Keep and Sporulate and by the koji keeper, so a black
+ * bed's acid reaches its koji and its spore whoever takes it.
+ */
+export const bedSpore = (batch: Batch, known: Ingredient[]): Ingredient | undefined =>
+  (batch.inputIngredientIds ?? [])
+    .map(id => known.find(i => i.id === id))
+    .find((i): i is Ingredient => !!i && isKojiSpore(i));
+
+/** Acidity a mash reaches when black koji (acidProtection 18) is a fifth of it. */
+const CITRIC_ACIDITY_PER_POINT = 60 / 18;
+
+/**
+ * HOW TART BLACK KOJI CAN MAKE WHAT IT GOES INTO.
+ *
+ * A. luchuensis makes citric acid as it grows, and the acid goes into the mash
+ * with the koji. That is the whole reason to brew with it, and before this it
+ * only ever lowered a risk factor. Weighted by mass like getBatchEnzymes: a koji
+ * at a fifth of the mash counts in full, a pinch of spore in a barrel for almost
+ * nothing.
+ *
+ * Per unique id, not per unit. `ingredients` holds one entry per unit drawn, so
+ * capping each entry would let three koji units at a fifth each count three
+ * times over.
+ */
+export const citricPotential = (
+  ingredients: Ingredient[],
+  quantities?: Record<string, number>
+): number => {
+  const massOf = (i: Ingredient) =>
+    quantities && quantities[i.id] !== undefined ? quantities[i.id] : i.mass;
+  const totalMass = ingredients.reduce((a, i) => a + massOf(i), 0);
+  if (totalMass <= 0) return 0;
+
+  const acidic = new Map<string, { acid: number; mass: number }>();
+  for (const i of ingredients) {
+    if (!i.acidProtection) continue;
+    const held = acidic.get(i.id);
+    if (held) held.mass += massOf(i);
+    else acidic.set(i.id, { acid: i.acidProtection, mass: massOf(i) });
+  }
+
+  let acidity = 0;
+  for (const { acid, mass } of acidic.values()) {
+    acidity += acid * CITRIC_ACIDITY_PER_POINT * Math.min(1, (mass / totalMass) / 0.2);
+  }
+  return Math.min(100, acidity);
+};
+
+/**
  * Mint the ingredient a finished koji cultivation becomes, carrying the enzyme
  * profile it actually developed. This is the hand-off that makes the koji loop
  * matter: what you grew decides what you can make next.
+ *
+ * `starter` is the spore the bed was grown from. Black koji's acid is made in
+ * the bed, so it has to come out of the bed on the koji. Without it the strain's
+ * one property vanished at the tray, and a black koji and a yellow koji with the
+ * same enzymes minted the same id and shared one inventory row.
  */
 export const mintKojiProduct = (
   batch: Batch,
   recipe: Recipe,
-  substrate: Ingredient | undefined
+  substrate: Ingredient | undefined,
+  starter?: Ingredient
 ): Ingredient => {
   const e = batch.enzymes ?? { amylase: 0, protease: 0 };
   const desc = describeEnzymes(e);
   const base = substrate?.name.split(' ').pop() ?? 'Grain';
   const stamp = `${Math.round(e.amylase)}/${Math.round(e.protease)}`;
+  const acid = starter?.acidProtection ?? 0;
 
   return {
-    id: `koji_${substrate?.id ?? 'grain'}_a${Math.round(e.amylase / 10)}_p${Math.round(e.protease / 10)}`,
-    name: `${base} Koji · ${desc.label}`,
+    id: `koji_${substrate?.id ?? 'grain'}${blackKojiTag(acid)}_a${Math.round(e.amylase / 10)}_p${Math.round(e.protease / 10)}`,
+    name: `${base} ${acid > 0 ? 'Black Koji' : 'Koji'} · ${desc.label}`,
     type: IngredientType.SUBSTRATE,
     baseCost: Math.round(20 + (e.amylase + e.protease) * 0.5),
     currency: 'money',
     quality: Math.round(Math.min(100, 55 + (e.amylase + e.protease) * 0.3)),
-    description: `Your own bed, ${stamp} amylase/protease. ${desc.detail}`,
+    description: `Your own bed, ${stamp} amylase/protease. ${desc.detail}` +
+      (acid > 0 ? ' Grown from black koji, so it carries citric acid into whatever you make with it.' : ''),
+    ...(acid > 0 ? { acidProtection: acid } : {}),
     idealFor: ['miso', 'garum', 'shoyu'],
     supplierId: 'in_house',
     tierRequired: 0,
