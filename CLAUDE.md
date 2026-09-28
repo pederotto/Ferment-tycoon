@@ -1595,6 +1595,13 @@ learned by breaking it:
   byte-level bisection cannot be trusted past that point and no single name is
   proven. Readable names cost ~0.5 MB of a 5.5 MB page and remove the lottery.
 
+**The page is pure ASCII.** Players saw "Sunny Â· 5â€“19 Â°C" and "The wild â†’": the page's
+UTF-8 read as Windows-1252. This was written off as a local-preview artefact ("the host adds a
+charset") and it was not. The packager writes every non-ASCII character in the script as a
+`\uXXXX` escape and asserts the whole page is ASCII, so no host, proxy or viewer can garble it.
+Verify on the `artifact-check` server, which sends no charset: `document.characterSet` reads
+windows-1252 there and the text must still be right.
+
 **`npm run package`** builds and folds the page into `dist/artifact/index.html`
 with `scripts/package_artifact.py`, which asserts `#root`, the fonts link and no
 wrapper tags — it lives in the repo because the ad-hoc packager that caused both
