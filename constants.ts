@@ -163,7 +163,8 @@ export const BOOKS: Book[] = [
    this list (tempeh too: rhizopus is a bed mould that wants 30-35 C); bottarga,
    casu marzu, katsuobushi, meju and IMO stay on the tray. The Thermal Chamber
    is deliberately NOT a koji bed: it traps the bed's own heat and kills the
-   mould, so koji in it is Bio-Sludge by design. The heritage module repeats the literal (it cannot import this). */
+   mould, so spores in it never make koji (grain goes to a generated black
+   ferment at 70 C instead). The heritage module repeats the literal (it cannot import this). */
 const KOJI_BEDS = ['koji_tray', 'koji_muro'];
 
 export const RECIPE_MATRIX: MatrixEntry[] = [
