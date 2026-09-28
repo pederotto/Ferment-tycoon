@@ -307,6 +307,26 @@ export const HERITAGE_RECIPES: Recipe[] = [
     difficulty: 4,
   },
   {
+    // The koji is the whole difference. A. luchuensis makes citric acid as it
+    // grows on the grain, and the acid goes into the mash with it — so this is
+    // brewed warm, where a grain sake would turn, and it comes out sharp where a
+    // grain sake is soft. The acid rides on the grown koji (mintKojiProduct), not
+    // on the spore, which is why the entry asks for black koji and not spores.
+    id: 'black_sake',
+    name: 'Black Sake',
+    type: FermentType.ALCOHOL,
+    description: 'Sake on black koji. A. luchuensis throws citric acid as it grows, and the acid comes through into the mash: it keeps a warm ferment from turning, which is why the hot south brews this way, and it comes out tart and lemony where a grain sake is soft and sweet.',
+    requiredIngredients: { substrate: true, starter: 'koji', additive: 'water' },
+    outputIngredientId: 'black_sake_bottle',
+    requiredVesselId: 'cedar_barrel',
+    baseDurationSeconds: 140,
+    peakWindowStart: 80, peakWindowEnd: 96,
+    activeIntervention: 'Stir',
+    idealParams: { temp: 25, humidity: 60, salinity: 0 },
+    idealFlavorProfile: { umami: 25, acidity: 55, funk: 30, sweetness: 35, safety: 98 },
+    difficulty: 4,
+  },
+  {
     id: 'corn_chicha',
     name: 'Corn Chicha',
     type: FermentType.ALCOHOL,
@@ -464,9 +484,16 @@ const GRAIN: MatrixSubstrate = { kind: 'oneOf', ids: [...GRAIN_IDS, ...CORN_IDS]
 const CORN: MatrixSubstrate = { kind: 'oneOf', ids: CORN_IDS, label: 'Landrace corn' };
 const PULSE: MatrixSubstrate = { kind: 'oneOf', ids: PULSE_IDS, label: 'Heirloom beans or peas' };
 const TOMATO: MatrixSubstrate = { kind: 'oneOf', ids: TOMATO_IDS, label: 'Heirloom tomato' };
+// Rice is what a black sake is brewed on in the south; the heritage grains take
+// it too. Glutinous rice is the only rice on the shelf, and nothing else in the
+// table takes it with koji and water in a barrel, so this steals nothing.
+const SAKE_BASE: MatrixSubstrate = { kind: 'oneOf', ids: ['glutinous_rice', ...GRAIN_IDS, ...CORN_IDS], label: 'Rice, heritage grain or landrace corn' };
 
 export const HERITAGE_MATRIX: MatrixEntry[] = [
   { recipeId: 'heritage_koji',   substrate: GRAIN,  requires: ['spores'],         forbids: ['salt'], vesselId: 'koji_tray' },
+  // ABOVE grain_sake: both take a heritage grain, koji and water in a barrel, so
+  // the black strain has to be asked about first or it would never win.
+  { recipeId: 'black_sake',      substrate: SAKE_BASE, requires: ['black_koji', 'water'], forbids: ['salt'], vesselId: 'cedar_barrel' },
   { recipeId: 'grain_sake',      substrate: GRAIN,  requires: ['koji', 'water'],  forbids: ['salt'], vesselId: 'cedar_barrel' },
   { recipeId: 'corn_miso',       substrate: CORN,   requires: ['koji', 'salt'],   vesselId: 'cedar_barrel' },
   { recipeId: 'corn_chicha',     substrate: CORN,   requires: ['water'],          forbids: ['koji', 'salt'], vesselId: 'onggi' },

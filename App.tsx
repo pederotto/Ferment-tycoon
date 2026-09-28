@@ -28,7 +28,7 @@ import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
 import { grantMastery, diagnoseBatch, FAULT_LABELS } from './services/mastery';
 import { MAX_ACTIVE_CONTRACTS, getStanding, standingFromSale, decayStanding, batchFitsContract, unitsFromBatch, makeContractOffer, overdueContracts, newlyUnlockedVendors, canOfferContract } from './services/vendors';
-import { mintKojiProduct, describeEnzymes, isKojiRecipe } from './services/koji';
+import { mintKojiProduct, describeEnzymes, isKojiRecipe, isKojiSpore, blackKojiTag } from './services/koji';
 import DevPanel from './components/DevPanel';
 import FirstCulture from './components/FirstCulture';
 import { FlaskConical, TrendingUp, Sparkles, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, ShieldAlert, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine, Boxes, Droplets, Sprout } from 'lucide-react';
@@ -1500,7 +1500,15 @@ export default function App() {
         const strain = lineageStrainKey(child.bias);
         const nextGen = child.generation;
 
-        const sporeId = `koji_spores_gen${nextGen}_${strain}`;
+        // Spores off a black koji bed are black koji. Without this the strain's
+        // citric acid was lost at the first sporulation, and its children were
+        // blended into the yellow house strain of the same generation.
+        const parentSpore = (batch.inputIngredientIds ?? [])
+          .map(id => [...INGREDIENTS, ...gameState.customIngredients].find(i => i.id === id))
+          .find((i): i is Ingredient => !!i && isKojiSpore(i));
+        const acid = parentSpore?.acidProtection;
+
+        const sporeId = `koji_spores_gen${nextGen}_${strain}${blackKojiTag(acid)}`;
         const existingIdx = newCustomIngredients.findIndex(i => i.id === sporeId);
 
         // Re-propagating into a strain you already hold blends the two rather
@@ -1522,13 +1530,14 @@ export default function App() {
 
         const spore: Ingredient = {
             id: sporeId,
-            name: `Master Spores (Gen ${nextGen} · ${lineageStrainLabel(merged.bias)})`,
+            name: `Master ${acid ? 'Black Koji ' : ''}Spores (Gen ${nextGen} · ${lineageStrainLabel(merged.bias)})`,
             type: IngredientType.STARTER,
             // Priced on strength, not on how many times you have propagated it.
             baseCost: sporeValue(merged),
             currency: 'money',
             quality: Math.round(Math.max(20, Math.min(100, (merged.potency ?? 1) * 78))),
-            description: describeLineage(merged),
+            description: describeLineage(merged) +
+              (acid ? ' Black koji: the beds you grow from it carry citric acid into whatever they go into.' : ''),
             idealFor: ['koji'],
             supplierId: 'in_house',
             tierRequired: 0,
@@ -1541,6 +1550,7 @@ export default function App() {
             // reaches the simulation through the same door a bought spore does.
             strainBias: merged.bias,
             lineage: merged,
+            ...(acid ? { acidProtection: acid } : {}),
         };
 
         if (existingIdx >= 0) newCustomIngredients[existingIdx] = spore;
@@ -1665,8 +1675,14 @@ export default function App() {
     // depends on how you grew it. Mint it carrying the enzyme profile the bed
     // actually developed, so it can be spent on the next batch.
     if (isKojiRecipe(recipe) && batch.enzymes) {
-      const substrate = [...INGREDIENTS, ...newCustomIngredients].find(i => i.id === batch.substrateId);
-      const product = mintKojiProduct(batch, recipe, substrate);
+      const known = [...INGREDIENTS, ...newCustomIngredients];
+      const substrate = known.find(i => i.id === batch.substrateId);
+      // Read the spore off what went into the bed rather than batch.starterId,
+      // which a black koji bed started before the fix left null.
+      const starter = (batch.inputIngredientIds ?? [])
+        .map(id => known.find(i => i.id === id))
+        .find((i): i is Ingredient => !!i && isKojiSpore(i));
+      const product = mintKojiProduct(batch, recipe, substrate, starter);
       const already = [...INGREDIENTS, ...newCustomIngredients].find(i => i.id === product.id);
       if (!already) newCustomIngredients.push(product);
 

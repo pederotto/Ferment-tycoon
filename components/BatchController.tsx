@@ -5,7 +5,7 @@ import { resolveRecipeFromMatrix, generateInitialQuality, getInitialParamsFromTe
 import { getMastery, getMasteryLadder, xpToNextLevel } from '../services/mastery';
 import IngredientIcon from './IngredientIcon';
 import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../services/gameLogic';
-import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias } from '../services/koji';
+import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias, isKojiSpore } from '../services/koji';
 import RecipeCard from './RecipeCard';
 import MolecularScan, { ScanTarget } from './MolecularScan';
 import {
@@ -475,11 +475,14 @@ const BatchController: React.FC<BatchControllerProps> = ({
     setErrorNotice(null);
 
     const recipe = resolveRecipeFromMatrix(selectedIngredients, vesselId);
-    const primarySubstrate = selectedIngredients.find(i => i.type === IngredientType.SUBSTRATE) 
-                          || selectedIngredients.find(i => i.type === IngredientType.STARTER && !i.id.includes('spores'))
+    const primarySubstrate = selectedIngredients.find(i => i.type === IngredientType.SUBSTRATE)
+                          || selectedIngredients.find(i => i.type === IngredientType.STARTER && !isKojiSpore(i))
                           || selectedIngredients[0];
 
-    const starter = selectedIngredients.find(i => i.type === IngredientType.STARTER && i.id.includes('spores'));
+    // isKojiSpore, not `id.includes('spores')`: black koji is aspergillus_luchuensis,
+    // and the substring test recorded no starter for it and gave its lineage the
+    // neutral 0.5 bias instead of the strain's own 0.35.
+    const starter = selectedIngredients.find(isKojiSpore);
     const generation = starter?.generation || 1;
     const { yieldVolume } = calculateBatchDynamics(selectedIngredients, customQuantities);
 
