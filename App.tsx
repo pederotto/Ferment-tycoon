@@ -37,6 +37,9 @@ import WelcomeScreen from './components/WelcomeScreen';
 import LogbookModal from './components/LogbookModal';
 import HarvestReport from './components/HarvestReport';
 import OrderBook from './components/OrderBook';
+import TownView from './components/TownView';
+import { TOWN_FACES } from './components/townFaceSheet';
+import { cellarCapacity, completeTownStep, townReady } from './services/town';
 import PressRoom from './components/PressRoom';
 import MolecularScan, { ScanTarget } from './components/MolecularScan';
 import { saveGame, loadGame, getSaveMeta, clearSave } from './services/persistence';
@@ -98,6 +101,8 @@ export default function App() {
     vendorStanding: {},
     contracts: [],
     unlockedVendorIds: [],
+    // Nobody in town knows you yet.
+    town: {},
     // Hires are people now rather than four switches. The pool rotates, so who
     // is going at any moment is part of the situation.
     crew: [],
@@ -535,7 +540,7 @@ export default function App() {
     // estate does not mean a garum left to go over. Pure: it runs inside this
     // updater, and every intervention it calls is pure too.
     const tech = prev.staff?.tech;
-    let cellarRoom = CELLAR_CAPACITY - prev.batches.filter(b => b.cellared).length;
+    let cellarRoom = cellarCapacity(prev) - prev.batches.filter(b => b.cellared).length;
     const heldNow: string[] = [];
     const updatedBatches = updatedBatches0.map(batch => {
       const orders = prev.labOrders?.[batch.id];
@@ -932,8 +937,8 @@ export default function App() {
       return;
     }
     const inCellar = gameState.batches.filter(b => b.cellared).length;
-    if (inCellar >= CELLAR_CAPACITY) {
-      setLabNotification({ id: Date.now(), text: `The cellar is full — ${CELLAR_CAPACITY} vessels is all it holds.`, type: 'warn' });
+    if (inCellar >= cellarCapacity(gameState)) {
+      setLabNotification({ id: Date.now(), text: `The cellar is full — ${cellarCapacity(gameState)} vessels is all it holds.`, type: 'warn' });
       return;
     }
     setGameState(prev => ({
@@ -1426,6 +1431,7 @@ export default function App() {
   // what pops up and what the archive keeps are guaranteed to be the same thing.
   const [harvestReport, setHarvestReport] = useState<LogEntry | null>(null);
   const [showOrders, setShowOrders] = useState(false);
+  const [showTown, setShowTown] = useState(false);
   const [openTool, setOpenTool] = useState<string | null>(null);
 
   const handleStopBatch = (batch: Batch) => {
@@ -1643,6 +1649,17 @@ export default function App() {
           Math.max(0, getStanding(prev, prev.contracts.find(c => c.id === id)?.buyerId ?? '') - 2),
       },
     }));
+  };
+
+  /** Go back to someone in town with what they asked for. */
+  const handleTownStep = (personId: string) => {
+    const r = completeTownStep(gameState, personId);
+    if (!r.ok) {
+      setLabNotification({ id: Date.now(), text: r.message, type: 'warn' });
+      return;
+    }
+    setGameState(prev => completeTownStep(prev, personId).state);
+    setLabNotification({ id: Date.now(), text: r.message, type: 'info' });
   };
 
   const handleSell = (buyer: Buyer, price: number, renownGain: number) => {
@@ -2044,7 +2061,7 @@ export default function App() {
   const currentAmbient = getAmbientConditions(gameState.month, gameState.weather);
 
   return (
-    <div className="min-h-screen font-sans selection:bg-amber-500/30 relative flex flex-col" style={{ background: 'var(--bg-void)', color: 'var(--text-hi)' }}>
+    <div className="app-shell min-h-screen font-sans selection:bg-amber-500/30 relative flex flex-col" style={{ background: 'var(--bg-void)', color: 'var(--text-hi)' }}>
       
       {/* Scrim behind the Supply drawer. With the two shop drawers merged the
           whole stack is now scrim(20) < HUD(30) < supply(50) < modals(100),
@@ -2311,7 +2328,7 @@ export default function App() {
             >
             <PanelMark name="cellar" size={38} />
             <span className="nt-name">Cellar</span>
-            <span className="dot mono">{gameState.batches.filter(b => b.cellared).length}/{CELLAR_CAPACITY}</span>
+            <span className="dot mono">{gameState.batches.filter(b => b.cellared).length}/{cellarCapacity(gameState)}</span>
             </button>
             {gameState.kojiRoomOwned && (
             <button
@@ -2332,6 +2349,16 @@ export default function App() {
             <PanelMark name="orders" size={38} />
             <span className="nt-name">Orders</span>
             {gameState.contracts.some(c => c.status === 'offered') && <span className="pip" />}
+            </button>
+            {/* The town: the people behind the vendors, and their errands. */}
+            <button
+            onClick={() => setShowTown(true)}
+            className={`tab-btn-hud${showTown ? ' active' : ''}${townReady(gameState).length > 0 ? ' has-offer' : ''}`}
+            title="The market town: its people and their errands"
+            >
+            <span className="town-tile-mark" style={{ backgroundImage: `url(${TOWN_FACES.crier})` }} />
+            <span className="nt-name">The Town</span>
+            {townReady(gameState).length > 0 && <span className="pip" />}
             </button>
             </div>
           </section>
@@ -2561,6 +2588,7 @@ export default function App() {
             onClose={() => setShowCellar(false)}
             onSelect={b => { setShowCellar(false); setUiState(u => ({ ...u, activeBatchId: b.id })); }}
             onBringUp={b => handleUncellarBatch(b)}
+            capacity={cellarCapacity(gameState)}
           />
         )}
 
@@ -2635,6 +2663,14 @@ export default function App() {
           customIngredients={gameState.customIngredients}
           onClose={() => setOpenTool(null)}
           onPress={(b) => { const a = openTool === 'centrifuge' ? 'filter' : 'press'; setOpenTool(null); handleProcessBatch(a, b); }}
+        />
+      )}
+
+      {showTown && (
+        <TownView
+          gameState={gameState}
+          onClose={() => setShowTown(false)}
+          onReport={handleTownStep}
         />
       )}
 

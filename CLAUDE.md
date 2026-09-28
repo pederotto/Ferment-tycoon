@@ -1834,3 +1834,10 @@ with the guess. If there is no real figure for a process, do not check it.
 
 ## The estate export takes seconds
 - `export_estate.py` packs every plate, sprite and piece of geometry into `estatePlates.ts`. It took 12-15 minutes because every plate was WebP-encoded at `method=6` (11 s a plate, 104 plates) for files 2.5% smaller than `method=4` (0.04 s). It also re-rendered every placeholder for places that are painted, which the painted plates then replaced; those are skipped now. Measured: 15 min 25 s -> 6 s, identical content (only key order in the geometry table differs), +170 KB on a 12.7 MB page.
+
+## The town (constants.town.ts, services/town.ts, components/TownView.tsx)
+- Twelve townsfolk from the owner's `fxom2f` sheet (cut by `cut_town.py` into `townFaceSheet.ts`), each speaking for a vendor or supplier that already exists. Two or three errands each, 25 in all, in three chapters: people appear after 0, 3 and 8 errands, and the crier's last errand (20 done) is the Harvest Fair.
+- **An errand reads what the game already records; nothing is tracked for it.** Sales and scored batches come from the logbook, deliveries from the pantry, and the rest from standing, renown, vessels owned, places owned and the field guide. A save from before the town can report errands it had in effect already done. `GameState.town` holds only how many errands each person has had.
+- **Rewards are handed over when the player goes back, never on a tick.** `completeTownStep` re-checks the need, takes the delivery (poorest grade first) or the payment, and pays out in one pure update, so StrictMode's double call gives one answer.
+- Rewards are things the rest of the game already reads: standing, an introduction (latched into `unlockedVendorIds`, a second route beside the vendor's own), a supplier level, a book with its recipes (or half its price if owned), cash, renown, heat. The one new effect is the mason's two cellar bays: read the cellar's size through `cellarCapacity(g)`, never `CELLAR_CAPACITY`.
+- The Order Book names the townsperson who can introduce a locked vendor, once you have met them.

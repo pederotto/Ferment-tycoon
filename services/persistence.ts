@@ -106,6 +106,9 @@ function migrate(state: Partial<GameState>): GameState {
     // The estate postdates every save. Nobody has bought any land yet.
     estate: migrateEstate(state.estate),
     labOrders: state.labOrders ?? {},
+    // The town postdates every save. Its errands read what the save already
+    // records, so anything done in effect is ready to report.
+    town: state.town ?? {},
   };
 }
 

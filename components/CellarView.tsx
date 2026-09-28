@@ -29,6 +29,8 @@ interface CellarViewProps {
   onClose: () => void;
   onSelect: (batch: Batch) => void;
   onBringUp: (batch: Batch) => void;
+  /** Places, with any bays the mason opened. */
+  capacity?: number;
 }
 
 /* The viewBox IS the plate's pixel grid, 1344x800. Working in the painting's own
@@ -86,7 +88,7 @@ const SHELF_SPOTS: Spot[] = [
    on those boards. */
 const ROOM_SCALE = 2.0;
 
-const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onBringUp }) => {
+const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onBringUp, capacity = CELLAR_CAPACITY }) => {
   const [focused, setFocused] = useState<string | null>(null);
 
   const read = (batch: Batch) => {
@@ -173,7 +175,7 @@ const CellarView: React.FC<CellarViewProps> = ({ batches, onClose, onSelect, onB
         <div className="cellar-clime mono">
           <span>Stable · no weather, no hygiene</span>
           <span>Ages at <b>1/{CELLAR_TICK_DIVISOR}</b> bench rate</span>
-          <span><b>{batches.length}</b> / {CELLAR_CAPACITY} places</span>
+          <span><b>{batches.length}</b> / {capacity} places</span>
         </div>
 
         <div className="iso-room cellar-room">

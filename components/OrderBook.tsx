@@ -9,6 +9,7 @@ import {
   contractProgressLabel, isVendorUnlocked, describeUnlock,
 } from '../services/vendors';
 import { CloseIcon } from './icons';
+import { townRouteTo } from '../services/town';
 import { CheckCircle2 } from 'lucide-react';
 
 /**
@@ -185,7 +186,8 @@ const OrderBook: React.FC<OrderBookProps> = ({ gameState, onClose, onAccept, onD
                 <div key={b.id} className="ob-locked">
                   <Seal id={b.id} size={20} />
                   <span className="who">{b.name}</span>
-                  <span className="how">{b.unlock ? describeUnlock(b.unlock) : `Reputation ${b.minReputation}.`}</span>
+                  <span className="how">{b.unlock ? describeUnlock(b.unlock) : `Reputation ${b.minReputation}.`}
+                    {townRouteTo(gameState, b.id) && ` Or ask ${townRouteTo(gameState, b.id)!.name} in town to introduce you.`}</span>
                 </div>
               ))}
             </section>

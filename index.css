@@ -4586,7 +4586,7 @@ html, body {
 /* The studio head. Supply and the Codex use `.studio-head`; the cellar, koji
    room, press, orders and crew heads already had the same shape (mark, kicker,
    title, close) and take the same look. */
-.studio-head, .pr-head, .ob-head, .cw-head, .inoc-head {
+.studio-head, .pr-head, .ob-head, .cw-head, .inoc-head, .tw-head {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 13px 20px 12px; position: relative; flex-shrink: 0;
   background:
@@ -4597,7 +4597,7 @@ html, body {
   border-bottom: 1px solid #0b0a09;
 }
 /* a brass hairline instead of the engraved leaf and wheat rules */
-.studio-head::after, .pr-head::after, .ob-head::after, .cw-head::after, .inoc-head::after {
+.studio-head::after, .pr-head::after, .ob-head::after, .cw-head::after, .inoc-head::after, .tw-head::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; top: auto; pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(222, 186, 110, 0.7) 14%, rgba(222, 186, 110, 0.7) 86%, transparent);
   -webkit-mask: none; mask: none; opacity: 1; transform: none; width: auto;
@@ -4613,11 +4613,11 @@ html, body {
 }
 .sh-medal .panel-mark img { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); }
 .sh-title { margin-right: auto; min-width: 0; }
-.studio-head .kicker, .pr-head .kicker, .ob-head .kicker, .cw-head .kicker, .inoc-head .kicker {
+.studio-head .kicker, .pr-head .kicker, .ob-head .kicker, .cw-head .kicker, .inoc-head .kicker, .tw-head .kicker {
   display: block; font-family: var(--f-spec); font-size: 11px; font-weight: 600;
   letter-spacing: 0.2em; text-transform: uppercase; color: #cfae6e; margin: 0 0 1px;
 }
-.studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2, .inoc-head h2 {
+.studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2, .inoc-head h2, .tw-head h2 {
   font-family: var(--f-name); font-size: 22px; font-weight: 600; line-height: 1.1;
   letter-spacing: 0.005em; color: var(--text-hi); margin: 0;
 }
@@ -4632,13 +4632,13 @@ html, body {
 .sh-plate .v small { font-size: 11px; font-weight: 600; color: #5d4521; }
 .sh-plate .v em { font-style: normal; font-size: 10px; margin-left: 5px; color: #4a2748; }
 /* one round close, brass-rimmed, on every dark head */
-.studio-head .close-stamp, .pr-head .close-stamp, .ob-head .close-stamp, .cw-head .close-stamp, .inoc-head .close-stamp {
+.studio-head .close-stamp, .pr-head .close-stamp, .ob-head .close-stamp, .cw-head .close-stamp, .inoc-head .close-stamp, .tw-head .close-stamp {
   flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   border: 1px solid rgba(222, 186, 110, 0.55); color: #e2c27a;
   background: radial-gradient(circle at 50% 35%, #3a3430, #1a1715);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
 }
-.studio-head .close-stamp:hover, .pr-head .close-stamp:hover, .ob-head .close-stamp:hover, .cw-head .close-stamp:hover, .inoc-head .close-stamp:hover {
+.studio-head .close-stamp:hover, .pr-head .close-stamp:hover, .ob-head .close-stamp:hover, .cw-head .close-stamp:hover, .inoc-head .close-stamp:hover, .tw-head .close-stamp:hover {
   border-color: #e2c27a; color: #fff1cc; filter: brightness(1.12);
 }
 /* the Codex panel no longer wears the ledger's ornaments */
@@ -4650,8 +4650,8 @@ html, body {
 }
 .sup-tab.active .tab-count { background: rgba(217, 164, 65, 0.25); color: var(--amber); }
 @media (max-width: 620px) {
-  .studio-head, .pr-head, .ob-head, .cw-head, .inoc-head { padding: 10px 12px; gap: 10px; }
-  .studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2, .inoc-head h2 { font-size: 19px; }
+  .studio-head, .pr-head, .ob-head, .cw-head, .inoc-head, .tw-head { padding: 10px 12px; gap: 10px; }
+  .studio-head h2, .pr-head h2, .ob-head h2, .cw-head h2, .inoc-head h2, .tw-head h2 { font-size: 19px; }
   .sh-plates { order: 3; width: 100%; }
 }
 
@@ -5456,3 +5456,81 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 .el-kit .nm { display: inline-flex; align-items: center; }
 .el-face { display: inline-block; vertical-align: middle; margin-right: 8px; border-radius: 50%; border: 1px solid rgba(222, 186, 110, 0.35); background-color: #1a130b; }
 .el-bed .stage .ripe:has(.farm-icon) { display: inline-flex; align-items: center; }
+
+/* =========================================================================
+   THE TOWN
+   A dark room of people; each errand is a note on stock. The head is the
+   studio head (the class is in those groups above).
+   ========================================================================= */
+.townview {
+  position: relative; width: min(1000px, 96vw); max-height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid #0b0a09; border-radius: 4px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3)), linear-gradient(#4e4943, #4e4943),
+    var(--tex-plaster, none) 0 0 / 512px 512px repeat, #191715;
+  background-blend-mode: normal, color, normal, normal;
+}
+.tw-medal { overflow: hidden; }
+.tw-medal img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; transform: scale(1.35) translateY(8%); }
+.tw-body { overflow-y: auto; padding: 4px 20px 22px; }
+.tw-body section { margin-top: 16px; }
+.tw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 430px), 1fr)); gap: 12px; }
+.tw-card {
+  position: relative; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px;
+  padding: 12px 14px 12px 12px; border-radius: 2px; color: var(--ink);
+  background: linear-gradient(178deg, var(--stock), var(--stock-deep));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+.tw-card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background-image: var(--grain-paper); background-size: 160px; opacity: 0.1; mix-blend-mode: multiply;
+}
+.tw-card.ready { box-shadow: 0 0 0 2px rgba(74, 107, 52, 0.7), 0 4px 12px rgba(0, 0, 0, 0.38); }
+.tw-face {
+  width: 84px; height: 84px; border-radius: 50%; overflow: hidden; align-self: start;
+  background: radial-gradient(circle at 50% 40%, #3a2c1c, #1a130b 72%);
+  box-shadow: 0 0 0 2px #8a6a32, 0 0 0 3px rgba(226, 194, 122, 0.5), 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+.tw-face img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; transform: scale(1.18) translateY(7%); }
+.tw-main { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.tw-main header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }
+.tw-main h3 { font-family: var(--f-name); font-size: 17px; font-weight: 600; color: var(--ink); margin: 0; }
+.tw-trade { font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+.tw-steps { margin-left: auto; display: flex; gap: 3px; }
+.tw-steps i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ink-soft); }
+.tw-steps i.on { background: #3b5429; border-color: #3b5429; }
+.tw-where { font-family: var(--f-desc); font-style: italic; font-size: 14px; line-height: 1.35; color: var(--ink-soft); margin: 0; }
+.tw-ask { font-family: var(--f-body); font-size: 13px; line-height: 1.5; color: var(--ink); margin: 2px 0 0; text-wrap: pretty; }
+.tw-ask.said { font-family: var(--f-desc); font-style: italic; font-size: 15px; }
+.tw-foot { display: flex; flex-direction: column; gap: 2px; font-family: var(--f-spec); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.tw-prog { color: var(--ink-soft); }
+.tw-prog.met { color: #3b5429; font-weight: 700; }
+.tw-reward { color: #6b5320; }
+.tw-reward::before { content: "They give: "; color: var(--ink-soft); }
+.tw-go { align-self: flex-start; margin-top: 3px; font-family: var(--f-spec); letter-spacing: 0.13em; border-radius: 2px;
+  background: rgba(74, 107, 52, 0.16); border: 1px solid rgba(74, 107, 52, 0.45); color: #3e5a2b; box-shadow: none; }
+.tw-go:hover:not(:disabled) { background: rgba(74, 107, 52, 0.28); }
+.tw-go:disabled { background: rgba(42, 32, 21, 0.05); border-color: var(--ink-line); color: var(--ink-soft); cursor: default; }
+.tw-go:focus-visible { outline: 2px solid #3b5429; outline-offset: 2px; }
+.tw-last { font-family: var(--f-desc); font-style: italic; font-size: 13px; color: var(--ink-soft); margin: 2px 0 0; }
+.tw-link { font-family: var(--f-spec); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+.tw-card.finished { padding-right: 96px; }
+.tw-stamp {
+  position: absolute; top: 14px; right: 10px; transform: rotate(-8deg);
+  font-family: var(--f-spec); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--stamp-good); border: 2px solid var(--stamp-good); padding: 2px 6px; border-radius: 2px; opacity: 0.85;
+  max-width: 84px; text-align: center; line-height: 1.2;
+}
+.tw-more { margin-top: 16px; color: var(--text-lo); }
+.town-tile-mark {
+  display: block; width: 38px; height: 38px; margin: 0 auto; border-radius: 50%;
+  background-color: #1a130b; background-size: 150%; background-position: 50% 8%; background-repeat: no-repeat;
+  box-shadow: 0 0 0 2px #8a6a32, 0 0 0 3px rgba(226, 194, 122, 0.45), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+@media (max-width: 620px) {
+  .tw-body { padding: 4px 12px 16px; }
+  .tw-card { grid-template-columns: 56px minmax(0, 1fr); gap: 10px; }
+  .tw-face { width: 56px; height: 56px; }
+  .tw-card.finished { padding-right: 14px; padding-bottom: 44px; }
+  .tw-stamp { top: auto; bottom: 10px; max-width: none; }
+}

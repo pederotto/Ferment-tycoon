@@ -818,6 +818,9 @@ export interface GameState {
    * elsewhere. Keyed by batch id.
    */
   labOrders: Record<string, LabOrders>;
+
+  /** Errands done for each townsperson, by id (constants.town.ts). Absent = none. */
+  town: Record<string, number>;
 }
 
 /** What the technician does with a batch without being asked. */
