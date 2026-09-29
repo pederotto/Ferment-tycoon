@@ -1,5 +1,7 @@
 # Garden Shop — pixel art prompts
 
+> **Done (29 Sep 2026).** All three pictures are in the game, embedded in `index.html`. The item sheet's last row did not follow the grid, so its items were cut out one by one. The prompts below are kept in case any picture is redone.
+
 There are three images, all 16:9. Save them in this folder with these exact names. The game picks them up on its own, and until then it shows plain placeholders.
 
 | File | What it is | Grid |
