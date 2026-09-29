@@ -5893,3 +5893,11 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
   .gs-card { grid-template-columns: 48px minmax(0, 1fr); gap: 10px; }
   .gs-pic .gs-art { width: 48px; height: 48px; }
 }
+/* The seed shelf is grouped by kind; a group's heading spans the whole grid. */
+.gs-group {
+  grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; margin: 10px 0 0;
+  font-family: var(--f-spec); font-size: 13px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brass);
+  border-bottom: 1px solid rgba(222, 186, 110, 0.3); padding-bottom: 4px;
+}
+.gs-group:first-child { margin-top: 0; }
+.gs-group small { font-size: 12px; letter-spacing: 0.04em; color: var(--text-lo); font-variant-numeric: tabular-nums; }

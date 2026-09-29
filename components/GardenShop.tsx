@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { GameState } from '../types';
 import { FacilityId } from '../types.farm';
-import { CROPS, FACILITIES, FARM_TOOLS, PROBLEMS } from '../constants.farm';
+import { CROPS, FACILITIES, FAMILIES, FARM_TOOLS, PROBLEMS } from '../constants.farm';
 import { GARDEN_SEED_SIZES, GARDEN_SHOP_ITEMS, GS_KIND, GS_TOOL_ART, ShopItem, ShopKind, gsSeedArt } from '../constants.shop';
 import { seasonLabel } from '../constants.forage';
 import { INGREDIENTS } from '../constants';
@@ -73,7 +73,8 @@ const GardenShop: React.FC<GardenShopProps> = ({ gameState: g, tab, onTab, onClo
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
-  const [onlyNow, setOnlyNow] = useState(true);
+  // Every seed is on the shelf: buying ahead for a season is planning, not a mistake.
+  const [onlyNow, setOnlyNow] = useState(false);
   const est = g.estate;
   const seeds = est.seeds ?? {};
   const shop = est.shop ?? {};
@@ -85,9 +86,16 @@ const GardenShop: React.FC<GardenShopProps> = ({ gameState: g, tab, onTab, onClo
     const crops = Object.values(CROPS)
       .filter(c => !onlyNow || c.plant.includes(month) || c.plant.includes((month + 1) % 12))
       .sort((a, b) => (b.plant.includes(month) ? 1 : 0) - (a.plant.includes(month) ? 1 : 0) || nameOf(a.id).localeCompare(nameOf(b.id)));
+    // Grouped by kind, in the order the families are declared; sow-now first within each.
+    const groups = (Object.keys(FAMILIES) as (keyof typeof FAMILIES)[])
+      .map(fam => ({ fam, list: crops.filter(c => c.family === fam) }))
+      .filter(g2 => g2.list.length > 0);
     body = crops.length === 0
-      ? <p className="gs-empty">Nothing goes in the ground this month or next. Show everything instead.</p>
-      : crops.map(c => {
+      ? <p className="gs-empty">Nothing goes in the ground this month or next. Show every seed instead.</p>
+      : groups.map(({ fam, list }) => (
+        <React.Fragment key={fam}>
+          <h3 className="gs-group">{FAMILIES[fam].label}<small>{list.length}</small></h3>
+          {list.map(c => {
         const places = c.where.map(w => FACILITIES[w]?.name ?? w);
         const usable = c.where.some(w => owned.includes(w));
         const have = Math.round(seeds[c.id] ?? 0);
@@ -106,7 +114,9 @@ const GardenShop: React.FC<GardenShopProps> = ({ gameState: g, tab, onTab, onClo
             })}
           </Card>
         );
-      });
+          })}
+        </React.Fragment>
+      ));
   } else if (tab === 'tools') {
     body = FARM_TOOLS.map(t => {
       const where = (t.where ?? owned).filter(fid => owned.includes(fid));
@@ -164,7 +174,7 @@ const GardenShop: React.FC<GardenShopProps> = ({ gameState: g, tab, onTab, onClo
         </div>
         <div className="gs-intro">
           <p>{GS_KIND[tab].note}</p>
-          {tab === 'seeds' && <button className="linkish" onClick={() => setOnlyNow(v => !v)}>{onlyNow ? 'Show every seed' : 'Only what goes in now'}</button>}
+          {tab === 'seeds' && <button className="linkish" onClick={() => setOnlyNow(v => !v)}>{onlyNow ? 'Show every seed' : 'Only what goes in this month or next'}</button>}
         </div>
         <div className="tw-body custom-scrollbar"><div className="gs-grid">{body}</div></div>
       </div>
