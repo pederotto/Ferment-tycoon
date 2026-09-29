@@ -326,6 +326,10 @@ export interface EstateState {
   log: EstateLogEntry[];
   /** Saved seed lines: crop id → generation. */
   seedLines: Record<string, number>;
+  /** Seed in the shed, crop id → m² it will sow: bought at the Garden Shop or saved. */
+  seeds: Record<string, number>;
+  /** Garden Shop feeds and remedies in the shed, item id → m² they will cover. */
+  shop: Record<string, number>;
   /** Kept per crop for the ledger. */
   ledger: Record<string, { kg: number; value: number; q: number; n: number }>;
   patches: Record<string, WildPatch>;

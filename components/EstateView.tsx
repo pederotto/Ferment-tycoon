@@ -6,7 +6,7 @@ import {
 } from '../constants.farm';
 import {
   ActionResult, walkRows, groupedProblems, fixProblem, waterPlots, plantPlots, clearPlots, coverPlots, trainPlots,
-  applyToPlots, pickHere, contractHarvest, pruneTrees, thinTrees, hiveAction, henAction, isBio, panAction, shedAction, PULLET_COST, RUN_CAPACITY, henFeedStock, henBinDays, HEN_SACK_KG, STRAW_BALE, FLY_FIRST,
+  applyToPlots, applyShopItem, shopItemBlocked, pickHere, contractHarvest, pruneTrees, thinTrees, hiveAction, henAction, isBio, panAction, shedAction, PULLET_COST, RUN_CAPACITY, henFeedStock, henBinDays, HEN_SACK_KG, STRAW_BALE, FLY_FIRST,
   stoveAction, saveSeed, buyFacility, buyTool, setOrder, sellToVan, vanUnitPrice, isEstateProduce, baseOfProduce,
   plotQualityNow, treeQualityNow, baseIngredient, ROLE_FOR, farmRolesFor,
   pantryOf, pantryKg, soilLots, doseKg, treatmentName, bioBlocker, treeIsBiodynamic, sprayPlots, sprayCost,
@@ -31,6 +31,8 @@ import { gainCraft, gardenerLevel, gardenerXp, progressOf, GARDENER_LEVELS, gard
 import { GROUNDS } from '../constants.wild';
 import { ESTATE_GEOM, ESTATE_PLATES, CROP_SPRITES } from './estatePlates';
 import { CloseIcon } from './icons';
+import { GsArt } from './GardenShop';
+import { GARDEN_SHOP_ITEMS, GS_KIND, ShopKind } from '../constants.shop';
 
 /* =============================================================================
    THE ESTATE
@@ -58,6 +60,8 @@ export interface EstateViewProps {
   onWait: (minutes: number) => void;
   onClose: () => void;
   onOpenStaff: () => void;
+  /** Open the Garden Shop, at a tab. */
+  onOpenShop?: (tab?: ShopKind) => void;
   log: { at: string; text: string }[];
   /** The game clock's control, so time can be run or stopped from inside the room. */
   clock?: ClockProps;
@@ -96,7 +100,7 @@ const Sprite: React.FC<{ id: string; size?: 'small' | 'tiny' }> = ({ id, size = 
   return <img className={`es-sprite ${size}`} src={s[size]} alt="" />;
 };
 
-const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait, onClose, onOpenStaff, log, clock }) => {
+const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait, onClose, onOpenStaff, onOpenShop, log, clock }) => {
   const date = dateOf(state);
   const doy = dayOfYear(date);
   const day = absoluteDay(date);
@@ -251,7 +255,7 @@ const EstateView: React.FC<EstateViewProps> = ({ state, place, onGo, act, onWait
                 <PlaceLedger
                   state={state} f={f} day={day} date={date} sel={sel} setSel={setSel} toggle={toggle} act={actWork}
                   planting={planting} setPlanting={setPlanting} feeding={feeding} setFeeding={setFeeding}
-                  showKit={showKit} setShowKit={setShowKit} onOpenStaff={onOpenStaff}
+                  showKit={showKit} setShowKit={setShowKit} onOpenStaff={onOpenStaff} onOpenShop={onOpenShop}
                 />
               )}
           </div>
@@ -469,6 +473,7 @@ interface PlaceProps {
   setSel: (s: string[]) => void; toggle: (id: string) => void; act: EstateViewProps['act'];
   planting: boolean; setPlanting: (b: boolean) => void; feeding: boolean; setFeeding: (b: boolean) => void;
   showKit: boolean; setShowKit: (b: boolean) => void; onOpenStaff: () => void;
+  onOpenShop?: (tab?: ShopKind) => void;
 }
 
 const ORDER_WORDS: Partial<Record<keyof StandingOrders, string>> = {
@@ -700,13 +705,13 @@ const BedActions: React.FC<PlaceProps & { plots: Plot[]; empty: Plot[]; focus: P
         <button className="linkish" onClick={() => p.setSel(sameAsFocus)}>Select every bed of {nameOf(focus!.planting!.cropId)}</button>
       )}
       <div className="row">
-        {f.id !== 'top_field' && <button className="mini-btn" onClick={() => act(s => waterPlots(s, f.id, ids))}>Water</button>}
+        {(f.id !== 'top_field' || f.kit.rain_gun) && <button className="mini-btn" onClick={() => act(s => waterPlots(s, f.id, ids))}>Water</button>}
         {growing.some(x => x.planting!.ripeKg > 0.05) && f.id !== 'top_field' && <button className="mini-btn gold" onClick={() => act(s => pickHere(s, f.id, ids))}>Pick</button>}
         {growing.length > 0 && f.id !== 'top_field' && <button className="mini-btn" onClick={() => act(s => coverPlots(s, f.id, growing.map(x => x.id), 'mulch'))}>{growing.every(x => x.planting!.cover.mulch) ? 'Lift mulch' : 'Mulch'}</button>}
         {growing.length > 0 && f.kit.netting && <button className="mini-btn" onClick={() => act(s => coverPlots(s, f.id, growing.map(x => x.id), 'net'))}>{growing.every(x => x.planting!.cover.net) ? 'Take nets off' : 'Net'}</button>}
         {growing.length > 0 && f.kit.fleece && <button className="mini-btn" onClick={() => act(s => coverPlots(s, f.id, growing.map(x => x.id), 'fleece'))}>{growing.every(x => x.planting!.cover.fleece) ? 'Fold fleece' : 'Fleece'}</button>}
         {tomatoes.length > 0 && <button className="mini-btn" onClick={() => act(s => trainPlots(s, f.id, tomatoes.map(x => x.id), day))}>Pinch out and tie in</button>}
-        <button className="mini-btn" onClick={() => p.setFeeding(!p.feeding)}>Feed…</button>
+        <button className="mini-btn" onClick={() => p.setFeeding(!p.feeding)}>Feed & treat…</button>
         {growing.some(x => x.planting!.problems.some(q => SPRAYABLE.has(q.id))) && (
           <button className="mini-btn warn" title="Clears pests, fungus and weeds at once and keeps them off a fortnight. The bed starts its biodynamic year again."
             onClick={() => act(s => sprayPlots(s, f.id, growing.map(x => x.id), day))}>Spray · ${growing.reduce((a, x) => a + sprayCost(x.areaM2), 0)} · loses the label</button>
@@ -717,7 +722,7 @@ const BedActions: React.FC<PlaceProps & { plots: Plot[]; empty: Plot[]; focus: P
       </div>
       {p.feeding && (
         <div className="el-pick">
-          {store.length === 0 && <p className="el-note">Nothing for the soil in the pantry. The soil lab and the worm shed make it; until then a feed means bought manure (the gardener’s standing order does that).</p>}
+          {store.length === 0 && <p className="el-note">Nothing for the soil in the pantry. The soil lab and the worm shed make it; until then, the Garden Shop sells feed by the bag (and the gardener’s standing order buys manure).</p>}
           {store.map(l => {
             const need = plots.reduce((a, x) => a + doseKg(l, x.areaM2), 0);
             return (
@@ -726,20 +731,23 @@ const BedActions: React.FC<PlaceProps & { plots: Plot[]; empty: Plot[]; focus: P
               </button>
             );
           })}
+          <ShopFeedOptions p={p} ids={ids} />
         </div>
       )}
       {p.planting && empty.length > 0 && (
         <div className="el-pick">
+          <ShopLink p={p} tab="seeds" text="Seed comes from the Garden Shop →" />
           {Object.values(CROPS).filter(c => c.where.includes(f.id) && (empty.some(x => x.id === 'roses') ? c.id === 'rose_petals' : c.id !== 'rose_petals')).map(c => {
             const ok = c.plant.includes(month);
-            const cost = Math.round(empty.reduce((a, x) => a + x.areaM2 * c.costM2, 0));
+            const need = Math.round(empty.reduce((a, x) => a + x.areaM2, 0));
+            const have = Math.round((state.estate.seeds ?? {})[c.id] ?? 0);
             const line = state.estate.seedLines[c.id] ?? 0;
             return (
-              <button key={c.id} className={`el-option${ok ? '' : ' off'}`} disabled={!ok || state.money < cost} onClick={() => { act(s => plantPlots(s, f.id, empty.map(x => x.id), c.id, day, month)); p.setPlanting(false); }}>
+              <button key={c.id} className={`el-option${ok ? '' : ' off'}${ok && have < need ? ' noseed' : ''}`} disabled={!ok || have < need} onClick={() => { act(s => plantPlots(s, f.id, empty.map(x => x.id), c.id, day, month)); p.setPlanting(false); }}>
                 <Sprite id={c.id} size="tiny" />
                 <span className="nm">{nameOf(c.id)}{line > 0 && <small> · your line, gen {line}</small>}</span>
                 <span className="ab">{ok ? c.note : `Goes in ${seasonLabel(c.plant)}.`}</span>
-                <span className="t mono">{ok ? `$${cost}` : ''}</span>
+                <span className="t mono">{ok ? (have >= need ? `seed ${have} m²` : have > 0 ? `seed ${have}/${need} m²` : 'no seed') : ''}</span>
               </button>
             );
           })}
@@ -780,6 +788,36 @@ const TreeCard: React.FC<{ tree: Tree; f: FacilityState; day: number; on: boolea
         {tree.problems.filter(x => x.seen).map(x => <span key={x.id} className="mk bad">{PROBLEMS[x.id]?.label}</span>)}
       </div>
     </li>
+  );
+};
+
+/** A link into the Garden Shop, where one is wired. */
+const ShopLink: React.FC<{ p: PlaceProps; tab: ShopKind; text: string }> = ({ p, tab, text }) =>
+  p.onOpenShop ? <button className="linkish gs-link" onClick={() => p.onOpenShop!(tab)}>{text}</button> : null;
+
+/** The shop's feeds and remedies in the shed, in a bed's Feed & treat menu. */
+const ShopFeedOptions: React.FC<{ p: PlaceProps; ids: string[] }> = ({ p, ids }) => {
+  const { state, f } = p;
+  const shop = state.estate.shop ?? {};
+  const area = Math.round(f.plots.filter(x => ids.includes(x.id)).reduce((a, x) => a + x.areaM2, 0));
+  const items = GARDEN_SHOP_ITEMS.filter(i => (shop[i.id] ?? 0) >= 1);
+  return (
+    <>
+      {items.map(i => {
+        const have = Math.round(shop[i.id]);
+        const why = i.kind === 'feed' ? null : shopItemBlocked(i, f.id, state.month);
+        return (
+          <button key={i.id} className="el-option gs-opt" disabled={have < area || !!why}
+            onClick={() => { p.act(s => applyShopItem(s, f.id, ids, i.id, absoluteDay(dateOf(s)))); p.setFeeding(false); }}>
+            <GsArt cell={i.art} size={18} />
+            <span className="nm">{i.name}<small> · {GS_KIND[i.kind].label.toLowerCase()}</small></span>
+            <span className="ab">{why ? `Not now: ${why}.` : i.about}</span>
+            <span className="t mono">{area} of {have} m²</span>
+          </button>
+        );
+      })}
+      <ShopLink p={p} tab="feed" text={items.length ? 'More from the Garden Shop →' : 'Feed, remedies and beneficial insects: the Garden Shop →'} />
+    </>
   );
 };
 

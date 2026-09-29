@@ -6,6 +6,8 @@ import {
   FACILITIES, CROPS, FAMILIES, TREE_SPECS, PROBLEMS, FARM_TOOLS, VAN_WHOLESALE, VAN_RECOVERY, PRODUCE_CLASS, produceClassOf, FACILITY_ORDER,
   BIO_CONVERSION_DAYS, BIO_LIFE_MIN, SPRAYABLE, QUALITY_ELASTIC, SPRAY_DAYS, SPRAY_COST_M2, HOME_GROWN_PREMIUM, BIO_VAN_PREMIUM, BIO_APPETITE_KG,
 } from '../constants.farm';
+import { GARDEN_SEED_SIZES, GS_BY_ID, ShopItem } from '../constants.shop';
+import { seasonLabel } from '../constants.forage';
 import { makeCandidate } from './crew';
 import { skill5, frac, crewLevel, gardenerLevel, gardenQualityBonus, gardenKgMult, gardenWalkMult } from './skills';
 import { WILD } from '../constants.wild';
@@ -34,7 +36,7 @@ import { hiveDay, henDay, panDay, shedDay, newHive, honeyQuality, YOLKS_PER_UNIT
 export const ESTATE_SUPPLIER = 'estate';
 
 export const newEstate = (): EstateState => ({
-  facilities: {}, vanDemand: {}, log: [], seedLines: {}, ledger: {},
+  facilities: {}, vanDemand: {}, log: [], seedLines: {}, seeds: {}, shop: {}, ledger: {},
   patches: {}, guide: {}, lastDay: -1,
 });
 
@@ -339,7 +341,8 @@ export const estateDay = (stateIn: GameState, date: CalendarDate, week: WeatherS
       r.events.forEach(t => log(report.notes, day, t, t.includes('killed') || t.includes('lost') ? 'bad' : t.includes('ready') ? 'good' : 'warn', fid));
       const pl = plot.planting;
       // Drip line: waters on its own.
-      if (f.kit.drip && plot.water < 45 && fid !== 'top_field') plot = { ...plot, water: 80 };
+      // Drip line: waters on its own. So does the rain gun on the field.
+      if (((f.kit.drip && fid !== 'top_field') || (fid === 'top_field' && f.kit.rain_gun)) && plot.water < 45) plot = { ...plot, water: 80 };
       if (!pl || pl.stage === 'dead') return plot;
       // Standing orders, if there is someone to carry them out.
       if (orders.water && !f.kit.drip && fid !== 'top_field' && plot.water < 35 && act('water' + plot.id)) plot = { ...plot, water: 82 };
@@ -746,6 +749,95 @@ export const buyTool = (state: GameState, fid: FacilityId, toolId: string): Acti
   return { state: { ...withFacility(state, fid, { ...f, kit: { ...f.kit, [toolId]: true } }), money: state.money - tool.cost }, minutes: 10, message: `${tool.name} set up.`, ok: true };
 };
 
+/* -----------------------------------------------------------------------------
+   THE GARDEN SHOP (constants.shop.ts)
+   --------------------------------------------------------------------------- */
+/** A bigger size is cheaper per m²; the price follows the crop's own seed cost. */
+export const seedPrice = (spec: { costM2: number }, size: { m2: number; off: number }): number =>
+  Math.max(1, Math.round(spec.costM2 * size.m2 * size.off));
+
+/** A rotavator halves the work of clearing and planting a bed; a two-wheel tractor takes the field to a third. */
+const machineFactor = (f: FacilityState, fid: FacilityId): number =>
+  fid === 'top_field' ? (f.kit.walking_tractor ? 0.34 : 1) : (f.kit.rotavator ? 0.5 : 1);
+
+/** Plugs raised in a heated propagator go out a fortnight ahead. */
+const propagated = (pl: Planting, f: FacilityState, spec: { how: string }): Planting =>
+  f.kit.propagator && spec.how === 'plug' ? { ...pl, gdd: pl.gdd + 60 } : pl;
+
+export const buySeed = (state: GameState, cropId: string, sizeId: string): ActionResult => {
+  const spec = CROPS[cropId];
+  const size = GARDEN_SEED_SIZES.find(z => z.id === sizeId);
+  if (!spec || !size) return fail(state, 'Nothing to buy.');
+  const cost = seedPrice(spec, size);
+  const name = BASE(cropId)?.name ?? cropId;
+  if (state.money < cost) return fail(state, `A ${size.label.toLowerCase()} of ${name} is $${cost}.`);
+  const seeds = state.estate.seeds ?? {};
+  return {
+    state: { ...state, money: state.money - cost, estate: { ...state.estate, seeds: { ...seeds, [cropId]: (seeds[cropId] ?? 0) + size.m2 } } },
+    minutes: 0, message: `${size.label} of ${name}: seed for ${size.m2} m² ($${cost}).`, ok: true,
+  };
+};
+
+export const buyShopItem = (state: GameState, itemId: string, units = 1): ActionResult => {
+  const it = GS_BY_ID[itemId];
+  if (!it) return fail(state, 'Nothing to buy.');
+  const cost = it.price * units;
+  const what = `${units} ${it.unit}${units > 1 ? 's' : ''} of ${it.name}`;
+  if (state.money < cost) return fail(state, `${what} is $${cost}.`);
+  const shop = state.estate.shop ?? {};
+  return {
+    state: { ...state, money: state.money - cost, estate: { ...state.estate, shop: { ...shop, [itemId]: (shop[itemId] ?? 0) + it.cover * units } } },
+    minutes: 0, message: `${what} in the shed ($${cost}).`, ok: true,
+  };
+};
+
+/** Why an item will not work here and now, or null. */
+export const shopItemBlocked = (it: ShopItem, fid: FacilityId, month: number): string | null =>
+  it.covered && !FACILITIES[fid].covered ? 'only under cover'
+    : it.months && !it.months.includes(month) ? `works ${seasonLabel(it.months)}` : null;
+
+/** Put a shop feed or remedy on beds or trees. A tree takes 10 m² of cover. */
+export const applyShopItem = (state: GameState, fid: FacilityId, ids: string[], itemId: string, day: number): ActionResult => {
+  const f = state.estate.facilities[fid];
+  const it = GS_BY_ID[itemId];
+  if (!f || !it) return fail(state, 'Nothing to apply.');
+  const why = shopItemBlocked(it, fid, state.month);
+  if (why) return fail(state, `${it.name}: ${why}.`);
+  let stock = (state.estate.shop ?? {})[itemId] ?? 0;
+  let minutes = 0, n = 0, cleared = 0;
+  const clears = it.clears ?? [];
+  const liquid = it.kind !== 'feed';
+  const plots = f.plots.map(p => {
+    if (!ids.includes(p.id) || stock < p.areaM2 - 1e-6) return p;
+    stock -= p.areaM2; n++;
+    minutes += p.areaM2 > 100 ? (f.kit.walking_tractor ? 30 : liquid ? 45 : 90) : liquid ? (f.kit.sprayer ? 3 : 10) : 12;
+    const q: Plot = { ...p, fertility: clamp(p.fertility + (it.fertility ?? 0), 0, 100), life: clamp(p.life + (it.life ?? 0), 0, 100) };
+    if (it.kind === 'feed') q.boughtFeedDay = day;
+    if (it.synthetic) q.sprayedDay = day;
+    if (q.planting && it.key) {
+      const keep = q.planting.problems.filter(x => !clears.includes(x.id));
+      cleared += q.planting.problems.length - keep.length;
+      q.planting = { ...q.planting, problems: keep, treated: { ...q.planting.treated, [it.key]: day + (it.lasts ?? 0) } };
+    }
+    return q;
+  });
+  const trees = f.trees.map(t => {
+    if (!ids.includes(t.id) || !it.key || stock < 10 - 1e-6) return t;
+    stock -= 10; n++;
+    minutes += f.kit.sprayer ? 5 : 15;
+    const keep = t.problems.filter(x => !clears.includes(x.id));
+    cleared += t.problems.length - keep.length;
+    return { ...t, problems: keep, treated: { ...(t.treated ?? {}), [it.key]: day + (it.lasts ?? 0) } };
+  });
+  if (n === 0) return fail(state, `Not enough ${it.name} in the shed for that. The Garden Shop sells it.`);
+  const w = withFacility(state, fid, { ...f, plots, trees });
+  return {
+    state: { ...w, estate: { ...w.estate, shop: { ...(w.estate.shop ?? {}), [itemId]: stock } } },
+    minutes: Math.round(minutes),
+    message: `${it.name} on ${n} ${n > 1 ? 'places' : 'place'}${cleared ? ` — ${cleared} ${cleared > 1 ? 'troubles' : 'trouble'} seen off` : ''}.`, ok: true,
+  };
+};
+
 export const setOrder = (state: GameState, fid: FacilityId, key: keyof StandingOrders, on: boolean): GameState => {
   const f = state.estate.facilities[fid];
   if (!f) return state;
@@ -817,9 +909,9 @@ export const fixProblem = (state: GameState, fid: FacilityId, problemId: string)
 export const waterPlots = (state: GameState, fid: FacilityId, plotIds: string[]): ActionResult => {
   const f = state.estate.facilities[fid];
   if (!f) return fail(state, 'Not yours.');
-  if (fid === 'top_field') return fail(state, 'The field is rain-fed. There is no watering 600 m² with a can.');
+  if (fid === 'top_field' && !f.kit.rain_gun) return fail(state, 'The field is rain-fed. There is no watering 600 m² with a can.');
   const spec = FACILITIES[fid];
-  const rate = (spec.canMinPerM2 ?? 3) * (f.kit.hose ? 0.28 : 1);
+  const rate = fid === 'top_field' ? 0.05 : (spec.canMinPerM2 ?? 3) * (f.kit.hose ? 0.28 : 1);
   let minutes = 0;
   const plots = f.plots.map(p => {
     if (!plotIds.includes(p.id)) return p;
@@ -837,8 +929,12 @@ export const plantPlots = (state: GameState, fid: FacilityId, plotIds: string[],
   if (!spec.plant.includes(month)) return fail(state, `Not the month for ${BASE(cropId)?.name}.`);
   const targets = f.plots.filter(p => plotIds.includes(p.id) && (!p.planting || p.planting.stage === 'spent' || p.planting.stage === 'dead') && (p.id === 'roses') === (cropId === 'rose_petals'));
   if (targets.length === 0) return fail(state, 'Clear the bed first.');
-  const cost = Math.round(targets.reduce((a, p) => a + p.areaM2 * spec.costM2, 0));
-  if (state.money < cost) return fail(state, `Seed for that runs $${cost}.`);
+  // Seed comes out of the shed, bought at the Garden Shop or saved from your own crops.
+  const have = (state.estate.seeds ?? {})[cropId] ?? 0;
+  const need = Math.round(targets.reduce((a, p) => a + p.areaM2, 0));
+  if (have < need) return fail(state, have <= 0
+    ? `No ${BASE(cropId)?.name ?? cropId} seed in the shed. The Garden Shop sells it.`
+    : `Seed for ${Math.round(have)} m² in the shed, and that wants ${need} m². The Garden Shop sells more.`);
   const line = state.estate.seedLines[cropId] ?? 0;
   const drill = fid === 'top_field' && f.kit.seed_drill;
   let minutes = 0;
@@ -846,9 +942,14 @@ export const plantPlots = (state: GameState, fid: FacilityId, plotIds: string[],
     if (!targets.includes(p)) return p;
     minutes += p.areaM2 > 100 ? (drill ? 20 : 60) + 20 : Math.max(10, p.areaM2 * (spec.how === 'seed' ? 1.5 : spec.how === 'clove' ? 4 : 2.5));
     const hist = p.planting ? [FAMILIES[CROPS[p.planting.cropId].family].id, ...p.history].slice(0, 4) : p.history;
-    return { ...p, history: hist, greenManure: undefined, planting: newPlanting(p, cropId, day, `${cropId}_${p.id}_${day}`, line) };
+    return { ...p, history: hist, greenManure: undefined, planting: propagated(newPlanting(p, cropId, day, `${cropId}_${p.id}_${day}`, line), f, spec) };
   });
-  return { state: { ...withFacility(state, fid, { ...f, plots }), money: state.money - cost }, minutes: Math.round(minutes), message: `Planted ${BASE(cropId)?.name} in ${targets.length} bed${targets.length > 1 ? 's' : ''} ($${cost}).`, ok: true };
+  const w = withFacility(state, fid, { ...f, plots });
+  return {
+    state: { ...w, estate: { ...w.estate, seeds: { ...(w.estate.seeds ?? {}), [cropId]: have - need } } },
+    minutes: Math.round(minutes * machineFactor(f, fid)),
+    message: `Planted ${BASE(cropId)?.name} in ${targets.length} bed${targets.length > 1 ? 's' : ''} (${need} m² of seed).`, ok: true,
+  };
 };
 
 /** Clear a finished or failed bed. A legume leaves nitrogen; everything leaves something for the compost. */
@@ -868,7 +969,7 @@ export const clearPlots = (state: GameState, fid: FacilityId, plotIds: string[])
     return { ...p, fertility: clamp(p.fertility + (fam.fixes ?? 0), 0, 100), history: [fam.id, ...p.history].slice(0, 4), planting: undefined };
   });
   const next = withFacility(state, fid, { ...f, plots });
-  return { state: addWaste(next, ['green_waste', residue], ['straw', straw]), minutes, message: straw > 0 ? `Cleared. ${Math.round(straw)} kg of straw baled for mulch.` : 'Cleared, and the haulm is on the heap.', ok: true };
+  return { state: addWaste(next, ['green_waste', residue], ['straw', straw]), minutes: Math.round(minutes * machineFactor(f, fid)), message: straw > 0 ? `Cleared. ${Math.round(straw)} kg of straw baled for mulch.` : 'Cleared, and the haulm is on the heap.', ok: true };
 };
 
 export const coverPlots = (state: GameState, fid: FacilityId, plotIds: string[], cover: 'net' | 'fleece' | 'mulch'): ActionResult => {
@@ -987,7 +1088,7 @@ export const pickHere = (state: GameState, fid: FacilityId, ids: string[]): Acti
     if (r.kg <= 0) return p;
     got.push({ id: pl.cropId, kg: r.kg * gk, q: Math.min(100, r.quality + gq), bio: bedIsBiodynamic(p, today, f.boughtDay) });
     if (fam.pickKgH > 0) minutes += (r.kg / fam.pickKgH) * 60;
-    else minutes += f.kit.scythe ? 360 : 540;   // a strip of grain by hand: cut, stook, thresh
+    else minutes += f.kit.walking_tractor ? 150 : f.kit.scythe ? 360 : 540;   // a strip of grain: reaper-binder, or by hand cut, stook, thresh
     return { ...p, planting: r.planting };
   });
   const trees = f.trees.map(t => {
@@ -1240,7 +1341,9 @@ export const saveSeed = (state: GameState, fid: FacilityId, plotId: string): Act
   const plots = f.plots.map(x => x.id === plotId ? { ...x, planting: { ...pl, seedKept: true, ripeKg: pl.ripeKg * 0.85 } } : x);
   const next = withFacility(state, fid, { ...f, plots });
   return {
-    state: { ...next, estate: { ...next.estate, seedLines: { ...next.estate.seedLines, [pl.cropId]: line } } },
+    // What is saved goes in the shed: enough to sow the bed four times over.
+    state: { ...next, estate: { ...next.estate, seedLines: { ...next.estate.seedLines, [pl.cropId]: line },
+      seeds: { ...(next.estate.seeds ?? {}), [pl.cropId]: ((next.estate.seeds ?? {})[pl.cropId] ?? 0) + Math.round(p!.areaM2 * 4) } } },
     minutes: 25, ok: true,
     message: line > (state.estate.seedLines[pl.cropId] ?? 0) ? `Saved seed from the best plants. Your ${BASE(pl.cropId)?.name} line is generation ${line} now.` : 'Saved seed, but these plants were not good enough to improve the line.',
   };

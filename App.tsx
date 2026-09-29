@@ -39,6 +39,9 @@ import LogbookModal from './components/LogbookModal';
 import HarvestReport from './components/HarvestReport';
 import OrderBook from './components/OrderBook';
 import TownView from './components/TownView';
+import GardenShop from './components/GardenShop';
+import { GS_UI } from './components/gardenShopSheet';
+import { ShopKind } from './constants.shop';
 import { TOWN_FACES } from './components/townFaceSheet';
 import { cellarCapacity, completeTownStep, townReady } from './services/town';
 import PressRoom from './components/PressRoom';
@@ -1450,6 +1453,7 @@ export default function App() {
   const [harvestReport, setHarvestReport] = useState<LogEntry | null>(null);
   const [showOrders, setShowOrders] = useState(false);
   const [showTown, setShowTown] = useState(false);
+  const [showShop, setShowShop] = useState<ShopKind | null>(null);
   const [openTool, setOpenTool] = useState<string | null>(null);
 
   const handleStopBatch = (batch: Batch) => {
@@ -2421,6 +2425,15 @@ export default function App() {
             <span className="nt-name">The Town</span>
             {townReady(gameState).length > 0 && <span className="pip" />}
             </button>
+            {/* The Garden Shop: seed, feed, remedies and farm machines. */}
+            <button
+            onClick={() => setShowShop('seeds')}
+            className={`tab-btn-hud${showShop ? ' active' : ''}`}
+            title="Seed, feed, remedies, beneficial insects and farm machines"
+            >
+            <span className="town-tile-mark gs-tile-mark" style={{ backgroundImage: `url(${GS_UI[1]})` }} />
+            <span className="nt-name">Garden Shop</span>
+            </button>
             </div>
           </section>
 
@@ -2639,6 +2652,7 @@ export default function App() {
             onWait={waitOnEstate}
             onClose={leaveEstate}
             onOpenStaff={() => setUiState(u => ({ ...u, showStaff: true }))}
+            onOpenShop={t => setShowShop(t ?? 'seeds')}
             log={fieldLog.filter(x => x.day === todayKey)}
             clock={clock}
           />
@@ -2727,6 +2741,21 @@ export default function App() {
           customIngredients={gameState.customIngredients}
           onClose={() => setOpenTool(null)}
           onPress={(b) => { const a = openTool === 'centrifuge' ? 'filter' : 'press'; setOpenTool(null); handleProcessBatch(a, b); }}
+        />
+      )}
+
+      {showShop && (
+        <GardenShop
+          gameState={gameState}
+          tab={showShop}
+          onTab={setShowShop}
+          onClose={() => setShowShop(null)}
+          onBuy={fn => {
+            const r = fn(gameState);
+            if (!r.ok) { setLabNotification({ id: Date.now(), text: r.message, type: 'warn' }); return; }
+            setGameState(prev => { const r2 = fn(prev); return r2.ok ? r2.state : prev; });
+            setLabNotification({ id: Date.now(), text: r.message, type: 'info' });
+          }}
         />
       )}
 

@@ -1,5 +1,6 @@
 import { WILD } from './constants.wild';
 import { FacilityId, FamilyId, CropStage } from './types.farm';
+import { GARDEN_SHOP_ITEMS } from './constants.shop';
 
 /* =============================================================================
    WHAT GROWS HERE, AND HOW
@@ -448,6 +449,18 @@ export const PROBLEMS: Record<string, ProblemSpec> = {
   scale: { id: 'scale', label: 'Scale', see: 'Sticky leaves and black mould', is: 'Scale insects under the leaves, and sooty mould on the honeydew.', hit: 0.8, fix: 'Wipe the leaves with soapy water', minutes: 20 },
 };
 
+/* The Garden Shop's remedies stop what they clear, for as long as they last: each
+   item's key goes into the stoppedBy of every problem it names. Vent openers keep
+   the damp-air problems out of a tunnel or a lemon house. */
+for (const it of GARDEN_SHOP_ITEMS) {
+  if (!it.key || !it.clears) continue;
+  for (const pid of it.clears) {
+    const pr = PROBLEMS[pid];
+    if (pr) pr.stoppedBy = [...new Set([...(pr.stoppedBy ?? []), it.key])];
+  }
+}
+for (const pid of ['botrytis', 'mildew']) PROBLEMS[pid].stoppedBy = [...(PROBLEMS[pid].stoppedBy ?? []), 'auto_vent'];
+
 /* -----------------------------------------------------------------------------
    THE KIT: tools that change how long things take, or that act on their own
    --------------------------------------------------------------------------- */
@@ -479,6 +492,12 @@ export const FARM_TOOLS: FarmTool[] = [
   { id: 'ladder', name: 'Orchard ladder', cost: 90, about: 'Three legs, and the top of the tree within reach: picking goes twice as fast.', where: ['orchard'] },
   { id: 'extractor', name: 'Honey extractor', cost: 240, about: 'Spin the frames instead of crushing the comb. The bees keep it.', where: ['hives'] },
   { id: 'auto_door', name: 'Automatic coop door', cost: 120, about: 'Shuts at dusk and opens at dawn. The fox finds it shut.', where: ['hen_run'] },
+  // From the Garden Shop.
+  { id: 'propagator', name: 'Heated propagator', cost: 140, about: 'Plugs raised on bottom heat go out a fortnight ahead of the weather.', where: ['polytunnel', 'walled_garden'] },
+  { id: 'auto_vent', name: 'Automatic vent openers', cost: 95, about: 'Wax pistons open the vents on a warm morning. Grey mould and mildew stay out.', provides: 'auto_vent', where: ['polytunnel', 'orangery'] },
+  { id: 'rotavator', name: 'Rotavator', cost: 380, about: 'Beds cleared and planted in half the time.', where: ['walled_garden', 'polytunnel'] },
+  { id: 'walking_tractor', name: 'Two-wheel tractor', cost: 1200, about: 'Plough, drill and reaper-binder on one engine: the field planted, cleared and cut in a third of the time.', where: ['top_field'] },
+  { id: 'rain_gun', name: 'Travelling rain gun', cost: 640, about: 'A hose reel that walks itself down the field. The field can be watered, and waters itself when it runs dry.', where: ['top_field'] },
 ];
 
 /* -----------------------------------------------------------------------------

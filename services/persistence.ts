@@ -158,6 +158,9 @@ function migrateEstate(e: Partial<GameState['estate']> | undefined): GameState['
     vanDemand: e.vanDemand ?? {},
     log: e.log ?? [],
     seedLines: e.seedLines ?? {},
+    // The Garden Shop postdates every save: the shed starts empty.
+    seeds: e.seeds ?? {},
+    shop: e.shop ?? {},
     ledger: e.ledger ?? {},
     patches: e.patches ?? {},
     guide: e.guide ?? {},
