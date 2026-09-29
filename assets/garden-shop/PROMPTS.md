@@ -10,7 +10,9 @@ There are three images, all 16:9. Save them in this folder with these exact name
 
 **Grid rules (important):** the grid has to fill the whole frame edge to edge, with every cell the same size. There is no outer margin, border, gutter, title or label. At 1920×1080 each cell is 240×270 px. Each object sits centred in its cell with about 10% padding, and no object crosses into a neighbouring cell. The game slices the image by fractions of its size, so the resolution doesn't matter, but a crooked grid does. If the generator drifts, crop and resize to 1920×1080 before saving.
 
-**Background:** use flat pure magenta `#FF00FF` behind the icons in both sheets so it can be keyed out. Key the magenta out to transparency and save as PNG before dropping the file in. The game draws each cell as-is, so any magenta left behind will show.
+**Background:** use flat pure magenta `#FF00FF` behind the icons in both sheets so it can be keyed out. Leave the magenta in: Plate Drop re-saves images as JPEG, which loses transparency anyway. Claude keys the magenta out when it pulls the plates into the game.
+
+**Sending them:** drop them through the Plate Drop artifact named `items`, `ui` and `scene` (any extension). Claude then keys them, checks the grid, and inlines them into `index.html` the way the rest of the game's art is stored.
 
 ---
 
