@@ -58,6 +58,9 @@ import DevPanel from './components/DevPanel';
 import PanelMark from './components/PanelMark';
 import GameIcon from './components/GameIcon';
 import FirstCulture, { guideProgress } from './components/FirstCulture';
+import PrimerModal from './components/PrimerModal';
+import StoryCard from './components/StoryCard';
+import { STORY_BEATS, markSeen, StoryCardData } from './constants.story';
 import { TrendingUp, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon, BagIcon, CloseIcon } from './components/icons';
 
@@ -119,6 +122,9 @@ export default function App() {
     craft: {},
     undergroundBusts: 0,
     onboardingDone: false,
+    // The story: no beat shown yet, and no name until the letter asks for one.
+    story: { seen: [] },
+    playerName: '',
     kojiRoomOwned: false,
     kojiTargetKg: KOJI_ROOM_DEFAULT_TARGET_KG,
     // The first morning: a little after seven, the light just up.
@@ -251,6 +257,8 @@ export default function App() {
   // Walking out to the estate stops the clock (it is turn by turn until you
   // press play or skip ahead); walking home puts it back as it was.
   const pausedBeforeField = useRef(false);
+  /** True while any menu, book, message or story card is open: the bench clock waits. Written every render, below. */
+  const menuHoldRef = useRef(false);
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
@@ -322,7 +330,7 @@ export default function App() {
     if (guideWasDone.current === null) { guideWasDone.current = guideDoneNow; return; }
     if (guideDoneNow && !guideWasDone.current) {
       setGameState(prev => (prev.onboardingDone ? prev : { ...prev, onboardingDone: true }));
-      setLabNotification({ id: Date.now(), text: 'First culture done. The guide steps back — the Codex, the post-mortems and your own archive carry it from here.', type: 'info' });
+      setLabNotification({ id: Date.now(), text: 'The first two chapters are done. The guide steps back — the Codex, the Primer, the post-mortems and your own archive carry it from here.', type: 'info' });
     }
     guideWasDone.current = guideDoneNow;
   }, [guideDoneNow, setLabNotification]);
@@ -387,6 +395,8 @@ export default function App() {
     inspectorRaid: boolean; 
     showStaff: boolean;
     showWelcome: boolean;
+    /** The story card on screen, if any. While it is up the clock waits. */
+    storyCard: StoryCardData | null;
     hoveredInventoryItem: Ingredient | null;
   }>({
     modalOpen: false,
@@ -395,6 +405,7 @@ export default function App() {
     inspectorRaid: false,
     showStaff: false,
     showWelcome: true,
+    storyCard: null,
     hoveredInventoryItem: null
   });
 
@@ -919,6 +930,28 @@ export default function App() {
     setPaused(pausedBeforeField.current);
   };
 
+  // --- The story ---
+  // One beat at a time, each once per run (constants.story.ts). It sits BELOW
+  // gameState and uiState because it reads both in its dependency list — an
+  // effect placed above their declarations throws before the first render. The
+  // beat is marked seen and applied in the updater (pure, so StrictMode's second
+  // call gives the same answer); the card is set beside it, and a card that is
+  // already up holds the next beat back. A save from before the story carries
+  // 'legacy' and never gets here.
+  useEffect(() => {
+    if (uiState.showWelcome || gameState.gameOver || uiState.storyCard) return;
+    const seen = gameState.story?.seen ?? [];
+    if (seen.includes('legacy')) return;
+    const beat = STORY_BEATS.find(b => !seen.includes(b.id) && b.when(gameState));
+    if (!beat) return;
+    const card = beat.card(gameState);
+    setGameState(prev => {
+      const next = markSeen(prev, beat.id);
+      return beat.apply ? beat.apply(next) : next;
+    });
+    setUiState(u => ({ ...u, storyCard: card }));
+  }, [gameState, uiState.showWelcome, uiState.storyCard]);
+
   // --- Game Loop ---
   // The world runs live everywhere now, the estate included: the owner asked for
   // the clock to be run or stopped from inside the estate and the growing rooms
@@ -931,6 +964,10 @@ export default function App() {
 
     const tickRate = 1000 / gameSpeed;
     const interval = setInterval(() => {
+      // Held while any menu, book, message or story card is open. The ref is
+      // refreshed every render (see menuHoldRef), so the interval never has to
+      // be rebuilt when a menu opens, and it never reads a stale flag.
+      if (menuHoldRef.current) return;
       setGameState(prev => advanceWorld(prev, MINUTES_PER_TICK));
     }, tickRate);
     return () => clearInterval(interval);
@@ -1102,10 +1139,14 @@ export default function App() {
   // --- PERSISTENCE ---
   // Mirror progress to localStorage once per in-game day rather than on every
   // tick — a full serialize at the physics tick rate is wasted work.
+  // A story beat is saved when it is recorded too: the first save of a new run is
+  // written in the same commit that closes the title screen, before any beat is in
+  // `story.seen`, so a tab killed before the next day would replay chapter 1's card.
   useEffect(() => {
     if (uiState.showWelcome) return;
     saveGame(gameState);
-  }, [gameState.day, gameState.week, gameState.year, uiState.showWelcome]);
+  }, [gameState.day, gameState.week, gameState.year, uiState.showWelcome,
+      gameState.story?.seen?.length, gameState.story?.primerRead]);
 
   // Also save on the way out, so a mid-day close keeps the last few seconds.
   useEffect(() => {
@@ -1120,8 +1161,10 @@ export default function App() {
     setUiState(prev => ({ ...prev, showWelcome: false }));
   };
 
-  const handleNewRun = () => {
+  // The letter asks whose name goes over the door; it is saved with the run.
+  const handleNewRun = (playerName: string) => {
     clearSave();
+    setGameState(prev => ({ ...prev, playerName: String(playerName || '').trim().slice(0, 24) }));
     setUiState(prev => ({ ...prev, showWelcome: false }));
   };
 
@@ -1455,6 +1498,12 @@ export default function App() {
   const [showTown, setShowTown] = useState(false);
   const [showShop, setShowShop] = useState<ShopKind | null>(null);
   const [openTool, setOpenTool] = useState<string | null>(null);
+  /** The Primer, from the Codex or from the guide. Opening it once is what the guide's "Read the Primer" step asks. */
+  const [showPrimer, setShowPrimer] = useState(false);
+  const openPrimer = () => {
+    setShowPrimer(true);
+    setGameState(prev => (prev.story?.primerRead ? prev : { ...prev, story: { ...(prev.story ?? { seen: [] }), primerRead: true } }));
+  };
 
   const handleStopBatch = (batch: Batch) => {
     setGameState(prev => ({
@@ -2099,6 +2148,21 @@ export default function App() {
     }
   }, [gameState.day, gameState.week, gameState.month, gameState.year,
       gameState.heat, gameState.gameOver, uiState.inspectorRaid, uiState.showWelcome]);
+
+  /* THE CLOCK WAITS FOR ANY MENU. Refreshed every render, after every piece of
+     state it reads is declared, and read by the tick's interval. A ref rather
+     than another effect dependency, so opening a menu does not tear the
+     interval down and up again. The batch inspector is deliberately NOT here:
+     it is how a running batch is watched live. Orders is here, and (as before)
+     does not close on Escape. The estate, the cellar and the koji room are ROOMS,
+     not menus: each carries its own clock control (RoomClock), so holding the
+     clock there would leave its play and speed buttons dead. */
+  menuHoldRef.current = !!(
+    activeDrawer || showShop || showTown || showOrders || showHardware ||
+    openIngredient || openTool || journalOpen || harvestReport || menuOpen ||
+    showPrimer || uiState.modalOpen || uiState.showLogbook || uiState.showStaff ||
+    uiState.storyCard
+  );
 
   // The clock's control, for the rooms that carry one (estate, cellar, koji room).
   const sunToday = sunTimes(dayOfYear(gameState));
@@ -2798,12 +2862,14 @@ export default function App() {
               unlockedRecipes={gameState.unlockedRecipes}
               ownedBookIds={gameState.ownedBookIds}
               discoveredRecipeIds={gameState.discoveredRecipeIds}
+              onOpenPrimer={openPrimer}
           />
       )}
 
       {!gameState.onboardingDone && !guideDoneNow && !uiState.showWelcome && !gameState.gameOver && (
         <FirstCulture
           gameState={gameState}
+          onOpenPrimer={openPrimer}
           onDismiss={() => setGameState(prev => ({ ...prev, onboardingDone: true }))}
         />
       )}
@@ -2818,6 +2884,16 @@ export default function App() {
         >
           Guide
         </button>
+      )}
+
+      {/* The Primer opens over the Codex (it is offered there), and both story
+          surfaces sit above every modal: scrim(20) < HUD(30) < supply(50) <
+          modals(100) < ingredient panel(130) < story(140). */}
+      {showPrimer && !uiState.showWelcome && (
+        <PrimerModal gameState={gameState} onClose={() => setShowPrimer(false)} />
+      )}
+      {uiState.storyCard && !uiState.showWelcome && (
+        <StoryCard card={uiState.storyCard} onClose={() => setUiState(u => ({ ...u, storyCard: null }))} />
       )}
 
       {showDev && (

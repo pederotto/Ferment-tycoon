@@ -18,7 +18,7 @@ import { Ingredient, IngredientType, Recipe, FermentType, MatrixEntry, MatrixSub
 const NORDIC = 'nordic';   // Nordic Staples Co. — grains, salts, legumes
 const PRIME = 'prime';     // Prime Sourcing — meats and seasonal produce
 
-const mk = (
+export const mk = (
   id: string,
   name: string,
   supplierId: string,
@@ -48,9 +48,11 @@ const mk = (
 /* -----------------------------------------------------------------------------
    HERITAGE GRAINS — a koji substrate argument, not a flavour one
 
-   All five are wheats and all five are starch-dominant, so they are AMYLASE
-   substrates: the mirror of the mushrooms, and the reason both belong in the
-   same expansion. What separates them is protein, which is the part a protease
+   The first five are wheats and all of them are starch-dominant, so they are
+   AMYLASE substrates: the mirror of the mushrooms, and the reason both belong in
+   the same expansion. The pantry pack added the rest of the grain shelf after
+   them — the koji rices (Koshihikari to Forbidden black), two old barleys and
+   two American wheats — on the same terms. What separates them is protein, which is the part a protease
    can also reach — einkorn and kamut carry far more of it than modern bread
    wheat, so a koji grown on them has more umami potential than one on rice.
 
@@ -84,10 +86,55 @@ export const HERITAGE_GRAINS: Ingredient[] = [
     { sugarContent: 2, starchContent: 6, nativeSalinity: 0, microbialDiversity: 1, fatContent: 1, proteinContent: 4 },
     'Green wheat burned in the field and rubbed out of its own ash. The fire sterilises it, so the bed starts clean — and stays dull unless you bring the character yourself.',
     ['heritage_koji']),
+
+  mk('koshihikari', 'Koshihikari Rice', NORDIC, 14, 78,
+    { sugarContent: 1, starchContent: 8, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 2 },
+    'The short-grain rice half of Japan grows. Clean, sticky and sweet, and the reference every other koji rice gets measured against.',
+    ['heritage_koji', 'grain_sake']),
+
+  mk('yamada_nishiki', 'Yamada Nishiki', NORDIC, 26, 90,
+    { sugarContent: 1, starchContent: 9, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 2 },
+    'The sake rice: a large grain with a starchy white heart the koji mould can only reach by growing inward. Slow to take, and worth it for clean, deep sake.',
+    ['heritage_koji', 'grain_sake'], { tierRequired: 2 }),
+
+  mk('carolina_gold', 'Carolina Gold Rice', NORDIC, 22, 86,
+    { sugarContent: 1, starchContent: 8, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 3 },
+    'The rice that built the Carolina Lowcountry, all but lost by the 1920s. Floral, and it carries that into a koji.',
+    ['heritage_koji', 'grain_sake'], { tierRequired: 2 }),
+
+  mk('forbidden_rice', 'Forbidden Black Rice', NORDIC, 20, 84,
+    { sugarContent: 1, starchContent: 7, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 4 },
+    'Kept for emperors in old China. The bran is black-purple, so the koji comes up lilac and nutty, and the mash it feeds stains everything it touches.',
+    ['heritage_koji', 'grain_sake'], { tierRequired: 2 }),
+
+  mk('bhutanese_red_rice', 'Bhutanese Red Rice', NORDIC, 18, 80,
+    { sugarContent: 1, starchContent: 7, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 4 },
+    'A high-valley rice with a soft red bran. Gives a pink-tinted koji with a nutty, mineral edge.',
+    ['heritage_koji', 'grain_sake']),
+
+  mk('bere_barley', 'Bere Barley', NORDIC, 16, 82,
+    { sugarContent: 1, starchContent: 7, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 4 },
+    'Grown on Orkney for a thousand years and never improved. Small-eared, quick to ripen in the cold, and it gives an earthy, malty koji with more character than pearl barley.',
+    ['heritage_koji', 'grain_sake']),
+
+  mk('naked_barley', 'Naked Barley', NORDIC, 13, 76,
+    { sugarContent: 1, starchContent: 7, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 4 },
+    'Hulless, so there is no husk between the koji and the starch. It takes the bed quickly and evenly.',
+    ['heritage_koji', 'grain_sake']),
+
+  mk('red_fife', 'Red Fife', NORDIC, 15, 80,
+    { sugarContent: 1, starchContent: 7, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 5 },
+    "Canada's founding wheat, brought over from Ukraine in a sack in 1842. Nutty and high in protein, so a protease koji has plenty to free from it.",
+    ['heritage_koji', 'grain_sake']),
+
+  mk('turkey_red', 'Turkey Red Wheat', NORDIC, 14, 78,
+    { sugarContent: 1, starchContent: 7, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 5 },
+    'The hard red winter wheat the Mennonites carried onto the Kansas plains. Dense and flavourful, and slow to soften.',
+    ['heritage_koji', 'grain_sake']),
 ];
 
 /* -----------------------------------------------------------------------------
-   LANDRACE CORN — the same starch, ten different histories
+   LANDRACE CORN — the same starch, eleven different histories
 
    Dried corn is a commodity like any grain. What separates these is the kernel:
    a flour corn is soft all through and gives its starch up at once, a flint or a
@@ -145,6 +192,11 @@ export const LANDRACE_CORN: Ingredient[] = [
     { sugarContent: 2, starchContent: 8, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 3 },
     'A deep red flint. Hard, glassy and slow — it wants a long soak before anything will live on it.',
     ['corn_miso']),
+
+  mk('cherokee_white_eagle_corn', 'Cherokee White Eagle', NORDIC, 17, 80,
+    { sugarContent: 2, starchContent: 8, nativeSalinity: 0, microbialDiversity: 4, fatContent: 1, proteinContent: 3 },
+    'A tall white flour corn, pale as bone and soft in the crown. Ferments to a clean, sweet, almost milky result.',
+    ['corn_chicha', 'corn_miso']),
 ];
 
 /* -----------------------------------------------------------------------------
@@ -185,6 +237,46 @@ export const PULSES: Ingredient[] = [
     { sugarContent: 1, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 7 },
     'The desert bean of the Sonoran, grown on the rain from a summer storm. Small, dense, and as much protein as anything on this shelf.',
     ['pulse_amino', 'bean_miso']),
+
+  mk('tamba_black_soybeans', 'Tamba Kuromame', NORDIC, 24, 88,
+    { sugarContent: 2, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 3, proteinContent: 8, innateUmami: 6 },
+    'The big black soybean of Tamba, eaten at New Year and grown for nothing else. Sweeter and richer than a yellow soy, and its miso comes out grey-violet.',
+    ['shiro_miso', 'hatcho_miso', 'moromi', 'tamari'], { tierRequired: 2 }),
+
+  mk('carlin_peas', 'Carlin Peas', NORDIC, 12, 76,
+    { sugarContent: 1, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 6 },
+    "Britain's maple pea, eaten parched on Passion Sunday since the Middle Ages. Dark brown, nutty and earthy in a miso.",
+    ['bean_miso', 'pulse_amino']),
+
+  mk('black_badger_peas', 'Black Badger Peas', NORDIC, 13, 76,
+    { sugarContent: 1, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 6 },
+    'A Scottish black-seeded field pea, small and dark. Dark brown miso, nutty and earthy.',
+    ['bean_miso', 'pulse_amino']),
+
+  mk('martock_beans', 'Martock Beans', NORDIC, 14, 78,
+    { sugarContent: 1, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 7 },
+    'An English field bean grown around Martock in Somerset since Roman times. Gives a green-beige miso, grassy and buttery.',
+    ['bean_miso', 'pulse_amino'], { tierRequired: 2 }),
+
+  mk('aquadulce_beans', 'Aquadulce Broad Beans', NORDIC, 11, 72,
+    { sugarContent: 1, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 6 },
+    'The old Spanish long-pod broad bean. Green-beige and buttery, and sweeter than the standard field bean.',
+    ['bean_miso', 'pulse_amino']),
+
+  mk('adzuki_beans', 'Adzuki Beans', NORDIC, 12, 76,
+    { sugarContent: 2, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 5 },
+    'The small red bean of East Asia. Red-brown, sweet and chestnut-like once it is a miso.',
+    ['bean_miso', 'pulse_amino']),
+
+  mk('anasazi_beans', 'Anasazi Beans', NORDIC, 16, 80,
+    { sugarContent: 1, starchContent: 5, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 6 },
+    'Speckled maroon and white, grown in the Four Corners for centuries. Sweet and mealy, and a little less gassy than most.',
+    ['bean_miso', 'pulse_amino'], { tierRequired: 2 }),
+
+  mk('christmas_lima_beans', 'Christmas Lima', NORDIC, 15, 78,
+    { sugarContent: 1, starchContent: 6, nativeSalinity: 0, microbialDiversity: 2, fatContent: 1, proteinContent: 6 },
+    'A big flat lima with a chestnut flavour and a red-and-white marbling that fades in the pot. Creamy, sweet and mild.',
+    ['bean_miso', 'pulse_amino']),
 ];
 
 /* -----------------------------------------------------------------------------
@@ -192,7 +284,7 @@ export const PULSES: Ingredient[] = [
 
    Sugar and acid, almost no starch, and more free glutamate than any other
    fruit — which is why a tomato tastes savoury before anything has touched it.
-   What separates these ten is where they sit between sweet and sharp, and how
+   What separates these is where they sit between sweet and sharp, and how
    much solid there is per kilo: a San Marzano is mostly flesh, a beefsteak is
    mostly water.
    --------------------------------------------------------------------------- */
@@ -257,6 +349,46 @@ export const TOMATOES: Ingredient[] = [
     { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 4 },
     'A Russian black tomato named for the singer. Earthy and dark, and sweeter than it looks.',
     ['tomato_amino', 'lacto_tomato'], 2),
+
+  tomato('aunt_rubys_german_green', "Aunt Ruby's German Green", 12, 78, [6, 7, 8, 9], // Jul-Oct
+    { sugarContent: 4, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 7 },
+    'A big green beefsteak that stays green when ripe. Firm and sharp, so it goes into the jar dilly and crisp, and stays that way.',
+    ['lacto_tomato', 'tomato_vinegar']),
+
+  tomato('pineapple_tomato', 'Pineapple Tomato', 13, 80, [7, 8],            // Aug-Sep
+    { sugarContent: 8, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 3 },
+    'A gold-and-red marbled beefsteak from Hawaii, very sweet and fruity. Makes a sweet, gold-marbled brine, and a ketchup you do not need sugar for.',
+    ['koji_ketchup', 'lacto_tomato', 'tomato_kombucha']),
+
+  tomato('principe_borghese', 'Principe Borghese', 10, 78, [7, 8, 9],       // Aug-Oct
+    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 7, innateAcidity: 5 },
+    'The Italian drying tomato: small, thick-walled and low in juice. Keeps its shape in a brine and concentrates in a pot.',
+    ['lacto_tomato', 'koji_ketchup']),
+
+  tomato('piennolo', 'Piennolo del Vesuvio', 20, 90, [7, 8, 9],             // Aug-Oct
+    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 8, innateAcidity: 6 },
+    'Grown on the slopes of Vesuvius and hung in bunches from the rafters for the winter. Thick-skinned, intense and slow to break down.',
+    ['lacto_tomato', 'tomato_amino', 'koji_ketchup'], 2),
+
+  tomato('currant_tomato', 'Currant Tomato', 22, 82, [7, 8, 9],             // Aug-Oct
+    { sugarContent: 5, starchContent: 0, nativeSalinity: 0, microbialDiversity: 7, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 8 },
+    'Solanum pimpinellifolium, the wild ancestor of every tomato. Tiny red pearls that burst in the mouth, more skin than flesh and very sharp.',
+    ['lacto_tomato', 'tomato_vinegar'], 2),
+
+  tomato('yellow_pear_tomato', 'Yellow Pear', 11, 74, [7, 8, 9],            // Aug-Oct
+    { sugarContent: 6, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 6, innateAcidity: 3 },
+    'A pear-shaped yellow cherry tomato from the 1800s. Mild and sweet, and it makes a golden ketchup.',
+    ['koji_ketchup', 'lacto_tomato']),
+
+  tomato('tomatillo', 'Tomatillo', 10, 74, [7, 8, 9],                       // Aug-Oct
+    { sugarContent: 3, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 3, innateAcidity: 8 },
+    'A husk-wrapped cousin of the tomato, not a tomato at all. Tart, green and citrusy, and it stays firm in a brine.',
+    ['lacto_tomato', 'tomato_vinegar']),
+
+  tomato('ground_cherry', 'Ground Cherry', 14, 76, [8, 9],                  // Sep-Oct
+    { sugarContent: 7, starchContent: 0, nativeSalinity: 0, microbialDiversity: 5, fatContent: 0, proteinContent: 2, innateUmami: 2, innateAcidity: 4 },
+    'Another husked cousin, golden and sweet, with a pineapple and vanilla flavour. Small, and goes soft quickly.',
+    ['lacto_tomato', 'tomato_kombucha']),
 ];
 
 export const HERITAGE_INGREDIENTS: Ingredient[] = [

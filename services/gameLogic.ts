@@ -13,6 +13,7 @@ import {
   AGEING_BY_TYPE, AGEING_MAX_PROGRESS, AGEING_PEAK_BONUS, AGEING_VALUE_BONUS, CELLAR_TICK_DIVISOR,
   SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
+import { applyPantryStages } from '../constants.pantry';
 
 import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, processModel, ProductForm, alcoholPct, chargeOf, alcoholTolerance } from './massBalance';
 // --- GAMEPLAY CONSTANTS ---
@@ -100,6 +101,9 @@ export const satisfiesToken = (t: string, i: Ingredient): boolean => {
     // it counts and nothing that merely has 'black' in its name does.
     case 'black_koji': return isLiveKoji(i) && (i.acidProtection ?? 0) > 0;
     case 'chili': return i.id.includes('chili') || i.id.includes('pepper');
+    // A fresh herb is a thing, not a word in an id: the pantry's basils, lovage
+    // and coriander carry the HERB tag, and nothing else may satisfy it.
+    case 'herb': return !!(i.tags && i.tags.includes('HERB'));
     default: return i.id.includes(t);
   }
 };
@@ -241,9 +245,11 @@ export const resolveRecipeFromMatrix = (
           const isBrine = hasWater;
           return {
               id: `lacto_${sub.id}_gen`,
-              name: isBrine ? `Brined ${sub.name.split(' ').pop()}` : `Lacto-Fermented ${sub.name.split(' ').pop()}`, 
+              // Lacto-fermented either way: 'brined' named the vessel's contents, not
+              // what the salt is for, and a pickle is not the process.
+              name: `Lacto-Fermented ${sub.name.split(' ').pop()}`,
               type: FermentType.LACTO,
-              description: isBrine ? `Salt-brine pickle. Slower, safer.` : `Dry-salted ${sub.name}. Crisp, acidic, and probiotic.`,
+              description: isBrine ? `Lacto-fermented in a light salt solution. Slower, safer.` : `Dry-salted ${sub.name}. Crisp, acidic, and probiotic.`,
               requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
               outputIngredientId: `lacto_${sub.id}`,
               requiredVesselId: vesselId,
@@ -3252,6 +3258,11 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
     finish = 'Clean, and it fades quickly.';
   }
   notes.push({ facet: 'Finish', text: finish });
+
+  // The pantry pack's recipes (and a handful of older ones) carry a look, a smell,
+  // a taste and a feel for a fresh, a ripe and an aged jar, written over the
+  // generic lines above. Before the strength note so that stays last.
+  applyPantryStages(notes, batch, recipe, ings);
 
   /* --- STRENGTH ----------------------------------------------------------
      Alcohol is not one of the four axes, so it cannot be scored — but it is the

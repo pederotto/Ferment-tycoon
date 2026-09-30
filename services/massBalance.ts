@@ -216,6 +216,29 @@ const BY_TYPE: Record<FermentType, ProcessModel> = {
    Recipes that are not their family's average: cures that are mostly the water
    they lose, drinks and seasonings filed under koji, syrups filed as brews. */
 const BY_RECIPE: Record<string, Partial<ProcessModel>> = {
+  /* THE PANTRY PACK (constants.pantry.ts). The same reasons as everything below,
+     found by reading each recipe against the family it is filed under. Dried
+     things filed under a wet family (a black boshi is mostly the water it gives
+     up, a persimmon hung to a gotgam, a black chilli); honey and sugar ferments
+     that barely ferment (honey garlic, oxymel, fruit cheong, which takes the
+     cheong split); pastes that are not their family's paste (a koji ketchup, a
+     koji butter, a strained yoghurt); and the three drinks, which are brews
+     whatever family they are filed in. */
+  black_boshi:   { dry: 0.6, form: 'dried', attenuation: 0.3, toAcid: 0.5 },
+  gotgam:        { dry: 0.5, form: 'dried' },
+  black_chilli:  { dry: 0.5 },
+  honey_garlic:  { attenuation: 0.08, toAcid: 0.4, toGas: 0.5, form: 'paste' },
+  koji_ketchup:  { attenuation: 0.15, toAcid: 0.3, form: 'paste' },
+  koji_butter:   { dry: 0.02, form: 'paste' },
+  miso_hazelnuts: { dry: 0.15, form: 'solid' },
+  fruit_cheong:  { attenuation: 0.08, toEthanol: 0.5, toAcid: 0.1, toGas: 0.4 },
+  oxymel:        { attenuation: 0.02, toAcid: 0.1, form: 'liquid' },
+  ginger_beer:   { attenuation: 0.55, toEthanol: 0.22, toAcid: 0.4, toGas: 0.38 },
+  wild_soda:     { attenuation: 0.55, toEthanol: 0.22, toAcid: 0.42, toGas: 0.36 },
+  verbena_tea:   { dry: 0.2 },
+  sowens:        { attenuation: 0.5, toAcid: 0.5, form: 'paste' },
+  yoghurt_kefir: { dry: 0.02, proteolysis: 0.1, form: 'paste' },
+  kanji:         { form: 'liquid' },
   bottarga:      { dry: 0.62, proteolysis: 0.15, form: 'dried' },
   salumi:        { dry: 0.55, proteolysis: 0.20, attenuation: 0.9, toAcid: 0.9, toGas: 0.1, toEthanol: 0, form: 'dried' },
   katsuobushi:   { dry: 0.92, proteolysis: 0.25, form: 'dried' },

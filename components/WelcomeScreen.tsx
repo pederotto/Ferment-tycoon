@@ -1,18 +1,25 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import GameIcon from './GameIcon';
 import { ScienceIcon, LabLedgerIcon, MarketLedgerIcon, ArrowRightIcon } from './icons';
 import { CREST } from './titleArt';
 import { LAB_PLATE } from './labPlate';
+import LetterScene, { LetterPhase } from './LetterScene';
 
 interface WelcomeScreenProps {
-    onStart: () => void;
+    /** A new run, once the letter has been read and a name given. */
+    onStart: (playerName: string) => void;
     onContinue?: () => void;
     save?: { savedAt: number; week: number; year: number; money: number } | null;
 }
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onContinue, save }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart: startRun, onContinue, save }) => {
+    // 'title' is this card; every other phase is the letter (chapter 0). The
+    // clock is stopped while the title screen is up, so the letter costs no game time.
+    const [phase, setPhase] = useState<'title' | LetterPhase>('title');
+    const onStart = () => setPhase('name');
     const hasSave = !!(save && onContinue);
+    if (phase !== 'title') return <LetterScene phase={phase} setPhase={setPhase} onDone={startRun} />;
     return (
         <div
             onClick={hasSave ? undefined : onStart}

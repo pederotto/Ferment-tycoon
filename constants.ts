@@ -3,6 +3,7 @@ import { Ingredient, IngredientType, Recipe, FermentType, Supplier, Vessel, Buye
 import { FORAGE_SUPPLIER, FORAGED_MUSHROOMS, FORAGE_RECIPES, FORAGE_MATRIX } from './constants.forage';
 import { HERITAGE_INGREDIENTS, HERITAGE_RECIPES, HERITAGE_MATRIX } from './constants.heritage';
 import { MARKET_INGREDIENTS, MARKET_RECIPES, MARKET_MATRIX } from './constants.market';
+import { PANTRY_INGREDIENTS, PANTRY_RECIPES, PANTRY_MATRIX, PANTRY_MATRIX_LATE } from './constants.pantry';
 import { SOIL_INGREDIENTS, SOIL_RECIPES, SOIL_MATRIX, SOIL_VESSELS } from './constants.soil';
 
 // --- CONFIGURATION ---
@@ -77,9 +78,9 @@ export const BOOKS: Book[] = [
   {
     id: 'primer_bench',
     title: 'The Bench Primer',
-    author: 'Anon., trade printing',
-    blurb: 'The three things every culture house starts with, and the rules of thumb behind the generated ferments.',
-    teaches: ['barley_koji', 'shio_koji', 'amazake'],
+    author: 'Mr. Master',
+    blurb: 'A page for each kind of ferment: what the microbe wants, the levers you hold, and one example to make. The margins are left in.',
+    teaches: ['barley_koji', 'shio_koji', 'amazake', 'shiro_miso', 'sauerkraut', 'tepache', 'kombucha', 'tamari', 'nuoc_mam', 'cider_vinegar', 'black_garlic'],
     revealsProcedural: true,
     price: 150,
     xpRequired: 0,
@@ -173,6 +174,9 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   // (differential-tested: see CLAUDE.md), and they are the most specific
   // entries in the table.
   ...SOIL_MATRIX,
+  // The pantry pack's own recipes: see constants.pantry.ts for why these go before
+  // the older entries and PANTRY_MATRIX_LATE for the ones that go after.
+  ...PANTRY_MATRIX,
   // Direct koji substrates — these ran before everything else and ignore the vessel.
   { recipeId: 'shio_koji', substrate: { kind: 'kojiBase' }, requires: ['koji', 'salt', 'water'], vesselId: null },
   { recipeId: 'amazake',   substrate: { kind: 'kojiBase' }, requires: ['koji', 'water'], forbids: ['salt'], vesselId: null },
@@ -256,6 +260,7 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
   ...FORAGE_MATRIX,
   ...HERITAGE_MATRIX,
   ...MARKET_MATRIX,
+  ...PANTRY_MATRIX_LATE,
 
   /* KOJI GROWS ON ALMOST ANYTHING, NOT ONLY GRAIN.
      Aspergillus takes a pork loin, a mushroom, a cabbage heart or an oily fillet
@@ -273,6 +278,10 @@ export const RECIPE_MATRIX: MatrixEntry[] = [
 
 // Human labels for the tokens above, used by the recipe-book formula card.
 export const MATRIX_TOKEN_LABELS: Record<string, string> = {
+  herb: 'A fresh herb',
+  vinegar: 'Vinegar',
+  miso: 'Miso',
+  starter: 'A milk culture',
   salt: 'Salt',
   koji: 'Live koji',
   black_koji: 'Live black koji',
@@ -1842,7 +1851,7 @@ INGREDIENTS.push(...HIGH_TIER);
 // --- THE FORAGER, THE HERITAGE STAPLES AND THE MARKET ---
 // Appended, never interleaved. Nothing reads this list by position — the sheet
 // art is looked up by id — but appending leaves every existing entry where it was.
-INGREDIENTS.push(...FORAGED_MUSHROOMS, ...HERITAGE_INGREDIENTS, ...MARKET_INGREDIENTS, ...SOIL_INGREDIENTS);
+INGREDIENTS.push(...FORAGED_MUSHROOMS, ...HERITAGE_INGREDIENTS, ...MARKET_INGREDIENTS, ...PANTRY_INGREDIENTS, ...SOIL_INGREDIENTS);
 
 // Generated from the real entries above, so a grey copy can never drift from the
 // ingredient it is a copy of.
@@ -2753,7 +2762,7 @@ export const RECIPES: Recipe[] = [
     id: 'kimchi',
     name: 'Kimchi',
     type: FermentType.LACTO,
-    description: 'Brined napa, chili, and a little fish sauce to feed it. Cold and slow in an onggi, sour and effervescent by the third week.',
+    description: 'Salted napa, chili, and a little fish sauce to feed it. Cold and slow in an onggi, sour and effervescent by the third week.',
     requiredIngredients: { substrate: true, starter: null, additive: 'chili' },
     outputIngredientId: 'kimchi_jar',
     requiredVesselId: 'onggi',
@@ -2982,4 +2991,4 @@ export const RECIPES: Recipe[] = [
   }
 ];
 
-RECIPES.push(...FORAGE_RECIPES, ...HERITAGE_RECIPES, ...MARKET_RECIPES, ...SOIL_RECIPES);
+RECIPES.push(...FORAGE_RECIPES, ...HERITAGE_RECIPES, ...MARKET_RECIPES, ...PANTRY_RECIPES, ...SOIL_RECIPES);

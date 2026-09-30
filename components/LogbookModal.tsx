@@ -18,9 +18,11 @@ interface LogbookModalProps {
   unlockedRecipes?: string[];
   discoveredRecipeIds?: string[];
   ownedBookIds?: string[];
+  /** Opens the Primer (App.tsx). Offered in the bar once the book is on the shelf. */
+  onOpenPrimer?: () => void;
 }
 
-const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes = [], ownedBookIds = [], discoveredRecipeIds = [] }) => {
+const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedRecipeIds, recipeMastery, unlockedRecipes = [], ownedBookIds = [], discoveredRecipeIds = [], onOpenPrimer }) => {
   const [activeTab, setActiveTab] = useState<'codex' | 'archives'>('codex');
   // The Library splits what you have MADE from what you have only READ — the
   // difference the books system created and the Codex was flattening away.
@@ -133,6 +135,10 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
               <GameIcon name="award" size={12} /> Archive <span className="tab-count">{logbook.length}</span>
             </button>
           </div>
+
+          {onOpenPrimer && ownedBookIds.includes('primer_bench') && (
+            <button className="sec-tab primer-open" type="button" onClick={onOpenPrimer}>Read the Primer</button>
+          )}
 
           <div className="search-box cx-search">
             <GameIcon name="search" size={13} />

@@ -1,6 +1,9 @@
 import React from 'react';
 import { INGREDIENT_SHEET, SHEET_COLS, SHEET_CELL_W, SHEET_CELL_H, sheetIndex } from './ingredientSheet';
 import { PRODUCT_SHEET, PRODUCT_COLS, PRODUCT_CELL, productIndex } from './productSheet';
+import {
+  PANTRY_ING_SHEET, PANTRY_PRODUCT_SHEET, PANTRY_COLS, PANTRY_CELL, pantryIngIndex, pantryProductIndex,
+} from './pantrySheet';
 import { GRAIN_IDS, CORN_IDS } from '../constants.heritage';
 
 const HERITAGE_KOJI_GRAINS: string[] = [...GRAIN_IDS, ...CORN_IDS];
@@ -9,10 +12,11 @@ import { artFor } from './IngredientArt';
 /**
  * ONE INGREDIENT — OR ONE FINISHED PRODUCT — DRAWN.
  *
- * Four sources, in order: the painted ingredient sheet, the painted product
+ * Five sources, in order: the painted ingredient sheet, the painted product
  * sheet (which also answers for every generated recipe's output, folded onto its
- * family), the hand-authored SVG for anything neither carries, and the generic
- * glyph as a floor. Nothing ever renders empty, so adding to either sheet is
+ * family), the two pantry sheets (`pantrySheet.ts`, exact ids only), the
+ * hand-authored SVG for anything none of them carries, and the generic glyph as
+ * a floor. Nothing ever renders empty, so adding to either sheet is
  * additive and a missing cell is invisible rather than broken.
  *
  * Sliced with background-position rather than by cropping to a canvas, so the
@@ -39,9 +43,19 @@ if (typeof document !== 'undefined' && !document.getElementById('ing-icon-sheets
     + `.ing-icon.sheet-product{background-image:url("${PRODUCT_SHEET}")}`;
   document.head.appendChild(tag);
 }
+/* The pantry sheets get a tag of their own: the guard above skips injection when
+   its id is already in the document, so under hot reload a rule added to that
+   tag would not appear until a full page load. */
+if (typeof document !== 'undefined' && !document.getElementById('pantry-icon-sheets')) {
+  const tag = document.createElement('style');
+  tag.id = 'pantry-icon-sheets';
+  tag.textContent = `.ing-icon.sheet-pantry-ing{background-image:url("${PANTRY_ING_SHEET}")}`
+    + `.ing-icon.sheet-pantry-product{background-image:url("${PANTRY_PRODUCT_SHEET}")}`;
+  document.head.appendChild(tag);
+}
 
 const Sliced: React.FC<{
-  sheet: 'ing' | 'product'; cols: number; cw: number; ch: number; index: number; size: number; className?: string;
+  sheet: 'ing' | 'product' | 'pantry-ing' | 'pantry-product'; cols: number; cw: number; ch: number; index: number; size: number; className?: string;
 }> = ({ sheet, cols, cw, ch, index, size, className }) => {
   const col = index % cols;
   const row = Math.floor(index / cols);
@@ -89,6 +103,21 @@ const IngredientIcon: React.FC<Props> = ({ id, size = 30, fallback, className })
   if (p >= 0) {
     return <Sliced sheet="product" cols={PRODUCT_COLS} cw={PRODUCT_CELL} ch={PRODUCT_CELL}
                    index={p} size={size} className={`product${className ? ' ' + className : ''}`} />;
+  }
+
+  // The pantry sheets are exact-id lookups, so they come before the pattern
+  // fallbacks below: a painted cell for an id beats a family's borrowed picture.
+  // No pantry id is on either older sheet, so nothing above can be shadowed.
+  const pantryI = pantryIngIndex(id);
+  if (pantryI >= 0) {
+    return <Sliced sheet="pantry-ing" cols={PANTRY_COLS} cw={PANTRY_CELL} ch={PANTRY_CELL}
+                   index={pantryI} size={size} className={className} />;
+  }
+
+  const pantryP = pantryProductIndex(id);
+  if (pantryP >= 0) {
+    return <Sliced sheet="pantry-product" cols={PANTRY_COLS} cw={PANTRY_CELL} ch={PANTRY_CELL}
+                   index={pantryP} size={size} className={`product${className ? ' ' + className : ''}`} />;
   }
 
   // Koji the player grows is minted per bed (`koji_<substrate>_a6_p4`) and matches

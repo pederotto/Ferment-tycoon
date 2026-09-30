@@ -95,6 +95,10 @@ function migrate(state: Partial<GameState>): GameState {
     undergroundBusts: state.undergroundBusts ?? 0,
     // An existing save has clearly got past the opening.
     onboardingDone: state.onboardingDone ?? true,
+    // The story postdates every save. A save without it was made before the
+    // cards existed, so it is marked and never shown one (constants.story.ts).
+    story: state.story ?? { seen: ['legacy'] },
+    playerName: state.playerName ?? '',
     // Older saves seeded unlockedRecipes with a bogus id and used it for nothing.
     // It now means "formula known", so it is rebuilt from what has been cooked.
     unlockedRecipes: Array.from(new Set([

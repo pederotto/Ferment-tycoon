@@ -18,7 +18,7 @@ const NORDIC = 'nordic';
 const PRIME = 'prime';
 const SILK = 'asia_import';
 
-const fruit = (
+export const fruit = (
   id: string, name: string, supplierId: string, baseCost: number, quality: number, season: number[],
   hiddenStats: Ingredient['hiddenStats'], description: string, idealFor: string[], tier = 1,
 ): Ingredient => ({
@@ -287,9 +287,9 @@ export const MARKET_RECIPES: Recipe[] = [
   },
   {
     id: 'brined_fruit',
-    name: 'Brined Wild Fruit',
+    name: 'Lacto-Fermented Wild Fruit',
     type: FermentType.LACTO,
-    description: 'Whole fruit under a light brine, anaerobic and shut. Opening it to look is the fault — the surface is the only place anything can go wrong.',
+    description: 'Whole fruit salted to about three percent and left to sour in its own juice, anaerobic and shut. Opening it to look is the fault — the surface is the only place anything can go wrong.',
     requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
     outputIngredientId: 'brined_fruit_jar',
     requiredVesselId: 'mason_jar',
@@ -302,9 +302,9 @@ export const MARKET_RECIPES: Recipe[] = [
   },
   {
     id: 'brined_plums',
-    name: 'Brined Green Plums',
+    name: 'Lacto-Fermented Green Plums',
     type: FermentType.LACTO,
-    description: 'Unripe plums under a light brine. Hard, sour and almond-bitter going in; the brine draws the bitterness and gives back a clean lactic sour. Not umeboshi — that is a fifth of the weight in salt and keeps for decades. This is a pickle, and it peaks.',
+    description: 'Unripe plums salted to about five percent. Hard, sour and almond-bitter going in; the salt draws the bitterness and lactic acid bacteria give back a clean sour. Not umeboshi — that is a fifth of the weight in salt and keeps for decades. This is a lacto ferment, and it peaks.',
     requiredIngredients: { substrate: true, starter: null, additive: 'salt' },
     outputIngredientId: 'brined_plum_jar',
     requiredVesselId: 'onggi',

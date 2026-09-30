@@ -5901,3 +5901,180 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
 }
 .gs-group:first-child { margin-top: 0; }
 .gs-group small { font-size: 12px; letter-spacing: 0.04em; color: var(--text-lo); font-variant-numeric: tabular-nums; }
+
+/* =========================================================================
+   THE STORY LAYER — the letter, the chapter cards, the Primer, the margin notes
+
+   Paper or dark by the house's one-line rule. A letter, a note left on the bench
+   and a page of a book are PAPER: printed stock with soft corners, the ink
+   tones and the type tokens (a pop-up you read over a painting is paper; a dark
+   plaster panel is harsh there). The name card is the title screen's own, and
+   the Primer's frame, its class rail, and the guide's card are the room, so they
+   stay dark. Written at the end because it overrides `.welcome-card`, which is
+   declared three times above.
+
+   Ink is measured against the DARKER stop of the stock: --ink is 9.2:1 there,
+   --ink-soft 5.0:1, and the gilt below (#6f4a12) 4.5:1. --ink-faint is 4.3 at
+   that end, so nothing small is set in it.
+   ========================================================================= */
+
+/* --- The name card: the title screen's own, charcoal plaster and an input --- */
+.letter-name { text-align: center; }
+.letter-name h2 {
+  font-family: var(--f-name); font-size: clamp(24px, 4vw, 32px); font-weight: 600;
+  margin: 6px 0 8px; color: #f0e4c8;
+}
+.letter-name p.sub { font-family: var(--f-desc); font-style: italic; font-size: 17px; color: var(--text-mid); margin: 0 0 20px; }
+.letter-input {
+  width: 100%; padding: 13px 14px; border-radius: 4px; text-align: center; outline: none;
+  font-family: var(--f-name); font-size: 24px; color: #f0e4c8;
+  background: #0e0b08; border: 1px solid rgba(222, 186, 110, 0.35);
+}
+.letter-input:focus { border-color: #e2c27a; }
+.letter-name .welcome-cta { margin-top: 16px; }
+.welcome-cta[disabled] { opacity: 0.4; cursor: default; }
+.welcome-cta[disabled]:hover { filter: none; }
+
+/* --- The letter, the terms and the story cards: printed stock --- */
+.letter-card { text-align: left; }
+.letter-paper {
+  --text-hi: var(--ink); --text-mid: var(--ink-soft); --text-lo: var(--ink-faint);
+  --gilt: #6f4a12;
+  border: 0; border-radius: 12px; color: var(--ink);
+  background: linear-gradient(178deg, #efe4c9, var(--stock) 40%, var(--stock-deep));
+  background-blend-mode: normal;
+  box-shadow: 0 18px 50px rgba(8, 6, 4, 0.55), 0 1px 3px rgba(20, 12, 4, 0.3);
+}
+.letter-paper::before { display: none; }   /* the brass hairline belongs to plaster */
+.letter-paper .kicker, .letter-to {
+  font-family: var(--f-spec); font-size: 12px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+}
+.letter-paper .kicker, .letter-paper .letter-to { color: var(--gilt); }
+.letter-to { margin-bottom: 20px; }
+.letter-body p {
+  font-family: var(--f-desc); font-style: italic; font-size: 20px; line-height: 1.5;
+  margin: 0 0 15px; color: var(--text-hi);
+}
+.letter-sign { font-family: var(--f-desc); font-style: italic; font-size: 20px; text-align: right; margin-top: 8px; color: var(--gilt); }
+.letter-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 24px; }
+.letter-actions .welcome-cta { width: auto; padding: 13px 26px; flex: 0 0 auto; }
+.letter-link {
+  background: none; border: none; padding: 6px 2px; cursor: pointer; white-space: nowrap;
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-lo);
+}
+.letter-paper .letter-link { color: var(--ink-soft); }
+.letter-paper .letter-link:hover { color: var(--ink); text-decoration: underline; }
+.letter-link:focus-visible { outline: 2px solid var(--gilt); outline-offset: 2px; }
+.letter-dots { display: flex; gap: 6px; justify-content: center; margin-top: 18px; }
+.letter-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(42, 32, 21, 0.22); }
+.letter-dots i.on { background: var(--ink-amber); }
+
+/* The terms are the letter's enclosure, a ledger on the same stock. */
+.letter-paper .ledger-lines { margin-bottom: 0; }
+.letter-paper .ledger-line + .ledger-line::before {
+  background: linear-gradient(90deg, transparent, var(--ink-line) 10%, var(--ink-line) 90%, transparent);
+}
+.letter-paper .ledger-line .t { font-size: 16px; color: var(--ink); }
+.letter-paper .ledger-line .d { font-size: 13.5px; line-height: 1.4; color: var(--ink-soft); }
+
+/* A story card stands over the room. Its scrim sits above every modal
+   (scrim 20 < HUD 30 < supply 50 < modals 100 < ingredient panel 130 < story 140). */
+.story-scrim {
+  position: fixed; inset: 0; z-index: 140; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(8, 6, 4, 0.74);
+}
+.story-card { max-height: 92vh; overflow: auto; }
+.story-title {
+  font-family: var(--f-name); font-size: clamp(24px, 4vw, 32px); font-weight: 600;
+  margin: 4px 0 16px; color: var(--ink); text-align: center;
+}
+.story-card .kicker { text-align: center; }
+
+/* --- The Primer: the Codex's frame and rail, and a printed page --- */
+.primer-panel {
+  width: min(1000px, 96vw); height: min(90vh, 740px); border-radius: 16px;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.primer-body { display: flex; flex: 1; min-height: 0; }
+.primer-nav {
+  flex: 0 0 220px; width: 220px; overflow: auto; padding: 10px;
+  border-right: 1px solid rgba(222, 186, 110, 0.18);
+}
+.primer-tab {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+  margin-bottom: 4px; padding: 9px 10px; text-align: left; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: 4px;
+  font-family: var(--f-spec); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-mid);
+}
+.primer-tab:hover { color: var(--text-hi); }
+.primer-tab.on { background: rgba(255, 255, 255, 0.05); border-color: rgba(222, 186, 110, 0.35); color: var(--text-hi); }
+.primer-tab:focus-visible { outline: 2px solid #e2c27a; outline-offset: -2px; }
+.primer-dots { display: flex; gap: 4px; }
+.primer-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); }
+.primer-dots i.on { background: #e2c27a; }
+
+.primer-page {
+  --text-hi: var(--ink); --text-mid: var(--ink-soft); --text-lo: var(--ink-faint);
+  --gilt: #6f4a12;
+  flex: 1; min-width: 0; overflow: auto; margin: 12px 14px 14px 0; padding: 22px 28px 28px;
+  border-radius: 2px; color: var(--ink);
+  background: linear-gradient(178deg, #efe4c9, var(--stock) 40%, var(--stock-deep));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+.primer-page h3 { font-family: var(--f-name); font-size: 26px; font-weight: 600; margin: 0 0 10px; color: var(--ink); }
+.primer-page h4 {
+  font-family: var(--f-spec); font-size: 12px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+  margin: 18px 0 6px; color: var(--gilt);
+}
+.primer-page p, .primer-page li {
+  font-family: var(--f-desc); font-size: 18px; line-height: 1.45; margin: 0 0 8px; color: var(--ink);
+}
+.primer-page p.primer-what { font-style: italic; font-size: 19px; }
+.primer-page ul { margin: 0 0 6px; padding: 0 0 0 20px; list-style: disc; }
+.primer-page li::marker { color: var(--gilt); }
+.primer-box {
+  margin-top: 18px; padding: 12px 16px 14px; border-radius: 4px;
+  border: 1px solid var(--ink-line); background: rgba(42, 32, 21, 0.06);
+}
+.primer-box h4 { margin-top: 0; }
+.primer-row { display: flex; gap: 12px; padding: 3px 0; font-family: var(--f-spec); font-size: 14px; letter-spacing: 0.03em; }
+.primer-row .l { flex: 0 0 96px; padding-top: 2px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
+.primer-row .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+.primer-chip {
+  display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 99px;
+  border: 1px solid var(--ink-line); color: var(--ink-soft);
+  font-family: var(--f-spec); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.primer-chip.on { border-color: var(--stamp-good); color: #3b5429; }
+.primer-page p.primer-margin { margin-top: 20px; font-style: italic; color: var(--gilt); }
+.primer-page p.primer-margin span {
+  font-style: normal; font-family: var(--f-spec); font-size: 0.8em; letter-spacing: 0.06em; white-space: nowrap; color: var(--ink-soft);
+}
+/* In the Codex's bar, beside the tabs it sits with. */
+.cx-bar .primer-open { align-self: flex-end; margin: 0 auto -9px 4px; }
+
+/* --- The guide: a margin note under each step, and the button that opens the Primer --- */
+.firstrun .fr-note {
+  margin-top: 8px; font-family: var(--f-desc); font-style: italic; font-size: 13px; line-height: 1.4; color: #d9c48f;
+}
+.firstrun .fr-note span {
+  font-style: normal; font-family: var(--f-spec); font-size: 11px; letter-spacing: 0.06em; white-space: nowrap; color: var(--text-mid);
+}
+.firstrun .fr-act { margin-top: 10px; }
+
+@media (max-width: 640px) {
+  .primer-body { flex-direction: column; }
+  .primer-nav {
+    flex: 0 0 auto; width: auto; display: flex; overflow-x: auto; padding: 6px;
+    border-right: none; border-bottom: 1px solid rgba(222, 186, 110, 0.18);
+  }
+  .primer-tab { width: auto; flex: 0 0 auto; white-space: nowrap; margin: 0 4px 0 0; }
+  .primer-page { margin: 0 10px 12px; padding: 16px 18px 24px; }
+}
+@media (max-width: 480px) {
+  /* Three actions do not fit one row at 375px: the links share a row, the plate takes its own. */
+  .letter-actions { flex-wrap: wrap; gap: 6px 14px; }
+  .letter-actions .welcome-cta { order: 3; flex: 1 1 100%; padding: 13px 14px; letter-spacing: 0.08em; font-size: 13px; }
+  .letter-card, .letter-name { padding-left: 22px; padding-right: 22px; }
+}

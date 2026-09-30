@@ -44,6 +44,13 @@ export interface HiddenStats {
    * not the yeast's — and with no term for it a ponzu could reach acidity 0.
    */
   innateAcidity?: number;
+  /**
+   * How much tannin the raw thing carries, 0-10: a cider bittersharp, a sloe, a
+   * chokeberry. Descriptive only for now — nothing in the simulation reads it,
+   * and it moves no score. It is on the data (the pantry pack's apples and dark
+   * berries) so that an axis for it has somewhere to read from when one is asked for.
+   */
+  tannin?: number;
 }
 
 /**
@@ -801,6 +808,15 @@ export interface GameState {
   // The guided opening has been finished or waved away.
   onboardingDone: boolean;
 
+  /**
+   * The story layer (constants.story.ts): which beats have played, and whether
+   * the Primer has been opened. A save from before the story existed carries
+   * 'legacy' in `seen` and is never shown a card.
+   */
+  story: StoryState;
+  /** Whose name is over the door: chosen on the title screen, saved with the run. Empty on an old save. */
+  playerName: string;
+
   /** The koji room has been built. A later stage: needs a Head of R&D. */
   kojiRoomOwned: boolean;
   /** Kilograms of koji the keeper keeps in the pantry. */
@@ -831,6 +847,14 @@ export interface GameState {
 
   /** Errands done for each townsperson, by id (constants.town.ts). Absent = none. */
   town: Record<string, number>;
+}
+
+/** The story layer's memory. See `STORY_BEATS` in constants.story.ts. */
+export interface StoryState {
+  /** Beat ids already shown, once each per run. 'legacy' marks a save that pre-dates the story. */
+  seen: string[];
+  /** The Primer has been opened at least once (the guide's "Read the Primer" step). */
+  primerRead?: boolean;
 }
 
 /** What the technician does with a batch without being asked. */
