@@ -14,6 +14,8 @@ import {
   SPORULATION_START, SPORULATION_FULL, SPORULATION_SPOIL
 } from '../constants';
 import { applyPantryStages } from '../constants.pantry';
+import { tr as tx } from '../i18n/runtime';
+import { lang } from '../i18n/lang';
 
 import { tickMassLoss, currentMassG, concentratedProfile, vesselOpenness, processModel, ProductForm, alcoholPct, chargeOf, alcoholTolerance } from './massBalance';
 // --- GAMEPLAY CONSTANTS ---
@@ -3021,8 +3023,10 @@ const pickFrom = <T,>(arr: T[], seed: string): T => arr[noteHash(seed) % arr.len
 const sentence = (parts: string[]): string => {
   // Clauses are written to stand alone, but some carry a leading conjunction
   // from when they were concatenated by hand — strip it, or the join produces
-  // "wild and and a flat, yeasty note".
-  const clean = parts.map(p => p.trim().replace(/^(and|with)\s+/i, '')).filter(Boolean);
+  // "wild and and a flat, yeasty note". In another language each clause is translated
+  // whole (it is keyed with its "and" or "with") and the conjunction is kept: a
+  // comma-joined ", y sobre todo…" or ", con la primera nota…" reads naturally.
+  const clean = parts.map(p => (lang === 'en' ? p.trim().replace(/^(and|with)\s+/i, '') : tx(p.trim()))).filter(Boolean);
   if (!clean.length) return '';
   // Comma-joined, the way tasting notes are actually written. An " and " before
   // the last clause fought the "and"s already inside the clauses themselves.
@@ -3133,10 +3137,11 @@ export const generateTastingNotes = (batch: Batch, recipe: Recipe): TastingNote[
     ], id + 'col') });
   } else if (baseColour) {
     const lead = COLOUR_LEAD[processModel(recipe).form] ?? 'Pours';
-    let text = `${lead} ${pickFrom(baseColour, id + 'col')}`;
-    if (under) text += ', paler than it should be for the age';
-    else if (over) text += ', darker than the window wanted';
-    if (film > 40 && !filmIsTheCulture(recipe)) text += ', with a skin you can lift off in one piece';
+    // Each piece is translated where it is joined: the sentence exists nowhere whole.
+    let text = `${tx(lead)} ${tx(pickFrom(baseColour, id + 'col'))}`;
+    if (under) text += tx(', paler than it should be for the age');
+    else if (over) text += tx(', darker than the window wanted');
+    if (film > 40 && !filmIsTheCulture(recipe)) text += tx(', with a skin you can lift off in one piece');
     notes.push({ facet: 'Colour', text: text + '.' });
   }
 

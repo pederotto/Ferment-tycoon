@@ -25,10 +25,21 @@ export default defineConfig({
   // and rewording or removing our own strings changed nothing. Costs ~0.5 MB of
   // a 5 MB page (most of which is pictures). Whitespace and syntax are still
   // minified. See CLAUDE.md, "Publishing the page".
-  esbuild: { minifyIdentifiers: false },
+  esbuild: {
+    minifyIdentifiers: false,
+    // Every JSX call goes through i18n/jsx-runtime, which translates what is about
+    // to be drawn when the page is in another language and is React's own runtime
+    // in English (i18n/engine.ts). Set here and not on the React plugin, which
+    // would also pre-bundle the runtime as a dependency and freeze its dictionary.
+    jsxImportSource: 'fermenta-i18n',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      // The JSX runtime lives in the project. Named and aliased (not '@/i18n') so
+      // Vite resolves it as source rather than pre-bundling it as a dependency,
+      // which would freeze the dictionary it imports.
+      'fermenta-i18n': path.resolve(__dirname, 'i18n'),
     },
   },
 });

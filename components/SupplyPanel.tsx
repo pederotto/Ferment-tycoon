@@ -4,6 +4,7 @@ import { Ingredient, IngredientType, Vessel, Book, Supplier } from '../types';
 import { VESSELS, BOOKS, SUPPLIERS, UNDERGROUND_TIER_XP, MAX_EQUIPMENT_SLOTS } from '../constants';
 import { BagIcon, SearchIcon, ShieldIcon, CheckIcon, getIngredientIcon, JarOutlineIcon, WrenchIcon, BookIcon, BoltIcon, CloseIcon } from './icons';
 import { ArrowUpDown } from 'lucide-react';
+import { searchMatch } from '../i18n/runtime';
 import { sporeValue, cultureSalePrice } from '../services/gameLogic';
 import IngredientIcon from './IngredientIcon';
 import VesselArt from './VesselArt';
@@ -120,7 +121,7 @@ const SupplyPanel: React.FC<SupplyPanelProps> = ({
       if (i.supplierId === 'in_house') return false;
       if (category !== 'all' && i.type !== category) return false;
       if (supplierFilter !== 'all' && i.supplierId !== supplierFilter) return false;
-      if (search.trim() && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (!searchMatch(i.name, search)) return false;
       return true;
     });
     const lockedCount = list.filter(i => lockReason(i) !== null).length;

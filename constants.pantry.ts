@@ -3,6 +3,7 @@ import type { TastingNote } from './services/gameLogic';
 import { FORAGE_SUPPLIER } from './constants.forage';
 import { mk, TOMATO_IDS } from './constants.heritage';
 import { fruit } from './constants.market';
+import { tr as tx } from './i18n/runtime';
 
 /* =============================================================================
    THE PANTRY PACK — twenty-three recipes, a shelf of heirlooms to make them
@@ -1699,7 +1700,9 @@ export const applyPantryStages = (notes: TastingNote[], batch: Batch, recipe: Re
   const order: StageKey[] = [want, ...STAGE_FALLBACK[want]];
   const key = order.find(k => spec[k]);
   if (!key) return notes;
-  const [look, smell, taste, feel] = spec[key]!;
+  // Each stage phrase is translated here, where it is capitalised and given its full stop:
+  // the finished sentence exists nowhere whole.
+  const [look, smell, taste, feel] = spec[key]!.map(tx);
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const low = (s: string) => s.charAt(0).toLowerCase() + s.slice(1).replace(/\.$/, '');
@@ -1718,7 +1721,7 @@ export const applyPantryStages = (notes: TastingNote[], batch: Batch, recipe: Re
 
   // The generic palate line is kept as an aside unless it says nothing.
   const pal = find('Palate');
-  const keep = pal && !/^Balanced/.test(pal.text) && !/^Nothing/.test(pal.text) ? low(pal.text) : '';
+  const keep = pal && !/^(Balanced|Equilibrad)/.test(pal.text) && !/^(Nothing|Nada)/.test(pal.text) ? low(pal.text) : '';
   if (pal) pal.text = `${cap(taste)}${keep ? '; ' + keep : ''}.`;
   else notes.push({ facet: 'Palate', text: `${cap(taste)}.` });
 

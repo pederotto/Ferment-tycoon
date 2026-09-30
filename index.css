@@ -6078,3 +6078,16 @@ button.drawer:focus-visible { outline: 2px solid var(--brass); outline-offset: -
   .letter-actions .welcome-cta { order: 3; flex: 1 1 100%; padding: 13px 14px; letter-spacing: 0.08em; font-size: 13px; }
   .letter-card, .letter-name { padding-left: 22px; padding-right: 22px; }
 }
+
+
+/* LANGUAGE CHOICE. Both names on the title screen (fixed to the scene's corner,
+   above the card), one chip beside DEV in the rail. */
+.lang-switch { position: fixed; top: 14px; right: 16px; z-index: 6; display: flex; gap: 6px; }
+.lang-switch button {
+  padding: 5px 11px; border-radius: 4px; cursor: pointer; background: rgba(20, 15, 10, 0.55);
+  font-family: var(--f-spec); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-mid); border: 1px solid rgba(222, 186, 110, 0.3);
+}
+.lang-switch button:hover { color: #e2c27a; border-color: rgba(222, 186, 110, 0.7); }
+.lang-switch button.on { color: #e2c27a; background: rgba(222, 186, 110, 0.16); border-color: rgba(222, 186, 110, 0.7); cursor: default; }
+.lang-chip { margin-left: 6px; }

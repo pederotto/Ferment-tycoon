@@ -5,6 +5,7 @@ import { ScienceIcon, LabLedgerIcon, MarketLedgerIcon, ArrowRightIcon } from './
 import { CREST } from './titleArt';
 import { LAB_PLATE } from './labPlate';
 import LetterScene, { LetterPhase } from './LetterScene';
+import LangSwitch from './LangSwitch';
 
 interface WelcomeScreenProps {
     /** A new run, once the letter has been read and a name given. */
@@ -35,6 +36,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart: startRun, onCont
             style={{ ['--art' as string]: `url(${LAB_PLATE})`, ['--art-tall' as string]: `url(${LAB_PLATE})` }}
         >
             <div className="grain" />
+            <LangSwitch variant="title" />
 
             <div className="welcome-card">
                 <span className="crest-mark sh-medal"><img src={CREST} alt="" aria-hidden="true" /></span>

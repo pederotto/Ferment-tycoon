@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "tsc --noEmit",
     "preview": "vite preview",
-    "package": "vite build && python3 scripts/package_artifact.py"
+    "package": "vite build && python3 scripts/package_artifact.py",
+    "i18n:check": "node scripts/i18n/check.cjs",
+    "i18n:test": "esbuild scripts/i18n/engine.test.ts --bundle --platform=node --outfile=/tmp/i18n-engine-test.cjs --log-level=error && node /tmp/i18n-engine-test.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.561.0",

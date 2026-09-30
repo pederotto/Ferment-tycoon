@@ -60,6 +60,7 @@ import GameIcon from './components/GameIcon';
 import FirstCulture, { guideProgress } from './components/FirstCulture';
 import PrimerModal from './components/PrimerModal';
 import StoryCard from './components/StoryCard';
+import LangSwitch from './components/LangSwitch';
 import { STORY_BEATS, markSeen, StoryCardData } from './constants.story';
 import { TrendingUp, BookOpen, AlertCircle, SprayCan, Star, Zap, Flame, Calendar, Users, CloudSun, Clock, Activity, CloudRain, Sun, CloudSnow, Wind, CloudFog, FastForward, Play, PauseCircle, Wrench, Handshake, ShoppingBasket, ArrowDownToLine } from 'lucide-react';
 import { SealGlyphIcon, AlmanacIcon, WrenchIcon, StaffGroupIcon, BookIcon, GrainSprigIcon, SaltCrystalIcon, WaterDropIcon, SporeClusterIcon, VesselLineIcon, ArrowRightIcon, BagIcon, CloseIcon } from './components/icons';
@@ -2402,6 +2403,7 @@ export default function App() {
                   enough: Cmd/Ctrl+Shift+D is claimed by Chrome for "Bookmark all tabs". */}
               <button className="dev-chip" onClick={() => setShowDev(v => !v)}
                       title="Dev tools and god mode — or press the backtick key">DEV</button>
+              <LangSwitch variant="chip" />
             </h3>
             <div className="tabs-hud nav-grid">
             {/* Supply is one destination among the others, not a drawer over the room. */}

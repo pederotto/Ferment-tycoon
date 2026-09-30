@@ -11,6 +11,7 @@ import { getRecipeKnowledge, describeFormula, getFlavorPotential } from '../serv
 import { getBatchEnzymes, describeEnzymes, kojiDevelopment, strainAmylaseBias, isKojiSpore } from '../services/koji';
 import RecipeCard from './RecipeCard';
 import MolecularScan, { ScanTarget } from './MolecularScan';
+import { searchMatch } from '../i18n/runtime';
 import { Play, Info, Skull, Minus, Scale, Thermometer, ChevronRight, AlertTriangle, Lock, Lightbulb, Activity } from 'lucide-react';
 import { SporeClusterIcon, BookIcon, CloseIcon, SearchIcon, PlusIcon, JarOutlineIcon, JarLineIcon, BoltIcon, CheckCircleIcon, WaterDropIcon, SaltCrystalIcon, VesselLineIcon, getIngredientIcon } from './icons';
 
@@ -561,10 +562,7 @@ const BatchController: React.FC<BatchControllerProps> = ({
       .filter(i => (inventory[i.id] || 0) > 0)
       .filter(i => {
         if (pantryCategory !== 'all' && i.type !== pantryCategory) return false;
-        if (pantrySearch.trim() !== '') {
-          return i.name.toLowerCase().includes(pantrySearch.toLowerCase());
-        }
-        return true;
+        return searchMatch(i.name, pantrySearch);
       })
       .sort((a, b) => {
         const order = { [IngredientType.SUBSTRATE]: 1, [IngredientType.STARTER]: 2, [IngredientType.ADDITIVE]: 3 };

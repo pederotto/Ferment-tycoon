@@ -1,0 +1,37 @@
+# Display words the extractor would skip (single lowercase tokens). One per line.
+disturbance
+grade
+yield
+The
+sale
+sales
+place
+places
+trouble
+troubles
+packet
+tin
+sack
+up
+in
+restrained
+chewy
+crisp
+crisp-tender
+date-like
+dense
+floral
+honeyed
+smooth
+sweet-sour
+syrupy
+The Cellars
+Europe
+Nordic
+Silk
+BioLab
+Prime
+Hedge
+Lab
+{0} renown
+{0} min

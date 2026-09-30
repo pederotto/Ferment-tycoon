@@ -9,6 +9,7 @@ import { HarvestReportBody } from './HarvestReport';
 import { getRecipeKnowledge, describeFormula } from '../services/gameLogic';
 import { CheckCircle2 } from 'lucide-react';
 import { CloseIcon, BookIcon } from './icons';
+import { searchMatch } from '../i18n/runtime';
 
 interface LogbookModalProps {
   onClose: () => void;
@@ -45,18 +46,16 @@ const LogbookModal: React.FC<LogbookModalProps> = ({ onClose, logbook, analyzedR
         shelf === 'cooked' ? k === 'analyzed' :
         shelf === 'book' ? k === 'known' : k === 'unknown';
       if (!matchesShelf) return false;
-      const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            recipe.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = searchMatch(recipe.name, searchQuery) || searchMatch(recipe.description, searchQuery);
       return matchesType && matchesSearch;
     });
   }, [searchQuery, selectedType, shelf, unlockedRecipes, analyzedRecipeIds, ownedBookIds, discoveredRecipeIds]);
 
   const filteredArchives = useMemo(() => {
     return logbook.filter(entry => {
-      const query = searchQuery.toLowerCase();
-      return entry.recipeName.toLowerCase().includes(query) ||
-             entry.substrateName.toLowerCase().includes(query) ||
-             (entry.notes && entry.notes.toLowerCase().includes(query));
+      return searchMatch(entry.recipeName, searchQuery) ||
+             searchMatch(entry.substrateName, searchQuery) ||
+             (!!entry.notes && searchMatch(entry.notes, searchQuery));
     });
   }, [logbook, searchQuery]);
 

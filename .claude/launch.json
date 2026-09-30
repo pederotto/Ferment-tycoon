@@ -18,6 +18,16 @@
         "dist/artifact"
       ],
       "port": 4173
+    },
+    {
+      "name": "fermenta-3100",
+      "runtimeExecutable": "./node_modules/.bin/vite",
+      "runtimeArgs": [
+        "--port",
+        "3100",
+        "--strictPort"
+      ],
+      "port": 3100
     }
   ]
 }
