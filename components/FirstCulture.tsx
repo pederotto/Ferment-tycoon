@@ -148,7 +148,13 @@ const STEPS: Step[] = [
  */
 const stepFlags = (g: GameState) => {
   const latched = g.story?.guideDone ?? [];
-  return STEPS.map(s => latched.includes(s.id) || s.done(g));
+  const raw = STEPS.map(s => latched.includes(s.id) || s.done(g));
+  // Chapter 2 cannot be reached without leaving the bench behind. A player who
+  // made and sold something else first has outgrown the koji steps, and holding
+  // them on "Decide what it will be" for a koji they never made was the guide
+  // stalling for good. Reading the Primer is excluded: it can be opened early.
+  const movedOn = STEPS.some((s, i) => s.ch === 2 && s.id !== 'read' && raw[i]);
+  return raw.map((f, i) => f || (movedOn && STEPS[i].ch === 1));
 };
 
 /** Ids of steps that are done now and not yet latched; empty almost always. */

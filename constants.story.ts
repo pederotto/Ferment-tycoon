@@ -308,7 +308,7 @@ export const STORY_BEATS: StoryBeat[] = [
     id: 'primer',
     // Kept or sold: a player who sold their first koji would otherwise never be
     // handed the book, and the guide's Chapter 2 asks them to read it.
-    when: g => hasKojiProduct(g) || madeKoji(g),
+    when: g => hasKojiProduct(g) || madeKoji(g) || g.logbook.some(l => !!l.record),
     apply: g => {
       const b = BOOKS.find(x => x.id === 'primer_bench');
       return b && !g.ownedBookIds.includes(b.id)
@@ -321,7 +321,9 @@ export const STORY_BEATS: StoryBeat[] = [
       paras: [
         hasKojiProduct(g)
           ? 'You kept it instead of selling it. Most people cannot. So I have left you something.'
-          : 'You sold it. Everyone does, the first time, and it was a fair price. I have left you something all the same.',
+          : madeKoji(g)
+            ? 'You sold it. Everyone does, the first time, and it was a fair price. I have left you something all the same.'
+            : 'You went to market without the koji. That is allowed, and the bench will tell you what it cost. I have left you something all the same.',
         'It is my Primer: a page for each kind of ferment, with what it wants, the levers you hold, and one example to make. My notes are in the margins. It is in your Codex now. Follow the book if you like. I would rather you also tried one thing on instinct, and were wrong once. That is how the margins got written.',
       ],
       cta: 'Thank you',
