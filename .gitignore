@@ -25,3 +25,6 @@ dist-ssr
 
 # Python bytecode from the art scripts
 __pycache__/
+
+# Vite dependency cache
+.vite
