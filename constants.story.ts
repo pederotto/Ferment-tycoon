@@ -79,6 +79,15 @@ export const hasKojiProduct = (g: GameState) =>
     n > 0 && (g.customIngredients.some(c => c.id === id && c.enzymes) ||
               INGREDIENTS.some(i => i.id === id && i.enzymes)));
 
+/**
+ * Has the player brought a koji through to the end, kept OR sold? Selling one
+ * removes the batch and leaves no koji in the pantry, so every koji step that
+ * reads a live batch or the pantry could never pass again, and the guide sat on
+ * it for good. Sold or kept, the lesson of the bench has been had.
+ */
+export const madeKoji = (g: GameState) =>
+  (g.analyzedRecipeIds ?? []).some(id => RECIPES.find(r => r.id === id)?.type === FermentType.KOJI);
+
 /* -----------------------------------------------------------------------------
    THE PRIMER — one page per class of ferment: what it is, what it wants, the
    levers, one example to make, an instinct hint, and a margin note. It is the
@@ -297,18 +306,22 @@ export const STORY_BEATS: StoryBeat[] = [
   },
   {
     id: 'primer',
-    when: g => hasKojiProduct(g),
+    // Kept or sold: a player who sold their first koji would otherwise never be
+    // handed the book, and the guide's Chapter 2 asks them to read it.
+    when: g => hasKojiProduct(g) || madeKoji(g),
     apply: g => {
       const b = BOOKS.find(x => x.id === 'primer_bench');
       return b && !g.ownedBookIds.includes(b.id)
         ? { ...g, ownedBookIds: [...g.ownedBookIds, b.id], unlockedRecipes: Array.from(new Set([...g.unlockedRecipes, ...b.teaches])) }
         : g;
     },
-    card: () => ({
+    card: g => ({
       kicker: 'Chapter 2 · The Primer',
       title: 'A parcel on the bench',
       paras: [
-        'You kept it instead of selling it. Most people cannot. So I have left you something.',
+        hasKojiProduct(g)
+          ? 'You kept it instead of selling it. Most people cannot. So I have left you something.'
+          : 'You sold it. Everyone does, the first time, and it was a fair price. I have left you something all the same.',
         'It is my Primer: a page for each kind of ferment, with what it wants, the levers you hold, and one example to make. My notes are in the margins. It is in your Codex now. Follow the book if you like. I would rather you also tried one thing on instinct, and were wrong once. That is how the margins got written.',
       ],
       cta: 'Thank you',

@@ -2,7 +2,7 @@ import React from 'react';
 import PanelMark from './PanelMark';
 import { GameState } from '../types';
 import { CloseIcon, CheckIcon } from './icons';
-import { CHAPTER_TITLES, MASTER, PRIMER_EXAMPLES, STEP_NOTES, hasKojiProduct, instinctDone } from '../constants.story';
+import { CHAPTER_TITLES, MASTER, PRIMER_EXAMPLES, STEP_NOTES, hasKojiProduct, instinctDone, madeKoji } from '../constants.story';
 
 /**
  * FIRST CULTURE — a guided opening, not a tour.
@@ -44,6 +44,9 @@ const hasTouchedChamber = (g: GameState) =>
   g.batches.some(b => b.controls && (b.controls.vent > 0 || b.controls.mist > 0)) ||
   g.logbook.some(l => l.record?.controls && (l.record.controls.vent > 0 || l.record.controls.mist > 0));
 
+/** A koji has been made and kept or sold: nothing about the bed can be asked of the player now. */
+const kojiBeen = (g: GameState) => hasKojiProduct(g) || madeKoji(g);
+
 const STEPS: Step[] = [
   {
     id: 'inoculate',
@@ -57,35 +60,38 @@ const STEPS: Step[] = [
     ch: 1,
     title: 'Fill the vessel',
     body: 'Set your proportions, then press "Fill to capacity at these proportions" under the fill bar. A half-full vessel costs the same weeks of rent as a full one, so it is rent paid for nothing. The button scales everything at once and leaves your ratios alone.',
-    done: g => g.batches.some(b => (b.totalMass ?? 0) > 1200) || g.logbook.some(l => (l.record?.massG ?? 0) > 1200),
+    // Keeping a koji removes the batch and logs it with no record, so without the
+    // koji fallback this step un-completed the moment the first koji was kept and
+    // the guide jumped back to it for good.
+    done: g => g.batches.some(b => (b.totalMass ?? 0) > 1200) || g.logbook.some(l => (l.record?.massG ?? 0) > 1200) || kojiBeen(g),
   },
   {
     id: 'steer',
     ch: 1,
     title: 'Decide what it will be',
     body: 'Before you seal it, look at the steering bar. Warm and wet grows amylase, which turns starch into sugar. Cool and dry grows protease, which frees the amino acids that taste savoury. The same spore makes either — you are choosing, not waiting.',
-    done: g => g.batches.some(b => (b.enzymes?.amylase ?? 0) + (b.enzymes?.protease ?? 0) > 20) || hasKojiProduct(g),
+    done: g => g.batches.some(b => (b.enzymes?.amylase ?? 0) + (b.enzymes?.protease ?? 0) > 20) || kojiBeen(g),
   },
   {
     id: 'chamber',
     ch: 1,
     title: 'Hold it where you want it',
     body: 'Inspect the batch and find the Chamber panel. Vent sheds heat — and moisture with it. Mist adds water and cools as it evaporates, but only as fast as the vent carries it away. Run both: humidity holds while the temperature drops. That is the only route to a cool, damp bed, and to a properly savoury koji.',
-    done: g => hasTouchedChamber(g) || hasKojiProduct(g),
+    done: g => hasTouchedChamber(g) || kojiBeen(g),
   },
   {
     id: 'watch',
     ch: 1,
     title: 'Read the trace',
     body: 'The run trace draws the whole batch against the band it wanted, not just this instant. A bed ruined by a spike forty seconds ago looks fine right now — the trace is where you see it. Dots mark where it was under real stress.',
-    done: g => g.batches.some(b => b.progress > 40) || hasKojiProduct(g),
+    done: g => g.batches.some(b => b.progress > 40) || kojiBeen(g),
   },
   {
     id: 'cellar',
     ch: 1,
     title: 'Keep it, do not sell it',
     body: 'When it is ready, press Keep rather than Sell. Selling a koji throws away the reason you grew it; keeping turns it into an ingredient carrying the exact enzymes you just steered.',
-    done: hasKojiProduct,
+    done: kojiBeen,
   },
   {
     id: 'read',
@@ -135,23 +141,48 @@ const STEPS: Step[] = [
 ];
 
 /**
+ * Each step as the player stands now: done once, done for good. The tests above
+ * read live state, which moves under the player — the batch is kept, the koji is
+ * spent in a miso — and a step that un-completed sent the guide back to it, so a
+ * finished step is latched in `story.guideDone` (see `latchGuide`).
+ */
+const stepFlags = (g: GameState) => {
+  const latched = g.story?.guideDone ?? [];
+  return STEPS.map(s => latched.includes(s.id) || s.done(g));
+};
+
+/** Ids of steps that are done now and not yet latched; empty almost always. */
+export const guideNewlyDone = (g: GameState): string[] => {
+  const latched = g.story?.guideDone ?? [];
+  const flags = stepFlags(g);
+  return STEPS.filter((s, i) => flags[i] && !latched.includes(s.id)).map(s => s.id);
+};
+
+/** Pure, so it can run inside a state updater. Returns the same object when there is nothing to add. */
+export const latchGuide = (g: GameState): GameState => {
+  const add = guideNewlyDone(g);
+  if (!add.length) return g;
+  return { ...g, story: { ...(g.story ?? { seen: [] }), guideDone: [...(g.story?.guideDone ?? []), ...add] } };
+};
+
+/**
  * How far through the guide a run is. `complete` means it has nothing left to
  * say, which is when it should retire rather than sit there empty.
  */
 export const guideProgress = (g: GameState) => {
-  const done = STEPS.filter(step => step.done(g)).length;
+  const done = stepFlags(g).filter(Boolean).length;
   return { done, total: STEPS.length, complete: done === STEPS.length };
 };
 
 const FirstCulture: React.FC<FirstCultureProps> = ({ gameState, onDismiss, onOpenPrimer }) => {
-  const doneFlags = STEPS.map(s => s.done(gameState));
+  const doneFlags = stepFlags(gameState);
   const currentIdx = doneFlags.findIndex(d => !d);
   if (currentIdx === -1) return null; // finished; App stops rendering it
 
   const current = STEPS[currentIdx];
   // The header counts within the chapter the player is in, not the whole guide.
   const chapterSteps = STEPS.filter(s => s.ch === current.ch);
-  const chapterDone = chapterSteps.filter(s => s.done(gameState)).length;
+  const chapterDone = chapterSteps.filter(s => doneFlags[STEPS.indexOf(s)]).length;
   // Steps can be satisfied out of order — you might sell something before you
   // ever touch the chamber — so "last done" is the nearest completed step behind
   // the current one, not simply the one before it in the list.

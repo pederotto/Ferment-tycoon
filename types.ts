@@ -855,6 +855,14 @@ export interface StoryState {
   seen: string[];
   /** The Primer has been opened at least once (the guide's "Read the Primer" step). */
   primerRead?: boolean;
+  /**
+   * Guide steps the player has completed, kept for good. A step's test reads live
+   * state (a batch on the bench, a koji in the pantry), and the very act of
+   * finishing a step can undo it: keeping the first koji removes the batch the
+   * "fill" step was reading, and spending the koji empties the pantry the
+   * others read. Absent is none.
+   */
+  guideDone?: string[];
 }
 
 /** What the technician does with a batch without being asked. */

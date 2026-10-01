@@ -57,7 +57,7 @@ import { KOJI_ROOM_COST, KOJI_ROOM_CAPACITY, KOJI_ROOM_TEMP, KOJI_ROOM_DEFAULT_T
 import DevPanel from './components/DevPanel';
 import PanelMark from './components/PanelMark';
 import GameIcon from './components/GameIcon';
-import FirstCulture, { guideProgress } from './components/FirstCulture';
+import FirstCulture, { guideProgress, guideNewlyDone, latchGuide } from './components/FirstCulture';
 import PrimerModal from './components/PrimerModal';
 import StoryCard from './components/StoryCard';
 import LangSwitch from './components/LangSwitch';
@@ -326,6 +326,12 @@ export default function App() {
   // has nothing left to say, and the Guide chip used to reopen an empty card.
   // Finishing it closes it for good, with one note to say so.
   const guideDoneNow = guideProgress(gameState).complete;
+  // A finished step stays finished (story.guideDone). The key is a string so the
+  // effect runs when a step is newly done, not on every tick.
+  const guideLatchKey = guideNewlyDone(gameState).join(',');
+  useEffect(() => {
+    if (guideLatchKey) setGameState(prev => latchGuide(prev));
+  }, [guideLatchKey]);
   const guideWasDone = useRef<boolean | null>(null);
   useEffect(() => {
     if (guideWasDone.current === null) { guideWasDone.current = guideDoneNow; return; }
@@ -1147,7 +1153,7 @@ export default function App() {
     if (uiState.showWelcome) return;
     saveGame(gameState);
   }, [gameState.day, gameState.week, gameState.year, uiState.showWelcome,
-      gameState.story?.seen?.length, gameState.story?.primerRead]);
+      gameState.story?.seen?.length, gameState.story?.primerRead, gameState.story?.guideDone?.length]);
 
   // Also save on the way out, so a mid-day close keeps the last few seconds.
   useEffect(() => {
