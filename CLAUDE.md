@@ -3,6 +3,73 @@
 Rules that are easy to break because the reason for them is not local to the code
 you would be editing. Most were learned by breaking them.
 
+## How the repository is organized (read before you create a branch, a file, or a publish)
+
+This layout was chosen on purpose (2026-09-30 and 2026-10-01) after the repo had drifted into five
+branches, two stale worktrees (220 MB) and a game folder checked out on the wrong branch. Keep it. If you
+think it should change, ask the owner first; do not "tidy" it.
+
+### Branches: two that last, everything else is short-lived
+- **`source` is the only branch work lands on**, and the working folder is checked out on it. It holds the
+  code and everything needed to build the page.
+- **`main` is a frozen archive** of the old hand-published builds: unrelated history (it shares no ancestor
+  with `source`) holding a 15 MB `index.html` per publish. Nobody commits to it any more. **Never delete it,
+  never force-push it, never merge or push `source` into it.** Its history is the record of every build that
+  was ever live.
+- **Work branches** (`claude/*`, or your own) start from `source`, merge back into `source`, and are deleted
+  the same day, together with their worktree. A branch already contained in `source` is clutter: check with
+  `git merge-base --is-ancestor <branch> source`, then delete it. Do not leave anything in
+  `.claude/worktrees/`. Look for leftovers with `git branch -a -vv` and `git worktree list`.
+- Never start from `main`, from a downloaded copy of the page, or from the built `index.html`.
+
+**Why.** The built page is generated, 15 MB, and reproducible from `source`: on 2026-10-01 a clean build of
+`source` (code of commit `1129d23`) wrapped by `scripts/publish_site.py` gave a file with the same SHA-256 as
+the live page. So it is not something anyone edits, and it
+should not be something the code history carries. When the repo on GitHub held only the built page, cloud
+sessions patched that page instead of the code (see "What the cloud sessions left" below), and the next build
+erased their work. Pointing every session at `source` is what prevents that.
+
+### Publishing
+- Publishing is deliberate and never happens on a push. Actions tab -> "Publish the page" -> Run workflow,
+  on `source`. It runs `npm run lint`, `i18n:check`, `i18n:test`, `npm run package`, wraps the page with
+  `scripts/publish_site.py`, and deploys it to https://pederotto.github.io/Ferment-tycoon/. **No build output
+  is committed anywhere.**
+- `scripts/publish_site.py --check <live page>` proves the wrapper still reproduces a published page byte for
+  byte. Run it before touching the shell constant in that script.
+- **Status on 2026-10-01: the workflow is written but NOT on GitHub yet, and Pages is still set to serve
+  `main`.** Two things only the owner can do: (1) get `.github/workflows/pages.yml` onto `source` (the token
+  the sessions push with has no `workflow` scope, so GitHub refuses the push; it sits on the local branch
+  `pages-workflow` until a token with that scope pushes it, or paste it in through the GitHub web UI), and
+  (2) switch Settings -> Pages -> Source to "GitHub Actions" once. Until both are done, the old manual recipe
+  is the only way to publish: `npm run package`,
+  `python3 scripts/publish_site.py`, check `dist/site/index.html` on the `artifact-check` preview (copy it to
+  `dist/artifact/wrapped.html` for the test, delete it after), and push it as an ordinary fast-forward commit
+  on `origin/main` from a temporary `git worktree` of `origin/main`. Then compare the Pages `content-length`
+  with the file you pushed (it lags about a minute). Once the switch is made, delete this paragraph's second
+  half and say so here.
+- Before any publish: the title card renders, `document.fonts` holds the faces, and a batch ticks at 8x with
+  nothing after a `console.error` marker (details in "Publishing the page" below).
+
+### Where things go
+- **Logic** is in `services/` (pure functions of state; the tick, the economy, the soil, the wild), **screens
+  and widgets** in `components/*.tsx`, **data tables** in `constants*.ts`, **types** in `types*.ts`, **Spanish**
+  in `i18n/es.json`. A new domain gets its own `constants.<domain>.ts`, not another 500 lines in `constants.ts`.
+- **Art modules are pictures, not logic:** the 31 files in `components/` that are not `.tsx` (apart from
+  `layout.ts`), i.e. `*Sheet.ts`, `*Plate.ts`, `estatePlates.ts`, `kojiBedChart.ts`, `titleArt.ts`,
+  `paperArt.ts`, hold a base64 picture plus the comment and the small index helper at the top of the file,
+  which is real code. Five are rewritten by `scripts/forage_art` (`estatePlates`, `farmIconSheet`,
+  `farmFaceSheet`, `townFaceSheet`, `gardenShopSheet`: never hand-edit those, rerun the script); the rest
+  were embedded by earlier sessions from the pictures in `art/`, and their header says what they hold. Never
+  edit a base64 payload by hand. Sheets are sliced by index, so **append, never insert or reorder**.
+- **Originals live in `art/` and `docs/`, never on a side branch:** `art/` holds the painted sheets and the
+  generation prompts (`art/pantry/` the eight pantry sheets, `art/garden-shop/` the shop pictures and
+  `PROMPTS.md`), `docs/` the plans (`story-plan.md`) and the v2 prototype this game grew from.
+- **Never commit** `dist/`, `node_modules/`, `.vite/`, `.claude/worktrees/` or `__pycache__/` (all in
+  `.gitignore`).
+- **Pending, not done:** moving the code under `src/` (`components/`, a separate `artwork/` for the
+  generated modules, `data/`, `types/`, `services/`, `i18n/`) so the root holds only config and docs. When it
+  lands, update this section and the paths in the README in the same commit.
+
 ## Adding state
 
 **A new `GameState` field must be added in three places** or something silently
@@ -1942,10 +2009,10 @@ with the guess. If there is no real figure for a process, do not check it.
 - The shop head shows the painted interior. The studio head blends its plaster with `color`, so `.gs-head` resets `background-blend-mode`, or the painting comes out grey.
 
 
-## Branches, publishing, and what the cloud sessions left
-- **GitHub has two unrelated histories, on purpose.** `main` is the PUBLISHED BUILD only: `index.html` (the packaged game inside a plain HTML shell), `README.md` and a few assets, served at https://pederotto.github.io/Ferment-tycoon/. `source` is this repository's code. They share no ancestor, so **never push source to `main` and never force-push `main`**: it would erase the build history and break the play link. Local branches mirror GitHub: local `main` tracks `origin/main` (the build), local `source` tracks `origin/source`. Work on `source` (or a branch off it).
-- **Publishing** is manual: `npm run package`, then wrap `dist/artifact/index.html` in the shell that the current published `index.html` uses (everything before its `<title>Fermenta Tycoon</title>`, then the packaged page, then `\n\n</body></html>\n`), check the wrapped file on the `artifact-check` preview (copy it to `dist/artifact/wrapped.html` for the test, delete it after), and push it as an ordinary fast-forward commit on `origin/main` from a temporary `git worktree` of `origin/main`. Afterwards compare the Pages `content-length` with the file you pushed (it lags about a minute). The README on `main` points at `source`.
-- **A cloud session once patched the BUILT page instead of the source** (the Garden Shop, then the pantry pack and the story, all on `claude/affectionate-mendel-hqphzn`). Anything done that way is erased by the next build. The recovery that worked: diff the built page before and after at statement level (split on `;`, `{`, `}`), dump each hunk to a file, and re-express the hunks in TypeScript. Bundler-renamed names (`NORDIC$1`, `jsxRuntimeExports`) map back to the real ones. The original pantry sheet JPGs, `PLAN.md` and `PANTRY.md` still exist only on that old branch.
+## What the cloud sessions left
+(The branch and publishing rules are at the top of this file.)
+- **A cloud session once patched the BUILT page instead of the source** (the Garden Shop, then the pantry pack and the story, all on `claude/affectionate-mendel-hqphzn`). Anything done that way is erased by the next build. The recovery that worked: diff the built page before and after at statement level (split on `;`, `{`, `}`), dump each hunk to a file, and re-express the hunks in TypeScript. Bundler-renamed names (`NORDIC$1`, `jsxRuntimeExports`) map back to the real ones. If you find a feature that exists only in a built page, port it into the source before building anything.
+- The original pantry sheet JPGs, `PANTRY.md` and the readable `pantry-pack.js` are in `art/pantry/` now; the story `PLAN.md` is `docs/story-plan.md`. Nothing from that branch is missing from `source`.
 
 ## The story layer (chapters 0-2) and the pantry pack
 - **Story:** `constants.story.ts` holds the beats, chapter titles, step notes, the letter and the nine Primer pages. Components: `LetterScene`, `StoryCard`, `PrimerModal`; the guide is `FirstCulture`. A beat fires once per run and is recorded in `story.seen`; a save with no `story` gets `['legacy']` and never sees a card (and its "Read the Primer" step counts as done). A beat is saved when it is recorded, because the first save of a new run is written before any beat is in `seen`. Chapters 3-6 (the counter, the crew, the estate, the wild) are not written. Open questions: perception layers on the tasting card, and "name" versus "partner" for the player after the letter.

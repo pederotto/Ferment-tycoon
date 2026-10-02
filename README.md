@@ -61,7 +61,12 @@ Sale price flows through one function, `calculateOffer`:
 
 Read [CLAUDE.md](CLAUDE.md) first — it carries the invariants that are easy to
 break because the reason for them is not local to the code you would be editing.
+Its first section says how the repository is organized (which branches exist and why,
+how the page is published, where each kind of file goes); please keep to it.
 [OUTSTANDING.md](OUTSTANDING.md) says where the work stopped.
+
+The play link is https://pederotto.github.io/Ferment-tycoon/ . Branch `source` is the
+code; branch `main` is only the archive of old hand-published builds.
 
 ## Learning recipes
 
